@@ -307,12 +307,16 @@ class _KeypadKeyState extends State<_KeypadKey> {
   Widget build(BuildContext context) {
     final label = widget.label == 'del' ? '⌫' : widget.label;
     return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        setState(() => _pressed = true);
+        // Fire immediately on tap-down for instant response.
+        // This eliminates missed taps caused by widget rebuilds
+        // interrupting the gesture recognizer before onTapUp fires.
         widget.onTap();
       },
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
       child: AnimatedScale(
         duration: ZendMotion.keypadPress,
         curve: Curves.easeOut,
