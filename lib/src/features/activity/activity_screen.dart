@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
+
+class _ActivityScreenState extends State<ActivityScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ZendScope.of(context).fetchHistory();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+
     return Scaffold(
       backgroundColor: ZendColors.bgPrimary,
       body: SafeArea(
@@ -63,45 +79,60 @@ class ActivityScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: ZendColors.bgPrimary,
-                          borderRadius: BorderRadius.circular(24),
+                      if (model.historyLoading && model.recentTransactions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 48),
+                          child: Center(child: ZendLoader(size: 24)),
+                        )
+                      else if (model.recentTransactions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 48),
+                          child: Center(
+                            child: Text(
+                              'No transactions yet',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 14,
+                                color: ZendColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgPrimary,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            children: [
+                              for (var i = 0; i < model.recentTransactions.length; i++) ...[
+                                _ActivityTile(
+                                  avatarLabel: model.recentTransactions[i].avatarLabel,
+                                  name: model.recentTransactions[i].name,
+                                  note: model.recentTransactions[i].note,
+                                  amount: model.recentTransactions[i].amount,
+                                  amountColor: model.recentTransactions[i].amountColor,
+                                ),
+                                if (i < model.recentTransactions.length - 1)
+                                  const Divider(color: ZendColors.border, height: 1),
+                              ],
+                            ],
+                          ),
                         ),
-                        child: const Column(
-                          children: [
-                            _DateMarker(label: 'TUE'),
-                            _ActivityTile(
-                              avatarLabel: 'C',
-                              name: 'Carissa Thompson',
-                              note: 'Concert',
-                              amount: '+\$65.00',
-                              amountColor: ZendColors.positive,
+                      if (model.lastHistoryError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            'Could not load latest activity',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 12,
+                              color: ZendColors.textSecondary,
                             ),
-                            Divider(color: ZendColors.border, height: 1),
-                            _ActivityTile(
-                              avatarLabel: 'B',
-                              name: 'GTBank ••• 4465',
-                              note: 'External send',
-                              amount: '-\$42.00',
-                            ),
-                            Divider(color: ZendColors.border, height: 1),
-                            _ActivityTile(
-                              avatarLabel: 'J',
-                              name: 'Josh Hues',
-                              note: 'Lunch',
-                              amount: '-\$12.00',
-                            ),
-                            _DateMarker(label: 'MON'),
-                            _ActivityTile(
-                              avatarLabel: 'W',
-                              name: 'Whole Foods',
-                              note: 'Groceries',
-                              amount: '-\$145.20',
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -136,29 +167,6 @@ class _FilterPill extends StatelessWidget {
           fontFamily: 'DMSans',
           color: active ? ZendColors.textOnDeep : ZendColors.textSecondary,
           fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _DateMarker extends StatelessWidget {
-  const _DateMarker({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontFamily: 'DMSans',
-          color: ZendColors.textSecondary,
-          fontSize: 12,
-          letterSpacing: 1.2,
           fontWeight: FontWeight.w600,
         ),
       ),

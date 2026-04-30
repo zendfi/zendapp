@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'name_screen.dart';
+import 'pin_restore_screen.dart';
+import '../shell/zend_shell.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
@@ -19,6 +22,7 @@ class _OtpScreenState extends State<OtpScreen> {
   late final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   late final Timer _timer;
   Duration _remaining = const Duration(seconds: 42);
+  String? _errorText;
 
   @override
   void initState() {
@@ -46,10 +50,74 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
+  Future<void> _onContinue() async {
+    final code = _controllers.map((c) => c.text).join();
+    if (code.length < 6) return;
+
+    setState(() => _errorText = null);
+
+    final model = ZendScope.of(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    model.startLoading('Verifying code...');
+
+    try {
+      final response = await model.authService.verifyOtp(code);
+      model.stopLoading();
+      if (!mounted) return;
+
+      if (!response.userExists) {
+        navigator.push(zendRoute(page: const NameScreen()));
+      } else {
+        model.startLoading('Signing in...');
+        try {
+          final authResponse = await model.authService.signIn();
+          model.stopLoading();
+          if (!mounted) return;
+
+          model.setAuthenticated(
+            userId: authResponse.userId,
+            zendtag: authResponse.zendtag,
+            displayName: authResponse.zendtag,
+          );
+
+          final hasKeypair = await model.walletService.hasLocalKeypair();
+          if (!mounted) return;
+
+          if (hasKeypair) {
+            navigator.pushAndRemoveUntil(zendRoute(page: const ZendShell()), (route) => false);
+          } else {
+            navigator.pushAndRemoveUntil(zendRoute(page: const PinRestoreScreen()), (route) => false);
+          }
+        } catch (e) {
+          model.stopLoading();
+          if (!mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Sign in failed. Please try again.')),
+          );
+        }
+      }
+    } on ApiException catch (e) {
+      model.stopLoading();
+      if (!mounted) return;
+
+      if (e.errorCode == 'INVALID_OTP_CODE') {
+        setState(() => _errorText = e.userMessage);
+      } else if (e.errorCode == 'OTP_EXPIRED' || e.errorCode == 'OTP_MAX_ATTEMPTS') {
+        messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+        navigator.pop();
+      } else {
+        setState(() => _errorText = e.userMessage);
+      }
+    } catch (e) {
+      model.stopLoading();
+      if (!mounted) return;
+      setState(() => _errorText = 'Something went wrong. Please try again.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final model = ZendScope.of(context);
-    
     return Scaffold(
       body: SafeArea(
         child: ZendScrollPage(
@@ -94,6 +162,17 @@ class _OtpScreenState extends State<OtpScreen> {
                         );
                       }),
                     ),
+                    if (_errorText != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorText!,
+                        style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: ZendColors.destructive,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Text(
                       'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
@@ -106,13 +185,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     const Spacer(),
                     PrimaryButton(
                       label: 'Continue',
-                      onPressed: () async {
-                        model.startLoading('Verifying code...');
-                        await Future.delayed(const Duration(milliseconds: 1200));
-                        model.stopLoading();
-                        if (!context.mounted) return;
-                        pushZendSlide(context, const NameScreen());
-                      },
+                      onPressed: _onContinue,
                     ),
                     const SizedBox(height: 24),
                   ],

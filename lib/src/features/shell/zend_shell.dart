@@ -4,7 +4,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../activity/activity_screen.dart';
-import '../send/recipient_selection_screen.dart';
+import '../send/send_flow_sheet.dart';
 import '../send/send_screen.dart';
 import '../money/home_screen.dart';
 
@@ -26,15 +26,7 @@ class _ZendShellState extends State<ZendShell> {
   }
 
   Future<void> _openRecipientSheet(BuildContext context, double amount) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.92,
-        child: RecipientSelectionScreen(amount: amount),
-      ),
-    );
+    return showSendFlowSheet(context, amount: amount);
   }
 
   void _openFundDrawer(BuildContext context) {

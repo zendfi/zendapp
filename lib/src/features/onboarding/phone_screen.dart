@@ -1,16 +1,60 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'otp_screen.dart';
 
-class PhoneScreen extends StatelessWidget {
+class PhoneScreen extends StatefulWidget {
   const PhoneScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = TextEditingController(text: '2025550142');
+  State<PhoneScreen> createState() => _PhoneScreenState();
+}
 
+class _PhoneScreenState extends State<PhoneScreen> {
+  final _controller = TextEditingController(text: '2025550142');
+  static const _countryCode = '+44';
+
+  Future<void> _onContinue() async {
+    final rawNumber = _controller.text.trim();
+    if (rawNumber.isEmpty) return;
+
+    final digits = rawNumber.startsWith('0') ? rawNumber.substring(1) : rawNumber;
+    final phoneNumber = '$_countryCode$digits';
+
+    final model = ZendScope.of(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    model.startLoading('Sending code...');
+
+    try {
+      await model.authService.requestOtp(phoneNumber);
+      model.stopLoading();
+      if (!mounted) return;
+      navigator.push(zendRoute(page: const OtpScreen()));
+    } on ApiException catch (e) {
+      model.stopLoading();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+    } catch (e) {
+      model.stopLoading();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: ZendScrollPage(
@@ -35,11 +79,11 @@ class PhoneScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        const _CountryPill(code: '+44'),
+                        const _CountryPill(code: _countryCode),
                         const SizedBox(width: 14),
                         Expanded(
                           child: TextField(
-                            controller: controller,
+                            controller: _controller,
                             keyboardType: TextInputType.phone,
                             style: const TextStyle(
                               fontFamily: 'DMMono',
@@ -62,9 +106,7 @@ class PhoneScreen extends StatelessWidget {
                     const Spacer(),
                     PrimaryButton(
                       label: 'Continue',
-                      onPressed: () {
-                        pushZendSlide(context, const OtpScreen());
-                      },
+                      onPressed: _onContinue,
                     ),
                     const SizedBox(height: 24),
                   ],

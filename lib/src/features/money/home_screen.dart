@@ -27,6 +27,15 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _headerRowPadding = 14;
 
   @override
+  void initState() {
+    super.initState();
+    // Fetch balance after the first frame to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ZendScope.of(context).fetchBalance();
+    });
+  }
+
+  @override
   void dispose() {
     _sheetController.dispose();
     super.dispose();
@@ -145,9 +154,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: lerpDouble(6, 0, t) ?? 6),
                             Opacity(
                               opacity: yieldOpacity,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                child: Text('+${model.monthlyYield.toStringAsFixed(2)} yield this month', style: const TextStyle(color: ZendColors.accentPop, fontSize: 12)),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 20),
+                                child: Text('USDC balance', style: TextStyle(color: ZendColors.accentPop, fontSize: 12)),
                               ),
                             ),
                           ],
@@ -346,10 +355,3 @@ class _PoolAvatar extends StatelessWidget {
   Widget build(BuildContext context) => Container(width: 22, height: 22, decoration: const BoxDecoration(color: ZendColors.bgDeep, shape: BoxShape.circle), alignment: Alignment.center, child: Text(label, style: const TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendColors.textOnDeep)));
 }
 
-class _IconPill extends StatelessWidget {
-  const _IconPill({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap, child: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0x1AE8F4EC), shape: BoxShape.circle, border: Border.all(color: const Color(0x26E8F4EC))), child: Icon(icon, color: const Color(0x99E8F4EC), size: 20)));
-}

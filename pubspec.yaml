@@ -35,6 +35,18 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # Networking
+  dio: 5.4.3+1
+
+  # Secure storage (iOS Keychain / Android Keystore)
+  flutter_secure_storage: 9.2.4
+
+  # Solana keypair generation, transaction building, base58
+  solana: 0.31.0+1
+
+  # AES-256-GCM encryption + PBKDF2 key derivation
+  cryptography: 2.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

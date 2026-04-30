@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../pools/create_pool_drawer.dart';
@@ -17,6 +20,8 @@ class SendScreen extends StatefulWidget {
 
 class _SendScreenState extends State<SendScreen> {
   String _digits = '';
+  Timer? _fxDebounce;
+  String? _fxPreviewText;
 
   double get _parsedAmount => _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
 
@@ -29,8 +34,37 @@ class _SendScreenState extends State<SendScreen> {
   }
 
   String get _fxPreview {
+    if (_fxPreviewText != null) return _fxPreviewText!;
+    // Fallback to hardcoded rate while FX service loads
     final naira = (_parsedAmount * 1538.3).round();
     return '≈ ₦${_formatThousands(naira)}';
+  }
+
+  @override
+  void dispose() {
+    _fxDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _fetchFxPreview() {
+    _fxDebounce?.cancel();
+    if (_parsedAmount <= 0) {
+      setState(() => _fxPreviewText = null);
+      return;
+    }
+    _fxDebounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final model = ZendScope.of(context);
+        final preview = await model.fxService.getPreview(_parsedAmount);
+        if (!mounted) return;
+        final naira = preview.amountNgn.round();
+        setState(() => _fxPreviewText = '≈ ₦${_formatThousands(naira)}');
+      } catch (_) {
+        // On failure, hide the FX preview
+        if (!mounted) return;
+        setState(() => _fxPreviewText = null);
+      }
+    });
   }
 
   void _onKey(String value) {
@@ -46,6 +80,8 @@ class _SendScreenState extends State<SendScreen> {
         _digits += value;
       }
     });
+    // Trigger debounced FX preview fetch on every key press
+    _fetchFxPreview();
   }
 
   @override

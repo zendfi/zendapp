@@ -1,27 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
-import '../../navigation/zend_routes.dart';
-import 'welcome_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+/// Pure visual splash screen. Navigation is handled by the session-restore
+/// wrapper in app.dart.
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(ZendMotion.splash, () {
-      if (!mounted) return;
-      pushReplacementZendSlide(context, const WelcomeScreen());
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

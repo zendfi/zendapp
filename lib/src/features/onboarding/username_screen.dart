@@ -29,12 +29,23 @@ class _UsernameScreenState extends State<UsernameScreen> {
   void _scheduleCheck(String value) {
     _debounce?.cancel();
     setState(() {
-      _available = null;
+      _available = null; // Clear indicator while in flight
     });
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() {
-        _available = value.trim().isNotEmpty && value.trim() != 'taken';
-      });
+
+    final tag = value.trim().toLowerCase();
+    if (tag.isEmpty) return;
+
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final model = ZendScope.of(context);
+        final isAvailable = await model.zendtagService.checkAvailability(tag);
+        if (!mounted) return;
+        setState(() {
+          _available = isAvailable;
+        });
+      } catch (_) {
+        // On error, show nothing (leave _available as null)
+      }
     });
   }
 

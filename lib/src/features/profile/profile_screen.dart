@@ -55,9 +55,9 @@ class ProfileScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Blessed Oyinbo',
-                            style: TextStyle(
+                          Text(
+                            model.currentDisplayName ?? 'Blessed Oyinbo',
+                            style: const TextStyle(
                               fontFamily: 'InstrumentSerif',
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -141,6 +141,11 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.lock_outline,
                           label: 'Change password',
                           onTap: () => pushZendSlide(context, const ChangePasswordScreen()),
+                        ),
+                        _ProfileTile(
+                          icon: Icons.pin_outlined,
+                          label: 'Change PIN',
+                          onTap: () => _showChangePinDialog(context),
                         ),
                       ],
                     ),
@@ -303,7 +308,125 @@ Future<void> _confirmLogout(BuildContext context) async {
   );
 
   if (shouldLogout != true) return;
+  if (!context.mounted) return;
+
+  final model = ZendScope.of(context);
+
+  try {
+    await model.authService.logout();
+    model.resetState();
+  } catch (_) {
+    // Best-effort logout — still navigate away
+    model.resetState();
+  }
 
   if (!context.mounted) return;
   pushAndRemoveUntilZendSlide(context, const WelcomeScreen(), rootNavigator: true);
+}
+
+Future<void> _showChangePinDialog(BuildContext context) async {
+  final model = ZendScope.of(context);
+  String currentPin = '';
+  String newPin = '';
+  String confirmPin = '';
+  String? errorText;
+  int attempts = 0;
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Change Transfer PIN'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  obscureText: true,
+                  maxLength: 4,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Current PIN',
+                    counterText: '',
+                  ),
+                  onChanged: (v) => currentPin = v,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  obscureText: true,
+                  maxLength: 4,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'New PIN',
+                    counterText: '',
+                  ),
+                  onChanged: (v) => newPin = v,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  obscureText: true,
+                  maxLength: 4,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm new PIN',
+                    counterText: '',
+                  ),
+                  onChanged: (v) => confirmPin = v,
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    errorText!,
+                    style: const TextStyle(
+                      color: ZendColors.destructive,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (currentPin.length != 4 || newPin.length != 4 || confirmPin.length != 4) {
+                    setDialogState(() => errorText = 'PIN must be 4 digits');
+                    return;
+                  }
+                  if (newPin != confirmPin) {
+                    setDialogState(() => errorText = 'New PINs don\'t match');
+                    return;
+                  }
+                  try {
+                    await model.walletService.changePin(currentPin, newPin);
+                    if (!dialogContext.mounted) return;
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('PIN changed successfully')),
+                    );
+                  } catch (e) {
+                    attempts++;
+                    if (attempts >= 5) {
+                      if (!dialogContext.mounted) return;
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Too many attempts. Please try again later.')),
+                      );
+                    } else {
+                      setDialogState(() => errorText = 'Incorrect current PIN');
+                    }
+                  }
+                },
+                child: const Text('Change'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }
