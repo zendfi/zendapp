@@ -1,4 +1,4 @@
-package com.zendfi.app.zendapp
+package com.zendfi.zendapp
 
 import io.flutter.embedding.android.FlutterActivity
 
