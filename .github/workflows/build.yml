@@ -56,7 +56,7 @@ jobs:
           storePassword=$STORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=app/zend.jks
+          storeFile=zend.jks
           EOF
 
       # ── Build signed release APK ──────────────────────────────────────────────

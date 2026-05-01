@@ -37,7 +37,7 @@ android {
         create("release") {
             keyAlias     = prop("keyAlias")     ?: System.getenv("KEY_ALIAS")      ?: "zend"
             keyPassword  = prop("keyPassword")  ?: System.getenv("KEY_PASSWORD")   ?: ""
-            storeFile    = file(prop("storeFile") ?: "app/zend.jks")
+            storeFile    = file(prop("storeFile") ?: "zend.jks")
             storePassword = prop("storePassword") ?: System.getenv("STORE_PASSWORD") ?: ""
         }
     }
