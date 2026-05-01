@@ -1,18 +1,22 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Firebase / Google services
     id("com.google.gms.google-services")
 }
 
-// Load signing config from key.properties (local) or CI environment variables
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
+// Load signing config from key.properties (local dev) or CI env vars
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
+fun prop(key: String): String? =
+    keystoreProperties.getProperty(key)?.takeIf { it.isNotBlank() }
 
 android {
     namespace = "com.zendfi.zendapp"
@@ -25,31 +29,29 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     signingConfigs {
         create("release") {
-            // CI: secrets injected as env vars via key.properties written by workflow
-            // Local: key.properties file in android/ directory
-            keyAlias = keystoreProperties["keyAlias"] as String? ?: System.getenv("KEY_ALIAS") ?: "zend"
-            keyPassword = keystoreProperties["keyPassword"] as String? ?: System.getenv("KEY_PASSWORD") ?: ""
-            storeFile = file(keystoreProperties["storeFile"] as String? ?: "app/zend.jks")
-            storePassword = keystoreProperties["storePassword"] as String? ?: System.getenv("STORE_PASSWORD") ?: ""
+            keyAlias     = prop("keyAlias")     ?: System.getenv("KEY_ALIAS")      ?: "zend"
+            keyPassword  = prop("keyPassword")  ?: System.getenv("KEY_PASSWORD")   ?: ""
+            storeFile    = file(prop("storeFile") ?: "app/zend.jks")
+            storePassword = prop("storePassword") ?: System.getenv("STORE_PASSWORD") ?: ""
         }
     }
 
     defaultConfig {
         applicationId = "com.zendfi.zendapp"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk        = flutter.minSdkVersion
+        targetSdk     = flutter.targetSdkVersion
+        versionCode   = flutter.versionCode
+        versionName   = flutter.versionName
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig  = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
         debug {
@@ -63,10 +65,7 @@ flutter {
 }
 
 dependencies {
-    // Firebase BoM — manages compatible versions across all Firebase libraries
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
-    // FCM for push notifications
     implementation("com.google.firebase:firebase-messaging")
-    // Analytics (required by Firebase BoM)
     implementation("com.google.firebase:firebase-analytics")
 }
