@@ -83,94 +83,110 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // ── Balance hero — pixel-positioned, clipped to sheet top ──
-            Positioned.fill(
-              top: appBarBottom,
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _sheetController,
-                  builder: (context, child) {
-                    final sheetSize = _sheetController.isAttached
-                        ? _sheetController.size.clamp(_minSheetSize, maxChildSize)
-                        : _minSheetSize;
-                    final t = ((sheetSize - _minSheetSize) / (maxChildSize - _minSheetSize)).clamp(0.0, 1.0);
+            // ── Balance hero — truly centered in the gap between header and sheet ──
+            AnimatedBuilder(
+              animation: _sheetController,
+              builder: (context, _) {
+                final sheetSize = _sheetController.isAttached
+                    ? _sheetController.size.clamp(_minSheetSize, maxChildSize)
+                    : _minSheetSize;
+                final t = ((sheetSize - _minSheetSize) / (maxChildSize - _minSheetSize)).clamp(0.0, 1.0);
+                final sheetTopY = height * (1 - sheetSize);
+                final balanceSize = lerpDouble(88, 32, t) ?? 88;
+                final yieldOpacity = (1 - t).clamp(0.0, 1.0);
 
-                    // Sheet top Y relative to this area (which starts at appBarBottom).
-                    final sheetTopY = height * (1 - sheetSize);
-                    final areaHeight = height - appBarBottom;
-                    final sheetTopInArea = (sheetTopY - appBarBottom).clamp(0.0, areaHeight);
-
-                    // Balance widget height estimate (label + balance + yield ≈ 120px expanded, ≈ 40px collapsed).
-                    final balanceHeight = lerpDouble(120, 40, t) ?? 120;
-
-                    // Expanded: center in the visible gap between header and sheet.
-                    // Collapsed: pin 4px below the top of this area.
-                    final expandedTop = ((sheetTopInArea - balanceHeight) / 2).clamp(0.0, areaHeight);
-                    const collapsedTop = 4.0;
-                    final balanceTop = lerpDouble(expandedTop, collapsedTop, t) ?? expandedTop;
-
-                    final balanceSize = lerpDouble(88, 32, t) ?? 88;
-                    final yieldOpacity = (1 - t).clamp(0.0, 1.0);
-
-                    // Horizontal: centered when expanded, left-aligned when collapsed.
-                    final leftPad = lerpDouble(0, 20, t) ?? 0;
-
-                    return ClipRect(
-                      clipper: _BottomClip(sheetTopInArea),
-                      child: Padding(
-                        padding: EdgeInsets.only(top: balanceTop, left: leftPad, right: 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: t < 0.5 ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                          children: [
-                            // "Zend Balance" label
-                            Opacity(
-                              opacity: (1 - t * 2).clamp(0.0, 1.0),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 20),
-                                child: Text('Zend Balance', style: TextStyle(fontFamily: 'DMMono', color: Color(0x80E8F4EC), fontSize: 11, letterSpacing: 0.8)),
+                return Positioned(
+                  top: appBarBottom,
+                  left: 0,
+                  right: 0,
+                  bottom: height - sheetTopY,
+                  child: t < 0.5
+                      // Expanded: truly centered in the gap
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Zend Balance',
+                                style: TextStyle(
+                                  fontFamily: 'DMMono',
+                                  color: Color(0x80E8F4EC),
+                                  fontSize: 11,
+                                  letterSpacing: 0.8,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: lerpDouble(4, 0, t) ?? 4),
-                            // Balance + eye
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: t < 0.5 ? 20 : 0),
-                              child: Row(
+                              const SizedBox(height: 6),
+                              Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     model.balanceHidden ? '••••••' : '\$${model.balance.toStringAsFixed(2)}',
-                                    style: TextStyle(fontFamily: 'InstrumentSerif', color: ZendColors.textOnDeep, fontSize: balanceSize, height: 1.0, fontStyle: FontStyle.italic, fontWeight: FontWeight.w500),
+                                    style: TextStyle(
+                                      fontFamily: 'InstrumentSerif',
+                                      color: ZendColors.textOnDeep,
+                                      fontSize: balanceSize,
+                                      height: 1.0,
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   GestureDetector(
                                     onTap: model.toggleBalanceHidden,
-                                    child: Icon(model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0x99E8F4EC), size: 18),
+                                    child: Icon(
+                                      model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      color: const Color(0x99E8F4EC),
+                                      size: 20,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                            // Yield indicator
-                            SizedBox(height: lerpDouble(6, 0, t) ?? 6),
-                            Opacity(
-                              opacity: yieldOpacity,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                              const SizedBox(height: 8),
+                              Opacity(
+                                opacity: yieldOpacity,
                                 child: Text(
                                   '${model.monthlyYield.toStringAsFixed(1)}% earned this month',
                                   style: const TextStyle(color: ZendColors.accentPop, fontSize: 12),
                                 ),
                               ),
+                            ],
+                          ),
+                        )
+                      // Collapsed: left-aligned, pinned near top
+                      : Align(
+                          alignment: Alignment.topLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 20, right: 20),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  model.balanceHidden ? '••••••' : '\$${model.balance.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontFamily: 'InstrumentSerif',
+                                    color: ZendColors.textOnDeep,
+                                    fontSize: balanceSize,
+                                    height: 1.0,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: model.toggleBalanceHidden,
+                                  child: Icon(
+                                    model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    color: const Color(0x99E8F4EC),
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                );
+              },
             ),
-
             // ── Draggable sheet ──
             DraggableScrollableSheet(
               controller: _sheetController,
@@ -234,14 +250,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _BottomClip extends CustomClipper<Rect> {
-  _BottomClip(this.bottomY);
-  final double bottomY;
-  @override
-  Rect getClip(Size size) => Rect.fromLTRB(0, 0, size.width, bottomY);
-  @override
-  bool shouldReclip(_BottomClip old) => old.bottomY != bottomY;
-}
 
 String _displayName(String value) {
   final trimmed = value.trim();

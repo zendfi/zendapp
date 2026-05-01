@@ -15,29 +15,52 @@ import 'src/navigation/zend_routes.dart';
 
 class ZendApp extends StatefulWidget {
   const ZendApp({super.key, required this.model});
-
   final ZendAppModel model;
 
   @override
   State<ZendApp> createState() => _ZendAppState();
 }
 
-class _ZendAppState extends State<ZendApp> {
+class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
+  late ThemeMode _themeMode;
+
   @override
   void initState() {
     super.initState();
+    _themeMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
     widget.model.addListener(_onModelChanged);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     widget.model.removeListener(_onModelChanged);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   void _onModelChanged() {
-    // Only rebuild when isDarkMode changes to avoid resetting the navigator
-    setState(() {});
+    final newMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+    if (newMode != _themeMode) {
+      setState(() => _themeMode = newMode);
+    }
+  }
+
+  /// Pause polling when app goes to background, resume when foregrounded.
+  /// This cuts polling load to zero when users aren't actively using the app.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (widget.model.isAuthenticated) {
+        widget.model.startPolling();
+        // Immediate refresh on foreground so data is never stale
+        unawaited(widget.model.fetchBalance());
+        unawaited(widget.model.fetchHistory());
+      }
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.detached) {
+      widget.model.stopPolling();
+    }
   }
 
   @override
@@ -49,7 +72,7 @@ class _ZendAppState extends State<ZendApp> {
         title: 'Zend! App',
         theme: buildZendTheme(),
         darkTheme: buildZendDarkTheme(),
-        themeMode: widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        themeMode: _themeMode,
         home: _SplashWithSessionRestore(model: widget.model),
         localeResolutionCallback: (locale, _) {
           if (locale != null) {
@@ -58,9 +81,7 @@ class _ZendAppState extends State<ZendApp> {
           return locale;
         },
         builder: (context, child) {
-          return LoadingOverlay(
-            child: child ?? const SizedBox(),
-          );
+          return LoadingOverlay(child: child ?? const SizedBox());
         },
       ),
     );

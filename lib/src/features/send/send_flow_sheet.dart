@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,6 +15,7 @@ Future<void> showSendFlowSheet(BuildContext context, {required double amount}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
@@ -203,6 +206,10 @@ class _SendFlowSheetState extends State<SendFlowSheet>
             : _noteController.text.trim(),
       );
 
+      // Immediately refresh balance and history after transfer
+      unawaited(model.fetchBalance());
+      unawaited(model.fetchHistory());
+
       setState(() {
         _transferResult = result.transactionSignature;
         _stage = SendStage.success;
@@ -250,41 +257,44 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     return PopScope(
       canPop: _stage != SendStage.processing,
-      child: AnimatedContainer(
-        duration: _sheetResize,
-        curve: Curves.easeOutCubic,
-        height: screenHeight * _sheetHeightFraction,
-        decoration: const BoxDecoration(
-          color: ZendColors.bgPrimary,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(ZendRadii.xxl),
-          ),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 14),
-            const ZendSheetHandle(),
-            const SizedBox(height: 8),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: _stageTransition,
-                reverseDuration: const Duration(milliseconds: 140),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final slide = Tween<Offset>(
-                    begin: const Offset(0, 0.04),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: slide, child: child),
-                  );
-                },
-                child: RepaintBoundary(child: _buildStageContent()),
-              ),
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+        child: AnimatedContainer(
+          duration: _sheetResize,
+          curve: Curves.easeOutCubic,
+          height: screenHeight * _sheetHeightFraction,
+          decoration: const BoxDecoration(
+            color: ZendColors.bgPrimary,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(ZendRadii.xxl),
             ),
-          ],
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 14),
+              const ZendSheetHandle(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: _stageTransition,
+                  reverseDuration: const Duration(milliseconds: 140),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, 0.04),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: slide, child: child),
+                    );
+                  },
+                  child: RepaintBoundary(child: _buildStageContent()),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

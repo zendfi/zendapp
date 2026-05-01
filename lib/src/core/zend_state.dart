@@ -79,6 +79,34 @@ class ZendAppModel extends ChangeNotifier {
   final FxService fxService;
   final RecentContactsStore recentContactsStore;
 
+  // ── Background polling ──
+  Timer? _pollingTimer;
+  static const Duration _pollingInterval = Duration(seconds: 15);
+
+  /// Start polling balance + history every 15 seconds.
+  /// Call this when the user is authenticated and the app is in the foreground.
+  void startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(_pollingInterval, (_) {
+      if (isAuthenticated) {
+        fetchBalance();
+        fetchHistory();
+      }
+    });
+  }
+
+  /// Stop background polling (e.g. on logout or app background).
+  void stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  @override
+  void dispose() {
+    stopPolling();
+    super.dispose();
+  }
+
   bool isAuthenticated = false;
   String? currentUserId;
   String? currentZendtag;
@@ -238,7 +266,7 @@ class ZendAppModel extends ChangeNotifier {
         );
       }).toList();
       recentContacts = contacts;
-      await recentContactsStore.save(recentContacts);
+      await recentContactsStore.save(recentContacts).catchError((_) {});
       lastHistoryError = null;
     } catch (e) {
       lastHistoryError = e.toString();
@@ -261,6 +289,7 @@ class ZendAppModel extends ChangeNotifier {
     if (walletAddr != null) walletAddress = walletAddr;
     username = zendtag;
     notifyListeners();
+    startPolling();
   }
 
   Future<void> recordTransfer({
@@ -300,11 +329,14 @@ class ZendAppModel extends ChangeNotifier {
       ),
     );
 
-    await recentContactsStore.save(recentContacts);
+    await recentContactsStore.save(recentContacts).catchError((_) {
+      // Best-effort, don't fail the transfer if contact caching fails
+    });
     notifyListeners();
   }
 
   void resetState() {
+    stopPolling(); // Stop live updates on logout
     isAuthenticated = false;
     currentUserId = null;
     currentZendtag = null;
