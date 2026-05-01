@@ -24,7 +24,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
     model.startLoading('Setting up your account...');
 
     try {
-      final displayName = model.currentDisplayName ?? 'Blessed Oyinbo';
+      final displayName = model.currentDisplayName ?? model.username;
       final zendtag = model.username;
       final registerResponse = await model.authService.register(displayName, zendtag);
 

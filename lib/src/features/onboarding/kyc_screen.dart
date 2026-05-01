@@ -62,7 +62,10 @@ class KycScreen extends StatelessWidget {
                         await Future.delayed(const Duration(milliseconds: 2000));
                         model.stopLoading();
                         if (!context.mounted) return;
-                        pushReplacementZendSlide(context, const SuccessScreen(username: 'blessed'));
+                        pushReplacementZendSlide(
+                          context,
+                          SuccessScreen(username: model.username),
+                        );
                       },
                     ),
                     const SizedBox(height: 24),

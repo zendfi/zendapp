@@ -26,10 +26,12 @@ class WalletService {
   static const _feePayerAddress = 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52';
 
   WalletService({
-    required ApiClient apiClient,
-    required FlutterSecureStorage secureStorage,
-  })  : _apiClient = apiClient,
+        required ApiClient apiClient,
+        required FlutterSecureStorage secureStorage,
+      })  : _apiClient = apiClient,
         _secureStorage = secureStorage;
+
+      ApiClient get apiClient => _apiClient;
 
   Future<String> generateKeypair() async {
     final keypair = await Ed25519HDKeyPair.random();
@@ -58,6 +60,13 @@ class WalletService {
   Future<bool> hasPinSetup() async {
     final salt = await _secureStorage.read(key: _pinSaltKey);
     return salt != null && salt.isNotEmpty;
+  }
+
+  Future<void> verifyLocalPin(String pin) async {
+    final privateKeyBytes = await _decryptLocalKeypair(pin);
+    for (var i = 0; i < privateKeyBytes.length; i++) {
+      privateKeyBytes[i] = 0;
+    }
   }
 
   Future<String?> getWalletAddress() async {

@@ -15,7 +15,7 @@ class UsernameScreen extends StatefulWidget {
 }
 
 class _UsernameScreenState extends State<UsernameScreen> {
-  final _controller = TextEditingController(text: 'blessed');
+  final _controller = TextEditingController();
   Timer? _debounce;
   bool? _available;
 
@@ -33,7 +33,11 @@ class _UsernameScreenState extends State<UsernameScreen> {
     });
 
     final tag = value.trim().toLowerCase();
-    if (tag.isEmpty) return;
+    if (tag.isEmpty || tag.length < 3) return;
+    if (!RegExp(r'^[a-z0-9._]+$').hasMatch(tag)) return;
+    if (tag.startsWith('.') || tag.startsWith('_') || tag.endsWith('.') || tag.endsWith('_')) {
+      return;
+    }
 
     _debounce = Timer(const Duration(milliseconds: 400), () async {
       try {
@@ -52,7 +56,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
-    final username = _controller.text.trim().isEmpty ? 'blessed' : _controller.text.trim().toLowerCase();
+    final username = _controller.text.trim().isEmpty ? '' : _controller.text.trim().toLowerCase();
 
     return Scaffold(
       body: SafeArea(
@@ -100,7 +104,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                             decoration: const InputDecoration(
                               filled: false,
                               border: UnderlineInputBorder(borderSide: BorderSide(color: ZendColors.border)),
-                              hintText: 'blessed',
+                              hintText: 'yourname',
                             ),
                           ),
                         ),
@@ -148,6 +152,7 @@ class _PreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final safeUsername = username.isEmpty ? 'yourname' : username;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -179,7 +184,7 @@ class _PreviewCard extends StatelessWidget {
                 style: const TextStyle(fontFamily: 'DMMono', fontSize: 13, color: ZendColors.textSecondary),
               ),
               Text(
-                username,
+                safeUsername,
                 style: const TextStyle(fontFamily: 'DMMono', fontSize: 13, color: ZendColors.textPrimary),
               ),
             ],

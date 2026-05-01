@@ -5,6 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../models/recent_contact.dart';
 
 enum SendStage { recipient, note, pin, processing, success, error }
 
@@ -30,6 +31,8 @@ class SendFlowSheet extends StatefulWidget {
 
 class _SendFlowSheetState extends State<SendFlowSheet>
     with SingleTickerProviderStateMixin {
+  static const Duration _stageTransition = Duration(milliseconds: 180);
+  static const Duration _sheetResize = Duration(milliseconds: 220);
   SendStage _stage = SendStage.recipient;
 
   String? _recipientZendtag;
@@ -191,7 +194,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
       if (!mounted) return;
 
-      model.recordTransfer(
+      await model.recordTransfer(
         recipientZendtag: _recipientZendtag!,
         recipientDisplayName: _recipientDisplayName ?? '?',
         amount: widget.amount,
@@ -248,8 +251,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     return PopScope(
       canPop: _stage != SendStage.processing,
       child: AnimatedContainer(
-        duration: ZendMotion.sheetEnter,
-        curve: Curves.easeOut,
+        duration: _sheetResize,
+        curve: Curves.easeOutCubic,
         height: screenHeight * _sheetHeightFraction,
         decoration: const BoxDecoration(
           color: ZendColors.bgPrimary,
@@ -264,10 +267,21 @@ class _SendFlowSheetState extends State<SendFlowSheet>
             const SizedBox(height: 8),
             Expanded(
               child: AnimatedSwitcher(
-                duration: ZendMotion.sheetEnter,
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: _buildStageContent(),
+                duration: _stageTransition,
+                reverseDuration: const Duration(milliseconds: 140),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final slide = Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(position: slide, child: child),
+                  );
+                },
+                child: RepaintBoundary(child: _buildStageContent()),
               ),
             ),
           ],
@@ -349,7 +363,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   }
 }
 
-class _RecipientStage extends StatelessWidget {
+class _RecipientStage extends StatefulWidget {
   const _RecipientStage({
     super.key,
     required this.amountFormatted,
@@ -361,21 +375,98 @@ class _RecipientStage extends StatelessWidget {
   final bool resolving;
   final Future<void> Function(String tag, String displayName) onContactTap;
 
-  static const _contacts = [
-    ('Amara Nwosu', 'amara_n', 'A'),
-    ('Tunde Bakare', 'tunde_b', 'T'),
-    ('David Ojo', 'david.ojo', 'D'),
-  ];
+  @override
+  State<_RecipientStage> createState() => _RecipientStageState();
+}
+
+class _RecipientStageState extends State<_RecipientStage> {
+  late final TextEditingController _searchController;
+  String _searchQuery = '';
+  List<(String name, String tag, String avatar)> _searchResults = [];
+  bool _searching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onSearchChanged(String query) async {
+    setState(() => _searchQuery = query);
+
+    final normalized = query.trim().toLowerCase();
+
+    if (normalized.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _searching = false;
+      });
+      return;
+    }
+
+    final searchTag = normalized.startsWith('@')
+        ? normalized.substring(1)
+        : normalized;
+
+    // Only search if query is at least 3 characters (matches backend gating)
+    if (searchTag.length < 3) {
+      setState(() => _searching = false);
+      return;
+    }
+
+    setState(() => _searching = true);
+
+    try {
+      final model = ZendScope.of(context);
+      final resolved = await model.zendtagService.resolve(searchTag);
+      if (!mounted) return;
+
+      final displayName = resolved.displayName.trim().isEmpty
+          ? '@${resolved.zendtag}'
+          : resolved.displayName;
+      final avatarLabel = displayName.isNotEmpty
+          ? displayName[0].toUpperCase()
+          : resolved.zendtag.isNotEmpty
+              ? resolved.zendtag[0].toUpperCase()
+              : '?';
+
+      setState(() {
+        _searchResults = [
+          (displayName, resolved.zendtag, avatarLabel),
+        ];
+        _searching = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _searchResults = [];
+        _searching = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+    final recentContacts = _buildRecentContacts(model.recentContacts);
+    
+    // Show search results if actively searching/have results, otherwise show recents
+    final contactsToShow = _searchQuery.isNotEmpty ? _searchResults : recentContacts;
+    final showingSearchResults = _searchQuery.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Pay $amountFormatted to',
+            'Pay ${widget.amountFormatted} to',
             style: const TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 28,
@@ -386,6 +477,8 @@ class _RecipientStage extends StatelessWidget {
           const SizedBox(height: 18),
           // Search field
           TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
             decoration: InputDecoration(
               hintText: 'Name, @username, phone...',
               prefixIcon: const Icon(Icons.search,
@@ -401,7 +494,7 @@ class _RecipientStage extends StatelessWidget {
           const SizedBox(height: 18),
           // Section label
           Text(
-            'ZENDAPP USERS',
+            showingSearchResults ? 'SEARCH RESULTS' : 'RECENT ZEND USERS',
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 12,
@@ -412,21 +505,35 @@ class _RecipientStage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // Contact list
-          if (resolving)
+          if (widget.resolving || _searching)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(child: ZendLoader(size: 24)),
             )
+          else if (contactsToShow.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                showingSearchResults
+                    ? 'No users found with that zendtag'
+                    : 'No recent recipients yet',
+                style: const TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13,
+                  color: ZendColors.textSecondary,
+                ),
+              ),
+            )
           else
-            ...List.generate(_contacts.length, (i) {
-              final (name, tag, avatar) = _contacts[i];
+            ...List.generate(contactsToShow.length, (i) {
+              final (name, tag, avatar) = contactsToShow[i];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _ContactTile(
                   name: name,
                   handle: '@$tag',
                   avatarLabel: avatar,
-                  onTap: () => onContactTap(tag, name),
+                  onTap: () => widget.onContactTap(tag, name),
                 ),
               );
             }),
@@ -486,6 +593,14 @@ class _RecipientStage extends StatelessWidget {
       ),
     );
   }
+}
+
+List<(String name, String tag, String avatar)> _buildRecentContacts(
+  List<RecentContact> contacts,
+) {
+  return contacts
+      .map((contact) => (contact.name, contact.tag, contact.avatarLabel))
+      .toList();
 }
 
 class _NoteStage extends StatelessWidget {

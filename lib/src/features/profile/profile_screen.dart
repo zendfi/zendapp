@@ -16,6 +16,10 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
+    final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
+        ? model.currentDisplayName!
+        : (model.username.isNotEmpty ? model.username : 'Zend User');
+    final linkHandle = model.username.isNotEmpty ? '@${model.username}' : 'user';
 
     return Scaffold(
       backgroundColor: ZendColors.bgPrimary,
@@ -56,7 +60,7 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            model.currentDisplayName ?? 'Blessed Oyinbo',
+                            displayName,
                             style: const TextStyle(
                               fontFamily: 'InstrumentSerif',
                               fontSize: 20,
@@ -66,7 +70,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'zdfi.me/@${model.username}',
+                            'zdfi.me/$linkHandle',
                             style: const TextStyle(
                               fontFamily: 'DMMono',
                               fontSize: 12,
@@ -129,6 +133,19 @@ class ProfileScreen extends StatelessWidget {
                           onTap: () {
                             // TODO: Navigate to payment page customisation screen
                           },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionLabel('Appearance'),
+                    const SizedBox(height: 8),
+                    _SettingsGroup(
+                      tiles: [
+                        _ProfileToggleTile(
+                          icon: Icons.dark_mode_outlined,
+                          label: 'Dark mode',
+                          value: model.isDarkMode,
+                          onChanged: (_) => model.toggleDarkMode(),
                         ),
                       ],
                     ),
@@ -281,6 +298,49 @@ class _ProfileTile extends StatelessWidget {
             const Icon(Icons.chevron_right, size: 18, color: ZendColors.textSecondary),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileToggleTile extends StatelessWidget {
+  const _ProfileToggleTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: ZendColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: ZendColors.textPrimary,
+              ),
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeColor: ZendColors.accentBright,
+          ),
+        ],
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../request/payment_request.dart';
 import '../request/request_utils.dart';
 import 'pool.dart';
+import 'pool_detail_screen.dart';
 
 Future<void> showCreatePoolDrawer(
   BuildContext context, {
@@ -32,16 +33,29 @@ class CreatePoolDrawer extends StatefulWidget {
   State<CreatePoolDrawer> createState() => _CreatePoolDrawerState();
 }
 
+List<PoolParticipant> _buildRecentPoolContacts(
+  List<ZendTransaction> transactions,
+) {
+  final seen = <String>{};
+  final contacts = <PoolParticipant>[];
+
+  for (final tx in transactions) {
+    final raw = tx.name.trim();
+    final tag = raw.startsWith('@') ? raw.substring(1) : raw;
+    if (tag.isEmpty || seen.contains(tag)) continue;
+    seen.add(tag);
+    contacts.add(PoolParticipant(
+      displayName: raw.isEmpty ? '@$tag' : raw,
+      avatarLabel: tx.avatarLabel,
+      isExternal: false,
+    ));
+  }
+
+  return contacts;
+}
+
 class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
   static const int _nameMaxLength = 50;
-
-  // Known contacts — users we've previously interacted with (mock data).
-  static const List<PoolParticipant> _knownContacts = [
-    PoolParticipant(displayName: '@amara_n', avatarLabel: 'A'),
-    PoolParticipant(displayName: '@tunde_b', avatarLabel: 'T'),
-    PoolParticipant(displayName: '@david.ojo', avatarLabel: 'D'),
-    PoolParticipant(displayName: '@carissa', avatarLabel: 'C'),
-  ];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _zendUserController = TextEditingController();
@@ -63,18 +77,49 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     super.dispose();
   }
 
-  void _addZendUser(String input) {
+  Future<void> _addZendUser(String input) async {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return;
-    setState(() {
-      _participants.add(PoolParticipant(
-        displayName: '@$trimmed',
-        avatarLabel: trimmed[0].toUpperCase(),
-        isExternal: false,
-      ));
-      _participantError = null;
-      _zendUserController.clear();
-    });
+
+    final normalized = trimmed.toLowerCase();
+    final searchTag = normalized.startsWith('@')
+        ? normalized.substring(1)
+        : normalized;
+
+    if (searchTag.length < 3) {
+      setState(() {
+        _participantError = 'Username must be at least 3 characters';
+      });
+      return;
+    }
+
+    try {
+      final model = ZendScope.of(context);
+      final resolved = await model.zendtagService.resolve(searchTag);
+
+      final displayName = resolved.displayName.trim().isEmpty
+          ? '@${resolved.zendtag}'
+          : resolved.displayName;
+      final avatarLabel = displayName.isNotEmpty
+          ? displayName[0].toUpperCase()
+          : resolved.zendtag.isNotEmpty
+              ? resolved.zendtag[0].toUpperCase()
+              : '?';
+
+      setState(() {
+        _participants.add(PoolParticipant(
+          displayName: displayName,
+          avatarLabel: avatarLabel,
+          isExternal: false,
+        ));
+        _participantError = null;
+        _zendUserController.clear();
+      });
+    } catch (e) {
+      setState(() {
+        _participantError = 'User not found';
+      });
+    }
   }
 
   void _addExternalContact(String input) {
@@ -179,11 +224,20 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     }
 
     model.addPool(pool);
-    Navigator.of(context).pop();
+
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => PoolDetailScreen(pool: pool),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+    final recentContacts = _buildRecentPoolContacts(model.recentTransactions);
     final nameRemaining = _nameMaxLength - _nameController.text.length;
 
     return Container(
@@ -301,29 +355,42 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               const SizedBox(height: ZendSpacing.xs),
 
               // Known Zend contacts — tap to toggle selection
-              _SectionLabel('Zend users'),
+              _SectionLabel('Recent Zend users'),
               const SizedBox(height: ZendSpacing.xxs),
-              ..._knownContacts.map((contact) {
-                final isSelected = _participants.any(
-                  (p) => p.displayName == contact.displayName && !p.isExternal,
-                );
-                return _SelectableContactTile(
-                  participant: contact,
-                  selected: isSelected,
-                  onTap: () {
-                    setState(() {
-                      if (isSelected) {
-                        _participants.removeWhere(
-                          (p) => p.displayName == contact.displayName && !p.isExternal,
-                        );
-                      } else {
-                        _participants.add(contact);
-                        _participantError = null;
-                      }
-                    });
-                  },
-                );
-              }),
+              if (recentContacts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No recent Zend users yet',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 13,
+                      color: ZendColors.textSecondary,
+                    ),
+                  ),
+                )
+              else
+                ...recentContacts.map((contact) {
+                  final isSelected = _participants.any(
+                    (p) => p.displayName == contact.displayName && !p.isExternal,
+                  );
+                  return _SelectableContactTile(
+                    participant: contact,
+                    selected: isSelected,
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _participants.removeWhere(
+                            (p) => p.displayName == contact.displayName && !p.isExternal,
+                          );
+                        } else {
+                          _participants.add(contact);
+                          _participantError = null;
+                        }
+                      });
+                    },
+                  );
+                }),
               const SizedBox(height: ZendSpacing.xs),
 
               // Add new Zend user by username

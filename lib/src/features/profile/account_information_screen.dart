@@ -10,6 +10,10 @@ class AccountInformationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
+    final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
+        ? model.currentDisplayName!
+        : (model.username.isNotEmpty ? model.username : 'Zend User');
+    final username = model.username.isNotEmpty ? '@${model.username}' : 'Not set';
 
     return Scaffold(
       backgroundColor: ZendColors.bgPrimary,
@@ -30,13 +34,13 @@ class AccountInformationScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _InfoRow(label: 'Full name', value: 'Blessed Oyinbo'),
+                    _InfoRow(label: 'Full name', value: displayName),
                     const SizedBox(height: 14),
-                    _InfoRow(label: 'Username', value: '@${model.username}'),
+                    _InfoRow(label: 'Username', value: username),
                     const SizedBox(height: 14),
-                    const _InfoRow(label: 'Email', value: 'blessed@zendfi.com'),
+                    const _InfoRow(label: 'Email', value: 'Not set'),
                     const SizedBox(height: 14),
-                    const _InfoRow(label: 'Phone', value: '+234 810 000 2345'),
+                    const _InfoRow(label: 'Phone', value: 'Not set'),
                   ],
                 ),
               ),

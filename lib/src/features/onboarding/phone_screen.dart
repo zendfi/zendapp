@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -14,15 +15,50 @@ class PhoneScreen extends StatefulWidget {
 }
 
 class _PhoneScreenState extends State<PhoneScreen> {
-  final _controller = TextEditingController(text: '2025550142');
-  static const _countryCode = '+44';
+  final _controller = TextEditingController();
+  String _countryCode = _countryOptions.first.dialCode;
+
+  Future<void> _pickCountryCode() async {
+    final selected = await showModalBottomSheet<_CountryOption>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView.separated(
+            itemCount: _countryOptions.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final option = _countryOptions[index];
+              return ListTile(
+                title: Text(option.name, style: const TextStyle(fontFamily: 'DMSans')),
+                subtitle: Text(option.isoCode, style: const TextStyle(color: ZendColors.textSecondary)),
+                trailing: Text(option.dialCode, style: const TextStyle(fontFamily: 'DMMono')),
+                onTap: () => Navigator.of(context).pop(option),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+    setState(() => _countryCode = selected.dialCode);
+  }
 
   Future<void> _onContinue() async {
     final rawNumber = _controller.text.trim();
     if (rawNumber.isEmpty) return;
 
-    final digits = rawNumber.startsWith('0') ? rawNumber.substring(1) : rawNumber;
-    final phoneNumber = '$_countryCode$digits';
+    final digitsOnly = rawNumber.replaceAll(RegExp(r'\D'), '');
+    final normalized = digitsOnly.startsWith('0') ? digitsOnly.substring(1) : digitsOnly;
+    if (normalized.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid phone number.')),
+      );
+      return;
+    }
+
+    final phoneNumber = '$_countryCode$normalized';
 
     final model = ZendScope.of(context);
     final navigator = Navigator.of(context);
@@ -35,6 +71,10 @@ class _PhoneScreenState extends State<PhoneScreen> {
       if (!mounted) return;
       navigator.push(zendRoute(page: const OtpScreen()));
     } on ApiException catch (e) {
+      model.stopLoading();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+    } on ZendException catch (e) {
       model.stopLoading();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
@@ -79,12 +119,13 @@ class _PhoneScreenState extends State<PhoneScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        const _CountryPill(code: _countryCode),
+                        _CountryPill(code: _countryCode, onTap: _pickCountryCode),
                         const SizedBox(width: 14),
                         Expanded(
                           child: TextField(
                             controller: _controller,
                             keyboardType: TextInputType.phone,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             style: const TextStyle(
                               fontFamily: 'DMMono',
                               fontSize: 24,
@@ -121,41 +162,67 @@ class _PhoneScreenState extends State<PhoneScreen> {
 }
 
 class _CountryPill extends StatelessWidget {
-  const _CountryPill({required this.code});
+  const _CountryPill({required this.code, required this.onTap});
 
   final String code;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: ZendColors.bgSecondary,
-        borderRadius: BorderRadius.circular(ZendRadii.pill),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: const BoxDecoration(
-              color: ZendColors.bgDeep,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(ZendRadii.pill),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: ZendColors.bgSecondary,
+          borderRadius: BorderRadius.circular(ZendRadii.pill),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                color: ZendColors.bgDeep,
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright)),
+              ),
             ),
-            child: const Center(
-              child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright)),
+            const SizedBox(width: 8),
+            Text(
+              code,
+              style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            code,
-            style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down, size: 18),
-        ],
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down, size: 18),
+          ],
+        ),
       ),
     );
   }
 }
+
+class _CountryOption {
+  const _CountryOption(this.name, this.dialCode, this.isoCode);
+
+  final String name;
+  final String dialCode;
+  final String isoCode;
+}
+
+const List<_CountryOption> _countryOptions = [
+  _CountryOption('Nigeria', '+234', 'NG'),
+  _CountryOption('United States', '+1', 'US'),
+  _CountryOption('United Kingdom', '+44', 'GB'),
+  _CountryOption('Ghana', '+233', 'GH'),
+  _CountryOption('Kenya', '+254', 'KE'),
+  _CountryOption('South Africa', '+27', 'ZA'),
+  _CountryOption('India', '+91', 'IN'),
+  _CountryOption('Canada', '+1', 'CA'),
+  _CountryOption('France', '+33', 'FR'),
+  _CountryOption('Germany', '+49', 'DE'),
+];

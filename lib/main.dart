@@ -5,6 +5,7 @@ import 'app.dart';
 import 'src/core/zend_state.dart';
 import 'src/services/api_client.dart';
 import 'src/services/auth_service.dart';
+import 'src/services/recent_contacts_store.dart';
 import 'src/services/wallet_service.dart';
 import 'src/services/zendtag_service.dart';
 import 'src/services/transfer_service.dart';
@@ -44,6 +45,10 @@ void main() async {
 
   final fxService = FxService(apiClient: apiClient);
 
+  final recentContactsStore = RecentContactsStore(
+    secureStorage: secureStorage,
+  );
+
   // ── Create app model with injected services ──
   final model = ZendAppModel(
     authService: authService,
@@ -51,7 +56,10 @@ void main() async {
     zendtagService: zendtagService,
     transferService: transferService,
     fxService: fxService,
+    recentContactsStore: recentContactsStore,
   );
+
+  await model.hydrateRecentContacts();
 
   runApp(ZendApp(model: model));
 }

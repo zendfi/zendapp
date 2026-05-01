@@ -234,7 +234,7 @@ class ApiClient {
           'recipient_zendtag': recipientZendtag,
           'amount_usdc': amountUsdc,
           'partially_signed_tx': partiallySignedTxB64,
-          'note': note,
+          if (note != null) 'note': note,
         },
       );
       return TransferResponse.fromJson(response.data as Map<String, dynamic>);
@@ -251,8 +251,8 @@ class ApiClient {
       final response = await _dio.get(
         '/api/zend/transfer/history',
         queryParameters: {
-          'cursor': cursor,
-          'limit': limit,
+          if (cursor != null) 'cursor': cursor,
+          if (limit != null) 'limit': limit,
         },
       );
       return TransferHistoryResponse.fromJson(
@@ -274,6 +274,17 @@ class ApiClient {
       );
     } on DioException catch (e) {
       throw e.error ?? e;
+      }
+    }
+
+    Future<UserProfileResponse> getCurrentUser() async {
+      try {
+        final response = await _dio.get('/api/zend/user/me');
+        return UserProfileResponse.fromJson(
+          response.data as Map<String, dynamic>,
+        );
+      } on DioException catch (e) {
+        throw e.error ?? e;
+      }
     }
   }
-}

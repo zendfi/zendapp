@@ -3,7 +3,6 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'phone_screen.dart';
-import 'sign_in_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -52,7 +51,7 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     TextButton(
                       onPressed: () {
-                        pushZendSlide(context, const SignInScreen());
+                        pushZendSlide(context, const PhoneScreen());
                       },
                       child: const Text(
                         'I already have an account',

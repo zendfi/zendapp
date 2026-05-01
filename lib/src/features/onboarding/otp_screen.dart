@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -48,6 +49,27 @@ class _OtpScreenState extends State<OtpScreen> {
       focusNode.dispose();
     }
     super.dispose();
+  }
+
+  void _focusPrevious(int index) {
+    if (index <= 0) return;
+    _controllers[index - 1].clear();
+    _focusNodes[index - 1].requestFocus();
+  }
+
+  void _focusNext(int index) {
+    if (index >= _controllers.length - 1) return;
+    _focusNodes[index + 1].requestFocus();
+  }
+
+  void _handleBackspace(int index) {
+    final current = _controllers[index];
+    if (current.text.isNotEmpty) {
+      current.clear();
+      return;
+    }
+
+    _focusPrevious(index);
   }
 
   Future<void> _onContinue() async {
@@ -140,30 +162,35 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Sent to +234 ••• ••• 4521',
+                      'Sent to your phone number',
                       style: TextStyle(color: ZendColors.textSecondary, fontSize: 14),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
                     Row(
                       children: List.generate(6, (index) {
                         return Expanded(
                           child: Padding(
-                            padding: EdgeInsets.only(right: index == 5 ? 0 : 8),
+                            padding: EdgeInsets.only(right: index == 5 ? 0 : 6),
                             child: _OtpBox(
                               controller: _controllers[index],
                               focusNode: _focusNodes[index],
                               onChanged: (value) {
-                                if (value.isNotEmpty && index < 5) {
-                                  _focusNodes[index + 1].requestFocus();
+                                if (value.isNotEmpty) {
+                                  if (value.length > 1) {
+                                    _controllers[index].text = value.characters.last.toString();
+                                    _controllers[index].selection = const TextSelection.collapsed(offset: 1);
+                                  }
+                                  _focusNext(index);
                                 }
                               },
+                              onBackspace: () => _handleBackspace(index),
                             ),
                           ),
                         );
                       }),
                     ),
                     if (_errorText != null) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
                         _errorText!,
                         style: const TextStyle(
@@ -173,7 +200,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     Text(
                       'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
                       style: const TextStyle(
@@ -200,30 +227,59 @@ class _OtpScreenState extends State<OtpScreen> {
 }
 
 class _OtpBox extends StatelessWidget {
-  const _OtpBox({required this.controller, required this.focusNode, required this.onChanged});
+  const _OtpBox({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.onBackspace,
+  });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
+  final VoidCallback onBackspace;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 64,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        keyboardType: TextInputType.number,
-        style: const TextStyle(fontFamily: 'DMSans', fontSize: 20, fontWeight: FontWeight.w600),
-        decoration: const InputDecoration(
-          counterText: '',
-          filled: true,
-          fillColor: ZendColors.bgSecondary,
-          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(ZendRadii.lg)), borderSide: BorderSide.none),
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (controller.text.isEmpty) {
+            onBackspace();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: SizedBox(
+        height: 56,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          maxLength: 1,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: const TextStyle(
+            fontFamily: 'DMSans',
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: ZendColors.textPrimary,
+          ),
+          decoration: const InputDecoration(
+            counterText: '',
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            filled: true,
+            fillColor: ZendColors.bgSecondary,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(ZendRadii.lg)),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          onChanged: onChanged,
         ),
-        onChanged: onChanged,
       ),
     );
   }

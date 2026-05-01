@@ -100,8 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final areaHeight = height - appBarBottom;
                     final sheetTopInArea = (sheetTopY - appBarBottom).clamp(0.0, areaHeight);
 
-                    // Balance widget height estimate (label + balance + yield ≈ 110px expanded, ≈ 36px collapsed).
-                    final balanceHeight = lerpDouble(110, 36, t) ?? 110;
+                    // Balance widget height estimate (label + balance + yield ≈ 120px expanded, ≈ 40px collapsed).
+                    final balanceHeight = lerpDouble(120, 40, t) ?? 120;
 
                     // Expanded: center in the visible gap between header and sheet.
                     // Collapsed: pin 4px below the top of this area.
@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const collapsedTop = 4.0;
                     final balanceTop = lerpDouble(expandedTop.clamp(0, areaHeight), collapsedTop, t) ?? expandedTop;
 
-                    final balanceSize = lerpDouble(68, 28, t) ?? 68;
+                    final balanceSize = lerpDouble(88, 32, t) ?? 88;
                     final yieldOpacity = (1 - t).clamp(0.0, 1.0);
 
                     // Horizontal: centered when expanded, left-aligned when collapsed.
@@ -154,9 +154,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: lerpDouble(6, 0, t) ?? 6),
                             Opacity(
                               opacity: yieldOpacity,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 20),
-                                child: Text('USDC balance', style: TextStyle(color: ZendColors.accentPop, fontSize: 12)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Text(
+                                  '${model.monthlyYield.toStringAsFixed(1)}% earned this month',
+                                  style: const TextStyle(color: ZendColors.accentPop, fontSize: 12),
+                                ),
                               ),
                             ),
                           ],

@@ -7,7 +7,10 @@ import 'src/design/zend_theme.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/onboarding/splash_screen.dart';
 import 'src/features/onboarding/welcome_screen.dart';
-import 'src/features/shell/zend_shell.dart';
+import 'src/features/onboarding/device_unlock_screen.dart';
+import 'src/features/onboarding/pin_restore_screen.dart';
+import 'src/features/onboarding/pin_setup_screen.dart';
+
 import 'src/navigation/zend_routes.dart';
 
 class ZendApp extends StatelessWidget {
@@ -17,24 +20,29 @@ class ZendApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = buildZendTheme();
-
     return ZendScope(
       notifier: model,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Zend! App',
-        theme: theme,
-        home: _SplashWithSessionRestore(model: model),
-        localeResolutionCallback: (locale, _) {
-          if (locale != null) {
-            scheduleMicrotask(() => model.setLocale(locale));
-          }
-          return locale;
-        },
-        builder: (context, child) {
-          return LoadingOverlay(
-            child: child ?? const SizedBox(),
+      child: ListenableBuilder(
+        listenable: model,
+        builder: (context, _) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Zend! App',
+            theme: buildZendTheme(),
+            darkTheme: buildZendDarkTheme(),
+            themeMode: model.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: _SplashWithSessionRestore(model: model),
+            localeResolutionCallback: (locale, _) {
+              if (locale != null) {
+                scheduleMicrotask(() => model.setLocale(locale));
+              }
+              return locale;
+            },
+            builder: (context, child) {
+              return LoadingOverlay(
+                child: child ?? const SizedBox(),
+              );
+            },
           );
         },
       ),
@@ -42,8 +50,6 @@ class ZendApp extends StatelessWidget {
   }
 }
 
-/// Wraps the SplashScreen and performs session restoration during the splash
-/// timer. Navigates to ZendShell if authenticated, WelcomeScreen otherwise.
 class _SplashWithSessionRestore extends StatefulWidget {
   const _SplashWithSessionRestore({required this.model});
 
@@ -63,25 +69,34 @@ class _SplashWithSessionRestoreState
   }
 
   Future<void> _restoreSession() async {
-    bool authenticated = false;
-    try {
-      authenticated = await widget.model.authService.tryRestoreSession();
-    } catch (_) {
-      authenticated = false;
-    }
-
+    final hasToken = await widget.model.authService.isAuthenticated();
     if (!mounted) return;
 
-    if (authenticated) {
-      pushReplacementZendSlide(context, const ZendShell());
-    } else {
+    if (hasToken) {
+      await widget.model.restoreUserIdentity();
+      if (!mounted) return;
+    }
+
+    if (!hasToken) {
       pushReplacementZendSlide(context, const WelcomeScreen());
+      return;
+    }
+
+    final hasLocalKeypair = await widget.model.walletService.hasLocalKeypair();
+    final hasPinSetup = await widget.model.walletService.hasPinSetup();
+    if (!mounted) return;
+
+    if (hasLocalKeypair && hasPinSetup) {
+      pushReplacementZendSlide(context, const DeviceUnlockScreen());
+    } else if (hasLocalKeypair) {
+      pushReplacementZendSlide(context, const PinSetupScreen());
+    } else {
+      pushReplacementZendSlide(context, const PinRestoreScreen());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Render the existing SplashScreen visuals while session restores
     return const SplashScreen();
   }
 }
