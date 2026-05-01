@@ -20,11 +20,17 @@ class LoadingOverlay extends StatelessWidget {
         return Stack(
           children: [
             child,
-            if (model.isLoading)
+            if (model.isLoading) ...[
+              // Dismiss keyboard whenever the loader is shown
+              Builder(builder: (ctx) {
+                FocusScope.of(ctx).unfocus();
+                return const SizedBox.shrink();
+              }),
               LoaderScreen(
                 message: model.loadingMessage,
                 showLogo: true,
               ),
+            ],
           ],
         );
       },
