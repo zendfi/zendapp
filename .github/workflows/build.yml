@@ -10,13 +10,15 @@ jobs:
   build:
     name: Flutter Android Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create GitHub Releases
 
     steps:
       # ── Checkout ─────────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Java 17 (required by Gradle) ──────────────────────────────────────────
+      # ── Java 17 ───────────────────────────────────────────────────────────────
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -59,17 +61,46 @@ jobs:
           storeFile=zend.jks
           EOF
 
-      # ── Build signed release APK ──────────────────────────────────────────────
+      # ── Build ─────────────────────────────────────────────────────────────────
       - name: Build release APK
         run: flutter build apk --release
 
-      # ── Upload artifact ───────────────────────────────────────────────────────
-      - name: Upload APK
+      # Rename APK to include build number for clarity
+      - name: Rename APK
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk
+
+      # ── Upload artifact (all branches) ────────────────────────────────────────
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zendapp-${{ github.ref_name }}-${{ github.sha }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: zendapp-${{ github.ref_name }}-build${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk
           retention-days: 30
+
+      # ── GitHub Release (main branch only) ─────────────────────────────────────
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: build-${{ github.run_number }}
+          name: "ZendApp build #${{ github.run_number }}"
+          body: |
+            **Automated release** from commit `${{ github.sha }}`
+
+            Branch: `${{ github.ref_name }}`
+            Built: ${{ github.event.head_commit.timestamp }}
+
+            ### What's in this build
+            ${{ github.event.head_commit.message }}
+
+            ---
+            Install on Android: download `zendapp-${{ github.run_number }}.apk` below.
+          artifacts: "build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk"
+          artifactContentType: application/vnd.android.package-archive
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Comment on PR ─────────────────────────────────────────────────────────
       - name: Comment APK link on PR
@@ -82,5 +113,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ **Release APK built**\n\n[Download from Actions](${run_url}) → Artifacts section (kept 30 days)`
+              body: `✅ **Release APK built — build #${{ github.run_number }}**\n\n[Download from Actions](${run_url}) → Artifacts section (kept 30 days)`
             });

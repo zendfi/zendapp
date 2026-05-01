@@ -6,16 +6,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../firebase_options.dart';
 import 'api_client.dart';
 
-/// Handles FCM token registration, permission requests, and foreground
-/// notification display for ZendApp.
-///
-/// Architecture:
-/// - Background/terminated messages are handled by [firebaseMessagingBackgroundHandler]
-///   (top-level function, registered before runApp)
-/// - Foreground messages are shown as local notifications via flutter_local_notifications
-/// - FCM token is registered with the backend on login and refreshed automatically
 class PushNotificationService {
   final ApiClient _apiClient;
 
@@ -29,10 +22,6 @@ class PushNotificationService {
   PushNotificationService({required ApiClient apiClient})
       : _apiClient = apiClient;
 
-  /// Initialize Firebase, request permissions, set up notification channels,
-  /// and register the FCM token with the backend.
-  ///
-  /// Call this once after the user is authenticated.
   Future<void> initialize() async {
     await _setupLocalNotifications();
     await _requestPermissions();
@@ -41,12 +30,9 @@ class PushNotificationService {
     _listenForForegroundMessages();
   }
 
-  /// Stop listening for notifications (call on logout).
   void dispose() {
     FirebaseMessaging.onMessage.drain<RemoteMessage>();
   }
-
-  // ── Private helpers ──────────────────────────────────────────────────────
 
   Future<void> _setupLocalNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -65,7 +51,6 @@ class PushNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // Create the Android notification channel
     const channel = AndroidNotificationChannel(
       _androidChannelId,
       _androidChannelName,
@@ -114,7 +99,6 @@ class PushNotificationService {
       final notification = message.notification;
       if (notification == null) return;
 
-      // Show as a local notification while the app is in the foreground
       _localNotifications.show(
         notification.hashCode,
         notification.title,
@@ -166,11 +150,10 @@ class PushNotificationService {
 /// Must be a top-level function (not a class method) — Flutter requirement.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Firebase must be initialized before any Firebase calls in background isolate
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   if (kDebugMode) {
     debugPrint('PushNotifications: background message received: ${message.messageId}');
   }
-  // Background messages with a notification payload are shown automatically by FCM.
-  // Data-only messages can be processed here if needed.
 }
