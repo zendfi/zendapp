@@ -5,7 +5,6 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
 import 'account_information_screen.dart';
-import 'change_password_screen.dart';
 import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
@@ -27,6 +26,7 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ── Back button ──
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
               child: Row(
@@ -39,6 +39,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
 
+            // ── User card ──
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: Container(
@@ -102,9 +103,10 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            // ── Scrollable settings ──
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -130,9 +132,7 @@ class ProfileScreen extends StatelessWidget {
                         _ProfileTile(
                           icon: Icons.palette_outlined,
                           label: 'Customise payment page',
-                          onTap: () {
-                            // TODO: Navigate to payment page customisation screen
-                          },
+                          onTap: () {},
                         ),
                       ],
                     ),
@@ -155,11 +155,6 @@ class ProfileScreen extends StatelessWidget {
                     _SettingsGroup(
                       tiles: [
                         _ProfileTile(
-                          icon: Icons.lock_outline,
-                          label: 'Change password',
-                          onTap: () => pushZendSlide(context, const ChangePasswordScreen()),
-                        ),
-                        _ProfileTile(
                           icon: Icons.pin_outlined,
                           label: 'Change PIN',
                           onTap: () => _showChangePinDialog(context),
@@ -178,7 +173,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 32),
                     GestureDetector(
                       onTap: () => _confirmLogout(context),
                       child: Container(
@@ -207,7 +202,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),

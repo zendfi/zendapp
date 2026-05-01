@@ -13,36 +13,53 @@ import 'src/features/onboarding/pin_setup_screen.dart';
 
 import 'src/navigation/zend_routes.dart';
 
-class ZendApp extends StatelessWidget {
+class ZendApp extends StatefulWidget {
   const ZendApp({super.key, required this.model});
 
   final ZendAppModel model;
 
   @override
+  State<ZendApp> createState() => _ZendAppState();
+}
+
+class _ZendAppState extends State<ZendApp> {
+  @override
+  void initState() {
+    super.initState();
+    widget.model.addListener(_onModelChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.model.removeListener(_onModelChanged);
+    super.dispose();
+  }
+
+  void _onModelChanged() {
+    // Only rebuild when isDarkMode changes to avoid resetting the navigator
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ZendScope(
-      notifier: model,
-      child: ListenableBuilder(
-        listenable: model,
-        builder: (context, _) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Zend! App',
-            theme: buildZendTheme(),
-            darkTheme: buildZendDarkTheme(),
-            themeMode: model.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: _SplashWithSessionRestore(model: model),
-            localeResolutionCallback: (locale, _) {
-              if (locale != null) {
-                scheduleMicrotask(() => model.setLocale(locale));
-              }
-              return locale;
-            },
-            builder: (context, child) {
-              return LoadingOverlay(
-                child: child ?? const SizedBox(),
-              );
-            },
+      notifier: widget.model,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Zend! App',
+        theme: buildZendTheme(),
+        darkTheme: buildZendDarkTheme(),
+        themeMode: widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        home: _SplashWithSessionRestore(model: widget.model),
+        localeResolutionCallback: (locale, _) {
+          if (locale != null) {
+            scheduleMicrotask(() => widget.model.setLocale(locale));
+          }
+          return locale;
+        },
+        builder: (context, child) {
+          return LoadingOverlay(
+            child: child ?? const SizedBox(),
           );
         },
       ),

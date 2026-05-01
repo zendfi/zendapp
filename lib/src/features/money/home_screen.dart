@@ -105,9 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Expanded: center in the visible gap between header and sheet.
                     // Collapsed: pin 4px below the top of this area.
-                    final expandedTop = (sheetTopInArea - balanceHeight) / 2;
+                    final expandedTop = ((sheetTopInArea - balanceHeight) / 2).clamp(0.0, areaHeight);
                     const collapsedTop = 4.0;
-                    final balanceTop = lerpDouble(expandedTop.clamp(0, areaHeight), collapsedTop, t) ?? expandedTop;
+                    final balanceTop = lerpDouble(expandedTop, collapsedTop, t) ?? expandedTop;
 
                     final balanceSize = lerpDouble(88, 32, t) ?? 88;
                     final yieldOpacity = (1 - t).clamp(0.0, 1.0);
