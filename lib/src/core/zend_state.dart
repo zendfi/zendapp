@@ -10,7 +10,9 @@ import '../models/api_models.dart';
 import '../models/recent_contact.dart';
 import '../services/auth_service.dart';
 import '../services/fx_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/recent_contacts_store.dart';
+import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
@@ -70,6 +72,8 @@ class ZendAppModel extends ChangeNotifier {
     required this.transferService,
     required this.fxService,
     required this.recentContactsStore,
+    required this.sseService,
+    required this.pushNotificationService,
   });
 
   final AuthService authService;
@@ -78,32 +82,110 @@ class ZendAppModel extends ChangeNotifier {
   final TransferService transferService;
   final FxService fxService;
   final RecentContactsStore recentContactsStore;
+  final SseService sseService;
+  final PushNotificationService pushNotificationService;
 
-  // ── Background polling ──
+  // ── SSE subscription ──
+  StreamSubscription<SseEvent>? _sseSubscription;
+
+  // ── Fallback polling (used when SSE is unavailable) ──
   Timer? _pollingTimer;
-  static const Duration _pollingInterval = Duration(seconds: 15);
+  static const Duration _pollingInterval = Duration(seconds: 30);
+  bool _sseConnected = false;
 
-  /// Start polling balance + history every 15 seconds.
-  /// Call this when the user is authenticated and the app is in the foreground.
-  void startPolling() {
+  /// Start real-time updates via SSE.
+  /// Falls back to polling if SSE fails to connect within 5 seconds.
+  void startRealTimeUpdates() {
+    _stopAll();
+    _sseConnected = false;
+
+    // Start SSE
+    sseService.start();
+    _sseSubscription = sseService.events.listen(
+      _onSseEvent,
+      onError: (_) => _startFallbackPolling(),
+      onDone: () {
+        // SSE stream ended — start fallback polling until SSE reconnects
+        if (isAuthenticated) _startFallbackPolling();
+      },
+    );
+
+    // Start fallback polling immediately — it will be cancelled if SSE delivers
+    // its first event within the polling interval, confirming SSE is working.
+    _startFallbackPolling();
+  }
+
+  void _onSseEvent(SseEvent event) {
+    // SSE is working — cancel fallback polling
+    if (!_sseConnected) {
+      _sseConnected = true;
+      _pollingTimer?.cancel();
+      _pollingTimer = null;
+    }
+
+    switch (event.type) {
+      case SseEventType.transferUpdate:
+        // A transfer happened — refresh both balance and history
+        unawaited(fetchBalance());
+        unawaited(fetchHistory());
+      case SseEventType.transferFailed:
+        // A pending transfer failed — refresh history so status is accurate
+        unawaited(fetchHistory());
+      case SseEventType.balanceUpdate:
+        // Direct balance update from server — re-fetch for accuracy
+        // (empty usdc_balance means "please re-fetch")
+        final raw = event.data['usdc_balance'] as String?;
+        if (raw != null && raw.isNotEmpty) {
+          final parsed = double.tryParse(raw);
+          if (parsed != null) {
+            balance = parsed;
+            notifyListeners();
+          }
+        } else {
+          unawaited(fetchBalance());
+        }
+      case SseEventType.refreshRequired:
+        // Server told us we missed events — do a full refresh
+        unawaited(fetchBalance());
+        unawaited(fetchHistory());
+      default:
+        break;
+    }
+  }
+
+  void _startFallbackPolling() {
+    if (!isAuthenticated) return;
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(_pollingInterval, (_) {
-      if (isAuthenticated) {
-        fetchBalance();
-        fetchHistory();
+      if (isAuthenticated && !_sseConnected) {
+        unawaited(fetchBalance());
+        unawaited(fetchHistory());
       }
     });
   }
 
-  /// Stop background polling (e.g. on logout or app background).
-  void stopPolling() {
+  /// Stop all real-time updates (SSE + polling).
+  void stopRealTimeUpdates() {
+    _stopAll();
+    sseService.stop();
+  }
+
+  void _stopAll() {
+    _sseSubscription?.cancel();
+    _sseSubscription = null;
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _sseConnected = false;
   }
+
+  // Keep these for backward compatibility — they now delegate to startRealTimeUpdates
+  void startPolling() => startRealTimeUpdates();
+  void stopPolling() => stopRealTimeUpdates();
 
   @override
   void dispose() {
-    stopPolling();
+    _stopAll();
+    sseService.dispose();
     super.dispose();
   }
 
@@ -290,6 +372,9 @@ class ZendAppModel extends ChangeNotifier {
     username = zendtag;
     notifyListeners();
     startPolling();
+    // Initialize push notifications now that the user is authenticated
+    // and we have a valid session token to register the FCM token with
+    unawaited(pushNotificationService.initialize());
   }
 
   Future<void> recordTransfer({

@@ -277,14 +277,27 @@ class ApiClient {
       }
     }
 
-    Future<UserProfileResponse> getCurrentUser() async {
-      try {
-        final response = await _dio.get('/api/zend/user/me');
-        return UserProfileResponse.fromJson(
-          response.data as Map<String, dynamic>,
-        );
-      } on DioException catch (e) {
-        throw e.error ?? e;
-      }
+  Future<UserProfileResponse> getCurrentUser() async {
+    try {
+      final response = await _dio.get('/api/zend/user/me');
+      return UserProfileResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
     }
   }
+
+  /// Register or refresh the FCM device token with the backend.
+  /// Called after login and whenever FCM issues a new token.
+  Future<void> registerFcmToken(String fcmToken) async {
+    try {
+      await _dio.post(
+        '/api/zend/devices/register',
+        data: {'fcm_token': fcmToken},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+}

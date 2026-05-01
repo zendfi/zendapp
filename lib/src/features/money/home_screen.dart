@@ -214,9 +214,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             sliver: SliverList(
                               delegate: SliverChildListDelegate([
                                 Row(children: [
-                                  Expanded(child: OutlineActionButton(label: 'Add money', onPressed: widget.onOpenReceive)),
+                                  Expanded(child: OutlineActionButton(label: 'Fund', onPressed: widget.onOpenReceive)),
                                   const SizedBox(width: 12),
-                                  Expanded(child: OutlineActionButton(label: 'Withdraw', onPressed: widget.onOpenSend)),
+                                  Expanded(child: OutlineActionButton(label: 'Send', onPressed: widget.onOpenSend)),
                                 ]),
                                 const SizedBox(height: 18),
                                 Row(children: [const Expanded(child: _YieldCard()), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),

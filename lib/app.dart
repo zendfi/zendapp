@@ -52,14 +52,14 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       if (widget.model.isAuthenticated) {
-        widget.model.startPolling();
+        widget.model.startRealTimeUpdates();
         // Immediate refresh on foreground so data is never stale
         unawaited(widget.model.fetchBalance());
         unawaited(widget.model.fetchHistory());
       }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
-      widget.model.stopPolling();
+      widget.model.stopRealTimeUpdates();
     }
   }
 

@@ -3,10 +3,12 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase / Google services
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.zendfi.app.zendapp"
+    namespace = "com.zendfi.zendapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.zendfi.app.zendapp"
+        applicationId = "com.zendfi.zendapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -41,4 +43,13 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Firebase BoM — manages compatible versions across all Firebase libraries
+    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+    // FCM for push notifications
+    implementation("com.google.firebase:firebase-messaging")
+    // Analytics (required by Firebase BoM)
+    implementation("com.google.firebase:firebase-analytics")
 }

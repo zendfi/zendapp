@@ -92,7 +92,7 @@ class _FundDrawer extends StatelessWidget {
             const ZendSheetHandle(),
             const SizedBox(height: 20),
             const Text(
-              'Fund Zend! App with your Link',
+              'Fund Zend App with your link',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 24,
