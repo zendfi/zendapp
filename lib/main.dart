@@ -9,6 +9,7 @@ import 'src/services/api_client.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/push_notification_service.dart';
 import 'src/services/recent_contacts_store.dart';
+import 'src/services/sound_service.dart';
 import 'src/services/sse_service.dart';
 import 'src/services/wallet_service.dart';
 import 'src/services/zendtag_service.dart';
@@ -25,6 +26,9 @@ void main() async {
 
   // Register background message handler (must be top-level function)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Pre-warm audio engine so first Zent chime plays instantly
+  SoundService.init().ignore();
 
   // ── Create shared dependencies ──
   const secureStorage = FlutterSecureStorage();

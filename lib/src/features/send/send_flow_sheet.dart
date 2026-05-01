@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/recent_contact.dart';
+import '../../services/sound_service.dart';
 
 enum SendStage { recipient, note, pin, processing, success, error }
 
@@ -216,6 +217,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       });
 
       HapticFeedback.mediumImpact();
+      // Play the magical Zent chime 🎵
+      unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
       if (!mounted) return;
       _pinAttempts++;
