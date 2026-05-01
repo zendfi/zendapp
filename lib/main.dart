@@ -22,12 +22,24 @@ const kApiBaseUrl = 'https://api-v2.zendfi.tech';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Catch any Flutter framework errors and log them instead of crashing silently
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exception}');
+    debugPrint('${details.stack}');
+  };
 
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    // Firebase init failure is non-fatal — app works without push notifications
+    debugPrint('Firebase init failed: $e');
+  }
 
+  // Pre-warm audio — completely non-fatal
   SoundService.init().ignore();
 
   const secureStorage = FlutterSecureStorage();
