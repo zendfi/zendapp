@@ -96,13 +96,21 @@ class PushNotificationService {
 
   void _listenForForegroundMessages() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final notification = message.notification;
-      if (notification == null) return;
+      // We use data-only messages so onMessage fires reliably in foreground.
+      // Title and body are in message.data, not message.notification.
+      final title = message.data['title'] as String? ??
+          message.notification?.title ??
+          'Zend';
+      final body = message.data['body'] as String? ??
+          message.notification?.body ??
+          '';
+
+      if (body.isEmpty) return;
 
       _localNotifications.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
+        message.hashCode,
+        title,
+        body,
         NotificationDetails(
           android: AndroidNotificationDetails(
             _androidChannelId,
@@ -111,6 +119,7 @@ class PushNotificationService {
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
+            playSound: true,
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,

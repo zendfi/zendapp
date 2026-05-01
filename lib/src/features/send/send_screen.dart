@@ -10,9 +10,11 @@ import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
 
 class SendScreen extends StatefulWidget {
-  const SendScreen({super.key, required this.onOpenRecipients});
+  const SendScreen({super.key, required this.onOpenRecipients, this.onTransferComplete});
 
-  final ValueChanged<double> onOpenRecipients;
+  final Future<void> Function(double) onOpenRecipients;
+  /// Called after a successful transfer so the keypad can be cleared
+  final VoidCallback? onTransferComplete;
 
   @override
   State<SendScreen> createState() => _SendScreenState();
@@ -87,6 +89,7 @@ class _SendScreenState extends State<SendScreen> {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.of(context).size.height < 760;
+    final veryCompact = MediaQuery.of(context).size.height < 600;
 
     return Container(
       color: ZendColors.bgDeep,
@@ -123,9 +126,16 @@ class _SendScreenState extends State<SendScreen> {
                     ],
                   ),
                   Expanded(
-                    child: Column(
-                      children: [
-                        SizedBox(height: compact ? 44 : 68),
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 60,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            children: [
+                        SizedBox(height: veryCompact ? 16 : compact ? 44 : 68),
                         GestureDetector(
                           onTap: () {},
                           child: Text(
@@ -164,8 +174,8 @@ class _SendScreenState extends State<SendScreen> {
                             ),
                           ),
                         const Spacer(),
-                        _Keypad(onTap: _onKey, keyHeight: compact ? 66 : 78),
-                        const SizedBox(height: 14),
+                        _Keypad(onTap: _onKey, keyHeight: veryCompact ? 48 : compact ? 56 : 78),
+                        SizedBox(height: veryCompact ? 6 : 14),
                         Row(
                           children: [
                             Expanded(child: _GlassPill(label: 'Pool', onTap: _parsedAmount > 0 ? () => showCreatePoolDrawer(context, targetAmount: _parsedAmount) : () {})),
@@ -184,11 +194,24 @@ class _SendScreenState extends State<SendScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: _PayButton(
-                            onTap: () => widget.onOpenRecipients(_parsedAmount),
+                            onTap: () async {
+                              final amount = _parsedAmount;
+                              await widget.onOpenRecipients(amount);
+                              // Clear keypad after sheet closes (success or cancel)
+                              if (mounted) {
+                                setState(() {
+                                  _digits = '';
+                                  _fxPreviewText = null;
+                                });
+                              }
+                            },
                           ),
                         ),
                         SizedBox(height: compact ? 0 : 2),
-                      ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],

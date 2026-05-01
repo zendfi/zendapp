@@ -228,9 +228,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: ZendColors.textSecondary)),
                                 ]),
                                 const SizedBox(height: 14),
-                                for (var i = 0; i < model.recentTransactions.length; i++) ...[
+                                for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
                                   _TransactionRow.fromTransaction(model.recentTransactions[i]),
-                                  if (i != model.recentTransactions.length - 1) const Divider(color: ZendColors.border),
+                                  if (i != model.recentTransactions.take(5).length - 1) const Divider(color: ZendColors.border),
                                 ],
                                 const SizedBox(height: 26),
                               ]),
