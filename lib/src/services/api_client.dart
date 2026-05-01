@@ -234,8 +234,8 @@ class ApiClient {
           'recipient_zendtag': recipientZendtag,
           'amount_usdc': amountUsdc,
           'partially_signed_tx': partiallySignedTxB64,
-          if (note != null) 'note': note,
-        },
+          'note': note,
+        }..removeWhere((_, v) => v == null),
       );
       return TransferResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -250,10 +250,10 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/transfer/history',
-        queryParameters: {
-          if (cursor != null) 'cursor': cursor,
-          if (limit != null) 'limit': limit,
-        },
+        queryParameters: <String, dynamic>{
+          'cursor': cursor,
+          'limit': limit,
+        }..removeWhere((_, v) => v == null),
       );
       return TransferHistoryResponse.fromJson(
         response.data as Map<String, dynamic>,

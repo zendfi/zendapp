@@ -375,3 +375,35 @@ class FxPreviewResponse {
     };
   }
 }
+
+class UserProfileResponse {
+  final String userId;
+  final String zendtag;
+  final String displayName;
+  final String? walletAddress;
+
+  UserProfileResponse({
+    required this.userId,
+    required this.zendtag,
+    required this.displayName,
+    this.walletAddress,
+  });
+
+  factory UserProfileResponse.fromJson(Map<String, dynamic> json) {
+    return UserProfileResponse(
+      userId: json['user_id'] as String,
+      zendtag: json['zendtag'] as String,
+      displayName: json['display_name'] as String,
+      walletAddress: json['wallet_address'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'zendtag': zendtag,
+      'display_name': displayName,
+      'wallet_address': walletAddress,
+    };
+  }
+}

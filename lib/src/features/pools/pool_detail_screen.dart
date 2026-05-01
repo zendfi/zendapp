@@ -127,43 +127,6 @@ class PoolDetailScreen extends StatelessWidget {
 
                   const SizedBox(height: ZendSpacing.xl),
 
-                  // ── Action buttons (Contribute & Manage) ──
-                  if (pool.status == PoolStatus.active)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            label: 'Contribute',
-                            icon: Icons.add_circle_outline,
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Contribute feature coming soon'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: ZendSpacing.md),
-                        Expanded(
-                          child: _ActionButton(
-                            label: 'Manage',
-                            icon: Icons.settings_outlined,
-                            isPrimary: true,
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Manage pool feature coming soon'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (pool.status == PoolStatus.active)
-                    const SizedBox(height: ZendSpacing.xl),
-
                   // ── Timeline section ──
                   _TimelineRow(
                     label: 'Created',
@@ -180,6 +143,68 @@ class PoolDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Bottom action buttons (fixed, no icons) ──
+            if (pool.status == PoolStatus.active)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Contribute feature coming soon')),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ZendColors.textPrimary,
+                          side: const BorderSide(color: ZendColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.lg),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Contribute',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: ZendSpacing.md),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Manage pool feature coming soon')),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ZendColors.accent,
+                          foregroundColor: ZendColors.textOnDeep,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.lg),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Manage',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -279,60 +304,4 @@ class _TimelineRow extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    this.isPrimary = false,
-  });
 
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool isPrimary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isPrimary ? ZendColors.accent : ZendColors.bgSecondary,
-      borderRadius: BorderRadius.circular(ZendRadii.md),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(ZendRadii.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ZendSpacing.md,
-            vertical: ZendSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(ZendRadii.md),
-            border: isPrimary
-                ? null
-                : Border.all(color: ZendColors.border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: isPrimary ? ZendColors.textOnDeep : ZendColors.textPrimary,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isPrimary ? ZendColors.textOnDeep : ZendColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

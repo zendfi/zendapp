@@ -338,7 +338,8 @@ class _ProfileToggleTile extends StatelessWidget {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: ZendColors.accentBright,
+            activeThumbColor: ZendColors.accentBright,
+            activeTrackColor: ZendColors.accentBright.withValues(alpha: 0.4),
           ),
         ],
       ),
