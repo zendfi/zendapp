@@ -8,6 +8,7 @@ import 'account_information_screen.dart';
 import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
+import 'customise_page_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -132,7 +133,7 @@ class ProfileScreen extends StatelessWidget {
                         _ProfileTile(
                           icon: Icons.palette_outlined,
                           label: 'Customise payment page',
-                          onTap: () {},
+                          onTap: () => pushZendSlide(context, const CustomisePageScreen()),
                         ),
                       ],
                     ),

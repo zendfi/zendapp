@@ -123,30 +123,58 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     if (!_canCreate) return;
 
     final model = ZendScope.of(context);
-    final requestId = generateRequestId();
-    final link = buildRequestLink(model.username, requestId);
+    final nav = Navigator.of(context);
+    final ctx = context;
 
-    final request = PaymentRequest(
-      id: requestId,
-      link: link,
-      amount: _amount,
-      description: _descriptionController.text.trim(),
-      createdAt: DateTime.now(),
-      expiryDate: _expiryDate,
-      customisation: _customisation,
-      status: PaymentRequestStatus.pending,
-    );
+    // Close the sheet first, then call the API
+    nav.pop();
 
-    model.addPaymentRequest(request);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      PaymentRequest request;
+      try {
+        final response = await model.walletService.apiClient.createPaymentRequest(
+          amountUsdc: _amount > 0 ? _amount : null,
+          description: _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+          expiresAt: _expiryDate,
+        );
 
-    Navigator.of(context).pop();
+        request = PaymentRequest(
+          id: response['id'] as String,
+          link: response['link_url'] as String,
+          amount: (response['amount_usdc'] as num?)?.toDouble() ?? _amount,
+          description: _descriptionController.text.trim(),
+          createdAt: DateTime.now(),
+          expiryDate: _expiryDate,
+          customisation: _customisation,
+          status: PaymentRequestStatus.pending,
+        );
+      } catch (_) {
+        // Fallback: generate client-side (offline mode)
+        final requestId = generateRequestId();
+        final link = buildRequestLink(model.username, requestId);
+        request = PaymentRequest(
+          id: requestId,
+          link: link,
+          amount: _amount,
+          description: _descriptionController.text.trim(),
+          createdAt: DateTime.now(),
+          expiryDate: _expiryDate,
+          customisation: _customisation,
+          status: PaymentRequestStatus.pending,
+        );
+      }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      pushZendSlide(
-        context,
-        RequestConfirmationScreen(paymentRequest: request),
-        rootNavigator: true,
-      );
+      model.addPaymentRequest(request);
+
+      if (ctx.mounted) {
+        pushZendSlide(
+          ctx,
+          RequestConfirmationScreen(paymentRequest: request),
+          rootNavigator: true,
+        );
+      }
     });
   }
 

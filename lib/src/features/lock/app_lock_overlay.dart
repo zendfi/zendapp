@@ -48,7 +48,7 @@ class _LockScreen extends StatefulWidget {
 }
 
 class _LockScreenState extends State<_LockScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   String _digits = '';
   int _attempts = 0;
   String? _errorMessage;

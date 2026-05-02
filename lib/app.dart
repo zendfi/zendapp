@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
+import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
 import 'src/features/onboarding/splash_screen.dart';
@@ -11,6 +12,7 @@ import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
+import 'src/features/send/send_flow_sheet.dart';
 
 import 'src/navigation/zend_routes.dart';
 
@@ -22,8 +24,11 @@ class ZendApp extends StatefulWidget {
   State<ZendApp> createState() => _ZendAppState();
 }
 
+final _navigatorKey = GlobalKey<NavigatorState>();
+
 class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   late ThemeMode _themeMode;
+  StreamSubscription<DeepLinkPayload>? _deepLinkSub;
 
   @override
   void initState() {
@@ -31,13 +36,46 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     _themeMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
     widget.model.addListener(_onModelChanged);
     WidgetsBinding.instance.addObserver(this);
+
+    _deepLinkSub = DeepLinkHandler.stream.listen(_handleDeepLink);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final initial = DeepLinkHandler.initialLink;
+      if (initial != null) _handleDeepLink(initial);
+    });
   }
 
   @override
   void dispose() {
+    _deepLinkSub?.cancel();
     widget.model.removeListener(_onModelChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _handleDeepLink(DeepLinkPayload payload) {
+    if (!widget.model.isAuthenticated) return;
+    if (widget.model.appLockService.isLocked) return;
+
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+
+    final amount = payload.amountUsdc ?? 0.0;
+    if (amount > 0) {
+      showSendFlowSheet(
+        context,
+        amount: amount,
+        prefilledRecipient: payload.zendtag,
+        prefilledNote: payload.note,
+      );
+    } else {
+      showSendFlowSheet(
+        context,
+        amount: 0,
+        prefilledRecipient: payload.zendtag,
+        prefilledNote: payload.note,
+      );
+    }
   }
 
   void _onModelChanged() {
@@ -54,19 +92,13 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       if (model.isAuthenticated) {
         model.startRealTimeUpdates();
-        // Immediate refresh on foreground so data is never stale
         unawaited(model.fetchBalance());
         unawaited(model.fetchHistory());
-        // Resume the inactivity timer (only if not already locked)
         model.appLockService.startTimer();
       }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
       model.stopRealTimeUpdates();
-      // Pause the timer while backgrounded — we lock on resume if too long
-      // has passed (handled by startTimer checking elapsed time on next resume).
-      // For simplicity we lock immediately on background so the app is always
-      // protected when the user returns after any absence.
       if (model.isAuthenticated) {
         model.appLockService.lock();
       }
@@ -80,6 +112,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Zend! App',
+        navigatorKey: _navigatorKey,
         theme: buildZendTheme(),
         darkTheme: buildZendDarkTheme(),
         themeMode: _themeMode,
@@ -91,14 +124,6 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           return locale;
         },
         builder: (context, child) {
-          // Layer order (bottom → top):
-          //   1. App content
-          //   2. LoadingOverlay (spinner)
-          //   3. AppLockOverlay (PIN screen — only visible when locked)
-          //
-          // Wrap with a Listener so any pointer event resets the inactivity
-          // timer. We use HitTestBehavior.translucent so the events still
-          // reach the widgets below.
           return Listener(
             behavior: HitTestBehavior.translucent,
             onPointerDown: (_) =>

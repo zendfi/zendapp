@@ -7,6 +7,7 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'src/core/zend_state.dart';
 import 'src/services/api_client.dart';
+import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/services/app_lock_service.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/push_notification_service.dart';
@@ -98,6 +99,8 @@ void main() async {
   );
 
   await model.hydrateRecentContacts();
+
+  await DeepLinkHandler.init();
 
   runApp(ZendApp(model: model));
 }

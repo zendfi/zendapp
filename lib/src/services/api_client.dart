@@ -300,4 +300,63 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── Payment requests ──────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> createPaymentRequest({
+    double? amountUsdc,
+    String? description,
+    DateTime? expiresAt,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/payment-requests',
+        data: {
+          'amount_usdc': amountUsdc,
+          'description': description,
+          'expires_at': expiresAt?.toIso8601String(),
+        }..removeWhere((_, v) => v == null),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> getPaymentRequests({String? status}) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/payment-requests',
+        queryParameters: <String, dynamic>{
+          'status': status,
+        }..removeWhere((_, v) => v == null),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Page customisation ────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getMyPageCustomisation() async {    try {
+      final response = await _dio.get('/api/zend/page/customisation');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateMyPageCustomisation(
+      Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.put(
+        '/api/zend/page/customisation',
+        data: data,
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 }

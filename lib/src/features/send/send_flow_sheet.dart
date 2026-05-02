@@ -12,7 +12,12 @@ import '../../services/sound_service.dart';
 
 enum SendStage { recipient, note, pin, processing, success, error }
 
-Future<void> showSendFlowSheet(BuildContext context, {required double amount}) {
+Future<void> showSendFlowSheet(
+  BuildContext context, {
+  required double amount,
+  String? prefilledRecipient,
+  String? prefilledNote,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -20,14 +25,25 @@ Future<void> showSendFlowSheet(BuildContext context, {required double amount}) {
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
-    builder: (_) => SendFlowSheet(amount: amount),
+    builder: (_) => SendFlowSheet(
+      amount: amount,
+      prefilledRecipient: prefilledRecipient,
+      prefilledNote: prefilledNote,
+    ),
   );
 }
 
 class SendFlowSheet extends StatefulWidget {
-  const SendFlowSheet({super.key, required this.amount});
+  const SendFlowSheet({
+    super.key,
+    required this.amount,
+    this.prefilledRecipient,
+    this.prefilledNote,
+  });
 
   final double amount;
+  final String? prefilledRecipient;
+  final String? prefilledNote;
 
   @override
   State<SendFlowSheet> createState() => _SendFlowSheetState();
@@ -78,6 +94,16 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       parent: _shakeController,
       curve: Curves.elasticOut,
     ));
+
+    if (widget.prefilledRecipient != null) {
+      _recipientZendtag = widget.prefilledRecipient;
+      _recipientDisplayName = '@${widget.prefilledRecipient}';
+      _stage = SendStage.note;
+      if (widget.prefilledNote != null) {
+        _noteController.text = widget.prefilledNote!;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchFxPreview());
+    }
   }
 
   @override
@@ -137,7 +163,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() => _resolving = false);
-      // Fallback: use the display values from the contact list
       setState(() {
         _recipientZendtag = tag;
         _recipientDisplayName = displayName;
@@ -207,7 +232,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
             : _noteController.text.trim(),
       );
 
-      // Immediately refresh balance and history after transfer
       unawaited(model.fetchBalance());
       unawaited(model.fetchHistory());
 
@@ -217,7 +241,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       });
 
       HapticFeedback.mediumImpact();
-      // Play the magical Zent chime 🎵
       unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
       if (!mounted) return;
@@ -427,7 +450,6 @@ class _RecipientStageState extends State<_RecipientStage> {
         ? normalized.substring(1)
         : normalized;
 
-    // Only search if query is at least 3 characters (matches backend gating)
     if (searchTag.length < 3) {
       setState(() => _searching = false);
       return;
@@ -469,7 +491,6 @@ class _RecipientStageState extends State<_RecipientStage> {
     final model = ZendScope.of(context);
     final recentContacts = _buildRecentContacts(model.recentContacts);
     
-    // Show search results if actively searching/have results, otherwise show recents
     final contactsToShow = _searchQuery.isNotEmpty ? _searchResults : recentContacts;
     final showingSearchResults = _searchQuery.isNotEmpty;
 
@@ -488,7 +509,6 @@ class _RecipientStageState extends State<_RecipientStage> {
             ),
           ),
           const SizedBox(height: 18),
-          // Search field
           TextField(
             controller: _searchController,
             onChanged: _onSearchChanged,
@@ -505,7 +525,6 @@ class _RecipientStageState extends State<_RecipientStage> {
             ),
           ),
           const SizedBox(height: 18),
-          // Section label
           Text(
             showingSearchResults ? 'SEARCH RESULTS' : 'RECENT ZEND USERS',
             style: TextStyle(
@@ -562,7 +581,6 @@ class _RecipientStageState extends State<_RecipientStage> {
             ),
           ),
           const SizedBox(height: 12),
-          // Bank account tile (future use)
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -651,7 +669,6 @@ class _NoteStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Header: "Pay $X to ○ {Name} for"
           Text.rich(
             TextSpan(
               children: [
@@ -720,7 +737,6 @@ class _NoteStage extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          // Confirm button
           PrimaryButton(
             label: 'Zend $amountFormatted',
             onPressed: onConfirm,
@@ -763,7 +779,6 @@ class _PinStage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Column(
         children: [
-          // Back button
           Align(
             alignment: Alignment.centerLeft,
             child: GestureDetector(
@@ -773,7 +788,6 @@ class _PinStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Compact summary
           Text(
             '$amountFormatted to @$recipientZendtag',
             style: const TextStyle(
@@ -809,7 +823,6 @@ class _PinStage extends StatelessWidget {
             child: _PinDots(filledCount: pinDigits.length),
           ),
           const SizedBox(height: 10),
-          // Label / error
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
@@ -821,7 +834,6 @@ class _PinStage extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Keypad
           _PinKeypad(onTap: onKey, keyHeight: compact ? 56 : 64),
           SizedBox(height: compact ? 4 : 12),
         ],
@@ -911,7 +923,6 @@ class _SuccessStageState extends State<_SuccessStage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Animated checkmark
             ScaleTransition(
               scale: _checkScale,
               child: Container(
@@ -925,7 +936,6 @@ class _SuccessStageState extends State<_SuccessStage>
               ),
             ),
             const SizedBox(height: 20),
-            // "Zent It!" title
             const Text(
               'Zent It!',
               style: TextStyle(
