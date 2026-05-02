@@ -7,6 +7,7 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'src/core/zend_state.dart';
 import 'src/services/api_client.dart';
+import 'src/services/app_lock_service.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/push_notification_service.dart';
 import 'src/services/recent_contacts_store.dart';
@@ -82,6 +83,8 @@ void main() async {
     apiClient: apiClient,
   );
 
+  final appLockService = AppLockService();
+
   final model = ZendAppModel(
     authService: authService,
     walletService: walletService,
@@ -91,6 +94,7 @@ void main() async {
     recentContactsStore: recentContactsStore,
     sseService: sseService,
     pushNotificationService: pushNotificationService,
+    appLockService: appLockService,
   );
 
   await model.hydrateRecentContacts();

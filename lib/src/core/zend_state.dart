@@ -8,6 +8,7 @@ import '../features/pools/pool.dart';
 import '../features/request/payment_request.dart';
 import '../models/api_models.dart';
 import '../models/recent_contact.dart';
+import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
@@ -74,6 +75,7 @@ class ZendAppModel extends ChangeNotifier {
     required this.recentContactsStore,
     required this.sseService,
     required this.pushNotificationService,
+    required this.appLockService,
   });
 
   final AuthService authService;
@@ -84,6 +86,7 @@ class ZendAppModel extends ChangeNotifier {
   final RecentContactsStore recentContactsStore;
   final SseService sseService;
   final PushNotificationService pushNotificationService;
+  final AppLockService appLockService;
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;
@@ -372,6 +375,8 @@ class ZendAppModel extends ChangeNotifier {
     username = zendtag;
     notifyListeners();
     startPolling();
+    // Start the inactivity lock timer now that the user is authenticated
+    appLockService.startTimer();
     // Initialize push notifications now that the user is authenticated
     // and we have a valid session token to register the FCM token with
     unawaited(pushNotificationService.initialize());
@@ -422,6 +427,7 @@ class ZendAppModel extends ChangeNotifier {
 
   void resetState() {
     stopPolling(); // Stop live updates on logout
+    appLockService.reset(); // Stop inactivity timer and clear lock state
     isAuthenticated = false;
     currentUserId = null;
     currentZendtag = null;

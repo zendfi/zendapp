@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
 import 'src/features/loading/loading_overlay.dart';
+import 'src/features/lock/app_lock_overlay.dart';
 import 'src/features/onboarding/splash_screen.dart';
 import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
@@ -46,20 +47,29 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     }
   }
 
-  /// Pause polling when app goes to background, resume when foregrounded.
-  /// This cuts polling load to zero when users aren't actively using the app.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final model = widget.model;
+
     if (state == AppLifecycleState.resumed) {
-      if (widget.model.isAuthenticated) {
-        widget.model.startRealTimeUpdates();
+      if (model.isAuthenticated) {
+        model.startRealTimeUpdates();
         // Immediate refresh on foreground so data is never stale
-        unawaited(widget.model.fetchBalance());
-        unawaited(widget.model.fetchHistory());
+        unawaited(model.fetchBalance());
+        unawaited(model.fetchHistory());
+        // Resume the inactivity timer (only if not already locked)
+        model.appLockService.startTimer();
       }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
-      widget.model.stopRealTimeUpdates();
+      model.stopRealTimeUpdates();
+      // Pause the timer while backgrounded — we lock on resume if too long
+      // has passed (handled by startTimer checking elapsed time on next resume).
+      // For simplicity we lock immediately on background so the app is always
+      // protected when the user returns after any absence.
+      if (model.isAuthenticated) {
+        model.appLockService.lock();
+      }
     }
   }
 
@@ -81,7 +91,23 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           return locale;
         },
         builder: (context, child) {
-          return LoadingOverlay(child: child ?? const SizedBox());
+          // Layer order (bottom → top):
+          //   1. App content
+          //   2. LoadingOverlay (spinner)
+          //   3. AppLockOverlay (PIN screen — only visible when locked)
+          //
+          // Wrap with a Listener so any pointer event resets the inactivity
+          // timer. We use HitTestBehavior.translucent so the events still
+          // reach the widgets below.
+          return Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) =>
+                widget.model.appLockService.recordActivity(),
+            child: AppLockOverlay(
+              lockService: widget.model.appLockService,
+              child: LoadingOverlay(child: child ?? const SizedBox()),
+            ),
+          );
         },
       ),
     );
