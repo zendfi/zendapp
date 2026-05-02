@@ -228,6 +228,9 @@ class ApiClient {
     String? note,
   ) async {
     try {
+      // Use a longer timeout for transfers — ATA creation for first-time
+      // recipients can take 15-30s on mainnet (backend pays the fee).
+      // The global timeout is 15s which is too short for this case.
       final response = await _dio.post(
         '/api/zend/transfer',
         data: {
@@ -236,6 +239,10 @@ class ApiClient {
           'partially_signed_tx': partiallySignedTxB64,
           'note': note,
         }..removeWhere((_, v) => v == null),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
       );
       return TransferResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -331,6 +338,34 @@ class ApiClient {
           'status': status,
         }..removeWhere((_, v) => v == null),
       );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> cancelPaymentRequest(String id) async {
+    try {
+      await _dio.delete('/api/zend/payment-requests/$id');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Bridge KYC ───────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getBridgeKycStatus() async {
+    try {
+      final response = await _dio.get('/api/zend/bridge/kyc/status');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> startBridgeKyc() async {
+    try {
+      final response = await _dio.post('/api/zend/bridge/kyc/start');
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw e.error ?? e;

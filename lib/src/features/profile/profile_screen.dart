@@ -5,10 +5,12 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
 import 'account_information_screen.dart';
+import 'bridge_kyc_screen.dart';
 import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
 import 'customise_page_screen.dart';
+import '../request/payment_requests_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -135,6 +137,11 @@ class ProfileScreen extends StatelessWidget {
                           label: 'Customise payment page',
                           onTap: () => pushZendSlide(context, const CustomisePageScreen()),
                         ),
+                        _ProfileTile(
+                          icon: Icons.receipt_long_outlined,
+                          label: 'Payment requests',
+                          onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -159,6 +166,11 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.pin_outlined,
                           label: 'Change PIN',
                           onTap: () => _showChangePinDialog(context),
+                        ),
+                        _ProfileTile(
+                          icon: Icons.verified_user_outlined,
+                          label: 'Identity verification',
+                          onTap: () => pushZendSlide(context, const BridgeKycScreen()),
                         ),
                       ],
                     ),

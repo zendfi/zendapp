@@ -50,6 +50,9 @@ dependencies:
   # Audio — success sound on transfer
   audioplayers: ^6.1.0
 
+  # Deep link / URL launch
+  url_launcher: ^6.3.1
+
   # Firebase — push notifications
   firebase_core: ^3.13.1
   firebase_messaging: ^15.2.5
