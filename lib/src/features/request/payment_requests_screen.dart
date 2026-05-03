@@ -18,6 +18,8 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
   List<Map<String, dynamic>> _requests = [];
   String _activeFilter = 'all';
 
+  static const _filters = ['all', 'pending', 'paid', 'expired', 'cancelled'];
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +38,10 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
         status: status,
       );
       final list = (data['requests'] as List<dynamic>? ?? [])
-          .cast<Map<String, dynamic>>();
+          .cast<Map<String, dynamic>>()
+          // Only show requests with a fixed amount — no PWYW
+          .where((r) => r['amount_usdc'] != null)
+          .toList();
       setState(() {
         _requests = list;
         _loading = false;
@@ -73,213 +78,190 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
     );
   }
 
+  String _filterLabel(String f) =>
+      f == 'all' ? 'All' : f[0].toUpperCase() + f.substring(1);
+
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Header — matches activity screen layout ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+              child: Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back,
-                        color: ZendColors.textPrimary),
+                  // Back button sits left, same weight as activity icons
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Icon(Icons.arrow_back, color: zt.textPrimary),
                   ),
-                  const SizedBox(width: 4),
-                  const Expanded(
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Text(
                       'Payment requests',
-                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
-                        color: ZendColors.textPrimary,
+                        color: zt.textPrimary,
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 48,
-                    child: IconButton(
-                      icon: const Icon(Icons.refresh,
-                          color: ZendColors.textSecondary, size: 20),
-                      onPressed: _load,
-                    ),
+                  IconButton(
+                    onPressed: _load,
+                    icon: Icon(Icons.refresh, color: zt.textSecondary),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Filter pills
-              SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (final filter in [
-                      'all',
-                      'pending',
-                      'paid',
-                      'expired',
-                      'cancelled'
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _FilterChip(
-                          label: filter == 'all'
-                              ? 'All'
-                              : _capitalize(filter),
-                          active: _activeFilter == filter,
-                          onTap: () {
-                            setState(() => _activeFilter = filter);
-                            _load();
-                          },
+            ),
+
+            // ── Filter pills — identical structure to activity screen ──
+            SizedBox(
+              height: 48,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                itemCount: _filters.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final filter = _filters[i];
+                  final active = _activeFilter == filter;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _activeFilter = filter);
+                      _load();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: active ? zt.accent : zt.bgSecondary,
+                        borderRadius:
+                            BorderRadius.circular(ZendRadii.pill),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _filterLabel(filter),
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          color: active
+                              ? ZendColors.textOnDeep
+                              : zt.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: ZendColors.border),
-              Expanded(
-                child: _loading
-                    ? const Center(child: ZendLoader())
-                    : _error != null
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    fontFamily: 'DMSans',
-                                    fontSize: 14,
-                                    color: ZendColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: _load,
-                                  child: const Text('Retry'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : _requests.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 64,
-                                      height: 64,
-                                      decoration: BoxDecoration(
-                                        color: ZendColors.bgSecondary,
-                                        borderRadius: BorderRadius.circular(
-                                            ZendRadii.xl),
-                                      ),
-                                      child: const Icon(
-                                        Icons.link_off_rounded,
-                                        size: 28,
-                                        color: ZendColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      _activeFilter == 'all'
-                                          ? 'No payment requests yet'
-                                          : 'No $_activeFilter requests',
-                                      style: const TextStyle(
-                                        fontFamily: 'DMSans',
-                                        fontSize: 15,
-                                        color: ZendColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: _load,
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
-                                  itemCount: _requests.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 10),
-                                  itemBuilder: (context, i) =>
-                                      _RequestCard(
-                                    request: _requests[i],
-                                    onCopy: () => _copyLink(
-                                        _requests[i]['link_url']
-                                                as String? ??
-                                            ''),
-                                    onCancel:
-                                        _requests[i]['status'] == 'pending'
-                                            ? () => _cancel(
-                                                _requests[i]['id']
-                                                    as String)
-                                            : null,
-                                  ),
+            ),
+
+            // ── Content ──
+            Expanded(
+              child: _loading
+                  ? const Center(child: ZendLoader())
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _error!,
+                                style: TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 14,
+                                  color: zt.textSecondary,
                                 ),
                               ),
-              ),
-            ],
-          ),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ZendScrollPage(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                  16, 8, 16, 24),
+                              child: _requests.isEmpty
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 48),
+                                      child: Center(
+                                        child: Text(
+                                          _activeFilter == 'all'
+                                              ? 'No payment requests yet'
+                                              : 'No ${_filterLabel(_activeFilter).toLowerCase()} requests',
+                                          style: TextStyle(
+                                            fontFamily: 'DMSans',
+                                            fontSize: 14,
+                                            color: zt.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  // Single grouped container — same as activity screen
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        color: zt.bgSecondary,
+                                        borderRadius:
+                                            BorderRadius.circular(24),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          for (var i = 0;
+                                              i < _requests.length;
+                                              i++) ...[
+                                            _RequestTile(
+                                              request: _requests[i],
+                                              onCopy: () => _copyLink(
+                                                  _requests[i]['link_url']
+                                                          as String? ??
+                                                      ''),
+                                              onCancel: _requests[i]
+                                                          ['status'] ==
+                                                      'pending'
+                                                  ? () => _cancel(
+                                                      _requests[i]['id']
+                                                          as String)
+                                                  : null,
+                                            ),
+                                            if (i < _requests.length - 1)
+                                              Divider(
+                                                  color: zt.border,
+                                                  height: 1),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? ZendColors.accent : ZendColors.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.pill),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: active
-                ? ZendColors.textOnDeep
-                : ZendColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RequestCard extends StatelessWidget {
-  const _RequestCard({
+/// A single payment request row — styled like an activity tile.
+class _RequestTile extends StatelessWidget {
+  const _RequestTile({
     required this.request,
     required this.onCopy,
     this.onCancel,
@@ -291,16 +273,18 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+
     final status = request['status'] as String? ?? 'pending';
-    final amount = request['amount_usdc'] as double?;
+    final amount = (request['amount_usdc'] as num?)?.toDouble();
     final description = request['description'] as String?;
     final link = request['link_url'] as String? ?? '';
     final createdAt = request['created_at'] as String?;
 
     final statusColor = switch (status) {
       'paid' => ZendColors.positive,
-      'expired' || 'cancelled' => ZendColors.textSecondary,
-      _ => ZendColors.accent,
+      'expired' || 'cancelled' => zt.textSecondary,
+      _ => zt.accent,
     };
 
     final statusLabel = switch (status) {
@@ -310,27 +294,28 @@ class _RequestCard extends StatelessWidget {
       _ => 'Pending',
     };
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ZendColors.bgSecondary,
-        borderRadius: BorderRadius.circular(ZendRadii.xxl),
-      ),
+    // Amount string — always fixed since we filter out PWYW
+    final amountStr = amount != null
+        ? '\$${amount.toStringAsFixed(2)}'
+        : '';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Top row: amount + status badge ──
           Row(
             children: [
               Expanded(
                 child: Text(
-                  amount != null
-                      ? '\$${amount.toStringAsFixed(2)}'
-                      : 'Pay what you want',
-                  style: const TextStyle(
+                  amountStr,
+                  style: TextStyle(
                     fontFamily: 'InstrumentSerif',
                     fontSize: 22,
+                    fontStyle: FontStyle.italic,
                     fontWeight: FontWeight.w700,
-                    color: ZendColors.textPrimary,
+                    color: zt.textPrimary,
                   ),
                 ),
               ),
@@ -353,70 +338,63 @@ class _RequestCard extends StatelessWidget {
               ),
             ],
           ),
+
+          // ── Description ──
           if (description != null && description.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               description,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 13,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 10),
+
+          // ── Link row ──
           GestureDetector(
             onTap: onCopy,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: ZendColors.bgPrimary,
-                borderRadius: BorderRadius.circular(ZendRadii.md),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      link,
-                      style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 11,
-                        color: ZendColors.textSecondary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    link,
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: zt.textSecondary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.copy_outlined,
-                    size: 14,
-                    color: ZendColors.accent,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.copy_outlined, size: 14, color: zt.accent),
+              ],
             ),
           ),
+
+          // ── Date + cancel ──
           if (createdAt != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               _formatDate(createdAt),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMMono',
                 fontSize: 11,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
           ],
           if (onCancel != null) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: ZendColors.border),
             const SizedBox(height: 10),
             GestureDetector(
               onTap: onCancel,
-              child: const Text(
+              child: Text(
                 'Cancel request',
                 style: TextStyle(
                   fontFamily: 'DMSans',
