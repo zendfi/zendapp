@@ -440,8 +440,8 @@ class ApiClient {
           'amount_usdc': amountUsdc,
           'bank_id': bankId,
           'account_number': accountNumber,
-          'saved_account_id': ?savedAccountId,
-        },
+          'saved_account_id': savedAccountId,
+        }..removeWhere((_, v) => v == null),
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return response.data as Map<String, dynamic>;

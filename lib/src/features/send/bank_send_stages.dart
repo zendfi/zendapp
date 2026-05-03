@@ -1,8 +1,64 @@
+// Bank send stage widgets.
+// ignore_for_file: library_private_types_in_public_api
+
 part of 'bank_send_sheet.dart';
 
+// ── Rail definitions ──────────────────────────────────────────────────────────
+
+class _RailInfo {
+  const _RailInfo({
+    required this.rail,
+    required this.flag,
+    required this.title,
+    required this.subtitle,
+  });
+  final _BankSendRail rail;
+  final String flag;
+  final String title;
+  final String subtitle;
+}
+
+const _kRails = [
+  _RailInfo(
+    rail: _BankSendRail.ngn,
+    flag: '🇳🇬',
+    title: 'NGN — Nigerian banks',
+    subtitle: 'GTBank, Access, Zenith, UBA and more',
+  ),
+  _RailInfo(
+    rail: _BankSendRail.ach,
+    flag: '🇺🇸',
+    title: 'USD — ACH (United States)',
+    subtitle: 'Chase, Bank of America, Wells Fargo and more',
+  ),
+  _RailInfo(
+    rail: _BankSendRail.fp,
+    flag: '🇬🇧',
+    title: 'GBP — Faster Payments (UK)',
+    subtitle: 'Barclays, HSBC, Lloyds, Monzo and more',
+  ),
+  _RailInfo(
+    rail: _BankSendRail.sepa,
+    flag: '��🇺',
+    title: 'EUR — SEPA (Europe)',
+    subtitle: 'Revolut, N26, Deutsche Bank and more',
+  ),
+];
+
+// ── Rail Select ───────────────────────────────────────────────────────────────
+
 class _RailSelectStage extends StatelessWidget {
-  const _RailSelectStage({super.key, required this.onSelect});
+  const _RailSelectStage({
+    super.key,
+    required this.amount,
+    required this.onSelect,
+  });
+  final double amount;
   final void Function(_BankSendRail) onSelect;
+
+  String get _amountStr => amount == amount.roundToDouble()
+      ? '\$${amount.toStringAsFixed(0)}'
+      : '\$${amount.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context) {
@@ -12,29 +68,35 @@ class _RailSelectStage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Send to bank',
-              style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: zt.textPrimary)),
-          const SizedBox(height: 6),
-          Text('Choose where to send',
-              style: TextStyle(
-                  fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
-          const SizedBox(height: 24),
-          _RailCard(
-            emoji: '🇳🇬',
-            title: 'Nigerian bank',
-            subtitle: 'GTBank, Access, Zenith and more',
-            onTap: () => onSelect(_BankSendRail.ngn),
+          Text(
+            'Send $_amountStr to',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: zt.textPrimary,
+            ),
           ),
-          const SizedBox(height: 12),
-          _RailCard(
-            emoji: '🌍',
-            title: 'International bank',
-            subtitle: 'US, UK, Europe — ACH, Faster Payments, SEPA',
-            onTap: () => onSelect(_BankSendRail.intl),
+          const SizedBox(height: 4),
+          Text(
+            'Choose a payment rail',
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 14,
+              color: zt.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _kRails.length,
+              separatorBuilder: (_, i) =>
+                  Divider(height: 1, color: zt.border),
+              itemBuilder: (context, i) {
+                final info = _kRails[i];
+                return _RailTile(info: info, onTap: () => onSelect(info.rail));
+              },
+            ),
           ),
         ],
       ),
@@ -42,58 +104,54 @@ class _RailSelectStage extends StatelessWidget {
   }
 }
 
-class _RailCard extends StatelessWidget {
-  const _RailCard({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final String emoji;
-  final String title;
-  final String subtitle;
+class _RailTile extends StatelessWidget {
+  const _RailTile({required this.info, required this.onTap});
+  final _RailInfo info;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: zt.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.xxl),
-        ),
+      borderRadius: BorderRadius.circular(ZendRadii.md),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: zt.bgPrimary,
+                color: zt.bgSecondary,
                 borderRadius: BorderRadius.circular(ZendRadii.md),
               ),
               alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 22)),
+              child: Text(info.flag, style: const TextStyle(fontSize: 22)),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: zt.textPrimary)),
+                  Text(
+                    info.title,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 12,
-                          color: zt.textSecondary)),
+                  Text(
+                    info.subtitle,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -105,22 +163,26 @@ class _RailCard extends StatelessWidget {
   }
 }
 
+// ── NGN Bank Input ────────────────────────────────────────────────────────────
+
 class _NgnBankInputStage extends StatefulWidget {
   const _NgnBankInputStage({
     super.key,
-    required this.banks,
+    required this.amount,
+    required this.ngnRate,
     required this.selectedBank,
     required this.accountController,
     required this.errorMessage,
-    required this.onBankSelected,
+    required this.onSelectBank,
     required this.onContinue,
     required this.onBack,
   });
-  final List<Map<String, dynamic>> banks;
+  final double amount;
+  final double ngnRate;
   final Map<String, dynamic>? selectedBank;
   final TextEditingController accountController;
   final String? errorMessage;
-  final void Function(Map<String, dynamic>) onBankSelected;
+  final VoidCallback onSelectBank;
   final VoidCallback onContinue;
   final VoidCallback onBack;
 
@@ -133,9 +195,19 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
       widget.selectedBank != null &&
       widget.accountController.text.trim().length >= 10;
 
+  String get _fxPreview {
+    if (widget.ngnRate <= 0 || widget.amount <= 0) return '';
+    final ngn = widget.amount * widget.ngnRate;
+    return '≈ ₦${_formatNgn(ngn)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final amountStr = widget.amount == widget.amount.roundToDouble()
+        ? '\$${widget.amount.toStringAsFixed(0)}'
+        : '\$${widget.amount.toStringAsFixed(2)}';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -148,50 +220,63 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                 child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
-              Text('Nigerian bank',
-                  style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nigerian bank',
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    if (_fxPreview.isNotEmpty)
+                      Text(
+                        '$amountStr · $_fxPreview',
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 12,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          // Bank picker
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.lg),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<Map<String, dynamic>>(
-                value: widget.selectedBank,
-                hint: Text('Select bank',
-                    style: TextStyle(
+          const SizedBox(height: 24),
+          // Bank selector button
+          GestureDetector(
+            onTap: widget.onSelectBank,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.lg),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.selectedBank?['name'] as String? ?? 'Select bank',
+                      style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 15,
-                        color: zt.textSecondary)),
-                isExpanded: true,
-                dropdownColor: zt.bgSecondary,
-                icon: Icon(Icons.keyboard_arrow_down, color: zt.textSecondary),
-                items: widget.banks.map((bank) {
-                  return DropdownMenuItem<Map<String, dynamic>>(
-                    value: bank,
-                    child: Text(bank['name'] as String? ?? '',
-                        style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            color: zt.textPrimary)),
-                  );
-                }).toList(),
-                onChanged: (b) {
-                  if (b != null) widget.onBankSelected(b);
-                },
+                        color: widget.selectedBank != null
+                            ? zt.textPrimary
+                            : zt.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.keyboard_arrow_down, color: zt.textSecondary),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           // Account number
           TextField(
             controller: widget.accountController,
@@ -211,11 +296,14 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
           ),
           if (widget.errorMessage != null) ...[
             const SizedBox(height: 8),
-            Text(widget.errorMessage!,
-                style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 13,
-                    color: ZendColors.destructive)),
+            Text(
+              widget.errorMessage!,
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: ZendColors.destructive,
+              ),
+            ),
           ],
           const Spacer(),
           ElevatedButton(
@@ -229,11 +317,14 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(ZendRadii.lg)),
             ),
-            child: const Text('Verify account',
-                style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Verify account',
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -241,14 +332,140 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
   }
 }
 
+// ── Bank Picker (searchable full-stage list) ──────────────────────────────────
+
+class _BankPickerStage extends StatefulWidget {
+  const _BankPickerStage({
+    super.key,
+    required this.banks,
+    required this.onSelect,
+    required this.onBack,
+  });
+  final List<Map<String, dynamic>> banks;
+  final void Function(Map<String, dynamic>) onSelect;
+  final VoidCallback onBack;
+
+  @override
+  State<_BankPickerStage> createState() => _BankPickerStageState();
+}
+
+class _BankPickerStageState extends State<_BankPickerStage> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_query.isEmpty) return widget.banks;
+    final q = _query.toLowerCase();
+    return widget.banks
+        .where((b) => (b['name'] as String? ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: widget.onBack,
+                child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Select bank',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            autofocus: true,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search banks...',
+              prefixIcon: Icon(Icons.search, size: 20, color: zt.textSecondary),
+              filled: true,
+              fillColor: zt.bgSecondary,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      'No banks found',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 14,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _filtered.length,
+                    separatorBuilder: (_, i) =>
+                        Divider(height: 1, color: zt.border),
+                    itemBuilder: (context, i) {
+                      final bank = _filtered[i];
+                      final name = bank['name'] as String? ?? '';
+                      return ListTile(
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 4),
+                        title: Text(
+                          name,
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            color: zt.textPrimary,
+                          ),
+                        ),
+                        trailing: Icon(Icons.chevron_right,
+                            size: 18, color: zt.textSecondary),
+                        onTap: () => widget.onSelect(bank),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Intl Account Stage ────────────────────────────────────────────────────────
+
 class _IntlAccountStage extends StatelessWidget {
   const _IntlAccountStage({
     super.key,
+    required this.rail,
     required this.savedAccounts,
     required this.onSelect,
     required this.onBack,
     required this.onAddAccount,
   });
+  final _BankSendRail rail;
   final List<Map<String, dynamic>> savedAccounts;
   final void Function(Map<String, dynamic>) onSelect;
   final VoidCallback onBack;
@@ -257,6 +474,7 @@ class _IntlAccountStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final railInfo = _kRails.firstWhere((r) => r.rail == rail);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -269,12 +487,15 @@ class _IntlAccountStage extends StatelessWidget {
                 child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
-              Text('International bank',
-                  style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary)),
+              Text(
+                '${railInfo.flag}  ${rail.currency} bank',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -287,17 +508,21 @@ class _IntlAccountStage extends StatelessWidget {
                     Icon(Icons.account_balance_outlined,
                         size: 48, color: zt.textSecondary),
                     const SizedBox(height: 16),
-                    Text('No saved accounts yet',
-                        style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            color: zt.textSecondary)),
+                    Text(
+                      'No saved accounts yet',
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          color: zt.textSecondary),
+                    ),
                     const SizedBox(height: 8),
-                    Text('Add a bank account to get started',
-                        style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 13,
-                            color: zt.textSecondary)),
+                    Text(
+                      'Add a bank account to get started',
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: zt.textSecondary),
+                    ),
                   ],
                 ),
               ),
@@ -306,18 +531,16 @@ class _IntlAccountStage extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: savedAccounts.length,
-                separatorBuilder: (_, i) => Divider(
-                    height: 1, color: zt.border, indent: 16, endIndent: 16),
+                separatorBuilder: (_, i) =>
+                    Divider(height: 1, color: zt.border, indent: 16, endIndent: 16),
                 itemBuilder: (context, i) {
                   final acct = savedAccounts[i];
                   final label = acct['label'] as String? ?? 'Bank account';
                   final bankName = acct['bank_name'] as String? ?? '';
                   final last4 = acct['account_last4'] as String?;
-                  final currency =
-                      (acct['currency'] as String? ?? 'usd').toUpperCase();
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 4),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     leading: Container(
                       width: 44,
                       height: 44,
@@ -328,24 +551,26 @@ class _IntlAccountStage extends StatelessWidget {
                       child: Icon(Icons.account_balance_outlined,
                           size: 20, color: zt.textSecondary),
                     ),
-                    title: Text(label,
-                        style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: zt.textPrimary)),
+                    title: Text(
+                      label,
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: zt.textPrimary),
+                    ),
                     subtitle: Text(
-                        [
-                          if (bankName.isNotEmpty) bankName,
-                          if (last4 != null) '••••\$last4',
-                          currency,
-                        ].join(' · '),
-                        style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 12,
-                            color: zt.textSecondary)),
-                    trailing:
-                        Icon(Icons.chevron_right, color: zt.textSecondary),
+                      [
+                        if (bankName.isNotEmpty) bankName,
+                        if (last4 != null) '••••$last4',
+                        rail.currency,
+                      ].join(' · '),
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 12,
+                          color: zt.textSecondary),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: zt.textSecondary),
                     onTap: () => onSelect(acct),
                   );
                 },
@@ -362,6 +587,8 @@ class _IntlAccountStage extends StatelessWidget {
   }
 }
 
+// ── Resolving Stage ───────────────────────────────────────────────────────────
+
 class _ResolvingStage extends StatelessWidget {
   const _ResolvingStage({super.key});
 
@@ -373,197 +600,21 @@ class _ResolvingStage extends StatelessWidget {
         children: [
           const ZendLoader(size: 32),
           const SizedBox(height: 20),
-          Text('Verifying...',
-              style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: ZendTheme.of(context).textSecondary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _AmountInputStage extends StatefulWidget {
-  const _AmountInputStage({
-    super.key,
-    required this.rail,
-    required this.accountName,
-    required this.bankName,
-    required this.accountNumberMasked,
-    required this.ngnRate,
-    required this.fiatCurrency,
-    required this.amountController,
-    required this.onContinue,
-    required this.onBack,
-  });
-  final _BankSendRail rail;
-  final String? accountName;
-  final String? bankName;
-  final String? accountNumberMasked;
-  final double ngnRate;
-  final String fiatCurrency;
-  final TextEditingController amountController;
-  final VoidCallback onContinue;
-  final VoidCallback onBack;
-
-  @override
-  State<_AmountInputStage> createState() => _AmountInputStageState();
-}
-
-class _AmountInputStageState extends State<_AmountInputStage> {
-  double? _parsedAmount;
-
-  String get _fxPreview {
-    if (_parsedAmount == null || _parsedAmount! <= 0) return '';
-    if (widget.rail == _BankSendRail.ngn && widget.ngnRate > 0) {
-      final ngn = _parsedAmount! * widget.ngnRate;
-      return '≈ ₦${_formatNgn(ngn)}';
-    }
-    return '';
-  }
-
-  bool get _canContinue => _parsedAmount != null && _parsedAmount! >= 0.5;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: widget.onBack,
-                child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('How much?',
-                    style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: zt.textPrimary)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Recipient info card
-          if (widget.accountName != null || widget.bankName != null)
-            Container(
-              padding: const EdgeInsets.all(14),
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: zt.bgSecondary,
-                borderRadius: BorderRadius.circular(ZendRadii.lg),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: ZendColors.positive.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check,
-                        color: ZendColors.positive, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.accountName != null)
-                          Text(widget.accountName!,
-                              style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: zt.textPrimary)),
-                        if (widget.bankName != null ||
-                            widget.accountNumberMasked != null)
-                          Text(
-                              [
-                                if (widget.bankName != null) widget.bankName!,
-                                if (widget.accountNumberMasked != null)
-                                  widget.accountNumberMasked!,
-                              ].join(' · '),
-                              style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 12,
-                                  color: zt.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Amount field
-          TextField(
-            controller: widget.amountController,
-            autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (v) {
-              setState(() => _parsedAmount = double.tryParse(v.trim()));
-            },
+          Text(
+            'Verifying...',
             style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontSize: 36,
-                fontStyle: FontStyle.italic,
-                color: zt.textPrimary),
-            decoration: InputDecoration(
-              prefixText: '\$ ',
-              prefixStyle: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 36,
-                  fontStyle: FontStyle.italic,
-                  color: zt.textSecondary),
-              hintText: '0.00',
-              hintStyle: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 36,
-                  fontStyle: FontStyle.italic,
-                  color: zt.textSecondary.withValues(alpha: 0.4)),
-              filled: false,
-              border: InputBorder.none,
+              fontFamily: 'DMSans',
+              fontSize: 15,
+              color: ZendTheme.of(context).textSecondary,
             ),
-          ),
-          if (_fxPreview.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(_fxPreview,
-                style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 14,
-                    color: zt.textSecondary)),
-          ],
-          const Spacer(),
-          ElevatedButton(
-            onPressed: _canContinue ? widget.onContinue : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ZendTheme.of(context).accent,
-              foregroundColor: ZendColors.textOnDeep,
-              disabledBackgroundColor: ZendTheme.of(context).border,
-              elevation: 0,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(ZendRadii.lg)),
-            ),
-            child: const Text('Continue',
-                style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
   }
 }
+
+// ── Confirmation Stage ────────────────────────────────────────────────────────
 
 class _ConfirmationStage extends StatelessWidget {
   const _ConfirmationStage({
@@ -571,7 +622,6 @@ class _ConfirmationStage extends StatelessWidget {
     required this.rail,
     required this.amountUsdc,
     required this.fiatAmount,
-    required this.fiatCurrency,
     required this.accountName,
     required this.bankName,
     required this.accountNumberMasked,
@@ -581,21 +631,18 @@ class _ConfirmationStage extends StatelessWidget {
   final _BankSendRail rail;
   final double amountUsdc;
   final double? fiatAmount;
-  final String fiatCurrency;
   final String accountName;
   final String bankName;
   final String accountNumberMasked;
   final VoidCallback onConfirm;
   final VoidCallback onBack;
 
-  String get _fiatSymbol {
-    switch (fiatCurrency.toUpperCase()) {
-      case 'NGN': return '₦';
-      case 'GBP': return '£';
-      case 'EUR': return '€';
-      default: return '\$';
-    }
-  }
+  String get _fiatSymbol => switch (rail.currency) {
+        'NGN' => '₦',
+        'GBP' => '£',
+        'EUR' => '€',
+        _ => '\$',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -616,39 +663,45 @@ class _ConfirmationStage extends StatelessWidget {
                 child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
-              Text('Confirm transfer',
-                  style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary)),
+              Text(
+                'Confirm transfer',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          // Amount hero
           Center(
             child: Column(
               children: [
-                Text(amountStr,
-                    style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontStyle: FontStyle.italic,
-                        fontSize: 48,
-                        color: zt.textPrimary)),
+                Text(
+                  amountStr,
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSerif',
+                    fontStyle: FontStyle.italic,
+                    fontSize: 48,
+                    color: zt.textPrimary,
+                  ),
+                ),
                 if (fiatAmount != null && fiatAmount! > 0) ...[
                   const SizedBox(height: 4),
                   Text(
-                      '$_fiatSymbol${_formatFiat(fiatAmount!, fiatCurrency)} ${fiatCurrency.toUpperCase()}',
-                      style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 15,
-                          color: zt.textSecondary)),
+                    '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 15,
+                      color: zt.textSecondary,
+                    ),
+                  ),
                 ],
               ],
             ),
           ),
           const SizedBox(height: 24),
-          // Details card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -660,25 +713,17 @@ class _ConfirmationStage extends StatelessWidget {
                 _DetailRow(label: 'To', value: accountName, zt: zt),
                 Divider(height: 20, color: zt.border),
                 _DetailRow(label: 'Bank', value: bankName, zt: zt),
+                if (accountNumberMasked.isNotEmpty) ...[
+                  Divider(height: 20, color: zt.border),
+                  _DetailRow(label: 'Account', value: accountNumberMasked, zt: zt),
+                ],
                 Divider(height: 20, color: zt.border),
-                _DetailRow(
-                    label: 'Account',
-                    value: accountNumberMasked,
-                    zt: zt),
-                Divider(height: 20, color: zt.border),
-                _DetailRow(
-                    label: 'You send',
-                    value: '$amountStr USDC',
-                    zt: zt,
-                    valueColor: zt.textPrimary),
+                _DetailRow(label: 'You send', value: '$amountStr USDC', zt: zt),
               ],
             ),
           ),
           const Spacer(),
-          PrimaryButton(
-            label: 'Enter PIN to send',
-            onPressed: onConfirm,
-          ),
+          PrimaryButton(label: 'Enter PIN to send', onPressed: onConfirm),
         ],
       ),
     );
@@ -690,12 +735,10 @@ class _DetailRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.zt,
-    this.valueColor,
   });
   final String label;
   final String value;
   final ZendTheme zt;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -710,24 +753,24 @@ class _DetailRow extends StatelessWidget {
                 fontFamily: 'DMSans',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: valueColor ?? zt.textPrimary)),
+                color: zt.textPrimary)),
       ],
     );
   }
 }
 
 String _formatFiat(double value, String currency) {
-  if (currency.toUpperCase() == 'NGN') {
-    return _formatNgn(value);
-  }
+  if (currency == 'NGN') return _formatNgn(value);
   return value.toStringAsFixed(2);
 }
+
+// ── PIN Stage — uses light keypad matching send_flow_sheet ────────────────────
 
 class _PinStage extends StatelessWidget {
   const _PinStage({
     super.key,
     required this.amountUsdc,
-    required this.fiatCurrency,
+    required this.rail,
     required this.pinDigits,
     required this.pinError,
     required this.shakeAnimation,
@@ -736,7 +779,7 @@ class _PinStage extends StatelessWidget {
     required this.onBack,
   });
   final double amountUsdc;
-  final String fiatCurrency;
+  final _BankSendRail rail;
   final String pinDigits;
   final String? pinError;
   final Animation<double> shakeAnimation;
@@ -744,87 +787,88 @@ class _PinStage extends StatelessWidget {
   final ValueChanged<String> onKey;
   final VoidCallback onBack;
 
-  String get _amountStr {
-    return amountUsdc == amountUsdc.roundToDouble()
-        ? '\$${amountUsdc.toStringAsFixed(0)}'
-        : '\$${amountUsdc.toStringAsFixed(2)}';
-  }
+  String get _amountStr => amountUsdc == amountUsdc.roundToDouble()
+      ? '\$${amountUsdc.toStringAsFixed(0)}'
+      : '\$${amountUsdc.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final compact = MediaQuery.of(context).size.height < 760;
-    return Container(
-      color: ZendColors.bgDeep,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: onBack,
-                child: const Icon(Icons.arrow_back,
-                    color: ZendColors.textOnDeep, size: 22),
-              ),
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: onBack,
+              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Confirm with PIN',
-              style: const TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontSize: 22,
-                color: ZendColors.textOnDeep,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Confirm with PIN',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 22,
+              color: zt.textPrimary,
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Sending $_amountStr to bank',
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 14,
-                color: Color(0x99E8F4EC),
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Sending $_amountStr to ${rail.currency} bank',
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 14,
+              color: zt.textSecondary,
             ),
-            SizedBox(height: compact ? 24 : 36),
-            AnimatedBuilder(
-              animation: shakeController,
-              builder: (context, child) => Transform.translate(
-                offset: Offset(shakeAnimation.value, 0),
-                child: child,
-              ),
-              child: _BankPinDots(filledCount: pinDigits.length),
+          ),
+          SizedBox(height: compact ? 24 : 36),
+          AnimatedBuilder(
+            animation: shakeController,
+            builder: (context, child) => Transform.translate(
+              offset: Offset(shakeAnimation.value, 0),
+              child: child,
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 20,
-              child: pinError != null
-                  ? Text(pinError!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 13,
-                          color: ZendColors.destructive))
-                  : null,
-            ),
-            const Spacer(),
-            _BankPinKeypad(
-              onTap: onKey,
-              keyHeight: compact ? 62 : 72,
-            ),
-            SizedBox(height: compact ? 4 : 12),
-          ],
-        ),
+            child: _LightPinDots(filledCount: pinDigits.length),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 20,
+            child: pinError != null
+                ? Text(
+                    pinError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 13,
+                      color: ZendColors.destructive,
+                    ),
+                  )
+                : null,
+          ),
+          const Spacer(),
+          _LightPinKeypad(
+            onTap: onKey,
+            keyHeight: compact ? 56 : 64,
+          ),
+          SizedBox(height: compact ? 4 : 12),
+        ],
       ),
     );
   }
 }
 
-class _BankPinDots extends StatelessWidget {
-  const _BankPinDots({required this.filledCount});
+// Light PIN dots — matches send_flow_sheet style
+class _LightPinDots extends StatelessWidget {
+  const _LightPinDots({required this.filledCount});
   final int filledCount;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(4, (i) {
@@ -837,11 +881,9 @@ class _BankPinDots extends StatelessWidget {
             height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? ZendColors.accentPop : Colors.transparent,
+              color: filled ? zt.accent : Colors.transparent,
               border: Border.all(
-                color: filled
-                    ? ZendColors.accentPop
-                    : const Color(0x66E8F4EC),
+                color: filled ? zt.accent : zt.border,
                 width: 2,
               ),
             ),
@@ -852,8 +894,9 @@ class _BankPinDots extends StatelessWidget {
   }
 }
 
-class _BankPinKeypad extends StatelessWidget {
-  const _BankPinKeypad({required this.onTap, required this.keyHeight});
+// Light PIN keypad — same style as send_flow_sheet._PinKeypad
+class _LightPinKeypad extends StatelessWidget {
+  const _LightPinKeypad({required this.onTap, required this.keyHeight});
   final ValueChanged<String> onTap;
   final double keyHeight;
 
@@ -869,76 +912,84 @@ class _BankPinKeypad extends StatelessWidget {
       children: [
         for (var row = 0; row < 4; row++) ...[
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               for (var col = 0; col < 3; col++)
-                _BankPinKey(
-                  label: keys[row * 3 + col],
-                  onTap: onTap,
-                  height: keyHeight,
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: col == 2 ? 0 : 10,
+                      bottom: row == 3 ? 0 : 12,
+                    ),
+                    child: keys[row * 3 + col].isEmpty
+                        ? SizedBox(height: keyHeight)
+                        : _LightPinKey(
+                            label: keys[row * 3 + col],
+                            keyHeight: keyHeight,
+                            onTap: () => onTap(keys[row * 3 + col]),
+                          ),
+                  ),
                 ),
             ],
           ),
-          if (row < 3) const SizedBox(height: 14),
         ],
       ],
     );
   }
 }
 
-class _BankPinKey extends StatefulWidget {
-  const _BankPinKey({
+class _LightPinKey extends StatefulWidget {
+  const _LightPinKey({
     required this.label,
     required this.onTap,
-    required this.height,
+    required this.keyHeight,
   });
   final String label;
-  final ValueChanged<String> onTap;
-  final double height;
+  final VoidCallback onTap;
+  final double keyHeight;
 
   @override
-  State<_BankPinKey> createState() => _BankPinKeyState();
+  State<_LightPinKey> createState() => _LightPinKeyState();
 }
 
-class _BankPinKeyState extends State<_BankPinKey> {
+class _LightPinKeyState extends State<_LightPinKey> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    if (widget.label.isEmpty) {
-      return SizedBox(width: 80, height: widget.height);
-    }
+    final zt = ZendTheme.of(context);
+    final display = widget.label == 'del' ? '⌫' : widget.label;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
         setState(() => _pressed = true);
-        widget.onTap(widget.label);
+        widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
       onTapUp: (_) => setState(() => _pressed = false),
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 70),
+        duration: ZendMotion.keypadPress,
         curve: Curves.easeOut,
-        scale: _pressed ? 0.92 : 1.0,
+        scale: _pressed ? 0.94 : 1,
         child: SizedBox(
-          width: 80,
-          height: widget.height,
+          height: widget.keyHeight,
           child: Center(
-            child: widget.label == 'del'
-                ? const Icon(Icons.backspace_outlined,
-                    color: ZendColors.textOnDeep, size: 22)
-                : Text(widget.label,
-                    style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w400,
-                        color: ZendColors.textOnDeep)),
+            child: Text(
+              display,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 24,
+                color: zt.textPrimary,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+// ── Processing Stage ──────────────────────────────────────────────────────────
 
 class _ProcessingStage extends StatelessWidget {
   const _ProcessingStage({super.key});
@@ -951,16 +1002,21 @@ class _ProcessingStage extends StatelessWidget {
         children: [
           const ZendLoader(size: 32),
           const SizedBox(height: 20),
-          Text('Sending to your bank...',
-              style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: ZendTheme.of(context).textSecondary)),
+          Text(
+            'Sending to your bank...',
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 15,
+              color: ZendTheme.of(context).textSecondary,
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
+// ── Success Stage ─────────────────────────────────────────────────────────────
 
 class _SuccessStage extends StatefulWidget {
   const _SuccessStage({
@@ -968,14 +1024,12 @@ class _SuccessStage extends StatefulWidget {
     required this.rail,
     required this.amountUsdc,
     required this.fiatAmount,
-    required this.fiatCurrency,
     required this.bankName,
     required this.onDone,
   });
   final _BankSendRail rail;
   final double amountUsdc;
   final double? fiatAmount;
-  final String fiatCurrency;
   final String bankName;
   final VoidCallback onDone;
 
@@ -1003,18 +1057,16 @@ class _SuccessStageState extends State<_SuccessStage>
     super.dispose();
   }
 
-  String get _fiatSymbol {
-    switch (widget.fiatCurrency.toUpperCase()) {
-      case 'NGN': return '₦';
-      case 'GBP': return '£';
-      case 'EUR': return '€';
-      default: return '\$';
-    }
-  }
+  String get _fiatSymbol => switch (widget.rail.currency) {
+        'NGN' => '₦',
+        'GBP' => '£',
+        'EUR' => '€',
+        _ => '\$',
+      };
 
   String get _subtitle {
     if (widget.fiatAmount != null && widget.fiatAmount! > 0) {
-      final fiatStr = widget.fiatCurrency.toUpperCase() == 'NGN'
+      final fiatStr = widget.rail.currency == 'NGN'
           ? '$_fiatSymbol${_formatNgn(widget.fiatAmount!)}'
           : '$_fiatSymbol${widget.fiatAmount!.toStringAsFixed(2)}';
       return '$fiatStr on its way to ${widget.bankName}';
@@ -1024,6 +1076,10 @@ class _SuccessStageState extends State<_SuccessStage>
         : '\$${widget.amountUsdc.toStringAsFixed(2)}';
     return '$amtStr on its way to ${widget.bankName}';
   }
+
+  String get _eta => widget.rail == _BankSendRail.ngn
+      ? 'Usually arrives within minutes'
+      : 'Usually arrives within 1–2 business days';
 
   @override
   Widget build(BuildContext context) {
@@ -1041,34 +1097,35 @@ class _SuccessStageState extends State<_SuccessStage>
                 height: 64,
                 decoration: const BoxDecoration(
                     color: ZendColors.positive, shape: BoxShape.circle),
-                child:
-                    const Icon(Icons.check, color: Colors.white, size: 36),
+                child: const Icon(Icons.check, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
-            Text('On its way!',
-                style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontStyle: FontStyle.italic,
-                    fontSize: 40,
-                    color: zt.textPrimary)),
-            const SizedBox(height: 8),
-            Text(_subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: zt.textSecondary)),
-            const SizedBox(height: 6),
             Text(
-              widget.rail == _BankSendRail.ngn
-                  ? 'Usually arrives within minutes'
-                  : 'Usually arrives within 1–2 business days',
+              'On its way!',
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontStyle: FontStyle.italic,
+                fontSize: 40,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 13,
-                  color: zt.textSecondary.withValues(alpha: 0.7)),
+                  fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _eta,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: zt.textSecondary.withValues(alpha: 0.7),
+              ),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -1081,6 +1138,8 @@ class _SuccessStageState extends State<_SuccessStage>
     );
   }
 }
+
+// ── Error Stage ───────────────────────────────────────────────────────────────
 
 class _ErrorStage extends StatelessWidget {
   const _ErrorStage({
@@ -1110,18 +1169,20 @@ class _ErrorStage extends StatelessWidget {
               child: const Icon(Icons.close, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            Text('Oops',
-                style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 32,
-                    color: zt.textPrimary)),
+            Text(
+              'Oops',
+              style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 32,
+                  color: zt.textPrimary),
+            ),
             const SizedBox(height: 8),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: zt.textSecondary)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
+            ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -1144,9 +1205,11 @@ class _ErrorStage extends StatelessWidget {
 class _AddIntlAccountStage extends StatefulWidget {
   const _AddIntlAccountStage({
     super.key,
+    required this.rail,
     required this.onBack,
     required this.onSaved,
   });
+  final _BankSendRail rail;
   final VoidCallback onBack;
   final void Function(Map<String, dynamic>) onSaved;
 
@@ -1155,9 +1218,6 @@ class _AddIntlAccountStage extends StatefulWidget {
 }
 
 class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
-  String _currency = 'usd';
-  String _rail = 'ach';
-
   final _ownerController = TextEditingController();
   final _bankNameController = TextEditingController();
   final _routingController = TextEditingController();
@@ -1171,45 +1231,52 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
 
   bool get _canSave {
     if (_ownerController.text.trim().isEmpty) return false;
-    switch (_rail) {
-      case 'ach':
+    switch (widget.rail) {
+      case _BankSendRail.ach:
         return _routingController.text.trim().length == 9 &&
             _accountController.text.trim().length >= 4;
-      case 'faster_payments':
+      case _BankSendRail.fp:
         return _sortCodeController.text.trim().length >= 6 &&
             _fpAccountController.text.trim().length >= 8;
-      case 'sepa':
+      case _BankSendRail.sepa:
         return _ibanController.text.trim().length >= 15;
+      default:
+        return false;
     }
-    return false;
   }
 
   Future<void> _save() async {
     if (!_canSave || _saving) return;
-    setState(() { _saving = true; _errorMessage = null; });
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
     try {
       final model = ZendScope.of(context);
       Map<String, dynamic> accountDetails;
-      switch (_rail) {
-        case 'ach':
+      switch (widget.rail) {
+        case _BankSendRail.ach:
           accountDetails = {
             'routing_number': _routingController.text.trim(),
             'account_number': _accountController.text.trim(),
           };
-        case 'faster_payments':
+        case _BankSendRail.fp:
           accountDetails = {
             'sort_code': _sortCodeController.text.trim().replaceAll('-', ''),
             'account_number': _fpAccountController.text.trim(),
           };
-        case 'sepa':
-          accountDetails = {'iban': _ibanController.text.trim().toUpperCase()};
+        case _BankSendRail.sepa:
+          accountDetails = {
+            'iban': _ibanController.text.trim().toUpperCase(),
+          };
         default:
           accountDetails = {};
       }
       final result = await model.walletService.apiClient.addIntlBankAccount({
-        'label': '${_ownerController.text.trim()} (${_currency.toUpperCase()})',
-        'currency': _currency,
-        'payment_rail': _rail,
+        'label':
+            '${_ownerController.text.trim()} (${widget.rail.currency})',
+        'currency': widget.rail.bridgeCurrency,
+        'payment_rail': widget.rail.bridgeRail,
         'account_owner_name': _ownerController.text.trim(),
         'account_type': 'individual',
         if (_bankNameController.text.trim().isNotEmpty)
@@ -1243,6 +1310,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final railInfo = _kRails.firstWhere((r) => r.rail == widget.rail);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -1255,12 +1323,15 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                 child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
-              Text('Add bank account',
-                  style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary)),
+              Text(
+                '${railInfo.flag}  Add ${widget.rail.currency} account',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -1269,65 +1340,6 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Currency selector
-                  Row(
-                    children: [
-                      for (final (code, label, flag, railLabel) in [
-                        ('usd', 'USD', '🇺🇸', 'ACH'),
-                        ('gbp', 'GBP', '🇬🇧', 'Faster Payments'),
-                        ('eur', 'EUR', '🇪🇺', 'SEPA'),
-                      ])
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() {
-                              _currency = code;
-                              _rail = switch (code) {
-                                'usd' => 'ach',
-                                'gbp' => 'faster_payments',
-                                _ => 'sepa',
-                              };
-                            }),
-                            child: Container(
-                              margin: EdgeInsets.only(
-                                  right: code == 'eur' ? 0 : 8),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 8),
-                              decoration: BoxDecoration(
-                                color: _currency == code
-                                    ? zt.accent.withValues(alpha: 0.12)
-                                    : zt.bgSecondary,
-                                borderRadius:
-                                    BorderRadius.circular(ZendRadii.lg),
-                                border: _currency == code
-                                    ? Border.all(color: zt.accent, width: 1.5)
-                                    : null,
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(flag,
-                                      style: const TextStyle(fontSize: 20)),
-                                  const SizedBox(height: 4),
-                                  Text(label,
-                                      style: TextStyle(
-                                          fontFamily: 'DMMono',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: _currency == code
-                                              ? zt.accent
-                                              : zt.textPrimary)),
-                                  Text(railLabel,
-                                      style: TextStyle(
-                                          fontFamily: 'DMSans',
-                                          fontSize: 10,
-                                          color: zt.textSecondary)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
                   _FormField(
                     controller: _ownerController,
                     label: 'Account holder name',
@@ -1344,7 +1356,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                     zt: zt,
                   ),
                   const SizedBox(height: 20),
-                  if (_rail == 'ach') ...[
+                  if (widget.rail == _BankSendRail.ach) ...[
                     _FormField(
                       controller: _routingController,
                       label: 'Routing number',
@@ -1363,7 +1375,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                       onChanged: (_) => setState(() {}),
                       zt: zt,
                     ),
-                  ] else if (_rail == 'faster_payments') ...[
+                  ] else if (widget.rail == _BankSendRail.fp) ...[
                     _FormField(
                       controller: _sortCodeController,
                       label: 'Sort code',
@@ -1395,11 +1407,13 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                   ],
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 12),
-                    Text(_errorMessage!,
-                        style: const TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 13,
-                            color: ZendColors.destructive)),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: ZendColors.destructive),
+                    ),
                   ],
                   const SizedBox(height: 24),
                 ],
@@ -1420,11 +1434,13 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.lg)),
               ),
-              child: const Text('Save account',
-                  style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Save account',
+                style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
             ),
         ],
       ),
@@ -1457,12 +1473,14 @@ class _FormField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: zt.textSecondary)),
+        Text(
+          label,
+          style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: zt.textSecondary),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -1486,6 +1504,7 @@ class _FormField extends StatelessWidget {
   }
 }
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
 
 String _formatNgn(double value) {
   final rounded = value.round();

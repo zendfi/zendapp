@@ -332,6 +332,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       case SendStage.recipient:
         return _RecipientStage(
           key: const ValueKey('recipient'),
+          amount: widget.amount,
           amountFormatted: _amountFormatted,
           resolving: _resolving,
           onContactTap: _onContactTap,
@@ -403,11 +404,13 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 class _RecipientStage extends StatefulWidget {
   const _RecipientStage({
     super.key,
+    required this.amount,
     required this.amountFormatted,
     required this.resolving,
     required this.onContactTap,
   });
 
+  final double amount;
   final String amountFormatted;
   final bool resolving;
   final Future<void> Function(String tag, String displayName) onContactTap;
@@ -585,7 +588,7 @@ class _RecipientStageState extends State<_RecipientStage> {
           GestureDetector(
             onTap: () {
               Navigator.of(context).pop();
-              showBankSendSheet(context);
+              showBankSendSheet(context, amount: widget.amount);
             },
             child: Container(
               padding: const EdgeInsets.all(14),
