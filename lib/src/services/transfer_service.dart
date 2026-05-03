@@ -1,22 +1,18 @@
 import 'api_client.dart';
 import 'wallet_service.dart';
-import 'zendtag_service.dart';
 import '../models/api_models.dart';
 
 class TransferService {
   final ApiClient _apiClient;
   final WalletService _walletService;
-  final ZendtagService _zendtagService;
 
   String? _nextCursor;
 
   TransferService({
     required ApiClient apiClient,
     required WalletService walletService,
-    required ZendtagService zendtagService,
   })  : _apiClient = apiClient,
-        _walletService = walletService,
-        _zendtagService = zendtagService;
+        _walletService = walletService;
 
   Future<TransferResponse> sendTransfer({
     required String recipientZendtag,
@@ -24,14 +20,25 @@ class TransferService {
     required String pin,
     String? note,
   }) async {
-    final resolved = await _zendtagService.resolve(recipientZendtag);
-
-    final partiallySignedTxB64 = await _walletService.buildAndSignTransaction(
-      pin: pin,
+    // Step 1: Prepare — resolves recipient, creates ATA if needed, returns
+    // a fresh blockhash. This is the slow step for first-time recipients.
+    final prepared = await _apiClient.prepareTransfer(
+      recipientZendtag: recipientZendtag,
       amountUsdc: amountUsdc,
-      recipientAddress: resolved.walletAddress,
     );
 
+    // Step 2: Build and sign the transaction locally using the server-provided
+    // blockhash. The signature is always valid because the blockhash is fresh.
+    final partiallySignedTxB64 =
+        await _walletService.buildAndSignTransaction(
+      pin: pin,
+      amountUsdc: amountUsdc,
+      recipientAddress: prepared.recipientWalletAddress,
+      blockhash: prepared.blockhash,
+      feePayerAddress: prepared.feePayer,
+    );
+
+    // Step 3: Submit the pre-signed transaction.
     return _apiClient.submitTransfer(
       recipientZendtag,
       amountUsdc,

@@ -21,10 +21,6 @@ class WalletService {
 
   static const _usdcMintAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-  static const _solanaRpcUrl = 'https://mainnet.helius-rpc.com/?api-key=4e2b01ec-c741-441c-9a61-2e4aa756f9bc';
-
-  static const _feePayerAddress = 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52';
-
   WalletService({
         required ApiClient apiClient,
         required FlutterSecureStorage secureStorage,
@@ -211,6 +207,8 @@ class WalletService {
     required String pin,
     required double amountUsdc,
     required String recipientAddress,
+    required String blockhash,
+    required String feePayerAddress,
   }) async {
     final privateKeyBytes = await _decryptLocalKeypair(pin);
 
@@ -218,12 +216,6 @@ class WalletService {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
         privateKey: privateKeyBytes.toList(),
       );
-
-      final client = SolanaClient(
-        rpcUrl: Uri.parse(_solanaRpcUrl),
-        websocketUrl: Uri.parse('wss://api.mainnet-beta.solana.com'),
-      );
-      final blockhashResponse = await client.rpcClient.getLatestBlockhash();
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
       final recipientPubkey = Ed25519HDPublicKey.fromBase58(recipientAddress);
@@ -247,14 +239,14 @@ class WalletService {
         amount: amountTokens,
       );
 
-      final feePayer = Ed25519HDPublicKey.fromBase58(_feePayerAddress);
+      final feePayer = Ed25519HDPublicKey.fromBase58(feePayerAddress);
 
       final message = Message(
         instructions: [transferInstruction],
       );
 
       final compiledMessage = message.compile(
-        recentBlockhash: blockhashResponse.value.blockhash,
+        recentBlockhash: blockhash,
         feePayer: feePayer,
       );
 

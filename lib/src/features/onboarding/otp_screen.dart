@@ -12,7 +12,17 @@ import 'pin_restore_screen.dart';
 import '../shell/zend_shell.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key});
+  const OtpScreen({
+    super.key,
+    this.contactHint,
+    this.isEmail = false,
+  });
+
+  /// The phone number or email the code was sent to (for display only).
+  final String? contactHint;
+
+  /// Whether the OTP was sent to an email address (vs phone).
+  final bool isEmail;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -68,8 +78,16 @@ class _OtpScreenState extends State<OtpScreen> {
       current.clear();
       return;
     }
-
     _focusPrevious(index);
+  }
+
+  String get _subtitleText {
+    if (widget.contactHint != null && widget.contactHint!.isNotEmpty) {
+      return widget.isEmail
+          ? 'Sent to ${widget.contactHint}'
+          : 'Sent to ${widget.contactHint}';
+    }
+    return widget.isEmail ? 'Sent to your email' : 'Sent to your phone number';
   }
 
   Future<void> _onContinue() async {
@@ -107,15 +125,18 @@ class _OtpScreenState extends State<OtpScreen> {
           if (!mounted) return;
 
           if (hasKeypair) {
-            navigator.pushAndRemoveUntil(zendRoute(page: const ZendShell()), (route) => false);
+            navigator.pushAndRemoveUntil(
+                zendRoute(page: const ZendShell()), (route) => false);
           } else {
-            navigator.pushAndRemoveUntil(zendRoute(page: const PinRestoreScreen()), (route) => false);
+            navigator.pushAndRemoveUntil(
+                zendRoute(page: const PinRestoreScreen()), (route) => false);
           }
         } catch (e) {
           model.stopLoading();
           if (!mounted) return;
           messenger.showSnackBar(
-            const SnackBar(content: Text('Sign in failed. Please try again.')),
+            const SnackBar(
+                content: Text('Sign in failed. Please try again.')),
           );
         }
       }
@@ -125,7 +146,8 @@ class _OtpScreenState extends State<OtpScreen> {
 
       if (e.errorCode == 'INVALID_OTP_CODE') {
         setState(() => _errorText = e.userMessage);
-      } else if (e.errorCode == 'OTP_EXPIRED' || e.errorCode == 'OTP_MAX_ATTEMPTS') {
+      } else if (e.errorCode == 'OTP_EXPIRED' ||
+          e.errorCode == 'OTP_MAX_ATTEMPTS') {
         messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
         navigator.pop();
       } else {
@@ -134,7 +156,8 @@ class _OtpScreenState extends State<OtpScreen> {
     } catch (e) {
       model.stopLoading();
       if (!mounted) return;
-      setState(() => _errorText = 'Something went wrong. Please try again.');
+      setState(
+          () => _errorText = 'Something went wrong. Please try again.');
     }
   }
 
@@ -152,33 +175,38 @@ class _OtpScreenState extends State<OtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 44),
-                    Text(
+                    const Text(
                       'Enter the code',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Sent to your phone number',
-                      style: TextStyle(color: ZendColors.textSecondary, fontSize: 14),
+                    Text(
+                      _subtitleText,
+                      style: const TextStyle(
+                          color: ZendColors.textSecondary, fontSize: 14),
                     ),
                     const SizedBox(height: 20),
                     Row(
                       children: List.generate(6, (index) {
                         return Expanded(
                           child: Padding(
-                            padding: EdgeInsets.only(right: index == 5 ? 0 : 6),
+                            padding:
+                                EdgeInsets.only(right: index == 5 ? 0 : 6),
                             child: _OtpBox(
                               controller: _controllers[index],
                               focusNode: _focusNodes[index],
                               onChanged: (value) {
                                 if (value.isNotEmpty) {
                                   if (value.length > 1) {
-                                    _controllers[index].text = value.characters.last.toString();
-                                    _controllers[index].selection = const TextSelection.collapsed(offset: 1);
+                                    _controllers[index].text =
+                                        value.characters.last.toString();
+                                    _controllers[index].selection =
+                                        const TextSelection.collapsed(
+                                            offset: 1);
                                   }
                                   _focusNext(index);
                                 }
@@ -243,7 +271,8 @@ class _OtpBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Focus(
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.backspace) {
           if (controller.text.isEmpty) {
             onBackspace();
             return KeyEventResult.handled;
@@ -270,11 +299,13 @@ class _OtpBox extends StatelessWidget {
           decoration: const InputDecoration(
             counterText: '',
             isDense: true,
-            contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 0, vertical: 12),
             filled: true,
             fillColor: ZendColors.bgSecondary,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(ZendRadii.lg)),
+              borderRadius:
+                  BorderRadius.all(Radius.circular(ZendRadii.lg)),
               borderSide: BorderSide.none,
             ),
           ),

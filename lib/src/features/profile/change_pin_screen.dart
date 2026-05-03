@@ -4,31 +4,33 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
-import '../../navigation/zend_routes.dart';
-import '../profile/profile_screen.dart';
-import '../shell/zend_shell.dart';
-import 'welcome_screen.dart';
 
-class DeviceUnlockScreen extends StatefulWidget {
-  const DeviceUnlockScreen({super.key});
+enum _ChangePinPhase { current, newPin, confirm }
+
+class ChangePinScreen extends StatefulWidget {
+  const ChangePinScreen({super.key});
 
   @override
-  State<DeviceUnlockScreen> createState() => _DeviceUnlockScreenState();
+  State<ChangePinScreen> createState() => _ChangePinScreenState();
 }
 
-class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
+class _ChangePinScreenState extends State<ChangePinScreen>
     with SingleTickerProviderStateMixin {
+  _ChangePinPhase _phase = _ChangePinPhase.current;
+
   String _digits = '';
-  int _attempts = 0;
   String? _errorMessage;
   bool _loading = false;
-  DateTime? _lockedUntil;
+  int _attempts = 0;
+
+  // Stored across phases
+  String _currentPin = '';
+  String _newPin = '';
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
   static const int _maxAttempts = 5;
-  static const Duration _lockoutDuration = Duration(minutes: 15);
 
   @override
   void initState() {
@@ -55,13 +57,30 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
     super.dispose();
   }
 
-  bool get _isLockedOut {
-    if (_lockedUntil == null) return false;
-    return DateTime.now().isBefore(_lockedUntil!);
+  String get _title {
+    switch (_phase) {
+      case _ChangePinPhase.current:
+        return 'Enter current PIN';
+      case _ChangePinPhase.newPin:
+        return 'Enter new PIN';
+      case _ChangePinPhase.confirm:
+        return 'Confirm new PIN';
+    }
+  }
+
+  String get _subtitle {
+    switch (_phase) {
+      case _ChangePinPhase.current:
+        return 'Enter your existing 4-digit PIN';
+      case _ChangePinPhase.newPin:
+        return 'Choose a new 4-digit PIN';
+      case _ChangePinPhase.confirm:
+        return 'Re-enter your new PIN to confirm';
+    }
   }
 
   void _onKey(String value) {
-    if (_loading || _isLockedOut) return;
+    if (_loading) return;
     HapticFeedback.lightImpact();
 
     setState(() {
@@ -79,43 +98,50 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
     });
 
     if (_digits.length == 4) {
-      _submitPin(_digits);
+      _onPinComplete(_digits);
     }
   }
 
-  Future<void> _submitPin(String pin) async {
-    setState(() => _loading = true);
+  Future<void> _onPinComplete(String pin) async {
+    switch (_phase) {
+      case _ChangePinPhase.current:
+        await _verifyCurrentPin(pin);
+      case _ChangePinPhase.newPin:
+        _currentPin = _currentPin; // already stored
+        _newPin = pin;
+        setState(() {
+          _digits = '';
+          _phase = _ChangePinPhase.confirm;
+        });
+      case _ChangePinPhase.confirm:
+        await _confirmAndChange(pin);
+    }
+  }
 
+  Future<void> _verifyCurrentPin(String pin) async {
+    setState(() => _loading = true);
     try {
       final model = ZendScope.of(context);
       await model.walletService.verifyLocalPin(pin);
-
       if (!mounted) return;
-      pushAndRemoveUntilZendSlide(context, const ZendShell());
+      _currentPin = pin;
+      setState(() {
+        _loading = false;
+        _digits = '';
+        _phase = _ChangePinPhase.newPin;
+        _errorMessage = null;
+      });
     } on PinDecryptionException {
       if (!mounted) return;
       _attempts++;
       _shakeController.forward(from: 0);
-
       if (_attempts >= _maxAttempts) {
-        setState(() {
-          _loading = false;
-          _lockedUntil = DateTime.now().add(_lockoutDuration);
-          _errorMessage = 'Too many attempts. Try again in 15 minutes.';
-          _digits = '';
-        });
-      } else {
-        setState(() {
-          _loading = false;
-          _errorMessage = 'Incorrect PIN';
-          _digits = '';
-        });
+        if (mounted) Navigator.of(context).pop();
+        return;
       }
-    } on ZendException catch (e) {
-      if (!mounted) return;
       setState(() {
         _loading = false;
-        _errorMessage = e.userMessage;
+        _errorMessage = 'Incorrect PIN';
         _digits = '';
       });
     } catch (_) {
@@ -124,6 +150,55 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
         _loading = false;
         _errorMessage = 'Something went wrong. Please try again.';
         _digits = '';
+      });
+    }
+  }
+
+  Future<void> _confirmAndChange(String confirmPin) async {
+    if (confirmPin != _newPin) {
+      _shakeController.forward(from: 0);
+      setState(() {
+        _errorMessage = 'PINs don\'t match';
+        _digits = '';
+      });
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final model = ZendScope.of(context);
+      await model.walletService.changePin(_currentPin, _newPin);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN changed successfully')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Failed to change PIN. Please try again.';
+        _digits = '';
+      });
+    }
+  }
+
+  void _goBack() {
+    if (_phase == _ChangePinPhase.current) {
+      Navigator.of(context).pop();
+    } else if (_phase == _ChangePinPhase.confirm) {
+      setState(() {
+        _phase = _ChangePinPhase.newPin;
+        _digits = '';
+        _errorMessage = null;
+        _newPin = '';
+      });
+    } else {
+      setState(() {
+        _phase = _ChangePinPhase.current;
+        _digits = '';
+        _errorMessage = null;
+        _currentPin = '';
       });
     }
   }
@@ -138,27 +213,62 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: compact ? 40 : 64),
-              const Text(
-                'Unlock Zend',
-                style: TextStyle(
+              SizedBox(height: compact ? 16 : 24),
+              // Back button
+              Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: _goBack,
+                  child: const Icon(Icons.arrow_back,
+                      color: ZendColors.textOnDeep, size: 24),
+                ),
+              ),
+              SizedBox(height: compact ? 32 : 48),
+              // Phase indicator dots
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (i) {
+                  final active = i <= _phase.index;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: active ? 20 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? ZendColors.accentPop
+                            : const Color(0x33E8F4EC),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                _title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Enter your PIN to unlock this device',
+              Text(
+                _subtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
               ),
-              SizedBox(height: compact ? 36 : 52),
+              SizedBox(height: compact ? 32 : 48),
+              // PIN dots
               AnimatedBuilder(
                 animation: _shakeController,
                 builder: (context, child) {
@@ -183,55 +293,30 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                         ),
                       )
                     : _loading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: ZendColors.accentPop,
+                        ? const Center(
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: ZendColors.accentPop,
+                              ),
                             ),
                           )
                         : null,
               ),
               const Spacer(),
               Opacity(
-                opacity: (_isLockedOut || _loading) ? 0.3 : 1.0,
+                opacity: _loading ? 0.3 : 1.0,
                 child: IgnorePointer(
-                  ignoring: _isLockedOut || _loading,
+                  ignoring: _loading,
                   child: _PinKeypad(
                     onTap: _onKey,
                     keyHeight: compact ? 62 : 72,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  pushZendSlide(
-                    context,
-                    const ProfileScreen(),
-                    rootNavigator: true,
-                  );
-                },
-                child: const Text(
-                  'PIN settings',
-                  style: TextStyle(color: ZendColors.textSecondary),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  pushAndRemoveUntilZendSlide(
-                    context,
-                    const WelcomeScreen(),
-                    rootNavigator: true,
-                  );
-                },
-                child: const Text(
-                  'Use phone number instead',
-                  style: TextStyle(color: ZendColors.textSecondary),
-                ),
-              ),
-              SizedBox(height: compact ? 12 : 24),
+              SizedBox(height: compact ? 24 : 36),
             ],
           ),
         ),

@@ -40,6 +40,7 @@ List<PoolParticipant> _buildRecentPoolContacts(
   final contacts = <PoolParticipant>[];
 
   for (final tx in transactions) {
+    if (contacts.length >= 5) break;
     final raw = tx.name.trim();
     final tag = raw.startsWith('@') ? raw.substring(1) : raw;
     if (tag.isEmpty || seen.contains(tag)) continue;

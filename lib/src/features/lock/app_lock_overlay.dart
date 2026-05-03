@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/app_lock_service.dart';
@@ -69,22 +68,22 @@ class _LockScreenState extends State<_LockScreen>
 
     _shakeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
     );
     _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -12.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12.0, end: 12.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12.0, end: -8.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8.0, end: 6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -6.0, end: 4.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
     ]).animate(CurvedAnimation(
       parent: _shakeController,
-      curve: Curves.elasticOut,
+      curve: Curves.easeOut,
     ));
 
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 180),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
@@ -129,6 +128,7 @@ class _LockScreenState extends State<_LockScreen>
   }
 
   Future<void> _submitPin(String pin) async {
+    // Disable keys while verifying — no overlay flash
     setState(() => _loading = true);
 
     try {
@@ -187,82 +187,86 @@ class _LockScreenState extends State<_LockScreen>
       child: Scaffold(
         backgroundColor: ZendColors.bgDeep,
         body: SafeArea(
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    SizedBox(height: compact ? 40 : 64),
-                    // Lock icon
-                    const Icon(
-                      Icons.lock_outline_rounded,
-                      color: ZendColors.accentPop,
-                      size: 36,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'App locked',
-                      style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 28,
-                        color: ZendColors.textOnDeep,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Enter your PIN to continue',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 14,
-                        color: Color(0x99E8F4EC),
-                      ),
-                    ),
-                    SizedBox(height: compact ? 36 : 52),
-                    // PIN dots with shake animation
-                    AnimatedBuilder(
-                      animation: _shakeController,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(_shakeAnimation.value, 0),
-                          child: child,
-                        );
-                      },
-                      child: _PinDots(filledCount: _digits.length),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_errorMessage != null)
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 13,
-                          color: ZendColors.destructive,
-                        ),
-                      ),
-                    const Spacer(),
-                    Opacity(
-                      opacity: _isLockedOut ? 0.3 : 1.0,
-                      child: IgnorePointer(
-                        ignoring: _isLockedOut,
-                        child: _PinKeypad(
-                          onTap: _onKey,
-                          keyHeight: compact ? 62 : 72,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: compact ? 24 : 36),
-                  ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                SizedBox(height: compact ? 40 : 64),
+                // Lock icon
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  color: ZendColors.accentPop,
+                  size: 36,
                 ),
-              ),
-              if (_loading)
-                Container(
-                  color: const Color(0xCC1C2B1E),
-                  child: const Center(child: ZendLoader(size: 32)),
+                const SizedBox(height: 16),
+                const Text(
+                  'App locked',
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSerif',
+                    fontSize: 28,
+                    color: ZendColors.textOnDeep,
+                  ),
                 ),
-            ],
+                const SizedBox(height: 8),
+                const Text(
+                  'Enter your PIN to continue',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 14,
+                    color: Color(0x99E8F4EC),
+                  ),
+                ),
+                SizedBox(height: compact ? 36 : 52),
+                // PIN dots with shake animation
+                AnimatedBuilder(
+                  animation: _shakeController,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(_shakeAnimation.value, 0),
+                      child: child,
+                    );
+                  },
+                  child: _PinDots(filledCount: _digits.length),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 20,
+                  child: _errorMessage != null
+                      ? Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 13,
+                            color: ZendColors.destructive,
+                          ),
+                        )
+                      : _loading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: ZendColors.accentPop,
+                              ),
+                            )
+                          : null,
+                ),
+                const Spacer(),
+                Opacity(
+                  opacity: (_isLockedOut || _loading) ? 0.3 : 1.0,
+                  child: IgnorePointer(
+                    ignoring: _isLockedOut || _loading,
+                    child: _PinKeypad(
+                      onTap: _onKey,
+                      keyHeight: compact ? 62 : 72,
+                    ),
+                  ),
+                ),
+                SizedBox(height: compact ? 24 : 36),
+              ],
+            ),
           ),
         ),
       ),
@@ -286,14 +290,15 @@ class _PinDots extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+            duration: const Duration(milliseconds: 100),
             width: 16,
             height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color:
+                    filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
                 width: 2,
               ),
             ),
@@ -316,7 +321,7 @@ class _PinKeypad extends StatelessWidget {
       '1', '2', '3',
       '4', '5', '6',
       '7', '8', '9',
-      '',  '0', 'del',
+      '', '0', 'del',
     ];
 
     return Column(
@@ -340,7 +345,7 @@ class _PinKeypad extends StatelessWidget {
   }
 }
 
-class _PinKey extends StatelessWidget {
+class _PinKey extends StatefulWidget {
   const _PinKey({
     required this.label,
     required this.onTap,
@@ -352,27 +357,48 @@ class _PinKey extends StatelessWidget {
   final double height;
 
   @override
+  State<_PinKey> createState() => _PinKeyState();
+}
+
+class _PinKeyState extends State<_PinKey> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (label.isEmpty) {
-      return SizedBox(width: 80, height: height);
+    if (widget.label.isEmpty) {
+      return SizedBox(width: 80, height: widget.height);
     }
 
-    return SizedBox(
-      width: 80,
-      height: height,
-      child: TextButton(
-        onPressed: () => onTap(label),
-        style: TextButton.styleFrom(
-          foregroundColor: ZendColors.textOnDeep,
-          textStyle: const TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        setState(() => _pressed = true);
+        widget.onTap(widget.label);
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 70),
+        curve: Curves.easeOut,
+        scale: _pressed ? 0.92 : 1.0,
+        child: SizedBox(
+          width: 80,
+          height: widget.height,
+          child: Center(
+            child: widget.label == 'del'
+                ? const Icon(Icons.backspace_outlined,
+                    color: ZendColors.textOnDeep, size: 22)
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
+                  ),
           ),
         ),
-        child: label == 'del'
-            ? const Icon(Icons.backspace_outlined, color: ZendColors.textOnDeep)
-            : Text(label),
       ),
     );
   }

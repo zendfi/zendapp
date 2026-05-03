@@ -376,6 +376,30 @@ class FxPreviewResponse {
   }
 }
 
+/// Response from POST /api/zend/transfer/prepare
+class PrepareTransferResponse {
+  final String blockhash;
+  final String recipientWalletAddress;
+  final String feePayer;
+  final bool ataCreated;
+
+  PrepareTransferResponse({
+    required this.blockhash,
+    required this.recipientWalletAddress,
+    required this.feePayer,
+    required this.ataCreated,
+  });
+
+  factory PrepareTransferResponse.fromJson(Map<String, dynamic> json) {
+    return PrepareTransferResponse(
+      blockhash: json['blockhash'] as String,
+      recipientWalletAddress: json['recipient_wallet_address'] as String,
+      feePayer: json['fee_payer'] as String,
+      ataCreated: json['ata_created'] as bool,
+    );
+  }
+}
+
 class UserProfileResponse {
   final String userId;
   final String zendtag;

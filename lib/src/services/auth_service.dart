@@ -26,6 +26,12 @@ class AuthService {
     return response.sessionId;
   }
 
+  Future<String> requestOtpByEmail(String email) async {
+    final response = await _apiClient.requestOtpByEmail(email);
+    _otpSessionId = response.sessionId;
+    return response.sessionId;
+  }
+
   Future<OtpVerifyResponse> verifyOtp(String code) async {
     if (_otpSessionId == null) throw StateError('No OTP session. Call requestOtp first.');
     final response = await _apiClient.verifyOtp(_otpSessionId!, code);

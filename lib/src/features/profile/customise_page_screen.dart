@@ -19,7 +19,6 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
   String? _error;
   String? _successMessage;
 
-  // Form state
   final _bioController = TextEditingController();
   final _displayNameController = TextEditingController();
   String _themeColor = '#2D6A4F';
@@ -29,14 +28,14 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
   bool _showRecentActivity = false;
 
   static const _presetColors = [
-    '#2D6A4F', // Zend green
-    '#1A1A2E', // Deep navy
-    '#C94F2A', // Terracotta
-    '#7B2D8B', // Purple
-    '#1565C0', // Blue
-    '#E65100', // Orange
-    '#2E7D32', // Forest
-    '#37474F', // Slate
+    '#2D6A4F',
+    '#1A1A2E',
+    '#C94F2A',
+    '#7B2D8B',
+    '#1565C0',
+    '#E65100',
+    '#2E7D32',
+    '#37474F',
   ];
 
   @override
@@ -56,16 +55,19 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
     setState(() => _loading = true);
     try {
       final model = ZendScope.of(context);
-      final data = await model.walletService.apiClient.getMyPageCustomisation();
+      final data =
+          await model.walletService.apiClient.getMyPageCustomisation();
       setState(() {
         _themeColor = data['theme_color'] as String? ?? '#2D6A4F';
-        _backgroundColor = data['background_color'] as String? ?? '#FAFAF7';
+        _backgroundColor =
+            data['background_color'] as String? ?? '#FAFAF7';
         _accentColor = data['accent_color'] as String? ?? '#52B788';
         _bioController.text = data['bio'] as String? ?? '';
         _displayNameController.text =
             data['display_name_override'] as String? ?? '';
         _linkStyle = data['link_style'] as String? ?? 'card';
-        _showRecentActivity = data['show_recent_activity'] as bool? ?? false;
+        _showRecentActivity =
+            data['show_recent_activity'] as bool? ?? false;
         _loading = false;
       });
     } catch (_) {
@@ -99,8 +101,10 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
         _saving = false;
         _successMessage = 'Saved!';
       });
-      Timer(const Duration(seconds: 2),
-          () => mounted ? setState(() => _successMessage = null) : null);
+      Timer(
+        const Duration(seconds: 2),
+        () => mounted ? setState(() => _successMessage = null) : null,
+      );
     } catch (e) {
       setState(() {
         _saving = false;
@@ -111,7 +115,8 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
 
   Color _hexToColor(String hex) {
     try {
-      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
+      return Color(
+          int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
     } catch (_) {
       return ZendColors.accent;
     }
@@ -124,207 +129,269 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
 
     return Scaffold(
       backgroundColor: ZendColors.bgPrimary,
-      appBar: AppBar(
-        backgroundColor: ZendColors.bgPrimary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Customise payment page',
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: ZendColors.textPrimary,
-          ),
-        ),
-        actions: [
-          if (_successMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                child: Text(
-                  _successMessage!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 14,
-                    color: ZendColors.positive,
-                    fontWeight: FontWeight.w600,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back,
+                        color: ZendColors.textPrimary),
                   ),
-                ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: ZendColors.accent),
-                    )
-                  : const Text(
-                      'Save',
+                  const SizedBox(width: 4),
+                  const Expanded(
+                    child: Text(
+                      'Customise page',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontWeight: FontWeight.w600,
-                        color: ZendColors.accent,
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: ZendColors.textPrimary,
                       ),
                     ),
-            ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: ZendLoader())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Live preview
-                  _buildPreview(zendtag),
-                  const SizedBox(height: 28),
-
-                  // Display name
-                  _SectionLabel('Display name'),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _displayNameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Override your display name (optional)',
-                    ),
-                    onChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Bio
-                  _SectionLabel('Bio'),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _bioController,
-                    maxLines: 3,
-                    maxLength: 160,
-                    decoration: const InputDecoration(
-                      hintText: 'Tell people what you do...',
-                    ),
-                    onChanged: (_) => setState(() {}),
+                  SizedBox(
+                    width: 64,
+                    child: _successMessage != null
+                        ? Center(
+                            child: Text(
+                              _successMessage!,
+                              style: const TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 13,
+                                color: ZendColors.positive,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                        : TextButton(
+                            onPressed: _saving ? null : _save,
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: ZendColors.accent,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save',
+                                    style: TextStyle(
+                                      fontFamily: 'DMSans',
+                                      fontWeight: FontWeight.w600,
+                                      color: ZendColors.accent,
+                                    ),
+                                  ),
+                          ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Layout style
-                  _SectionLabel('Layout style'),
-                  const SizedBox(height: 8),
-                  _StyleSelector(
-                    selected: _linkStyle,
-                    onChanged: (s) => setState(() => _linkStyle = s),
-                    themeColor: _hexToColor(_themeColor),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Theme color
-                  _SectionLabel('Theme color'),
-                  const SizedBox(height: 8),
-                  _ColorPicker(
-                    selected: _themeColor,
-                    colors: _presetColors,
-                    onChanged: (c) => setState(() => _themeColor = c),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Background color
-                  _SectionLabel('Background color'),
-                  const SizedBox(height: 8),
-                  _ColorPicker(
-                    selected: _backgroundColor,
-                    colors: const [
-                      '#FAFAF7', '#FFFFFF', '#F0F4F8',
-                      '#1C2B1E', '#1A1A2E', '#0D0D0D',
-                    ],
-                    onChanged: (c) => setState(() => _backgroundColor = c),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Accent color
-                  _SectionLabel('Accent color'),
-                  const SizedBox(height: 8),
-                  _ColorPicker(
-                    selected: _accentColor,
-                    colors: _presetColors,
-                    onChanged: (c) => setState(() => _accentColor = c),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Show recent activity
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: ZendColors.bgPrimary,
-                      borderRadius: BorderRadius.circular(ZendRadii.lg),
-                      border: Border.all(color: ZendColors.border),
-                    ),
-                    child: Row(
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_loading)
+                const Expanded(child: Center(child: ZendLoader()))
+              else
+                Expanded(
+                  child: ZendScrollPage(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Expanded(
+                        // Live preview
+                        _buildPreview(zendtag),
+                        const SizedBox(height: 24),
+
+                        // Display name
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgSecondary,
+                            borderRadius:
+                                BorderRadius.circular(ZendRadii.xxl),
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Show recent activity',
-                                style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: ZendColors.textPrimary,
+                              const _SectionLabel('Display name'),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _displayNameController,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      'Override your display name (optional)',
                                 ),
+                                onChanged: (_) => setState(() {}),
                               ),
-                              Text(
-                                'Display recent payment count on your page',
-                                style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 12,
-                                  color: ZendColors.textSecondary,
+                              const SizedBox(height: 16),
+                              const _SectionLabel('Bio'),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _bioController,
+                                maxLines: 3,
+                                maxLength: 160,
+                                decoration: const InputDecoration(
+                                  hintText: 'Tell people what you do...',
                                 ),
+                                onChanged: (_) => setState(() {}),
                               ),
                             ],
                           ),
                         ),
-                        Switch.adaptive(
-                          value: _showRecentActivity,
-                          onChanged: (v) =>
-                              setState(() => _showRecentActivity = v),
-                          activeThumbColor: ZendColors.accentBright,
-                          activeTrackColor:
-                              ZendColors.accentBright.withValues(alpha: 0.4),
+                        const SizedBox(height: 16),
+
+                        // Layout style
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgSecondary,
+                            borderRadius:
+                                BorderRadius.circular(ZendRadii.xxl),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionLabel('Layout style'),
+                              const SizedBox(height: 12),
+                              _StyleSelector(
+                                selected: _linkStyle,
+                                onChanged: (s) =>
+                                    setState(() => _linkStyle = s),
+                                themeColor: _hexToColor(_themeColor),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(height: 16),
+
+                        // Colors
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgSecondary,
+                            borderRadius:
+                                BorderRadius.circular(ZendRadii.xxl),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionLabel('Theme color'),
+                              const SizedBox(height: 12),
+                              _ColorPicker(
+                                selected: _themeColor,
+                                colors: _presetColors,
+                                onChanged: (c) =>
+                                    setState(() => _themeColor = c),
+                              ),
+                              const SizedBox(height: 16),
+                              const _SectionLabel('Background color'),
+                              const SizedBox(height: 12),
+                              _ColorPicker(
+                                selected: _backgroundColor,
+                                colors: const [
+                                  '#FAFAF7',
+                                  '#FFFFFF',
+                                  '#F0F4F8',
+                                  '#1C2B1E',
+                                  '#1A1A2E',
+                                  '#0D0D0D',
+                                ],
+                                onChanged: (c) =>
+                                    setState(() => _backgroundColor = c),
+                              ),
+                              const SizedBox(height: 16),
+                              const _SectionLabel('Accent color'),
+                              const SizedBox(height: 12),
+                              _ColorPicker(
+                                selected: _accentColor,
+                                colors: _presetColors,
+                                onChanged: (c) =>
+                                    setState(() => _accentColor = c),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Show recent activity toggle
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgSecondary,
+                            borderRadius:
+                                BorderRadius.circular(ZendRadii.xxl),
+                          ),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Show recent activity',
+                                      style: TextStyle(
+                                        fontFamily: 'DMSans',
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: ZendColors.textPrimary,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Display recent payment count on your page',
+                                      style: TextStyle(
+                                        fontFamily: 'DMSans',
+                                        fontSize: 12,
+                                        color: ZendColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch.adaptive(
+                                value: _showRecentActivity,
+                                onChanged: (v) => setState(
+                                    () => _showRecentActivity = v),
+                                activeThumbColor: ZendColors.accentBright,
+                                activeTrackColor: ZendColors.accentBright
+                                    .withValues(alpha: 0.4),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (_error != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            style: const TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 13,
+                              color: ZendColors.destructive,
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+                        PrimaryButton(
+                          label: 'Save changes',
+                          onPressed: _saving ? () {} : _save,
+                        ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        color: ZendColors.destructive,
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 32),
-                  PrimaryButton(
-                    label: 'Save changes',
-                    onPressed: _saving ? () {} : _save,
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -396,7 +463,8 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      backgroundColor:
+                          Colors.white.withValues(alpha: 0.3),
                       child: Text(
                         displayName.isNotEmpty
                             ? displayName[0].toUpperCase()
@@ -432,7 +500,6 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 ),
               ),
             _ => Column(
-                // card style
                 children: [
                   CircleAvatar(
                     radius: 28,
@@ -508,7 +575,8 @@ class _ColorPicker extends StatelessWidget {
 
   Color _hex(String hex) {
     try {
-      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
+      return Color(
+          int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
     } catch (_) {
       return Colors.grey;
     }
@@ -531,7 +599,9 @@ class _ColorPicker extends StatelessWidget {
               color: _hex(color),
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? ZendColors.textPrimary : Colors.transparent,
+                color: isSelected
+                    ? ZendColors.textPrimary
+                    : Colors.transparent,
                 width: 2.5,
               ),
               boxShadow: isSelected
@@ -574,9 +644,9 @@ class _StyleSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const styles = [
-      ('minimal', 'Minimal', 'Clean, compact header'),
-      ('card', 'Card', 'Centered card with avatar'),
-      ('full', 'Full', 'Gradient hero banner'),
+      ('minimal', 'Minimal', 'Compact header'),
+      ('card', 'Card', 'Centered avatar'),
+      ('full', 'Full', 'Gradient banner'),
     ];
 
     return Row(
@@ -589,14 +659,15 @@ class _StyleSelector extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              padding: const EdgeInsets.symmetric(
+                  vertical: 12, horizontal: 8),
               decoration: BoxDecoration(
                 color: isSelected
                     ? themeColor.withValues(alpha: 0.1)
-                    : ZendColors.bgSecondary,
+                    : ZendColors.bgPrimary,
                 borderRadius: BorderRadius.circular(ZendRadii.lg),
                 border: Border.all(
-                  color: isSelected ? themeColor : Colors.transparent,
+                  color: isSelected ? themeColor : ZendColors.border,
                   width: 1.5,
                 ),
               ),
@@ -608,7 +679,9 @@ class _StyleSelector extends StatelessWidget {
                       fontFamily: 'DMSans',
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? themeColor : ZendColors.textPrimary,
+                      color: isSelected
+                          ? themeColor
+                          : ZendColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,7 +16,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _requests = [];
-  String _activeFilter = 'all'; // all | pending | paid | expired | cancelled
+  String _activeFilter = 'all';
 
   @override
   void initState() {
@@ -79,123 +77,160 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ZendColors.bgPrimary,
-      appBar: AppBar(
-        backgroundColor: ZendColors.bgPrimary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Payment requests',
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: ZendColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: ZendColors.textSecondary),
-            onPressed: _load,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Filter pills
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                for (final filter in ['all', 'pending', 'paid', 'expired', 'cancelled'])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _FilterChip(
-                      label: filter == 'all' ? 'All' : _capitalize(filter),
-                      active: _activeFilter == filter,
-                      onTap: () {
-                        setState(() => _activeFilter = filter);
-                        _load();
-                      },
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back,
+                        color: ZendColors.textPrimary),
+                  ),
+                  const SizedBox(width: 4),
+                  const Expanded(
+                    child: Text(
+                      'Payment requests',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: ZendColors.textPrimary,
+                      ),
                     ),
                   ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: ZendColors.border),
-          Expanded(
-            child: _loading
-                ? const Center(child: ZendLoader())
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _error!,
-                              style: const TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 14,
-                                color: ZendColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _load,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                  SizedBox(
+                    width: 48,
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh,
+                          color: ZendColors.textSecondary, size: 20),
+                      onPressed: _load,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Filter pills
+              SizedBox(
+                height: 36,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final filter in [
+                      'all',
+                      'pending',
+                      'paid',
+                      'expired',
+                      'cancelled'
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _FilterChip(
+                          label: filter == 'all'
+                              ? 'All'
+                              : _capitalize(filter),
+                          active: _activeFilter == filter,
+                          onTap: () {
+                            setState(() => _activeFilter = filter);
+                            _load();
+                          },
                         ),
-                      )
-                    : _requests.isEmpty
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: ZendColors.border),
+              Expanded(
+                child: _loading
+                    ? const Center(child: ZendLoader())
+                    : _error != null
                         ? Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.link_off,
-                                  size: 48,
-                                  color: ZendColors.textSecondary,
-                                ),
-                                const SizedBox(height: 12),
                                 Text(
-                                  _activeFilter == 'all'
-                                      ? 'No payment requests yet'
-                                      : 'No $_activeFilter requests',
+                                  _error!,
                                   style: const TextStyle(
                                     fontFamily: 'DMSans',
-                                    fontSize: 15,
+                                    fontSize: 14,
                                     color: ZendColors.textSecondary,
                                   ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: _load,
+                                  child: const Text('Retry'),
                                 ),
                               ],
                             ),
                           )
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _requests.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, i) =>
-                                  _RequestCard(
-                                request: _requests[i],
-                                onCopy: () => _copyLink(
-                                    _requests[i]['link_url'] as String? ?? ''),
-                                onCancel: _requests[i]['status'] == 'pending'
-                                    ? () => _cancel(
-                                        _requests[i]['id'] as String)
-                                    : null,
+                        : _requests.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        color: ZendColors.bgSecondary,
+                                        borderRadius: BorderRadius.circular(
+                                            ZendRadii.xl),
+                                      ),
+                                      child: const Icon(
+                                        Icons.link_off_rounded,
+                                        size: 28,
+                                        color: ZendColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      _activeFilter == 'all'
+                                          ? 'No payment requests yet'
+                                          : 'No $_activeFilter requests',
+                                      style: const TextStyle(
+                                        fontFamily: 'DMSans',
+                                        fontSize: 15,
+                                        color: ZendColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _load,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
+                                  itemCount: _requests.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, i) =>
+                                      _RequestCard(
+                                    request: _requests[i],
+                                    onCopy: () => _copyLink(
+                                        _requests[i]['link_url']
+                                                as String? ??
+                                            ''),
+                                    onCancel:
+                                        _requests[i]['status'] == 'pending'
+                                            ? () => _cancel(
+                                                _requests[i]['id']
+                                                    as String)
+                                            : null,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -221,7 +256,8 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? ZendColors.accent : ZendColors.bgSecondary,
           borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -232,7 +268,9 @@ class _FilterChip extends StatelessWidget {
             fontFamily: 'DMSans',
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: active ? ZendColors.textOnDeep : ZendColors.textSecondary,
+            color: active
+                ? ZendColors.textOnDeep
+                : ZendColors.textSecondary,
           ),
         ),
       ),
@@ -275,9 +313,8 @@ class _RequestCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
-        border: Border.all(color: ZendColors.border),
+        color: ZendColors.bgSecondary,
+        borderRadius: BorderRadius.circular(ZendRadii.xxl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,8 +335,8 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -329,15 +366,14 @@ class _RequestCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          const SizedBox(height: 10),
-          // Link row
+          const SizedBox(height: 12),
           GestureDetector(
             onTap: onCopy,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: ZendColors.bgSecondary,
+                color: ZendColors.bgPrimary,
                 borderRadius: BorderRadius.circular(ZendRadii.md),
               ),
               child: Row(
@@ -357,7 +393,7 @@ class _RequestCard extends StatelessWidget {
                   const Icon(
                     Icons.copy_outlined,
                     size: 14,
-                    color: ZendColors.textSecondary,
+                    color: ZendColors.accent,
                   ),
                 ],
               ),
@@ -375,9 +411,9 @@ class _RequestCard extends StatelessWidget {
             ),
           ],
           if (onCancel != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             const Divider(height: 1, color: ZendColors.border),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             GestureDetector(
               onTap: onCancel,
               child: const Text(

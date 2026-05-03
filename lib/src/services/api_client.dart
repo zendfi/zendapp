@@ -112,6 +112,45 @@ class ApiClient {
     }
   }
 
+  Future<OtpResponse> requestOtpByEmail(String email) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/auth/otp/request',
+        data: {'email': email},
+      );
+      return OtpResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// POST /api/zend/transfer/prepare
+  /// Step 1 of the two-step transfer flow.
+  /// Returns blockhash, recipient_wallet_address, fee_payer, ata_created.
+  Future<PrepareTransferResponse> prepareTransfer({
+    required String recipientZendtag,
+    required double amountUsdc,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/transfer/prepare',
+        data: {
+          'recipient_zendtag': recipientZendtag,
+          'amount_usdc': amountUsdc,
+        },
+        options: Options(
+          // ATA creation for first-time recipients can take 15-30s
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return PrepareTransferResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<OtpVerifyResponse> verifyOtp(String sessionId, String code) async {
     try {
       final response = await _dio.post(

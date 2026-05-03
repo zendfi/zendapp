@@ -66,7 +66,6 @@ void main() async {
   final transferService = TransferService(
     apiClient: apiClient,
     walletService: walletService,
-    zendtagService: zendtagService,
   );
 
   final fxService = FxService(apiClient: apiClient);

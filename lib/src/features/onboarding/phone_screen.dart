@@ -7,6 +7,7 @@ import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'otp_screen.dart';
 
+/// Entry screen — user can sign in with phone number OR email.
 class PhoneScreen extends StatefulWidget {
   const PhoneScreen({super.key});
 
@@ -14,9 +15,20 @@ class PhoneScreen extends StatefulWidget {
   State<PhoneScreen> createState() => _PhoneScreenState();
 }
 
+enum _InputMode { phone, email }
+
 class _PhoneScreenState extends State<PhoneScreen> {
-  final _controller = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  _InputMode _mode = _InputMode.phone;
   String _countryCode = _countryOptions.first.dialCode;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickCountryCode() async {
     final selected = await showModalBottomSheet<_CountryOption>(
@@ -30,9 +42,13 @@ class _PhoneScreenState extends State<PhoneScreen> {
             itemBuilder: (context, index) {
               final option = _countryOptions[index];
               return ListTile(
-                title: Text(option.name, style: const TextStyle(fontFamily: 'DMSans')),
-                subtitle: Text(option.isoCode, style: const TextStyle(color: ZendColors.textSecondary)),
-                trailing: Text(option.dialCode, style: const TextStyle(fontFamily: 'DMMono')),
+                title: Text(option.name,
+                    style: const TextStyle(fontFamily: 'DMSans')),
+                subtitle: Text(option.isoCode,
+                    style:
+                        const TextStyle(color: ZendColors.textSecondary)),
+                trailing: Text(option.dialCode,
+                    style: const TextStyle(fontFamily: 'DMMono')),
                 onTap: () => Navigator.of(context).pop(option),
               );
             },
@@ -40,57 +56,86 @@ class _PhoneScreenState extends State<PhoneScreen> {
         );
       },
     );
-
     if (!mounted || selected == null) return;
     setState(() => _countryCode = selected.dialCode);
   }
 
   Future<void> _onContinue() async {
-    final rawNumber = _controller.text.trim();
-    if (rawNumber.isEmpty) return;
-
-    final digitsOnly = rawNumber.replaceAll(RegExp(r'\D'), '');
-    final normalized = digitsOnly.startsWith('0') ? digitsOnly.substring(1) : digitsOnly;
-    if (normalized.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid phone number.')),
-      );
-      return;
-    }
-
-    final phoneNumber = '$_countryCode$normalized';
-
     final model = ZendScope.of(context);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    model.startLoading('Sending code...');
 
-    try {
-      await model.authService.requestOtp(phoneNumber);
-      model.stopLoading();
-      if (!mounted) return;
-      navigator.push(zendRoute(page: const OtpScreen()));
-    } on ApiException catch (e) {
-      model.stopLoading();
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
-    } on ZendException catch (e) {
-      model.stopLoading();
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
-    } catch (e) {
-      model.stopLoading();
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Please try again.')),
-      );
+    if (_mode == _InputMode.phone) {
+      final rawNumber = _phoneController.text.trim();
+      if (rawNumber.isEmpty) return;
+      final digitsOnly = rawNumber.replaceAll(RegExp(r'\D'), '');
+      final normalized =
+          digitsOnly.startsWith('0') ? digitsOnly.substring(1) : digitsOnly;
+      if (normalized.length < 6) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Please enter a valid phone number.')),
+        );
+        return;
+      }
+      final phoneNumber = '$_countryCode$normalized';
+      model.startLoading('Sending code...');
+      try {
+        await model.authService.requestOtp(phoneNumber);
+        model.stopLoading();
+        if (!mounted) return;
+        navigator.push(zendRoute(
+          page: OtpScreen(contactHint: phoneNumber, isEmail: false),
+        ));
+      } on ApiException catch (e) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      } on ZendException catch (e) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      } catch (_) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(
+              content: Text('Something went wrong. Please try again.')),
+        );
+      }
+    } else {
+      final email = _emailController.text.trim().toLowerCase();
+      if (email.isEmpty) return;
+      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Please enter a valid email address.')),
+        );
+        return;
+      }
+      model.startLoading('Sending code...');
+      try {
+        await model.authService.requestOtpByEmail(email);
+        model.stopLoading();
+        if (!mounted) return;
+        navigator.push(zendRoute(
+          page: OtpScreen(contactHint: email, isEmail: true),
+        ));
+      } on ApiException catch (e) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      } on ZendException catch (e) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      } catch (_) {
+        model.stopLoading();
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(
+              content: Text('Something went wrong. Please try again.')),
+        );
+      }
     }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
@@ -108,7 +153,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   children: [
                     const SizedBox(height: 48),
                     Text(
-                      "What's your number?",
+                      _mode == _InputMode.phone
+                          ? "What's your number?"
+                          : "What's your email?",
                       style: const TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 32,
@@ -117,33 +164,78 @@ class _PhoneScreenState extends State<PhoneScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        _CountryPill(code: _countryCode, onTap: _pickCountryCode),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            style: const TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 24,
-                              color: ZendColors.textPrimary,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: '0000 000 000',
-                              filled: false,
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(color: ZendColors.textSecondary),
+                    if (_mode == _InputMode.phone) ...[
+                      Row(
+                        children: [
+                          _CountryPill(
+                              code: _countryCode, onTap: _pickCountryCode),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: TextField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                              style: const TextStyle(
+                                fontFamily: 'DMMono',
+                                fontSize: 24,
+                                color: ZendColors.textPrimary,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: '0000 000 000',
+                                filled: false,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintStyle:
+                                    TextStyle(color: ZendColors.textSecondary),
+                              ),
                             ),
                           ),
+                        ],
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        style: const TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 20,
+                          color: ZendColors.textPrimary,
                         ),
-                      ],
-                    ),
+                        decoration: const InputDecoration(
+                          hintText: 'you@example.com',
+                          filled: false,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle:
+                              TextStyle(color: ZendColors.textSecondary),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     const Divider(color: ZendColors.border),
+                    const SizedBox(height: 16),
+                    // Toggle between phone and email
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _mode = _mode == _InputMode.phone
+                            ? _InputMode.email
+                            : _InputMode.phone;
+                      }),
+                      child: Text(
+                        _mode == _InputMode.phone
+                            ? 'Use email instead'
+                            : 'Use phone number instead',
+                        style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 14,
+                          color: ZendColors.accent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                     const Spacer(),
                     PrimaryButton(
                       label: 'Continue',
@@ -189,13 +281,18 @@ class _CountryPill extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright)),
+                child: Text('◉',
+                    style: TextStyle(
+                        fontSize: 10, color: ZendColors.accentBright)),
               ),
             ),
             const SizedBox(width: 8),
             Text(
               code,
-              style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.keyboard_arrow_down, size: 18),

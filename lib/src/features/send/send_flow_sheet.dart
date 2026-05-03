@@ -630,6 +630,7 @@ List<(String name, String tag, String avatar)> _buildRecentContacts(
   List<RecentContact> contacts,
 ) {
   return contacts
+      .take(5)
       .map((contact) => (contact.name, contact.tag, contact.avatarLabel))
       .toList();
 }
