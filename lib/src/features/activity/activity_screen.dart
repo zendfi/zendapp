@@ -85,7 +85,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 8),
                 itemCount: _filters.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   final label = _filters[i];
                   final active = _activeFilter == label;
