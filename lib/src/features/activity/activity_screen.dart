@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'transaction_receipt_sheet.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -177,6 +178,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     time: filtered[i].time,
                                     amountColor:
                                         filtered[i].amountColor,
+                                    onTap: filtered[i].entry != null
+                                        ? () => showTransactionReceipt(
+                                              context,
+                                              tx: filtered[i],
+                                            )
+                                        : null,
                                   ),
                                   if (i < filtered.length - 1)
                                     Divider(
@@ -221,6 +228,7 @@ class _ActivityTile extends StatelessWidget {
     required this.amount,
     required this.time,
     this.amountColor,
+    this.onTap,
   });
 
   final String avatarLabel;
@@ -229,69 +237,74 @@ class _ActivityTile extends StatelessWidget {
   final String amount;
   final String time;
   final Color? amountColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: zt.bgPrimary,
-            child: Text(avatarLabel,
-                style: TextStyle(color: zt.textPrimary)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: zt.bgPrimary,
+              child: Text(avatarLabel,
+                  style: TextStyle(color: zt.textPrimary)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    note,
+                    style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 13,
+                        color: zt.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  name,
+                  amount,
                   style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: zt.textPrimary),
+                    fontFamily: 'InstrumentSerif',
+                    fontSize: 22,
+                    fontStyle: FontStyle.italic,
+                    color: amountColor ?? zt.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  note,
+                  time,
                   style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 13,
-                      color: zt.textSecondary),
+                    fontFamily: 'DMMono',
+                    fontSize: 11,
+                    color: zt.textSecondary,
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                amount,
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 22,
-                  fontStyle: FontStyle.italic,
-                  color: amountColor ?? zt.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                time,
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 11,
-                  color: zt.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

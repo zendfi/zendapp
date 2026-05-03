@@ -55,6 +55,7 @@ class ZendTransaction {
     required this.time,
     required this.avatarLabel,
     this.amountColor,
+    this.entry,
   });
 
   final String name;
@@ -63,6 +64,9 @@ class ZendTransaction {
   final String time;
   final String avatarLabel;
   final Color? amountColor;
+  /// Full history entry — present for all server-fetched transactions.
+  /// Null only for optimistically-inserted local transactions.
+  final TransferHistoryEntry? entry;
 }
 
 class ZendAppModel extends ChangeNotifier {
@@ -348,6 +352,7 @@ class ZendAppModel extends ChangeNotifier {
           time: _formatTimestamp(entry.createdAt),
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
           amountColor: isSent ? null : ZendColors.positive,
+          entry: entry,
         );
       }).toList();
       recentContacts = contacts;

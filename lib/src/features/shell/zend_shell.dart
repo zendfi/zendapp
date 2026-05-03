@@ -51,6 +51,7 @@ class _ZendShellState extends State<ZendShell> {
       HomeScreen(
         onOpenReceive: () => _openFundDrawer(context),
         onOpenSend: () => _setTab(1),
+        onViewAll: () => _setTab(2),
       ),
       SendScreen(
         onOpenRecipients: (amount) => _openRecipientSheet(context, amount),

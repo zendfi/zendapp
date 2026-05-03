@@ -5,14 +5,21 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
+import '../activity/transaction_receipt_sheet.dart';
 import '../pools/pool_list_drawer.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onOpenReceive, required this.onOpenSend});
+  const HomeScreen({
+    super.key,
+    required this.onOpenReceive,
+    required this.onOpenSend,
+    required this.onViewAll,
+  });
 
   final VoidCallback onOpenReceive;
   final VoidCallback onOpenSend;
+  final VoidCallback onViewAll;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -227,12 +234,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final zt = ZendTheme.of(context);
                                   return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                                     Text('Recent', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                                    Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary)),
+                                    GestureDetector(
+                                      onTap: widget.onViewAll,
+                                      child: Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.accent)),
+                                    ),
                                   ]);
                                 }),
                                 const SizedBox(height: 14),
                                 for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
-                                  _TransactionRow.fromTransaction(model.recentTransactions[i]),
+                                  _TransactionRow.fromTransaction(
+                                    model.recentTransactions[i],
+                                    onTap: model.recentTransactions[i].entry != null
+                                        ? () => showTransactionReceipt(
+                                              context,
+                                              tx: model.recentTransactions[i],
+                                            )
+                                        : null,
+                                  ),
                                   if (i != model.recentTransactions.take(5).length - 1) const Divider(color: ZendColors.border),
                                 ],
                                 const SizedBox(height: 26),
@@ -261,35 +279,40 @@ String _displayName(String value) {
 }
 
 class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor});
+  const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor, this.onTap});
   final String name;
   final String note;
   final String amount;
   final String time;
   final String avatarLabel;
   final Color? amountColor;
+  final VoidCallback? onTap;
 
-  factory _TransactionRow.fromTransaction(ZendTransaction tx) => _TransactionRow(name: tx.name, note: tx.note, amount: tx.amount, time: tx.time, avatarLabel: tx.avatarLabel, amountColor: tx.amountColor);
+  factory _TransactionRow.fromTransaction(ZendTransaction tx, {VoidCallback? onTap}) =>
+      _TransactionRow(name: tx.name, note: tx.note, amount: tx.amount, time: tx.time, avatarLabel: tx.avatarLabel, amountColor: tx.amountColor, onTap: onTap);
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(children: [
-        CircleAvatar(radius: 20, backgroundColor: zt.bgCard, child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary))),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-          const SizedBox(height: 3),
-          Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
-        ])),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
-          const SizedBox(height: 4),
-          Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(children: [
+          CircleAvatar(radius: 20, backgroundColor: zt.bgCard, child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary))),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            const SizedBox(height: 3),
+            Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
+          ])),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
+            const SizedBox(height: 4),
+            Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+          ]),
         ]),
-      ]),
+      ),
     );
   }
 }
