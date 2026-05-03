@@ -9,6 +9,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/recent_contact.dart';
 import '../../services/sound_service.dart';
+import 'bank_send_sheet.dart';
 
 enum SendStage { recipient, note, pin, processing, success, error }
 
@@ -581,43 +582,49 @@ class _RecipientStageState extends State<_RecipientStage> {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: ZendColors.bgPrimary,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: ZendColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: ZendColors.bgSecondary,
-                    borderRadius: BorderRadius.circular(10),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).pop();
+              showBankSendSheet(context);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: ZendColors.bgPrimary,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: ZendColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: ZendColors.bgSecondary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance_outlined),
                   ),
-                  child: const Icon(Icons.account_balance_outlined),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Send to bank account',
-                          style: TextStyle(fontSize: 15)),
-                      SizedBox(height: 2),
-                      Text(
-                        'Nigeria, UK, USA, Europe',
-                        style: TextStyle(
-                            fontSize: 12, color: ZendColors.textSecondary),
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Send to bank account',
+                            style: TextStyle(fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text(
+                          'Nigeria, UK, USA, Europe',
+                          style: TextStyle(
+                              fontSize: 12, color: ZendColors.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Icon(Icons.chevron_right,
-                    size: 18, color: ZendColors.textSecondary),
-              ],
+                  const Icon(Icons.chevron_right,
+                      size: 18, color: ZendColors.textSecondary),
+                ],
+              ),
             ),
           ),
         ],

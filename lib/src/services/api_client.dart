@@ -391,7 +391,154 @@ class ApiClient {
     }
   }
 
-  // ── Bridge KYC ───────────────────────────────────────────────────────────
+  // ── Bank send ─────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getBankSendNgnRates() async {
+    try {
+      final response = await _dio.get('/api/zend/bank-send/ngn/rates');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<dynamic>> getBankSendNgnBanks() async {
+    try {
+      final response = await _dio.get('/api/zend/bank-send/ngn/banks');
+      final data = response.data as Map<String, dynamic>;
+      return data['banks'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> resolveNgnBankAccount({
+    required String bankId,
+    required String accountNumber,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/ngn/resolve-account',
+        data: {'bank_id': bankId, 'account_number': accountNumber},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> prepareNgnBankSend({
+    required double amountUsdc,
+    required String bankId,
+    required String accountNumber,
+    String? savedAccountId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/ngn/prepare',
+        data: <String, dynamic>{
+          'amount_usdc': amountUsdc,
+          'bank_id': bankId,
+          'account_number': accountNumber,
+          'saved_account_id': ?savedAccountId,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> confirmBankSend({
+    required String orderId,
+    required String partiallySignedTx,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/ngn/confirm',
+        data: {
+          'order_id': orderId,
+          'partially_signed_tx': partiallySignedTx,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<dynamic>> getIntlSavedAccounts() async {
+    try {
+      final response =
+          await _dio.get('/api/zend/bank-send/intl/saved-accounts');
+      final data = response.data as Map<String, dynamic>;
+      return data['accounts'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> addIntlBankAccount(
+      Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/intl/add-account',
+        data: data,
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> prepareIntlBankSend({
+    required double amountUsdc,
+    required String savedAccountId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/intl/prepare',
+        data: {
+          'amount_usdc': amountUsdc,
+          'saved_account_id': savedAccountId,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> confirmIntlBankSend({
+    required String orderId,
+    required String partiallySignedTx,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/bank-send/intl/confirm',
+        data: {
+          'order_id': orderId,
+          'partially_signed_tx': partiallySignedTx,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<dynamic>> getBankSendOrders() async {
+    try {
+      final response = await _dio.get('/api/zend/bank-send/orders');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 
   Future<Map<String, dynamic>> getBridgeKycStatus() async {
     try {

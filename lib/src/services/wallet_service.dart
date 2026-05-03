@@ -268,7 +268,72 @@ class WalletService {
     }
   }
 
-  Future<void> clearWalletData() async {
+  /// Build and sign a USDC transfer to a raw Solana address (e.g. PAJ deposit
+  /// address or Bridge liquidation address). Unlike [buildAndSignTransaction],
+  /// the destination ATA is derived from the destination address directly —
+  /// the address IS the token account, not a wallet that owns one.
+  Future<String> buildAndSignTransactionToAddress({
+    required String pin,
+    required double amountUsdc,
+    required String destinationAddress,
+    required String blockhash,
+    required String feePayerAddress,
+  }) async {
+    final privateKeyBytes = await _decryptLocalKeypair(pin);
+
+    try {
+      final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: privateKeyBytes.toList(),
+      );
+
+      final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
+      final destinationPubkey =
+          Ed25519HDPublicKey.fromBase58(destinationAddress);
+      final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
+
+      final senderAta = await findAssociatedTokenAddress(
+        owner: senderPubkey,
+        mint: usdcMint,
+      );
+
+      // For PAJ/Bridge deposit addresses the destination IS the token account
+      // (they manage their own ATAs). We send directly to the address.
+      final amountTokens = (amountUsdc * 1000000).round();
+
+      final transferInstruction = TokenInstruction.transfer(
+        source: senderAta,
+        destination: destinationPubkey,
+        owner: senderPubkey,
+        amount: amountTokens,
+      );
+
+      final feePayer = Ed25519HDPublicKey.fromBase58(feePayerAddress);
+
+      final message = Message(instructions: [transferInstruction]);
+      final compiledMessage = message.compile(
+        recentBlockhash: blockhash,
+        feePayer: feePayer,
+      );
+
+      final signature = await keypair.sign(compiledMessage.toByteArray());
+
+      final signedTx = SignedTx(
+        compiledMessage: compiledMessage,
+        signatures: [
+          Signature(List.filled(64, 0), publicKey: feePayer),
+          Signature(signature.bytes, publicKey: senderPubkey),
+        ],
+      );
+
+      return base64Encode(signedTx.toByteArray().toList());
+    } finally {
+      for (var i = 0; i < privateKeyBytes.length; i++) {
+        privateKeyBytes[i] = 0;
+      }
+    }
+  }
+
+  Future<void> clearLocalData() async {
     await _secureStorage.delete(key: _encryptedPrivateKeyKey);
     await _secureStorage.delete(key: _publicKeyKey);
     await _secureStorage.delete(key: _pinSaltKey);
