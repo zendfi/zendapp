@@ -80,9 +80,9 @@ class _FundDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       child: ZendScrollPage(
@@ -97,7 +97,6 @@ class _FundDrawer extends StatelessWidget {
                 fontFamily: 'InstrumentSerif',
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textPrimary,
               ),
             ),
             const SizedBox(height: 20),

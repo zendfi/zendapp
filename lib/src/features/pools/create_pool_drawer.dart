@@ -242,9 +242,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     final nameRemaining = _nameMaxLength - _nameController.text.length;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(ZendRadii.xxl),
         ),
       ),

@@ -54,7 +54,7 @@ class ZendTransaction {
     required this.amount,
     required this.time,
     required this.avatarLabel,
-    this.amountColor = ZendColors.textPrimary,
+    this.amountColor,
   });
 
   final String name;
@@ -62,7 +62,7 @@ class ZendTransaction {
   final String amount;
   final String time;
   final String avatarLabel;
-  final Color amountColor;
+  final Color? amountColor;
 }
 
 class ZendAppModel extends ChangeNotifier {
@@ -347,7 +347,7 @@ class ZendAppModel extends ChangeNotifier {
           amount: '$sign\$${entry.amountUsdc}',
           time: _formatTimestamp(entry.createdAt),
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
-          amountColor: isSent ? ZendColors.textPrimary : ZendColors.positive,
+          amountColor: isSent ? null : ZendColors.positive,
         );
       }).toList();
       recentContacts = contacts;

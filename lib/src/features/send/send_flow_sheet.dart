@@ -289,9 +289,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           duration: _sheetResize,
           curve: Curves.easeOutCubic,
           height: screenHeight * _sheetHeightFraction,
-          decoration: const BoxDecoration(
-            color: ZendColors.bgPrimary,
-            borderRadius: BorderRadius.vertical(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(
               top: Radius.circular(ZendRadii.xxl),
             ),
           ),

@@ -35,9 +35,9 @@ class PoolListDrawer extends StatelessWidget {
         model.pools.where((p) => p.status == PoolStatus.active).toList();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(ZendRadii.xxl),
         ),
       ),

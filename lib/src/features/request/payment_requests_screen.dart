@@ -76,7 +76,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),

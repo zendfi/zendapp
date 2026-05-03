@@ -30,7 +30,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
       case 'Sent':
         return all.where((t) => t.amount.startsWith('-')).toList();
       case 'Pending':
-        // Pending transfers show "Just now" and have no sign prefix yet
         return all.where((t) => t.time == 'Just now').toList();
       default:
         return all;
@@ -39,11 +38,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final filtered = _filtered(model.recentTransactions);
 
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,23 +54,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: const Text(
+                    child: Text(
                       'Activity',
                       style: TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
-                        color: ZendColors.textPrimary,
+                        color: zt.textPrimary,
                       ),
                     ),
                   ),
                   IconButton(
                     onPressed: () {},
-                    icon: const Icon(Icons.search, color: ZendColors.textSecondary),
+                    icon: Icon(Icons.search, color: zt.textSecondary),
                   ),
                   IconButton(
                     onPressed: () {},
-                    icon: const Icon(Icons.notifications_none, color: ZendColors.textSecondary),
+                    icon: Icon(Icons.notifications_none,
+                        color: zt.textSecondary),
                   ),
                 ],
               ),
@@ -81,9 +82,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
               height: 48,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
                 itemCount: _filters.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   final label = _filters[i];
                   final active = _activeFilter == label;
@@ -91,17 +93,23 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     onTap: () => setState(() => _activeFilter = label),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: active ? ZendColors.accent : ZendColors.bgSecondary,
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                        color: active
+                            ? zt.accent
+                            : zt.bgSecondary,
+                        borderRadius:
+                            BorderRadius.circular(ZendRadii.pill),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         label,
                         style: TextStyle(
                           fontFamily: 'DMSans',
-                          color: active ? ZendColors.textOnDeep : ZendColors.textSecondary,
+                          color: active
+                              ? ZendColors.textOnDeep
+                              : zt.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -118,27 +126,32 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 onRefresh: () => model.fetchHistory(),
                 child: ZendScrollPage(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    padding:
+                        const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (model.historyLoading && model.recentTransactions.isEmpty)
+                        if (model.historyLoading &&
+                            model.recentTransactions.isEmpty)
                           const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
-                            child: Center(child: ZendLoader(size: 24)),
+                            padding:
+                                EdgeInsets.symmetric(vertical: 48),
+                            child:
+                                Center(child: ZendLoader(size: 24)),
                           )
                         else if (filtered.isEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 48),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 48),
                             child: Center(
                               child: Text(
                                 _activeFilter == 'All'
                                     ? 'No transactions yet'
                                     : 'No ${_activeFilter.toLowerCase()} transactions',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'DMSans',
                                   fontSize: 14,
-                                  color: ZendColors.textSecondary,
+                                  color: zt.textSecondary,
                                 ),
                               ),
                             ),
@@ -146,36 +159,44 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         else
                           Container(
                             decoration: BoxDecoration(
-                              color: ZendColors.bgPrimary,
-                              borderRadius: BorderRadius.circular(24),
+                              color: zt.bgSecondary,
+                              borderRadius:
+                                  BorderRadius.circular(24),
                             ),
                             child: Column(
                               children: [
-                                for (var i = 0; i < filtered.length; i++) ...[
+                                for (var i = 0;
+                                    i < filtered.length;
+                                    i++) ...[
                                   _ActivityTile(
-                                    avatarLabel: filtered[i].avatarLabel,
+                                    avatarLabel:
+                                        filtered[i].avatarLabel,
                                     name: filtered[i].name,
                                     note: filtered[i].note,
                                     amount: filtered[i].amount,
                                     time: filtered[i].time,
-                                    amountColor: filtered[i].amountColor,
+                                    amountColor:
+                                        filtered[i].amountColor,
                                   ),
                                   if (i < filtered.length - 1)
-                                    const Divider(color: ZendColors.border, height: 1),
+                                    Divider(
+                                        color: zt.border,
+                                        height: 1),
                                 ],
                               ],
                             ),
                           ),
                         if (model.lastHistoryError != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 12),
+                            padding:
+                                const EdgeInsets.only(top: 12),
                             child: Text(
                               'Could not load latest activity',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'DMSans',
                                 fontSize: 12,
-                                color: ZendColors.textSecondary,
+                                color: zt.textSecondary,
                               ),
                             ),
                           ),
@@ -199,7 +220,7 @@ class _ActivityTile extends StatelessWidget {
     required this.note,
     required this.amount,
     required this.time,
-    this.amountColor = ZendColors.textPrimary,
+    this.amountColor,
   });
 
   final String avatarLabel;
@@ -207,19 +228,21 @@ class _ActivityTile extends StatelessWidget {
   final String note;
   final String amount;
   final String time;
-  final Color amountColor;
+  final Color? amountColor;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: ZendColors.bgSecondary,
+            backgroundColor: zt.bgPrimary,
             child: Text(avatarLabel,
-                style: const TextStyle(color: ZendColors.textPrimary)),
+                style: TextStyle(color: zt.textPrimary)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -228,18 +251,19 @@ class _ActivityTile extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 15,
-                      fontWeight: FontWeight.w600),
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   note,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 13,
-                      color: ZendColors.textSecondary),
+                      color: zt.textSecondary),
                 ),
               ],
             ),
@@ -253,16 +277,16 @@ class _ActivityTile extends StatelessWidget {
                   fontFamily: 'InstrumentSerif',
                   fontSize: 22,
                   fontStyle: FontStyle.italic,
-                  color: amountColor,
+                  color: amountColor ?? zt.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 time,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMMono',
                   fontSize: 11,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               ),
             ],

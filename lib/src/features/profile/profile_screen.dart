@@ -25,7 +25,7 @@ class ProfileScreen extends StatelessWidget {
     final linkHandle = model.username.isNotEmpty ? '@${model.username}' : 'user';
 
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,18 +252,19 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final children = <Widget>[];
     for (var i = 0; i < tiles.length; i++) {
       children.add(tiles[i]);
       if (i < tiles.length - 1) {
-        children.add(const Divider(height: 1, color: ZendColors.border));
+        children.add(Divider(height: 1, color: zt.border));
       }
     }
     return Container(
       decoration: BoxDecoration(
-        color: ZendColors.bgPrimary,
+        color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ZendColors.border),
+        border: Border.all(color: zt.border),
       ),
       child: Column(children: children),
     );
@@ -283,6 +284,7 @@ class _ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -290,20 +292,20 @@ class _ProfileTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: ZendColors.textSecondary),
+            Icon(icon, size: 20, color: zt.textSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: ZendColors.textSecondary),
+            Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
           ],
         ),
       ),
@@ -326,20 +328,21 @@ class _ProfileToggleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: ZendColors.textSecondary),
+          Icon(icon, size: 20, color: zt.textSecondary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
           ),
