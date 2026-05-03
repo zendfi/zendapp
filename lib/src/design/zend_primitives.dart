@@ -28,30 +28,35 @@ class PrimaryButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.backgroundColor = ZendColors.accent,
+    this.backgroundColor,
     this.foregroundColor = ZendColors.textOnDeep,
   });
 
   final String label;
   final VoidCallback onPressed;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Color foregroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return SizedBox(
       height: 52,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
+          backgroundColor: backgroundColor ?? zt.accent,
           foregroundColor: foregroundColor,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ZendRadii.lg)),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 15,
+              fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -59,25 +64,31 @@ class PrimaryButton extends StatelessWidget {
 }
 
 class OutlineActionButton extends StatelessWidget {
-  const OutlineActionButton({super.key, required this.label, required this.onPressed});
+  const OutlineActionButton(
+      {super.key, required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return SizedBox(
       height: 48,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: ZendColors.textPrimary,
-          side: const BorderSide(color: ZendColors.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+          foregroundColor: zt.textPrimary,
+          side: BorderSide(color: zt.border),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ZendRadii.pill)),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 15,
+              fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -89,14 +100,16 @@ class ZendSheetHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final zt = ZendTheme.of(context);
+    return Center(
       child: SizedBox(
         width: 32,
         height: 4,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: ZendColors.border,
-            borderRadius: BorderRadius.all(Radius.circular(ZendRadii.pill)),
+            color: zt.border,
+            borderRadius:
+                const BorderRadius.all(Radius.circular(ZendRadii.pill)),
           ),
         ),
       ),
@@ -105,7 +118,11 @@ class ZendSheetHandle extends StatelessWidget {
 }
 
 class ZendLoader extends StatelessWidget {
-  const ZendLoader({super.key, this.size = 22, this.strokeWidth = 2, this.color = ZendColors.accentPop});
+  const ZendLoader(
+      {super.key,
+      this.size = 22,
+      this.strokeWidth = 2,
+      this.color = ZendColors.accentPop});
 
   final double size;
   final double strokeWidth;

@@ -198,10 +198,10 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, scrollController) {
                 return RepaintBoundary(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: ZendColors.bgPrimary,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-                      boxShadow: [BoxShadow(color: Color(0x1F000000), blurRadius: 24, offset: Offset(0, -4))],
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+                      boxShadow: const [BoxShadow(color: Color(0x1F000000), blurRadius: 24, offset: Offset(0, -4))],
                     ),
                     child: SafeArea(
                       top: false,
@@ -221,12 +221,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 18),
                                 Row(children: [const Expanded(child: _YieldCard()), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
                                 const SizedBox(height: 18),
-                                const Divider(color: ZendColors.border),
+                                const Divider(),
                                 const SizedBox(height: 14),
-                                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [
-                                  Text('Recent', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600)),
-                                  Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: ZendColors.textSecondary)),
-                                ]),
+                                Builder(builder: (context) {
+                                  final zt = ZendTheme.of(context);
+                                  return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                    Text('Recent', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                                    Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary)),
+                                  ]);
+                                }),
                                 const SizedBox(height: 14),
                                 for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
                                   _TransactionRow.fromTransaction(model.recentTransactions[i]),
@@ -258,32 +261,33 @@ String _displayName(String value) {
 }
 
 class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor = ZendColors.textPrimary});
+  const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor});
   final String name;
   final String note;
   final String amount;
   final String time;
   final String avatarLabel;
-  final Color amountColor;
+  final Color? amountColor;
 
   factory _TransactionRow.fromTransaction(ZendTransaction tx) => _TransactionRow(name: tx.name, note: tx.note, amount: tx.amount, time: tx.time, avatarLabel: tx.avatarLabel, amountColor: tx.amountColor);
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(children: [
-        CircleAvatar(radius: 20, backgroundColor: ZendColors.bgSecondary, child: Text(avatarLabel, style: const TextStyle(color: ZendColors.textPrimary))),
+        CircleAvatar(radius: 20, backgroundColor: zt.bgCard, child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary))),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name, style: const TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(name, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
           const SizedBox(height: 3),
-          Text(note, style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.textSecondary)),
+          Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, fontStyle: FontStyle.italic, color: amountColor)),
+          Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
           const SizedBox(height: 4),
-          Text(time, style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.textSecondary)),
+          Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
         ]),
       ]),
     );
@@ -294,17 +298,21 @@ class _YieldCard extends StatelessWidget {
   const _YieldCard();
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Container(
       height: 118, padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: BoxDecoration(color: const Color(0xFFF3F4F1), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(14)),
       child: Stack(children: [
         Positioned(top: 0, right: 0, child: Container(width: 64, height: 48, decoration: const BoxDecoration(gradient: RadialGradient(colors: [Color(0x55A9D7BF), Color(0x00A9D7BF)])))),
-        const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Earnings', style: TextStyle(fontSize: 14, color: ZendColors.textSecondary)), Icon(Icons.settings_outlined, size: 16, color: ZendColors.textSecondary)]),
-          SizedBox(height: 3),
-          Text('4.2%', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 50, height: 0.92, color: ZendColors.textPrimary)),
-          Spacer(),
-          Text('CURRENT APY', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: ZendColors.textSecondary)),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Earnings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+            Icon(Icons.settings_outlined, size: 16, color: zt.textSecondary),
+          ]),
+          const SizedBox(height: 3),
+          Text('4.2%', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 50, height: 0.92, color: zt.textPrimary)),
+          const Spacer(),
+          Text('CURRENT APY', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary)),
         ]),
       ]),
     );
@@ -319,7 +327,9 @@ class _PoolsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final total = model.totalPoolsGathered;
+    final totalStr = '\$${total.toStringAsFixed(2)}';
     final participants = model.recentPoolParticipants;
     final displayedCount = participants.length > 2 ? 2 : participants.length;
     final overflow = participants.length - displayedCount;
@@ -327,10 +337,17 @@ class _PoolsCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 118, padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: BoxDecoration(color: const Color(0xFFF3F4F1), borderRadius: BorderRadius.circular(14)),
+        height: 118,
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        decoration: BoxDecoration(
+            color: zt.bgCard, borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [Text('Pools', style: TextStyle(fontSize: 14, color: ZendColors.textSecondary)), Icon(Icons.groups_2_outlined, size: 16, color: ZendColors.textSecondary)]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Pools',
+                style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+            Icon(Icons.groups_2_outlined,
+                size: 16, color: zt.textSecondary),
+          ]),
           const SizedBox(height: 3),
           if (participants.isNotEmpty)
             SizedBox(
@@ -338,21 +355,35 @@ class _PoolsCard extends StatelessWidget {
               height: 22,
               child: Stack(children: [
                 for (var i = 0; i < displayedCount; i++)
-                  Positioned(left: i * 16.0, child: _PoolAvatar(label: participants[i].avatarLabel)),
+                  Positioned(
+                      left: i * 16.0,
+                      child: _PoolAvatar(
+                          label: participants[i].avatarLabel)),
                 if (overflow > 0)
                   Positioned(
                     left: displayedCount * 16.0 + 4,
                     child: Container(
-                      width: 22, height: 22,
-                      decoration: const BoxDecoration(color: Color(0xFFE1E3DE), shape: BoxShape.circle),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                          color: zt.bgSecondary,
+                          shape: BoxShape.circle),
                       alignment: Alignment.center,
-                      child: Text('+$overflow', style: const TextStyle(fontSize: 10, color: ZendColors.textSecondary)),
+                      child: Text('+$overflow',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: zt.textSecondary)),
                     ),
                   ),
               ]),
             ),
           const Spacer(),
-          Text('\$${total.toStringAsFixed(2)}', style: const TextStyle(fontFamily: 'InstrumentSerif', fontSize: 50, height: 0.92, color: ZendColors.textPrimary)),
+          Text(totalStr,
+              style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 50,
+                  height: 0.92,
+                  color: zt.textPrimary)),
         ]),
       ),
     );
@@ -362,7 +393,20 @@ class _PoolsCard extends StatelessWidget {
 class _PoolAvatar extends StatelessWidget {
   const _PoolAvatar({required this.label});
   final String label;
-  @override
-  Widget build(BuildContext context) => Container(width: 22, height: 22, decoration: const BoxDecoration(color: ZendColors.bgDeep, shape: BoxShape.circle), alignment: Alignment.center, child: Text(label, style: const TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendColors.textOnDeep)));
-}
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(
+          color: ZendColors.bgDeep, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: Text(label,
+          style: const TextStyle(
+              fontFamily: 'DMMono',
+              fontSize: 10,
+              color: ZendColors.textOnDeep)),
+    );
+  }
+}

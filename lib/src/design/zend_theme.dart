@@ -175,18 +175,19 @@ ThemeData buildZendDarkTheme() {
     colorScheme: const ColorScheme.dark(
       primary: ZendColors.accentBright,
       secondary: ZendColors.accentPop,
-      surface: ZendColors.bgDeep,
+      surface: Color(0xFF111A12),       // bgPrimary dark
       onPrimary: ZendColors.textPrimary,
       onSurface: ZendColors.textOnDeep,
       error: ZendColors.destructive,
     ),
-    scaffoldBackgroundColor: ZendColors.bgDeep,
+    scaffoldBackgroundColor: const Color(0xFF111A12),
     textTheme: textTheme,
-    splashFactory: InkRipple.splashFactory,
+    splashFactory: NoSplash.splashFactory,
     dividerTheme: const DividerThemeData(color: Color(0x26E8F4EC), thickness: 1),
+    cardColor: const Color(0xFF1C2B1E),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0x1AE8F4EC),
+      fillColor: const Color(0xFF1C2B1E),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
