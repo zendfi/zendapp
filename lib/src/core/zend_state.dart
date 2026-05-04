@@ -56,7 +56,8 @@ class ZendTransaction {
     required this.avatarLabel,
     this.amountColor,
     this.entry,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   final String name;
   final String note;
@@ -64,6 +65,7 @@ class ZendTransaction {
   final String time;
   final String avatarLabel;
   final Color? amountColor;
+  final DateTime createdAt;
   /// Full history entry — present for all server-fetched transactions.
   /// Null only for optimistically-inserted local transactions.
   final TransferHistoryEntry? entry;
@@ -339,22 +341,89 @@ class ZendAppModel extends ChangeNotifier {
     lastHistoryError = null;
     notifyListeners();
     try {
-      final entries = await transferService.getHistory();
+      // Fetch zend-to-zend transfers and bank sends in parallel
+      final results = await Future.wait([
+        transferService.getHistory(),
+        walletService.apiClient.getBankSendOrders().catchError((_) => <dynamic>[]),
+      ]);
+
+      final entries = results[0] as List<TransferHistoryEntry>;
+      final bankOrders = results[1].cast<Map<String, dynamic>>();
       final contacts = _buildRecentContactsFromHistory(entries);
-      recentTransactions = entries.map((entry) {
+
+      // Build rows from zend-to-zend transfers
+      final transferRows = entries.map((entry) {
         final isSent = entry.senderZendtag == currentZendtag;
         final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
         final sign = isSent ? '-' : '+';
+        final amt = entry.amountUsdc;
         return ZendTransaction(
           name: '@$counterparty',
           note: entry.note ?? '',
-          amount: '$sign\$${entry.amountUsdc}',
+          amount: '$sign\$$amt',
           time: _formatTimestamp(entry.createdAt),
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
           amountColor: isSent ? null : ZendColors.positive,
           entry: entry,
+          createdAt: entry.createdAt,
         );
       }).toList();
+
+      // Build rows from bank send orders
+      final bankRows = bankOrders.map((order) {
+        final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
+        final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
+        final fiatCurrency = order['fiat_currency'] as String? ?? '';
+        final bankName = order['bank_name'] as String? ?? 'Bank';
+        final accountMasked = order['account_number_masked'] as String?;
+        final status = order['status'] as String? ?? '';
+        final createdAtStr = order['created_at'] as String? ?? '';
+        final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
+
+        // Note: show fiat amount + masked account for maximum context
+        final fiatPart = fiatAmount != null && fiatAmount > 0 && fiatCurrency.isNotEmpty
+            ? _formatFiatDisplay(fiatAmount, fiatCurrency)
+            : null;
+        final accountPart = accountMasked != null && accountMasked.isNotEmpty
+            ? accountMasked
+            : null;
+        final noteParts = [
+          fiatPart,
+          accountPart,
+        ].whereType<String>().toList();
+        final note = noteParts.isNotEmpty ? noteParts.join(' · ') : '→ $bankName';
+
+        final amtStr = amountUsdc == amountUsdc.roundToDouble()
+            ? '-\$${amountUsdc.toStringAsFixed(0)}'
+            : '-\$${amountUsdc.toStringAsFixed(2)}';
+
+        final timeStr = (status == 'pending_payment' || status == 'processing')
+            ? 'Processing'
+            : status == 'paid'
+                ? 'Sent'
+                : status == 'completed'
+                    ? 'Delivered'
+                    : status == 'failed'
+                        ? 'Failed'
+                        : _formatTimestamp(createdAt);
+
+        return ZendTransaction(
+          name: bankName.isNotEmpty ? bankName : 'Bank transfer',
+          note: note,
+          amount: amtStr,
+          time: timeStr,
+          avatarLabel: 'B',
+          amountColor: null,
+          entry: null,
+          createdAt: createdAt,
+        );
+      }).toList();
+
+      // Merge and sort newest first
+      final all = [...transferRows, ...bankRows]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      recentTransactions = all;
       recentContacts = contacts;
       await recentContactsStore.save(recentContacts).catchError((_) {});
       lastHistoryError = null;
@@ -364,6 +433,26 @@ class ZendAppModel extends ChangeNotifier {
       historyLoading = false;
       notifyListeners();
     }
+  }
+
+  String _formatFiatDisplay(double value, String currency) {
+    if (currency == 'NGN') {
+      final rounded = value.round();
+      final text = rounded.toString();
+      final buf = StringBuffer();
+      for (var i = 0; i < text.length; i++) {
+        final fromEnd = text.length - i;
+        buf.write(text[i]);
+        if (fromEnd > 1 && fromEnd % 3 == 1) buf.write(',');
+      }
+      return '₦${buf.toString()}';
+    }
+    final symbol = switch (currency) {
+      'GBP' => '£',
+      'EUR' => '€',
+      _ => '\$',
+    };
+    return '$symbol${value.toStringAsFixed(2)}';
   }
 
   void setAuthenticated({

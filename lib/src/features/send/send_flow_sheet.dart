@@ -587,6 +587,14 @@ class _RecipientStageState extends State<_RecipientStage> {
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {
+              if (widget.amount <= 0) {
+                // Amount not set — close this sheet and let the user enter
+                // an amount on the keypad first. The send screen's Pay button
+                // already guards against 0, so this handles edge cases like
+                // deep-link opens with no amount.
+                Navigator.of(context).pop();
+                return;
+              }
               Navigator.of(context).pop();
               showBankSendSheet(context, amount: widget.amount);
             },

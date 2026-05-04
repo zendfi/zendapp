@@ -576,7 +576,8 @@ class _IntlAccountStage extends StatelessWidget {
 // ── Resolving Stage ───────────────────────────────────────────────────────────
 
 class _ResolvingStage extends StatelessWidget {
-  const _ResolvingStage();
+  const _ResolvingStage({this.message = 'Verifying...'});
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -587,7 +588,8 @@ class _ResolvingStage extends StatelessWidget {
           const ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
-            'Verifying...',
+            message,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,

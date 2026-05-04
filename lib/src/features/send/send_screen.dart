@@ -37,9 +37,7 @@ class _SendScreenState extends State<SendScreen> {
 
   String get _fxPreview {
     if (_fxPreviewText != null) return _fxPreviewText!;
-    // Fallback to hardcoded rate while FX service loads
-    final naira = (_parsedAmount * 1538.3).round();
-    return '≈ ₦${_formatThousands(naira)}';
+    return '';
   }
 
   @override
@@ -164,7 +162,7 @@ class _SendScreenState extends State<SendScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        if (_digits.isNotEmpty)
+                        if (_digits.isNotEmpty && _fxPreviewText != null)
                           Text(
                             _fxPreview,
                             style: const TextStyle(

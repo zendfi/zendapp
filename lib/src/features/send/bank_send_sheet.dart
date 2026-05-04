@@ -119,6 +119,8 @@ class _BankSendSheetState extends State<BankSendSheet>
 
   // Error
   String? _errorMessage;
+  // Resolving message — shown during the PAJ OTP wait
+  String _resolvingMessage = 'Verifying...';
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
@@ -253,8 +255,23 @@ class _BankSendSheetState extends State<BankSendSheet>
   // ── Prepare order ─────────────────────────────────────────────────────────
 
   Future<void> _prepare() async {
-    _goTo(_BankSendStage.resolving);
+    // Show a more informative message — the PAJ OTP round-trip takes 10-30s
+    // and users need to know something is happening.
+    setState(() {
+      _stage = _BankSendStage.resolving;
+      _resolvingMessage = !_rail.isIntl
+          ? 'Verifying bank details...\nSit tight!'
+          : 'Preparing transfer...';
+    });
     try {
+      // Guard: amount must be set before prepare is called.
+      if (widget.amount <= 0) {
+        setState(() {
+          _errorMessage = 'Please enter an amount before sending.';
+          _stage = _BankSendStage.error;
+        });
+        return;
+      }
       final model = ZendScope.of(context);
       Map<String, dynamic> result;
 
@@ -467,7 +484,7 @@ class _BankSendSheetState extends State<BankSendSheet>
           },
         );
       case _BankSendStage.resolving:
-        return const _ResolvingStage();
+        return _ResolvingStage(message: _resolvingMessage);
       case _BankSendStage.confirmation:
         return _ConfirmationStage(
           rail: _rail,
