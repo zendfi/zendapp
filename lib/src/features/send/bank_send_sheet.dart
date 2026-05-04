@@ -84,9 +84,12 @@ class BankSendSheet extends StatefulWidget {
 }
 
 class _BankSendSheetState extends State<BankSendSheet>
-    with SingleTickerProviderStateMixin {
-  static const Duration _transition = Duration(milliseconds: 160);
-  static const Duration _resize = Duration(milliseconds: 180);
+    with TickerProviderStateMixin {
+  // Content transition — pure fade, no slide. Slide + resize simultaneously
+  // creates perceived lag because two layout passes compete on the same frame.
+  static const Duration _transition = Duration(milliseconds: 140);
+  // Sheet resize — slightly longer so the height settles after content fades in.
+  static const Duration _resize = Duration(milliseconds: 200);
 
   _BankSendStage _stage = _BankSendStage.railSelect;
   _BankSendRail _rail = _BankSendRail.ngn;
@@ -378,7 +381,7 @@ class _BankSendSheetState extends State<BankSendSheet>
         data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
         child: AnimatedContainer(
           duration: _resize,
-          curve: Curves.easeOutCubic,
+          curve: Curves.easeOut,
           height: screenHeight * _sheetHeightFraction,
           decoration: BoxDecoration(
             color: ZendTheme.of(context).bgPrimary,
@@ -394,20 +397,19 @@ class _BankSendSheetState extends State<BankSendSheet>
               Expanded(
                 child: AnimatedSwitcher(
                   duration: _transition,
-                  reverseDuration: const Duration(milliseconds: 140),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0, 0.04),
-                      end: Offset.zero,
-                    ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: _buildStage(),
+                  reverseDuration: const Duration(milliseconds: 100),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  // Pure fade — no slide. Slide + simultaneous height resize
+                  // creates a double-animation jank on every stage change.
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: KeyedSubtree(
+                    key: ValueKey(_stage),
+                    child: _buildStage(),
+                  ),
                 ),
               ),
             ],
@@ -421,13 +423,11 @@ class _BankSendSheetState extends State<BankSendSheet>
     switch (_stage) {
       case _BankSendStage.railSelect:
         return _RailSelectStage(
-          key: const ValueKey('rail'),
           amount: widget.amount,
           onSelect: _selectRail,
         );
       case _BankSendStage.bankInput:
         return _NgnBankInputStage(
-          key: const ValueKey('ngn-bank'),
           amount: widget.amount,
           ngnRate: _ngnRate,
           selectedBank: _selectedBank,
@@ -439,7 +439,6 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.bankPicker:
         return _BankPickerStage(
-          key: const ValueKey('bank-picker'),
           banks: _banks,
           onSelect: (bank) {
             setState(() {
@@ -452,7 +451,6 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.intlAccounts:
         return _IntlAccountStage(
-          key: const ValueKey('intl-acct'),
           rail: _rail,
           savedAccounts: _savedAccounts,
           onSelect: _selectSavedAccount,
@@ -461,7 +459,6 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.addIntlAccount:
         return _AddIntlAccountStage(
-          key: const ValueKey('add-intl'),
           rail: _rail,
           onBack: () => _goTo(_BankSendStage.intlAccounts),
           onSaved: (account) {
@@ -470,10 +467,9 @@ class _BankSendSheetState extends State<BankSendSheet>
           },
         );
       case _BankSendStage.resolving:
-        return const _ResolvingStage(key: ValueKey('resolving'));
+        return const _ResolvingStage();
       case _BankSendStage.confirmation:
         return _ConfirmationStage(
-          key: const ValueKey('confirm'),
           rail: _rail,
           amountUsdc: widget.amount,
           fiatAmount: _fiatAmount,
@@ -491,7 +487,6 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.pin:
         return _PinStage(
-          key: const ValueKey('pin'),
           amountUsdc: widget.amount,
           rail: _rail,
           pinDigits: _pinDigits,
@@ -508,10 +503,9 @@ class _BankSendSheetState extends State<BankSendSheet>
           },
         );
       case _BankSendStage.processing:
-        return const _ProcessingStage(key: ValueKey('processing'));
+        return const _ProcessingStage();
       case _BankSendStage.success:
         return _SuccessStage(
-          key: const ValueKey('success'),
           rail: _rail,
           amountUsdc: widget.amount,
           fiatAmount: _fiatAmount,
@@ -521,7 +515,6 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.error:
         return _ErrorStage(
-          key: const ValueKey('error'),
           message: _errorMessage ?? 'Something went wrong.',
           onRetry: () {
             setState(() {
