@@ -377,22 +377,26 @@ class ZendAppModel extends ChangeNotifier {
         final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
         final fiatCurrency = order['fiat_currency'] as String? ?? '';
         final bankName = order['bank_name'] as String? ?? 'Bank';
+        final accountName = order['account_name'] as String?;
         final accountMasked = order['account_number_masked'] as String?;
         final status = order['status'] as String? ?? '';
         final createdAtStr = order['created_at'] as String? ?? '';
         final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
 
-        // Note: show fiat amount + masked account for maximum context
+        // Title: account holder name if available, otherwise bank name
+        final title = (accountName != null && accountName.isNotEmpty)
+            ? _toTitleCase(accountName)
+            : bankName;
+
+        // Note: fiat amount + bank name + masked account
         final fiatPart = fiatAmount != null && fiatAmount > 0 && fiatCurrency.isNotEmpty
             ? _formatFiatDisplay(fiatAmount, fiatCurrency)
             : null;
+        final bankPart = bankName.isNotEmpty ? bankName : null;
         final accountPart = accountMasked != null && accountMasked.isNotEmpty
             ? accountMasked
             : null;
-        final noteParts = [
-          fiatPart,
-          accountPart,
-        ].whereType<String>().toList();
+        final noteParts = [fiatPart, bankPart, accountPart].whereType<String>().toList();
         final note = noteParts.isNotEmpty ? noteParts.join(' · ') : '→ $bankName';
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
@@ -410,7 +414,7 @@ class ZendAppModel extends ChangeNotifier {
                         : _formatTimestamp(createdAt);
 
         return ZendTransaction(
-          name: bankName.isNotEmpty ? bankName : 'Bank transfer',
+          name: title,
           note: note,
           amount: amtStr,
           time: timeStr,
@@ -436,6 +440,14 @@ class ZendAppModel extends ChangeNotifier {
       historyLoading = false;
       notifyListeners();
     }
+  }
+
+  String _toTitleCase(String s) {
+    if (s.isEmpty) return s;
+    return s.split(' ').map((w) {
+      if (w.isEmpty) return w;
+      return w[0].toUpperCase() + w.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   String _formatFiatDisplay(double value, String currency) {

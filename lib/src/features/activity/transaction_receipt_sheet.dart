@@ -306,6 +306,7 @@ class _BankSendReceiptSheet extends StatelessWidget {
     final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
     final fiatCurrency = order['fiat_currency'] as String? ?? '';
     final bankName = order['bank_name'] as String? ?? 'Bank';
+    final accountName = order['account_name'] as String?;
     final accountMasked = order['account_number_masked'] as String?;
     final rail = order['rail'] as String? ?? 'ngn';
     final status = order['status'] as String? ?? '';
@@ -413,7 +414,9 @@ class _BankSendReceiptSheet extends StatelessWidget {
                   const SizedBox(height: 6),
                   Center(
                     child: Text(
-                      'Sent to $bankName',
+                      accountName != null && accountName.isNotEmpty
+                          ? 'Sent to $accountName'
+                          : 'Sent to $bankName',
                       style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 15,
@@ -432,6 +435,10 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
+                        if (accountName != null && accountName.isNotEmpty) ...[
+                          _DetailRow(label: 'To', value: accountName),
+                          Divider(color: zt.border, height: 1),
+                        ],
                         _DetailRow(label: 'Bank', value: bankName),
                         if (accountMasked != null && accountMasked.isNotEmpty) ...[
                           Divider(color: zt.border, height: 1),
