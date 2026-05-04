@@ -87,10 +87,8 @@ class _RailSelectStage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.separated(
+            child: ListView.builder(
               itemCount: _kRails.length,
-              separatorBuilder: (_, i) =>
-                  Divider(height: 1, color: zt.border),
               itemBuilder: (context, i) {
                 final info = _kRails[i];
                 return _RailTile(info: info, onTap: () => onSelect(info.rail));

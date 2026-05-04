@@ -7,20 +7,34 @@ import '../../models/api_models.dart';
 import '../send/send_flow_sheet.dart';
 
 /// Opens the transaction receipt as a bottom sheet.
+/// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
 Future<void> showTransactionReceipt(
   BuildContext context, {
   required ZendTransaction tx,
 }) {
-  final entry = tx.entry;
-  if (entry == null) return Future.value();
+  // Zend-to-zend transfer
+  if (tx.entry != null) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReceiptSheet(tx: tx, entry: tx.entry!),
+    );
+  }
 
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useRootNavigator: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _ReceiptSheet(tx: tx, entry: entry),
-  );
+  // Bank send — tx has no entry but has bankOrder data
+  if (tx.bankOrder != null) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BankSendReceiptSheet(tx: tx, order: tx.bankOrder!),
+    );
+  }
+
+  return Future.value();
 }
 
 class _ReceiptSheet extends StatelessWidget {
@@ -273,5 +287,209 @@ class _DetailRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Bank Send Receipt ─────────────────────────────────────────────────────────
+
+class _BankSendReceiptSheet extends StatelessWidget {
+  const _BankSendReceiptSheet({required this.tx, required this.order});
+
+  final ZendTransaction tx;
+  final Map<String, dynamic> order;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+
+    final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
+    final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
+    final fiatCurrency = order['fiat_currency'] as String? ?? '';
+    final bankName = order['bank_name'] as String? ?? 'Bank';
+    final accountMasked = order['account_number_masked'] as String?;
+    final rail = order['rail'] as String? ?? 'ngn';
+    final status = order['status'] as String? ?? '';
+    final createdAtStr = order['created_at'] as String? ?? '';
+    final createdAt = DateTime.tryParse(createdAtStr) ?? tx.createdAt;
+
+    final statusColor = switch (status) {
+      'completed' => ZendColors.positive,
+      'failed' => ZendColors.destructive,
+      _ => ZendColors.accentPop,
+    };
+    final statusIcon = switch (status) {
+      'completed' => Icons.check_rounded,
+      'failed' => Icons.close_rounded,
+      _ => Icons.hourglass_top_rounded,
+    };
+    final statusLabel = switch (status) {
+      'completed' => 'Delivered',
+      'paid' => 'Sent',
+      'processing' => 'Processing',
+      'failed' => 'Failed',
+      'expired' => 'Expired',
+      _ => 'Processing',
+    };
+
+    final amountStr = amountUsdc == amountUsdc.roundToDouble()
+        ? '\$${amountUsdc.toStringAsFixed(0)}'
+        : '\$${amountUsdc.toStringAsFixed(2)}';
+
+    final fiatSymbol = switch (fiatCurrency) {
+      'NGN' => '₦',
+      'GBP' => '£',
+      'EUR' => '€',
+      _ => '\$',
+    };
+
+    final railLabel = switch (rail) {
+      'ngn' => 'Nigerian bank (NGN)',
+      'intl' => 'International bank',
+      _ => 'Bank transfer',
+    };
+
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Container(
+      height: screenHeight * 0.72,
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 14),
+          const ZendSheetHandle(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Status icon ──
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(statusIcon, color: statusColor, size: 30),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Amount ──
+                  Center(
+                    child: Text(
+                      amountStr,
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 48,
+                        fontStyle: FontStyle.italic,
+                        height: 1.0,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                  ),
+
+                  // ── Fiat equivalent ──
+                  if (fiatAmount != null && fiatAmount > 0) ...[
+                    const SizedBox(height: 4),
+                    Center(
+                      child: Text(
+                        '$fiatSymbol${_formatFiatValue(fiatAmount, fiatCurrency)} $fiatCurrency',
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 15,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text(
+                      'Sent to $bankName',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 15,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // ── Details card ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.xxl),
+                    ),
+                    child: Column(
+                      children: [
+                        _DetailRow(label: 'Bank', value: bankName),
+                        if (accountMasked != null && accountMasked.isNotEmpty) ...[
+                          Divider(color: zt.border, height: 1),
+                          _DetailRow(label: 'Account', value: accountMasked, mono: true),
+                        ],
+                        Divider(color: zt.border, height: 1),
+                        _DetailRow(label: 'Rail', value: railLabel),
+                        Divider(color: zt.border, height: 1),
+                        _DetailRow(label: 'Date', value: _formatDate(createdAt)),
+                        Divider(color: zt.border, height: 1),
+                        _DetailRow(
+                          label: 'Status',
+                          value: statusLabel,
+                          valueColor: statusColor,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  OutlineActionButton(
+                    label: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatFiatValue(double value, String currency) {
+    if (currency == 'NGN') {
+      final rounded = value.round();
+      final text = rounded.toString();
+      final buf = StringBuffer();
+      for (var i = 0; i < text.length; i++) {
+        final fromEnd = text.length - i;
+        buf.write(text[i]);
+        if (fromEnd > 1 && fromEnd % 3 == 1) buf.write(',');
+      }
+      return buf.toString();
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatDate(DateTime dt) {
+    final local = dt.toLocal();
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = local.hour < 12 ? 'AM' : 'PM';
+    return '${months[local.month - 1]} ${local.day}, ${local.year} · $hour:$minute $period';
   }
 }

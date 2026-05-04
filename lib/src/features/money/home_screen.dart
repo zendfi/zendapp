@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
                                   _TransactionRow.fromTransaction(
                                     model.recentTransactions[i],
-                                    onTap: model.recentTransactions[i].entry != null
+                                    onTap: model.recentTransactions[i].entry != null || model.recentTransactions[i].bankOrder != null
                                         ? () => showTransactionReceipt(
                                               context,
                                               tx: model.recentTransactions[i],

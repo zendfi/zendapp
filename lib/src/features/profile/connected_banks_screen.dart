@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
 class ConnectedBanksScreen extends StatelessWidget {
@@ -8,8 +7,9 @@ class ConnectedBanksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -18,92 +18,45 @@ class ConnectedBanksScreen extends StatelessWidget {
             children: [
               _Header(title: 'Connected banks'),
               const SizedBox(height: 18),
-              Container(
-                decoration: BoxDecoration(
-                  color: ZendColors.bgPrimary,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: ZendColors.border),
-                ),
-                child: Column(
-                  children: const [
-                    _BankTile(name: 'GTBank', detail: '••• 4465'),
-                    _TileDivider(),
-                    _BankTile(name: 'Access Bank', detail: '••• 1022'),
-                    _TileDivider(),
-                    _BankTile(name: 'Chase', detail: '••• 7781'),
-                  ],
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.account_balance_outlined,
+                        size: 48,
+                        color: zt.textSecondary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No banks connected yet',
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: zt.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Bank accounts you use for sending will\nappear here automatically.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
-              PrimaryButton(label: 'Add bank', onPressed: () {}),
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-class _BankTile extends StatelessWidget {
-  const _BankTile({required this.name, required this.detail});
-
-  final String name;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: ZendColors.bgSecondary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.account_balance_outlined, size: 18, color: ZendColors.textSecondary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: ZendColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: const TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 12,
-                    color: ZendColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, size: 18, color: ZendColors.textSecondary),
-        ],
-      ),
-    );
-  }
-}
-
-class _TileDivider extends StatelessWidget {
-  const _TileDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Divider(height: 1, color: ZendColors.border);
   }
 }
 

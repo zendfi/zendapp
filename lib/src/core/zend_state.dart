@@ -56,6 +56,7 @@ class ZendTransaction {
     required this.avatarLabel,
     this.amountColor,
     this.entry,
+    this.bankOrder,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -66,9 +67,10 @@ class ZendTransaction {
   final String avatarLabel;
   final Color? amountColor;
   final DateTime createdAt;
-  /// Full history entry — present for all server-fetched transactions.
-  /// Null only for optimistically-inserted local transactions.
+  /// Full history entry — present for zend-to-zend transfers.
   final TransferHistoryEntry? entry;
+  /// Raw bank send order map — present for bank send transactions.
+  final Map<String, dynamic>? bankOrder;
 }
 
 class ZendAppModel extends ChangeNotifier {
@@ -415,6 +417,7 @@ class ZendAppModel extends ChangeNotifier {
           avatarLabel: 'B',
           amountColor: null,
           entry: null,
+          bankOrder: order,
           createdAt: createdAt,
         );
       }).toList();

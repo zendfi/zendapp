@@ -178,7 +178,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     time: filtered[i].time,
                                     amountColor:
                                         filtered[i].amountColor,
-                                    onTap: filtered[i].entry != null
+                                    onTap: filtered[i].entry != null || filtered[i].bankOrder != null
                                         ? () => showTransactionReceipt(
                                               context,
                                               tx: filtered[i],
