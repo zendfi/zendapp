@@ -205,6 +205,10 @@ class _BankSendSheetState extends State<BankSendSheet>
   }
 
   // ── NGN: resolve account ──────────────────────────────────────────────────
+  // We skip the separate resolve step and go straight to prepare, which
+  // resolves the account internally and returns the account_name.
+  // This eliminates the double PAJ session (double OTP) that was happening
+  // when resolve and prepare each called acquire_paj_session independently.
 
   Future<void> _resolveNgnAccount() async {
     final accountNumber = _accountController.text.trim();
@@ -212,17 +216,6 @@ class _BankSendSheetState extends State<BankSendSheet>
 
     _goTo(_BankSendStage.resolving);
     try {
-      final model = ZendScope.of(context);
-      final result = await model.walletService.apiClient.resolveNgnBankAccount(
-        bankId: _selectedBank!['id'] as String,
-        accountNumber: accountNumber,
-      );
-      if (!mounted) return;
-      setState(() {
-        _resolvedAccountName = result['account_name'] as String?;
-        _stage = _BankSendStage.confirmation;
-      });
-      // Immediately prepare the order
       await _prepare();
     } catch (e) {
       if (!mounted) return;
@@ -240,7 +233,17 @@ class _BankSendSheetState extends State<BankSendSheet>
   Future<void> _selectSavedAccount(Map<String, dynamic> account) async {
     _selectedSavedAccount = account;
     _goTo(_BankSendStage.resolving);
-    await _prepare();
+    try {
+      await _prepare();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e is ApiException
+            ? e.userMessage
+            : 'Failed to prepare transfer. Please try again.';
+        _stage = _BankSendStage.error;
+      });
+    }
   }
 
   // ── Prepare order ─────────────────────────────────────────────────────────
@@ -271,17 +274,18 @@ class _BankSendSheetState extends State<BankSendSheet>
         _blockhash = result['blockhash'] as String?;
         _feePayer = result['fee_payer'] as String?;
         _fiatAmount = (result['fiat_amount'] as num?)?.toDouble();
-        _resolvedAccountName ??= result['account_name'] as String?;
+        // account_name comes from prepare — this is the verified account holder name
+        _resolvedAccountName = result['account_name'] as String?;
         _stage = _BankSendStage.confirmation;
       });
-    } catch (e) {
+    } on ApiException {
       if (!mounted) return;
-      setState(() {
-        _errorMessage = e is ApiException
-            ? e.userMessage
-            : 'Failed to prepare transfer. Please try again.';
-        _stage = _BankSendStage.error;
-      });
+      // Surface the backend error message directly — it's already user-friendly
+      // (e.g. "ACCOUNT_RESOLVE_FAILED", "INSUFFICIENT_BALANCE", etc.)
+      rethrow;
+    } catch (_) {
+      if (!mounted) return;
+      rethrow;
     }
   }
 
