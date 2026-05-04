@@ -420,6 +420,9 @@ class ApiClient {
       final response = await _dio.post(
         '/api/zend/bank-send/ngn/resolve-account',
         data: {'bank_id': bankId, 'account_number': accountNumber},
+        // This endpoint acquires a PAJ session (OTP email round-trip) before
+        // resolving the account — can take up to ~30s in normal conditions.
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
