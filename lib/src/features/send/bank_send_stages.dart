@@ -1259,7 +1259,14 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
         'currency': widget.rail.bridgeCurrency,
         'payment_rail': widget.rail.bridgeRail,
         'account_owner_name': _ownerController.text.trim(),
-        'account_type': 'individual',
+        // Bridge account_type is the account FORMAT, not ownership type:
+        // "us" = US ACH, "gb" = UK Faster Payments, "iban" = SEPA
+        'account_type': switch (widget.rail) {
+          _BankSendRail.ach => 'us',
+          _BankSendRail.fp => 'gb',
+          _BankSendRail.sepa => 'iban',
+          _ => 'us',
+        },
         if (_bankNameController.text.trim().isNotEmpty)
           'bank_name': _bankNameController.text.trim(),
         'account_details': accountDetails,
