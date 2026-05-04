@@ -1,0 +1,49 @@
+<svg width="100%" viewBox="0 0 680 680" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">EU flag circular badge</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Circular badge with the European Union flag — blue background with 12 gold stars in a circle</desc>
+
+  <defs>
+    <clipPath id="eu-clip">
+      <circle cx="340" cy="340" r="240"/>
+    </clipPath>
+  </defs>
+
+  <circle cx="340" cy="340" r="248" fill="#003399" style="fill:rgb(0, 51, 153);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <g clip-path="url(#eu-clip)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="100" y="100" width="480" height="480" fill="#003399" style="fill:rgb(0, 51, 153);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+    <!-- 12 gold stars arranged in a circle, radius 130px from center -->
+    <!-- Each star at angle = 30° * i, starting from top (270°) -->
+    <!-- Star positions (cx=340, cy=340, orbit r=130) -->
+    <!-- Using ★ text elements rotated around center -->
+
+    <!-- 0° top -->
+    <text x="340" y="198" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 30° -->
+    <text x="405" y="216" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 60° -->
+    <text x="452" y="264" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 90° right -->
+    <text x="468" y="340" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 120° -->
+    <text x="452" y="416" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 150° -->
+    <text x="405" y="464" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 180° bottom -->
+    <text x="340" y="482" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 210° -->
+    <text x="275" y="464" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 240° -->
+    <text x="228" y="416" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 270° left -->
+    <text x="212" y="340" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 300° -->
+    <text x="228" y="264" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+    <!-- 330° -->
+    <text x="275" y="216" text-anchor="middle" font-size="28" fill="#FFCC00" style="fill:rgb(255, 204, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:28px;font-weight:400;text-anchor:middle;dominant-baseline:auto">★</text>
+  </g>
+
+  <circle cx="340" cy="340" r="240" fill="none" stroke="#FFCC00" stroke-width="6" style="fill:none;stroke:rgb(255, 204, 0);color:rgb(0, 0, 0);stroke-width:6px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="340" cy="340" r="246" fill="none" stroke="#003399" stroke-width="4" style="fill:none;stroke:rgb(0, 51, 153);color:rgb(0, 0, 0);stroke-width:4px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+</svg>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
@@ -167,7 +168,10 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                     child: child,
                   );
                 },
-                child: _PinDots(filledCount: _digits.length),
+                child: ZendPinDotsOrSpinner(
+                  filledCount: _digits.length,
+                  loading: _loading,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -182,16 +186,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                           color: ZendColors.destructive,
                         ),
                       )
-                    : _loading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: ZendColors.accentPop,
-                            ),
-                          )
-                        : null,
+                    : null,
               ),
               const Spacer(),
               Opacity(
@@ -236,39 +231,6 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PinDots extends StatelessWidget {
-  const _PinDots({required this.filledCount});
-
-  final int filledCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
-        final filled = index < filledCount;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? ZendColors.accentPop : Colors.transparent,
-              border: Border.all(
-                color:
-                    filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
-                width: 2,
-              ),
-            ),
-          ),
-        );
-      }),
     );
   }
 }

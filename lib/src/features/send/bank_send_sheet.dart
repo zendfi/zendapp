@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -84,8 +85,8 @@ class BankSendSheet extends StatefulWidget {
 
 class _BankSendSheetState extends State<BankSendSheet>
     with SingleTickerProviderStateMixin {
-  static const Duration _transition = Duration(milliseconds: 180);
-  static const Duration _resize = Duration(milliseconds: 220);
+  static const Duration _transition = Duration(milliseconds: 160);
+  static const Duration _resize = Duration(milliseconds: 180);
 
   _BankSendStage _stage = _BankSendStage.railSelect;
   _BankSendRail _rail = _BankSendRail.ngn;

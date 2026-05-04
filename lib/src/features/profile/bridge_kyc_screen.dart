@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
@@ -438,17 +439,17 @@ class _InfoSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final item in [
-          (_KycRailIcon(code: 'US', colors: [Color(0xFF3C3B6E), Color(0xFFB22234)]), 'US ACH bank transfers'),
-          (_KycRailIcon(code: 'GB', colors: [Color(0xFF012169), Color(0xFFC8102E)]), 'UK Faster Payments'),
-          (_KycRailIcon(code: 'EU', colors: [Color(0xFF003399), Color(0xFF003399)]), 'EU SEPA transfers'),
-          (_KycRailIcon(code: 'MX', colors: [Color(0xFF006847), Color(0xFFCE1126)]), 'Mexico SPEI'),
-          (_KycRailIcon(code: 'CO', colors: [Color(0xFFFCD116), Color(0xFF003087)]), 'Colombia BRE-B'),
+          (ZendCountry.us, 'US ACH bank transfers'),
+          (ZendCountry.gb, 'UK Faster Payments'),
+          (ZendCountry.eu, 'EU SEPA transfers'),
+          (ZendCountry.mx, 'Mexico SPEI'),
+          (ZendCountry.co, 'Colombia BRE-B'),
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
               children: [
-                item.$1,
+                ZendCountryFlag(country: item.$1, size: 32),
                 const SizedBox(width: 12),
                 Text(
                   item.$2,
@@ -475,42 +476,3 @@ class _InfoSection extends StatelessWidget {
   }
 }
 
-/// A compact flag-style icon used in the KYC info section.
-/// Renders a rounded rectangle with a two-color gradient and a country code
-/// label — no emoji, no external packages required.
-class _KycRailIcon extends StatelessWidget {
-  const _KycRailIcon({required this.code, required this.colors});
-  final String code;
-  final List<Color> colors;
-
-  @override
-  Widget build(BuildContext context) {
-    final gradient = colors.length >= 2 && colors[0] != colors[1]
-        ? LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: colors,
-          )
-        : LinearGradient(colors: [colors[0], colors[0]]);
-
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        code,
-        style: const TextStyle(
-          fontFamily: 'DMSans',
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-}

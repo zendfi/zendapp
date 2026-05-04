@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
@@ -182,7 +183,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
               ),
               SizedBox(height: compact ? 36 : 52),
 
-              // PIN dots
+              // PIN dots / spinner
               AnimatedBuilder(
                 animation: _shakeController,
                 builder: (context, child) {
@@ -191,7 +192,10 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                     child: child,
                   );
                 },
-                child: _PinDots(filledCount: _digits.length),
+                child: ZendPinDotsOrSpinner(
+                  filledCount: _digits.length,
+                  loading: _loading,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -208,18 +212,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                           color: ZendColors.destructive,
                         ),
                       )
-                    : _loading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                color: ZendColors.accentPop,
-                              ),
-                            ),
-                          )
-                        : null,
+                    : null,
               ),
 
               const Spacer(),
@@ -244,39 +237,6 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
 }
 
 // ── Shared PIN UI components ─────────────────────────────────────────────────
-
-class _PinDots extends StatelessWidget {
-  const _PinDots({required this.filledCount});
-
-  final int filledCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
-        final filled = index < filledCount;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? ZendColors.accentPop : Colors.transparent,
-              border: Border.all(
-                color:
-                    filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
-                width: 2,
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
 
 class _PinKeypad extends StatelessWidget {
   const _PinKeypad({required this.onTap, required this.keyHeight});
