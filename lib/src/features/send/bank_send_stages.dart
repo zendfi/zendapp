@@ -49,7 +49,6 @@ const _kRails = [
 
 class _RailSelectStage extends StatelessWidget {
   const _RailSelectStage({
-    super.key,
     required this.amount,
     required this.onSelect,
   });
@@ -158,7 +157,6 @@ class _RailTile extends StatelessWidget {
 
 class _NgnBankInputStage extends StatefulWidget {
   const _NgnBankInputStage({
-    super.key,
     required this.amount,
     required this.ngnRate,
     required this.selectedBank,
@@ -327,7 +325,6 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
 
 class _BankPickerStage extends StatefulWidget {
   const _BankPickerStage({
-    super.key,
     required this.banks,
     required this.onSelect,
     required this.onBack,
@@ -449,7 +446,6 @@ class _BankPickerStageState extends State<_BankPickerStage> {
 
 class _IntlAccountStage extends StatelessWidget {
   const _IntlAccountStage({
-    super.key,
     required this.rail,
     required this.savedAccounts,
     required this.onSelect,
@@ -580,7 +576,7 @@ class _IntlAccountStage extends StatelessWidget {
 // ── Resolving Stage ───────────────────────────────────────────────────────────
 
 class _ResolvingStage extends StatelessWidget {
-  const _ResolvingStage({super.key});
+  const _ResolvingStage();
 
   @override
   Widget build(BuildContext context) {
@@ -608,7 +604,6 @@ class _ResolvingStage extends StatelessWidget {
 
 class _ConfirmationStage extends StatelessWidget {
   const _ConfirmationStage({
-    super.key,
     required this.rail,
     required this.amountUsdc,
     required this.fiatAmount,
@@ -758,7 +753,6 @@ String _formatFiat(double value, String currency) {
 
 class _PinStage extends StatelessWidget {
   const _PinStage({
-    super.key,
     required this.amountUsdc,
     required this.rail,
     required this.pinDigits,
@@ -982,7 +976,7 @@ class _LightPinKeyState extends State<_LightPinKey> {
 // ── Processing Stage ──────────────────────────────────────────────────────────
 
 class _ProcessingStage extends StatelessWidget {
-  const _ProcessingStage({super.key});
+  const _ProcessingStage();
 
   @override
   Widget build(BuildContext context) {
@@ -1010,7 +1004,6 @@ class _ProcessingStage extends StatelessWidget {
 
 class _SuccessStage extends StatefulWidget {
   const _SuccessStage({
-    super.key,
     required this.rail,
     required this.amountUsdc,
     required this.fiatAmount,
@@ -1133,7 +1126,6 @@ class _SuccessStageState extends State<_SuccessStage>
 
 class _ErrorStage extends StatelessWidget {
   const _ErrorStage({
-    super.key,
     required this.message,
     required this.onRetry,
     required this.onCancel,
@@ -1194,7 +1186,6 @@ class _ErrorStage extends StatelessWidget {
 
 class _AddIntlAccountStage extends StatefulWidget {
   const _AddIntlAccountStage({
-    super.key,
     required this.rail,
     required this.onBack,
     required this.onSaved,
