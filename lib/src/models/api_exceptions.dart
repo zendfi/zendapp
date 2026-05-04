@@ -36,7 +36,7 @@ class ApiException extends ZendException {
       case 'ZENDTAG_UNAVAILABLE':
         return 'That username is taken. Please choose another.';
       case 'INSUFFICIENT_BALANCE':
-        return "You don't have enough USDC for this transfer.";
+        return "You don't have enough balance for this transfer.";
       case 'RECIPIENT_NOT_FOUND':
         return "We couldn't find that username. Please check and try again.";
       case 'INVALID_AMOUNT':

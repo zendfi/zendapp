@@ -708,7 +708,7 @@ class _ConfirmationStage extends StatelessWidget {
                   _DetailRow(label: 'Account', value: accountNumberMasked, zt: zt),
                 ],
                 Divider(height: 20, color: zt.border),
-                _DetailRow(label: 'You send', value: '$amountStr USDC', zt: zt),
+                _DetailRow(label: 'You send', value: amountStr, zt: zt),
               ],
             ),
           ),
