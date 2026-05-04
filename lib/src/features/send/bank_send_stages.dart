@@ -8,12 +8,16 @@ part of 'bank_send_sheet.dart';
 class _RailInfo {
   const _RailInfo({
     required this.rail,
-    required this.flag,
+    required this.countryCode,
+    required this.flagColors,
     required this.title,
     required this.subtitle,
   });
   final _BankSendRail rail;
-  final String flag;
+  /// ISO 3166-1 alpha-2 country code, shown as the icon label.
+  final String countryCode;
+  /// Two colors used to render the flag-style icon background gradient.
+  final List<Color> flagColors;
   final String title;
   final String subtitle;
 }
@@ -21,25 +25,29 @@ class _RailInfo {
 const _kRails = [
   _RailInfo(
     rail: _BankSendRail.ngn,
-    flag: '🇳🇬',
+    countryCode: 'NG',
+    flagColors: [Color(0xFF008751), Color(0xFF008751)],
     title: 'NGN — Nigerian banks',
     subtitle: 'GTBank, Access, Zenith, UBA and more',
   ),
   _RailInfo(
     rail: _BankSendRail.ach,
-    flag: '🇺🇸',
+    countryCode: 'US',
+    flagColors: [Color(0xFF3C3B6E), Color(0xFFB22234)],
     title: 'USD — ACH (United States)',
     subtitle: 'Chase, Bank of America, Wells Fargo and more',
   ),
   _RailInfo(
     rail: _BankSendRail.fp,
-    flag: '🇬🇧',
+    countryCode: 'GB',
+    flagColors: [Color(0xFF012169), Color(0xFFC8102E)],
     title: 'GBP — Faster Payments (UK)',
     subtitle: 'Barclays, HSBC, Lloyds, Monzo and more',
   ),
   _RailInfo(
     rail: _BankSendRail.sepa,
-    flag: '��🇺',
+    countryCode: 'EU',
+    flagColors: [Color(0xFF003399), Color(0xFF003399)],
     title: 'EUR — SEPA (Europe)',
     subtitle: 'Revolut, N26, Deutsche Bank and more',
   ),
@@ -119,16 +127,7 @@ class _RailTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: zt.bgSecondary,
-                borderRadius: BorderRadius.circular(ZendRadii.md),
-              ),
-              alignment: Alignment.center,
-              child: Text(info.flag, style: const TextStyle(fontSize: 22)),
-            ),
+            _RailFlagIcon(info: info, size: 44),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -157,6 +156,46 @@ class _RailTile extends StatelessWidget {
             ),
             Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A flag-style icon for a payment rail — renders a rounded container with a
+/// two-color gradient and the ISO country code, replacing emoji flags.
+class _RailFlagIcon extends StatelessWidget {
+  const _RailFlagIcon({required this.info, this.size = 44});
+  final _RailInfo info;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = info.flagColors;
+    final gradient = colors.length >= 2 && colors[0] != colors[1]
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
+          )
+        : LinearGradient(colors: [colors[0], colors[0]]);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(ZendRadii.md),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        info.countryCode,
+        style: TextStyle(
+          fontFamily: 'DMSans',
+          fontSize: size * 0.27,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -474,7 +513,6 @@ class _IntlAccountStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final railInfo = _kRails.firstWhere((r) => r.rail == rail);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -488,7 +526,7 @@ class _IntlAccountStage extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '${railInfo.flag}  ${rail.currency} bank',
+                '${rail.currency} bank',
                 style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 22,
@@ -1310,7 +1348,6 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final railInfo = _kRails.firstWhere((r) => r.rail == widget.rail);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -1324,7 +1361,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
               ),
               const SizedBox(width: 12),
               Text(
-                '${railInfo.flag}  Add ${widget.rail.currency} account',
+                'Add ${widget.rail.currency} account',
                 style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 22,

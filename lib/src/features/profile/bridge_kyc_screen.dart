@@ -438,17 +438,17 @@ class _InfoSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final item in [
-          ('🇺🇸', 'US ACH bank transfers'),
-          ('🇬🇧', 'UK Faster Payments'),
-          ('🇪🇺', 'EU SEPA transfers'),
-          ('🇲🇽', 'Mexico SPEI'),
-          ('🇨🇴', 'Colombia BRE-B'),
+          (_KycRailIcon(code: 'US', colors: [Color(0xFF3C3B6E), Color(0xFFB22234)]), 'US ACH bank transfers'),
+          (_KycRailIcon(code: 'GB', colors: [Color(0xFF012169), Color(0xFFC8102E)]), 'UK Faster Payments'),
+          (_KycRailIcon(code: 'EU', colors: [Color(0xFF003399), Color(0xFF003399)]), 'EU SEPA transfers'),
+          (_KycRailIcon(code: 'MX', colors: [Color(0xFF006847), Color(0xFFCE1126)]), 'Mexico SPEI'),
+          (_KycRailIcon(code: 'CO', colors: [Color(0xFFFCD116), Color(0xFF003087)]), 'Colombia BRE-B'),
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
               children: [
-                Text(item.$1, style: const TextStyle(fontSize: 18)),
+                item.$1,
                 const SizedBox(width: 12),
                 Text(
                   item.$2,
@@ -471,6 +471,46 @@ class _InfoSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A compact flag-style icon used in the KYC info section.
+/// Renders a rounded rectangle with a two-color gradient and a country code
+/// label — no emoji, no external packages required.
+class _KycRailIcon extends StatelessWidget {
+  const _KycRailIcon({required this.code, required this.colors});
+  final String code;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = colors.length >= 2 && colors[0] != colors[1]
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
+          )
+        : LinearGradient(colors: [colors[0], colors[0]]);
+
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        code,
+        style: const TextStyle(
+          fontFamily: 'DMSans',
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }
