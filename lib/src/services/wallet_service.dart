@@ -268,10 +268,9 @@ class WalletService {
     }
   }
 
-  /// Build and sign a USDC transfer to a raw Solana address (e.g. PAJ deposit
-  /// address or Bridge liquidation address). Unlike [buildAndSignTransaction],
-  /// the destination ATA is derived from the destination address directly —
-  /// the address IS the token account, not a wallet that owns one.
+  /// Build and sign a USDC transfer to a Solana wallet address (e.g. PAJ deposit
+  /// address or Bridge liquidation address). Derives the destination ATA from
+  /// the wallet address — same pattern as [buildAndSignTransaction].
   Future<String> buildAndSignTransactionToAddress({
     required String pin,
     required double amountUsdc,
@@ -296,13 +295,19 @@ class WalletService {
         mint: usdcMint,
       );
 
-      // For PAJ/Bridge deposit addresses the destination IS the token account
-      // (they manage their own ATAs). We send directly to the address.
+      // Derive the destination ATA from the wallet address — PAJ and Bridge
+      // deposit addresses are wallet addresses that own an ATA, not the ATA
+      // itself. This matches how zend-to-zend transfers work.
+      final destinationAta = await findAssociatedTokenAddress(
+        owner: destinationPubkey,
+        mint: usdcMint,
+      );
+
       final amountTokens = (amountUsdc * 1000000).round();
 
       final transferInstruction = TokenInstruction.transfer(
         source: senderAta,
-        destination: destinationPubkey,
+        destination: destinationAta,
         owner: senderPubkey,
         amount: amountTokens,
       );

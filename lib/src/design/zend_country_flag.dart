@@ -137,17 +137,20 @@ class ZendPinDotsOrSpinner extends StatelessWidget {
       firstCurve: Curves.easeOut,
       secondCurve: Curves.easeIn,
       sizeCurve: Curves.easeInOut,
+      alignment: Alignment.center,
       firstChild: _PinDots(
         filledCount: filledCount,
         dotColor: dotColor,
         emptyBorderColor: emptyBorderColor,
       ),
       secondChild: SizedBox(
-        width: 28,
-        height: 28,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.0,
-          color: spinnerColor,
+        width: 44,
+        height: 44,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2.0,
+            color: spinnerColor,
+          ),
         ),
       ),
     );

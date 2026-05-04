@@ -40,7 +40,7 @@ const _kRails = [
   _RailInfo(
     rail: _BankSendRail.sepa,
     country: ZendCountry.eu,
-    title: 'EUR — SEPA (Europe)',
+    title: 'EUR',
     subtitle: 'Revolut, N26, Deutsche Bank and more',
   ),
 ];
