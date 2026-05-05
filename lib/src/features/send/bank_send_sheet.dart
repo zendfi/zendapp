@@ -338,6 +338,9 @@ class _BankSendSheetState extends State<BankSendSheet>
         destinationAddress: _depositAddress!,
         blockhash: _blockhash!,
         feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
+        // PAJ deposit addresses are wallet addresses — derive their ATA.
+        // Bridge liquidation addresses ARE token accounts — send directly.
+        deriveDestinationAta: !_rail.isIntl,
       );
 
       if (!_rail.isIntl) {
