@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 /// Handles incoming deep links for ZendApp.
 ///
 /// Supported patterns:
-///   https://zdfi.me/u/@{zendtag}                  → PWYW send flow
-///   https://zdfi.me/u/@{zendtag}/{request_id}      → Fixed-amount send flow
+///   https://zdfi.me/@{zendtag}                  → PWYW send flow
+///   https://zdfi.me/@{zendtag}/{request_id}      → Fixed-amount send flow
 ///   zendapp://pay?zendtag=...&amount=...&request_id=...&note=...
 ///
 /// Usage:
@@ -55,14 +55,14 @@ class DeepLinkHandler {
     try {
       final uri = Uri.parse(url);
 
-      // https://zdfi.me/u/@john_o
-      // https://zdfi.me/u/@john_o/abc123
+      // https://zdfi.me/@john_o
+      // https://zdfi.me/@john_o/abc123
       if (uri.host == 'zdfi.me' && uri.pathSegments.isNotEmpty) {
         final segments = uri.pathSegments;
-        if (segments.length >= 2 && segments[0] == 'u') {
-          final rawTag = segments[1]; // '@john_o'
-          final zendtag = rawTag.startsWith('@') ? rawTag.substring(1) : rawTag;
-          final requestId = segments.length >= 3 ? segments[2] : null;
+        // First segment is '@john_o' directly (no /u/ prefix)
+        if (segments.isNotEmpty && segments[0].startsWith('@')) {
+          final zendtag = segments[0].substring(1); // strip '@'
+          final requestId = segments.length >= 2 ? segments[1] : null;
           final amount = uri.queryParameters['amount'] != null
               ? double.tryParse(uri.queryParameters['amount']!)
               : null;
