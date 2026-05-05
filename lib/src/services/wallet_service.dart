@@ -268,18 +268,15 @@ class WalletService {
     }
   }
 
-  /// Build and sign a USDC transfer to a Solana address.
-  ///
-  /// [deriveDestinationAta] controls how the destination is treated:
-  /// - `true` (default, PAJ): the destination is a wallet address — derive its ATA.
-  /// - `false` (Bridge): the destination IS the token account — send directly to it.
+  /// Build and sign a USDC transfer to a Solana wallet address (e.g. PAJ deposit
+  /// address or Bridge liquidation address). Derives the destination ATA from
+  /// the wallet address — same pattern as [buildAndSignTransaction].
   Future<String> buildAndSignTransactionToAddress({
     required String pin,
     required double amountUsdc,
     required String destinationAddress,
     required String blockhash,
     required String feePayerAddress,
-    bool deriveDestinationAta = true,
   }) async {
     final privateKeyBytes = await _decryptLocalKeypair(pin);
 
@@ -298,23 +295,18 @@ class WalletService {
         mint: usdcMint,
       );
 
-      // For PAJ deposit addresses: derive the ATA from the wallet address.
-      // For Bridge liquidation addresses: the address IS the token account — send directly.
-      final Ed25519HDPublicKey destinationTokenAccount;
-      if (deriveDestinationAta) {
-        destinationTokenAccount = await findAssociatedTokenAddress(
-          owner: destinationPubkey,
-          mint: usdcMint,
-        );
-      } else {
-        destinationTokenAccount = destinationPubkey;
-      }
+      // Both PAJ and Bridge deposit addresses are wallet addresses that own
+      // an ATA — derive the ATA before transferring.
+      final destinationAta = await findAssociatedTokenAddress(
+        owner: destinationPubkey,
+        mint: usdcMint,
+      );
 
       final amountTokens = (amountUsdc * 1000000).round();
 
       final transferInstruction = TokenInstruction.transfer(
         source: senderAta,
-        destination: destinationTokenAccount,
+        destination: destinationAta,
         owner: senderPubkey,
         amount: amountTokens,
       );
