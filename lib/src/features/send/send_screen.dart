@@ -68,12 +68,14 @@ class _SendScreenState extends State<SendScreen>
       final ngn = (_parsedRaw * _ngnPerUsd!).round();
       return '≈ ₦${_formatThousands(ngn)}';
     } else {
-      // NGN mode: show USD equivalent
+      // NGN mode: show exact USD equivalent with up to 6 decimal places
+      // so the user sees the precise amount that will be sent.
       if (_ngnPerUsd == null || _ngnPerUsd! <= 0) return null;
       final usd = _parsedRaw / _ngnPerUsd!;
-      return usd == usd.roundToDouble()
-          ? '≈ \$${usd.toStringAsFixed(0)}'
-          : '≈ \$${usd.toStringAsFixed(2)}';
+      // Show enough precision — strip trailing zeros but keep at least 2 dp
+      final s6 = usd.toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '');
+      final display = s6.endsWith('.') ? '${s6}00' : s6;
+      return '≈ \$$display';
     }
   }
 
