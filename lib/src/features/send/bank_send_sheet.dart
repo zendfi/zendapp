@@ -101,6 +101,7 @@ class _BankSendSheetState extends State<BankSendSheet>
   String? _blockhash;
   String? _feePayer;
   double? _fiatAmount;
+  double? _confirmedAmountUsdc; // amount_usdc returned by prepare (may be rounded up for PAJ)
 
   String _pinDigits = '';
   String? _pinError;
@@ -265,6 +266,7 @@ class _BankSendSheetState extends State<BankSendSheet>
         _blockhash = result['blockhash'] as String?;
         _feePayer = result['fee_payer'] as String?;
         _fiatAmount = (result['fiat_amount'] as num?)?.toDouble();
+        _confirmedAmountUsdc = (result['amount_usdc'] as num?)?.toDouble() ?? widget.amount;
         _resolvedAccountName = result['account_name'] as String?;
         _stage = _BankSendStage.confirmation;
       });
@@ -299,7 +301,7 @@ class _BankSendSheetState extends State<BankSendSheet>
       final model = ZendScope.of(context);
       final signedTx = await model.walletService.buildAndSignTransactionToAddress(
         pin: pin,
-        amountUsdc: widget.amount,
+        amountUsdc: _confirmedAmountUsdc ?? widget.amount,
         destinationAddress: _depositAddress!,
         blockhash: _blockhash!,
         feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
@@ -449,7 +451,7 @@ class _BankSendSheetState extends State<BankSendSheet>
       case _BankSendStage.confirmation:
         return _ConfirmationStage(
           rail: _rail,
-          amountUsdc: widget.amount,
+          amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           fiatAmount: _fiatAmount,
           accountName: _resolvedAccountName ?? '',
           bankName: _selectedBank?['name'] as String? ??
@@ -465,7 +467,7 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.pin:
         return _PinStage(
-          amountUsdc: widget.amount,
+          amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           rail: _rail,
           pinDigits: _pinDigits,
           pinError: _pinError,
@@ -485,7 +487,7 @@ class _BankSendSheetState extends State<BankSendSheet>
       case _BankSendStage.success:
         return _SuccessStage(
           rail: _rail,
-          amountUsdc: widget.amount,
+          amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           fiatAmount: _fiatAmount,
           bankName: _selectedBank?['name'] as String? ??
               (_selectedSavedAccount?['bank_name'] as String? ?? ''),

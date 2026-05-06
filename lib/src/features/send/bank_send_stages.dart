@@ -663,25 +663,46 @@ class _ConfirmationStage extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                Text(
-                  amountStr,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontStyle: FontStyle.italic,
-                    fontSize: 48,
-                    color: zt.textPrimary,
+                if (fiatAmount != null && fiatAmount! > 0 && rail == _BankSendRail.ngn) ...[
+                  Text(
+                    '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)}',
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontStyle: FontStyle.italic,
+                      fontSize: 48,
+                      color: zt.textPrimary,
+                    ),
                   ),
-                ),
-                if (fiatAmount != null && fiatAmount! > 0) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
+                    '$amountStr USDC',
                     style: TextStyle(
                       fontFamily: 'DMMono',
-                      fontSize: 15,
+                      fontSize: 13,
                       color: zt.textSecondary,
                     ),
                   ),
+                ] else ...[
+                  Text(
+                    amountStr,
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontStyle: FontStyle.italic,
+                      fontSize: 48,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  if (fiatAmount != null && fiatAmount! > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 15,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -703,7 +724,16 @@ class _ConfirmationStage extends StatelessWidget {
                   _DetailRow(label: 'Account', value: accountNumberMasked, zt: zt),
                 ],
                 Divider(height: 20, color: zt.border),
-                _DetailRow(label: 'You send', value: amountStr, zt: zt),
+                _DetailRow(label: 'You send', value: '$amountStr USDC', zt: zt),
+                if (fiatAmount != null && fiatAmount! > 0 && rail == _BankSendRail.ngn) ...[
+                  Divider(height: 20, color: zt.border),
+                  _DetailRow(
+                    label: 'They receive',
+                    value: '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
+                    zt: zt,
+                    highlight: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -720,10 +750,12 @@ class _DetailRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.zt,
+    this.highlight = false,
   });
   final String label;
   final String value;
   final ZendTheme zt;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -738,7 +770,7 @@ class _DetailRow extends StatelessWidget {
                 fontFamily: 'DMSans',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: zt.textPrimary)),
+                color: highlight ? zt.accent : zt.textPrimary)),
       ],
     );
   }
