@@ -12,8 +12,6 @@ import '../../services/sound_service.dart';
 
 part 'bank_send_stages.dart';
 
-/// Opens the bank send bottom sheet.
-/// [amount] is pre-filled from the send screen keypad — no amount input stage.
 Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -26,12 +24,11 @@ Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
   );
 }
 
-/// Which payment rail the user selected.
 enum _BankSendRail {
-  ngn,   // PAJ — Nigerian banks
-  ach,   // Bridge — US ACH
-  fp,    // Bridge — UK Faster Payments
-  sepa,  // Bridge — EU SEPA
+  ngn,
+  ach,
+  fp,
+  sepa,
 }
 
 extension _BankSendRailExt on _BankSendRail {
@@ -60,15 +57,15 @@ extension _BankSendRailExt on _BankSendRail {
 }
 
 enum _BankSendStage {
-  railSelect,     // list all rails
-  bankInput,      // NGN: account number + bank selector button
-  bankPicker,     // NGN: searchable bank list (full stage)
-  addIntlAccount, // Intl: add new account form
-  intlAccounts,   // Intl: list saved accounts
-  resolving,      // spinner while verifying / fetching
-  confirmation,   // review before PIN
-  pin,            // enter PIN
-  processing,     // submitting
+  railSelect,
+  bankInput,
+  bankPicker,
+  addIntlAccount,
+  intlAccounts,
+  resolving,
+  confirmation,
+  pin,
+  processing,
   success,
   error,
 }
@@ -76,7 +73,6 @@ enum _BankSendStage {
 class BankSendSheet extends StatefulWidget {
   const BankSendSheet({super.key, required this.amount});
 
-  /// Amount pre-filled from the send screen keypad.
   final double amount;
 
   @override
@@ -85,41 +81,32 @@ class BankSendSheet extends StatefulWidget {
 
 class _BankSendSheetState extends State<BankSendSheet>
     with TickerProviderStateMixin {
-  // Content transition — pure fade, no slide. Slide + resize simultaneously
-  // creates perceived lag because two layout passes compete on the same frame.
   static const Duration _transition = Duration(milliseconds: 140);
-  // Sheet resize — slightly longer so the height settles after content fades in.
   static const Duration _resize = Duration(milliseconds: 200);
 
   _BankSendStage _stage = _BankSendStage.railSelect;
   _BankSendRail _rail = _BankSendRail.ngn;
 
-  // NGN state
   List<Map<String, dynamic>> _banks = [];
   Map<String, dynamic>? _selectedBank;
   final _accountController = TextEditingController();
   String? _resolvedAccountName;
   double _ngnRate = 0;
 
-  // Intl state
   List<Map<String, dynamic>> _savedAccounts = [];
   Map<String, dynamic>? _selectedSavedAccount;
 
-  // Order (set after prepare)
   String? _orderId;
   String? _depositAddress;
   String? _blockhash;
   String? _feePayer;
   double? _fiatAmount;
 
-  // PIN
   String _pinDigits = '';
   String? _pinError;
   int _pinAttempts = 0;
 
-  // Error
   String? _errorMessage;
-  // Resolving message — shown during the PAJ OTP wait
   String _resolvingMessage = 'Verifying...';
 
   late final AnimationController _shakeController;
@@ -164,8 +151,6 @@ class _BankSendSheetState extends State<BankSendSheet>
 
   void _goTo(_BankSendStage stage) => setState(() => _stage = stage);
 
-  // ── Rail selection ────────────────────────────────────────────────────────
-
   Future<void> _selectRail(_BankSendRail rail) async {
     _rail = rail;
     _goTo(_BankSendStage.resolving);
@@ -173,7 +158,6 @@ class _BankSendSheetState extends State<BankSendSheet>
     try {
       final model = ZendScope.of(context);
       if (!rail.isIntl) {
-        // NGN — fetch banks + rates in parallel
         final results = await Future.wait([
           model.walletService.apiClient.getBankSendNgnBanks(),
           model.walletService.apiClient.getBankSendNgnRates(),
@@ -187,7 +171,6 @@ class _BankSendSheetState extends State<BankSendSheet>
           _stage = _BankSendStage.bankInput;
         });
       } else {
-        // Intl — fetch saved accounts for this currency
         final accounts = await model.walletService.apiClient.getIntlSavedAccounts();
         if (!mounted) return;
         final filtered = accounts
@@ -210,12 +193,6 @@ class _BankSendSheetState extends State<BankSendSheet>
     }
   }
 
-  // ── NGN: resolve account ──────────────────────────────────────────────────
-  // We skip the separate resolve step and go straight to prepare, which
-  // resolves the account internally and returns the account_name.
-  // This eliminates the double PAJ session (double OTP) that was happening
-  // when resolve and prepare each called acquire_paj_session independently.
-
   Future<void> _resolveNgnAccount() async {
     final accountNumber = _accountController.text.trim();
     if (_selectedBank == null || accountNumber.length < 10) return;
@@ -234,8 +211,6 @@ class _BankSendSheetState extends State<BankSendSheet>
     }
   }
 
-  // ── Intl: select saved account ────────────────────────────────────────────
-
   Future<void> _selectSavedAccount(Map<String, dynamic> account) async {
     _selectedSavedAccount = account;
     _goTo(_BankSendStage.resolving);
@@ -252,11 +227,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     }
   }
 
-  // ── Prepare order ─────────────────────────────────────────────────────────
-
   Future<void> _prepare() async {
-    // Show a more informative message — the PAJ OTP round-trip takes 10-30s
-    // and users need to know something is happening.
     setState(() {
       _stage = _BankSendStage.resolving;
       _resolvingMessage = !_rail.isIntl
@@ -264,7 +235,6 @@ class _BankSendSheetState extends State<BankSendSheet>
           : 'Preparing transfer...';
     });
     try {
-      // Guard: amount must be set before prepare is called.
       if (widget.amount <= 0) {
         setState(() {
           _errorMessage = 'Please enter an amount before sending.';
@@ -295,22 +265,17 @@ class _BankSendSheetState extends State<BankSendSheet>
         _blockhash = result['blockhash'] as String?;
         _feePayer = result['fee_payer'] as String?;
         _fiatAmount = (result['fiat_amount'] as num?)?.toDouble();
-        // account_name comes from prepare — this is the verified account holder name
         _resolvedAccountName = result['account_name'] as String?;
         _stage = _BankSendStage.confirmation;
       });
     } on ApiException {
       if (!mounted) return;
-      // Surface the backend error message directly — it's already user-friendly
-      // (e.g. "ACCOUNT_RESOLVE_FAILED", "INSUFFICIENT_BALANCE", etc.)
       rethrow;
     } catch (_) {
       if (!mounted) return;
       rethrow;
     }
   }
-
-  // ── PIN + submit ──────────────────────────────────────────────────────────
 
   void _onPinKey(String value) {
     HapticFeedback.lightImpact();
@@ -386,8 +351,6 @@ class _BankSendSheetState extends State<BankSendSheet>
 
   void _dismiss() => Navigator.of(context).pop();
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -417,8 +380,6 @@ class _BankSendSheetState extends State<BankSendSheet>
                   reverseDuration: const Duration(milliseconds: 100),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
-                  // Pure fade — no slide. Slide + simultaneous height resize
-                  // creates a double-animation jank on every stage change.
                   transitionBuilder: (child, animation) => FadeTransition(
                     opacity: animation,
                     child: child,

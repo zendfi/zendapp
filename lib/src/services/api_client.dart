@@ -124,9 +124,6 @@ class ApiClient {
     }
   }
 
-  /// POST /api/zend/transfer/prepare
-  /// Step 1 of the two-step transfer flow.
-  /// Returns blockhash, recipient_wallet_address, fee_payer, ata_created.
   Future<PrepareTransferResponse> prepareTransfer({
     required String recipientZendtag,
     required double amountUsdc,
@@ -267,9 +264,6 @@ class ApiClient {
     String? note,
   ) async {
     try {
-      // Use a longer timeout for transfers — ATA creation for first-time
-      // recipients can take 15-30s on mainnet (backend pays the fee).
-      // The global timeout is 15s which is too short for this case.
       final response = await _dio.post(
         '/api/zend/transfer',
         data: {
@@ -334,8 +328,6 @@ class ApiClient {
     }
   }
 
-  /// Register or refresh the FCM device token with the backend.
-  /// Called after login and whenever FCM issues a new token.
   Future<void> registerFcmToken(String fcmToken) async {
     try {
       await _dio.post(
@@ -346,8 +338,6 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
-
-  // ── Payment requests ──────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> createPaymentRequest({
     double? amountUsdc,
@@ -391,8 +381,6 @@ class ApiClient {
     }
   }
 
-  // ── Bank send ─────────────────────────────────────────────────────────────
-
   Future<Map<String, dynamic>> getBankSendNgnRates() async {
     try {
       final response = await _dio.get('/api/zend/bank-send/ngn/rates');
@@ -420,8 +408,6 @@ class ApiClient {
       final response = await _dio.post(
         '/api/zend/bank-send/ngn/resolve-account',
         data: {'bank_id': bankId, 'account_number': accountNumber},
-        // This endpoint acquires a PAJ session (OTP email round-trip) before
-        // resolving the account — can take up to ~30s in normal conditions.
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return response.data as Map<String, dynamic>;
@@ -560,8 +546,6 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
-
-  // ── Page customisation ────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getMyPageCustomisation() async {    try {
       final response = await _dio.get('/api/zend/page/customisation');
