@@ -6,7 +6,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_models.dart';
 import '../send/send_flow_sheet.dart';
 
-/// Opens the transaction receipt as a bottom sheet.
+/// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
 Future<void> showTransactionReceipt(
   BuildContext context, {
@@ -23,7 +23,7 @@ Future<void> showTransactionReceipt(
     );
   }
 
-  // Bank send — tx has no entry but has bankOrder data
+  // Bank send
   if (tx.bankOrder != null) {
     return showModalBottomSheet<void>(
       context: context,
@@ -53,7 +53,6 @@ class _ReceiptSheet extends StatelessWidget {
     final isConfirmed = entry.status == 'confirmed';
     final isPending = entry.status == 'pending';
 
-    // Status visuals
     final statusColor = isConfirmed
         ? ZendColors.positive
         : isPending
@@ -70,7 +69,6 @@ class _ReceiptSheet extends StatelessWidget {
             ? 'Processing'
             : 'Failed';
 
-    // Amount — strip sign, format cleanly
     final rawAmount = entry.amountUsdc;
     final amountDouble = double.tryParse(rawAmount) ?? 0.0;
     final amountStr = '\$${amountDouble.toStringAsFixed(2)}';
@@ -79,7 +77,8 @@ class _ReceiptSheet extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      height: screenHeight * 0.72,
+      // Full screen height
+      height: screenHeight,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
         borderRadius:
@@ -104,8 +103,7 @@ class _ReceiptSheet extends StatelessWidget {
                         color: statusColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(statusIcon,
-                          color: statusColor, size: 30),
+                      child: Icon(statusIcon, color: statusColor, size: 30),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -119,9 +117,7 @@ class _ReceiptSheet extends StatelessWidget {
                         fontSize: 48,
                         fontStyle: FontStyle.italic,
                         height: 1.0,
-                        color: isSent
-                            ? zt.textPrimary
-                            : ZendColors.positive,
+                        color: isSent ? zt.textPrimary : ZendColors.positive,
                       ),
                     ),
                   ),
@@ -202,7 +198,6 @@ class _ReceiptSheet extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // ── Send again (only for sent transactions) ──
                   if (isSent) ...[
                     PrimaryButton(
                       label: 'Send again',
@@ -219,7 +214,6 @@ class _ReceiptSheet extends StatelessWidget {
                     const SizedBox(height: 12),
                   ],
 
-                  // ── Close ──
                   OutlineActionButton(
                     label: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
@@ -298,6 +292,19 @@ class _BankSendReceiptSheet extends StatelessWidget {
   final ZendTransaction tx;
   final Map<String, dynamic> order;
 
+  /// Human-readable rail label.
+  /// NGN → NIBSS, intl rails → ACH / Faster Payments / SEPA
+  String _railLabel(String rail, String? paymentRail) {
+    if (rail == 'ngn') return 'NIBSS';
+    // intl — use the bridge payment_rail if available
+    return switch (paymentRail?.toLowerCase()) {
+      'ach' => 'ACH',
+      'faster_payments' => 'Faster Payments',
+      'sepa' => 'SEPA',
+      _ => 'International',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -305,24 +312,28 @@ class _BankSendReceiptSheet extends StatelessWidget {
     final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
     final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
     final fiatCurrency = order['fiat_currency'] as String? ?? '';
-    final bankName = order['bank_name'] as String? ?? 'Bank';
+    final bankName = order['bank_name'] as String? ?? '';
     final accountName = order['account_name'] as String?;
     final accountMasked = order['account_number_masked'] as String?;
     final rail = order['rail'] as String? ?? 'ngn';
+    final paymentRail = order['payment_rail'] as String?;
     final status = order['status'] as String? ?? '';
     final createdAtStr = order['created_at'] as String? ?? '';
     final createdAt = DateTime.tryParse(createdAtStr) ?? tx.createdAt;
 
-    final statusColor = switch (status) {
-      'completed' => ZendColors.positive,
-      'failed' => ZendColors.destructive,
-      _ => ZendColors.accentPop,
-    };
-    final statusIcon = switch (status) {
-      'completed' => Icons.check_rounded,
-      'failed' => Icons.close_rounded,
-      _ => Icons.hourglass_top_rounded,
-    };
+    // Once funds are sent on-chain (status = 'paid' or 'completed'),
+    // show green tick — the user's obligation is fulfilled.
+    final isSent = status == 'paid' || status == 'completed';
+    final statusColor = isSent
+        ? ZendColors.positive
+        : status == 'failed'
+            ? ZendColors.destructive
+            : ZendColors.accentPop;
+    final statusIcon = isSent
+        ? Icons.check_rounded
+        : status == 'failed'
+            ? Icons.close_rounded
+            : Icons.hourglass_top_rounded;
     final statusLabel = switch (status) {
       'completed' => 'Delivered',
       'paid' => 'Sent',
@@ -343,16 +354,12 @@ class _BankSendReceiptSheet extends StatelessWidget {
       _ => '\$',
     };
 
-    final railLabel = switch (rail) {
-      'ngn' => 'Nigerian bank (NGN)',
-      'intl' => 'International bank',
-      _ => 'Bank transfer',
-    };
-
+    final railLabel = _railLabel(rail, paymentRail);
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      height: screenHeight * 0.72,
+      // Full screen height
+      height: screenHeight,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
         borderRadius:
@@ -416,7 +423,9 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     child: Text(
                       accountName != null && accountName.isNotEmpty
                           ? 'Sent to $accountName'
-                          : 'Sent to $bankName',
+                          : bankName.isNotEmpty
+                              ? 'Sent to $bankName'
+                              : 'Bank transfer',
                       style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 15,
@@ -435,20 +444,33 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
+                        // Account holder
                         if (accountName != null && accountName.isNotEmpty) ...[
-                          _DetailRow(label: 'To', value: accountName),
+                          _DetailRow(label: 'Account holder', value: accountName),
                           Divider(color: zt.border, height: 1),
                         ],
-                        _DetailRow(label: 'Bank', value: bankName),
+                        // Bank
+                        if (bankName.isNotEmpty) ...[
+                          _DetailRow(label: 'Bank', value: bankName),
+                          Divider(color: zt.border, height: 1),
+                        ],
+                        // Account number
                         if (accountMasked != null && accountMasked.isNotEmpty) ...[
-                          Divider(color: zt.border, height: 1),
                           _DetailRow(label: 'Account', value: accountMasked, mono: true),
+                          Divider(color: zt.border, height: 1),
                         ],
-                        Divider(color: zt.border, height: 1),
+                        // Rail
                         _DetailRow(label: 'Rail', value: railLabel),
                         Divider(color: zt.border, height: 1),
+                        // Currency
+                        if (fiatCurrency.isNotEmpty) ...[
+                          _DetailRow(label: 'Currency', value: fiatCurrency),
+                          Divider(color: zt.border, height: 1),
+                        ],
+                        // Date
                         _DetailRow(label: 'Date', value: _formatDate(createdAt)),
                         Divider(color: zt.border, height: 1),
+                        // Status
                         _DetailRow(
                           label: 'Status',
                           value: statusLabel,

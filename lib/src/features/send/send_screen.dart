@@ -34,10 +34,21 @@ class _SendScreenState extends State<SendScreen>
 
   double get _parsedRaw => _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
 
+  /// The USDC amount that will actually be sent on-chain.
+  /// PAJ only honors 2dp precision — we floor to 2dp to avoid overpaying.
+  /// e.g. ₦300 → $0.221414 → floor to $0.22 → user sends $0.22, receives ₦298
   double get _usdAmount {
     if (_inputMode == _InputMode.usd) return _parsedRaw;
     if (_ngnPerUsd == null || _ngnPerUsd! <= 0) return 0;
-    return _parsedRaw / _ngnPerUsd!;
+    final rawUsd = _parsedRaw / _ngnPerUsd!;
+    // Floor to 2dp — PAJ truncates, so we match exactly what they'll honor
+    return (rawUsd * 100).floor() / 100.0;
+  }
+
+  /// The NGN amount the user will actually receive — based on the 2dp-floored USDC.
+  double get _quantizedNgn {
+    if (_ngnPerUsd == null || _ngnPerUsd! <= 0) return _parsedRaw;
+    return _usdAmount * _ngnPerUsd!;
   }
 
   String get _primaryDisplay {
@@ -49,7 +60,11 @@ class _SendScreenState extends State<SendScreen>
           ? '\$${_parsedRaw.toStringAsFixed(0)}'
           : '\$${_parsedRaw.toStringAsFixed(2)}';
     } else {
-      return '₦${_formatThousands(_parsedRaw.round())}';
+      // Show the quantized NGN (what they'll actually receive)
+      final ngn = _quantizedNgn;
+      return ngn > 0
+          ? '₦${_formatThousands(ngn.round())}'
+          : '₦${_formatThousands(_parsedRaw.round())}';
     }
   }
 
@@ -61,10 +76,10 @@ class _SendScreenState extends State<SendScreen>
       return '≈ ₦${_formatThousands(ngn)}';
     } else {
       if (_ngnPerUsd == null || _ngnPerUsd! <= 0) return null;
-      final usd = _parsedRaw / _ngnPerUsd!;
-      final s6 = usd.toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '');
-      final display = s6.endsWith('.') ? '${s6}00' : s6;
-      return '≈ \$$display';
+      // Show the exact 2dp USDC that will be sent — no surprises
+      final usd = _usdAmount;
+      if (usd <= 0) return null;
+      return '= \$${usd.toStringAsFixed(2)}';
     }
   }
 
@@ -94,8 +109,7 @@ class _SendScreenState extends State<SendScreen>
       final preview = await model.fxService.getPreview(1.0);
       if (!mounted) return;
       setState(() => _ngnPerUsd = preview.rate);
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   void _scheduleFetchRate() {
@@ -116,6 +130,11 @@ class _SendScreenState extends State<SendScreen>
           _digits = _digits.isEmpty ? '0.' : '$_digits.';
         }
       } else if (value.length == 1 && RegExp(r'[0-9]').hasMatch(value)) {
+        // In USD mode, enforce max 2 decimal places
+        if (_inputMode == _InputMode.usd && _digits.contains('.')) {
+          final parts = _digits.split('.');
+          if (parts.length == 2 && parts[1].length >= 2) return; // already at 2dp
+        }
         _digits += value;
       }
     });
@@ -129,16 +148,14 @@ class _SendScreenState extends State<SendScreen>
     setState(() {
       if (_digits.isNotEmpty && _parsedRaw > 0 && _ngnPerUsd != null && _ngnPerUsd! > 0) {
         if (_inputMode == _InputMode.usd) {
-          final ngn = (_parsedRaw * _ngnPerUsd!).round();
+          // USD → NGN: show the NGN equivalent of the 2dp-floored USD
+          final usd2dp = (_parsedRaw * 100).floor() / 100.0;
+          final ngn = (usd2dp * _ngnPerUsd!).round();
           _digits = ngn.toString();
         } else {
-          final usd = _parsedRaw / _ngnPerUsd!;
-          // Keep full precision — toStringAsFixed(2) would truncate 0.221414 to 0.22
-          // causing PAJ to receive less USDC than needed for the exact NGN amount.
-          final usdStr = usd.toStringAsFixed(6)
-              .replaceAll(RegExp(r'0+\$'), '')
-              .replaceAll(RegExp(r'\.\$'), '');
-          _digits = usdStr.isEmpty ? '0' : usdStr;
+          // NGN → USD: convert back to the 2dp-floored USD string
+          final usd = _usdAmount;
+          _digits = usd > 0 ? usd.toStringAsFixed(2) : '0';
         }
       } else {
         _digits = '';
@@ -269,7 +286,6 @@ class _SendScreenState extends State<SendScreen>
                                   ),
                                 )
                               else if (_parsedRaw <= 0 && _ngnPerUsd != null)
-                                // Show the toggle hint even when amount is 0
                                 GestureDetector(
                                   onTap: _toggleMode,
                                   child: Row(
