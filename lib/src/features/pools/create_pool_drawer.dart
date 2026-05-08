@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/recent_contact.dart';
 import '../request/payment_request.dart';
 import '../request/request_utils.dart';
 import 'pool.dart';
@@ -34,25 +35,13 @@ class CreatePoolDrawer extends StatefulWidget {
 }
 
 List<PoolParticipant> _buildRecentPoolContacts(
-  List<ZendTransaction> transactions,
+  List<RecentContact> contacts,
 ) {
-  final seen = <String>{};
-  final contacts = <PoolParticipant>[];
-
-  for (final tx in transactions) {
-    if (contacts.length >= 5) break;
-    final raw = tx.name.trim();
-    final tag = raw.startsWith('@') ? raw.substring(1) : raw;
-    if (tag.isEmpty || seen.contains(tag)) continue;
-    seen.add(tag);
-    contacts.add(PoolParticipant(
-      displayName: raw.isEmpty ? '@$tag' : raw,
-      avatarLabel: tx.avatarLabel,
-      isExternal: false,
-    ));
-  }
-
-  return contacts;
+  return contacts.take(5).map((c) => PoolParticipant(
+    displayName: c.name,
+    avatarLabel: c.avatarLabel,
+    isExternal: false,
+  )).toList();
 }
 
 class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
@@ -238,7 +227,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
-    final recentContacts = _buildRecentPoolContacts(model.recentTransactions);
+    final recentContacts = _buildRecentPoolContacts(model.recentContacts);
     final nameRemaining = _nameMaxLength - _nameController.text.length;
 
     return Container(

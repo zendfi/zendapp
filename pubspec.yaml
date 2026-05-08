@@ -53,6 +53,12 @@ dependencies:
   # Deep link / URL launch
   url_launcher: ^6.3.1
 
+  # QR code generation
+  qr_flutter: ^4.1.0
+
+  # Native share sheet (WhatsApp, X, Telegram, etc.)
+  share_plus: ^10.1.4
+
   # SVG rendering for country flags
   flutter_svg: ^2.0.10+1
 

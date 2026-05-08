@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../request/request_drawer_sheet.dart';
@@ -7,6 +11,28 @@ class ReceiveScreen extends StatelessWidget {
   const ReceiveScreen({super.key, required this.username});
 
   final String username;
+
+  String get _paymentLink => 'https://zdfi.me/$username';
+
+  Future<void> _shareLink(BuildContext context) async {
+    await Share.share(
+      'Pay me with ZendApp 💸\n$_paymentLink',
+      subject: 'My ZendApp payment link',
+    );
+  }
+
+  Future<void> _copyLink(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: _paymentLink));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Link copied to clipboard'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +44,9 @@ class ReceiveScreen extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text(
+              child: const Text(
                 'Receive',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -35,8 +61,9 @@ class ReceiveScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // ── QR card ──
                       Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: ZendColors.bgDeep,
                           borderRadius: BorderRadius.circular(ZendRadii.xl),
@@ -44,43 +71,103 @@ class ReceiveScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              'zdfi.me/',
+                              'zdfi.me/$username',
                               style: const TextStyle(
                                 fontFamily: 'DMMono',
-                                color: Color(0x80E8F4EC),
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '@$username',
-                              style: const TextStyle(
-                                fontFamily: 'InstrumentSerif',
-                                color: ZendColors.textOnDeep,
-                                fontSize: 32,
-                                fontStyle: FontStyle.italic,
+                                color: Color(0x99E8F4EC),
+                                fontSize: 13,
                               ),
                             ),
                             const SizedBox(height: 20),
-                            const _QrCard(size: 120),
-                            const SizedBox(height: 18),
+                            // Real QR code pointing to zdfi.me/username
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(ZendRadii.lg),
+                              ),
+                              child: QrImageView(
+                                data: _paymentLink,
+                                version: QrVersions.auto,
+                                size: 160,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
                             Text(
-                              'Scan this code to pay @$username directly.',
+                              'Scan to pay @$username',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Color(0x99E8F4EC), fontSize: 14),
+                              style: const TextStyle(
+                                fontFamily: 'DMSans',
+                                color: Color(0x99E8F4EC),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Copy link row
+                            GestureDetector(
+                              onTap: () => _copyLink(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x1AE8F4EC),
+                                  borderRadius:
+                                      BorderRadius.circular(ZendRadii.pill),
+                                  border: Border.all(
+                                      color: const Color(0x26E8F4EC)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.copy_outlined,
+                                        size: 14,
+                                        color: Color(0x99E8F4EC)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _paymentLink,
+                                      style: const TextStyle(
+                                        fontFamily: 'DMMono',
+                                        color: Color(0x99E8F4EC),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 18),
-                      PrimaryButton(label: 'Share payment link', onPressed: () {}),
+
+                      // ── Share button — opens native share sheet ──
+                      PrimaryButton(
+                        label: 'Share payment link',
+                        onPressed: () => _shareLink(context),
+                      ),
                       const SizedBox(height: 12),
-                      OutlineActionButton(label: 'Create payment request', onPressed: () => showRequestDrawer(context)),
+                      OutlineActionButton(
+                        label: 'Create payment request',
+                        onPressed: () => showRequestDrawer(context),
+                      ),
                       const SizedBox(height: 22),
                       Center(
-                        child: Text(
+                        child: const Text(
                           'Customise your page',
-                          style: const TextStyle(fontFamily: 'DMSans', color: ZendColors.accent, fontSize: 15),
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            color: ZendColors.accent,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ],
@@ -93,57 +180,4 @@ class ReceiveScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QrCard extends StatelessWidget {
-  const _QrCard({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      color: Colors.white,
-      child: CustomPaint(painter: _QrPainter()),
-    );
-  }
-}
-
-class _QrPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black87;
-    const grid = 16;
-    final cell = size.width / grid;
-    final pattern = <List<int>>[
-      [1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0],
-      [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1],
-      [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0],
-      [1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1],
-      [1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-      [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1],
-      [1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0],
-      [0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1],
-      [1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0],
-      [1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0],
-      [0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1],
-      [1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1],
-      [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0],
-      [1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1],
-      [0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1],
-    ];
-    for (var row = 0; row < pattern.length; row++) {
-      for (var col = 0; col < pattern[row].length; col++) {
-        if (pattern[row][col] == 1) {
-          canvas.drawRect(Rect.fromLTWH(col * cell, row * cell, cell, cell), paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
