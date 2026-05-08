@@ -260,6 +260,7 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -269,13 +270,19 @@ class _DetailRow extends StatelessWidget {
               color: zt.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: mono ? 'DMMono' : 'DMSans',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: valueColor ?? zt.textPrimary,
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: mono ? 'DMMono' : 'DMSans',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? zt.textPrimary,
+              ),
             ),
           ),
         ],
@@ -446,7 +453,7 @@ class _BankSendReceiptSheet extends StatelessWidget {
                       children: [
                         // Account holder
                         if (accountName != null && accountName.isNotEmpty) ...[
-                          _DetailRow(label: 'Account holder', value: accountName),
+                          _DetailRow(label: 'To', value: accountName),
                           Divider(color: zt.border, height: 1),
                         ],
                         // Bank

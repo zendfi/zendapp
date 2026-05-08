@@ -246,15 +246,13 @@ class _ActivityTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             CircleAvatar(
               radius: 22,
               backgroundColor: zt.bgPrimary,
-              child: Text(avatarLabel,
-                  style: TextStyle(color: zt.textPrimary)),
+              child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -263,6 +261,8 @@ class _ActivityTile extends StatelessWidget {
                 children: [
                   Text(
                     name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 15,
@@ -272,6 +272,8 @@ class _ActivityTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     note,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 13,
@@ -280,8 +282,10 @@ class _ActivityTile extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   amount,

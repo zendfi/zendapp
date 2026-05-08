@@ -302,12 +302,19 @@ class _TransactionRow extends StatelessWidget {
           CircleAvatar(radius: 20, backgroundColor: zt.bgCard, child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary))),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(height: 3),
-            Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
+            Text(note,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
           ])),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
+          const SizedBox(width: 8),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+            Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
             const SizedBox(height: 4),
             Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
           ]),
