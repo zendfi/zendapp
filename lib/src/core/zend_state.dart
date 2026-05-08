@@ -343,14 +343,16 @@ class ZendAppModel extends ChangeNotifier {
     lastHistoryError = null;
     notifyListeners();
     try {
-      // Fetch zend-to-zend transfers and bank sends in parallel
+      // Fetch zend-to-zend transfers, bank sends, and payins in parallel
       final results = await Future.wait([
         transferService.getHistory(),
         walletService.apiClient.getBankSendOrders().catchError((_) => <dynamic>[]),
+        walletService.apiClient.getPayinOrders().catchError((_) => <dynamic>[]),
       ]);
 
       final entries = results[0] as List<TransferHistoryEntry>;
       final bankOrders = results[1].cast<Map<String, dynamic>>();
+      final payinOrders = results[2].cast<Map<String, dynamic>>();
       final contacts = _buildRecentContactsFromHistory(entries);
 
       // Build rows from zend-to-zend transfers
@@ -426,8 +428,44 @@ class ZendAppModel extends ChangeNotifier {
         );
       }).toList();
 
+      // Build rows from payin orders (NGN → USDC received via zdfi.me)
+      final payinRows = payinOrders.map((order) {
+        final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
+        final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
+        final status = order['status'] as String? ?? '';
+        final createdAtStr = order['created_at'] as String? ?? '';
+        final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
+
+        final fiatPart = fiatAmount != null && fiatAmount > 0
+            ? _formatFiatDisplay(fiatAmount, 'NGN')
+            : null;
+        final note = fiatPart != null ? '$fiatPart received' : 'NGN payin';
+
+        final amtStr = amountUsdc == amountUsdc.roundToDouble()
+            ? '+\${amountUsdc.toStringAsFixed(0)}'
+            : '+\${amountUsdc.toStringAsFixed(2)}';
+
+        final timeStr = status == 'completed'
+            ? _formatTimestamp(createdAt)
+            : status == 'pending_payment'
+                ? 'Pending'
+                : _formatTimestamp(createdAt);
+
+        return ZendTransaction(
+          name: 'NGN Payin',
+          note: note,
+          amount: amtStr,
+          time: timeStr,
+          avatarLabel: '₦',
+          amountColor: ZendColors.positive,
+          entry: null,
+          bankOrder: order,
+          createdAt: createdAt,
+        );
+      }).toList();
+
       // Merge and sort newest first
-      final all = [...transferRows, ...bankRows]
+      final all = [...transferRows, ...bankRows, ...payinRows]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       recentTransactions = all;

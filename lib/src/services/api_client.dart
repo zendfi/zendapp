@@ -529,6 +529,15 @@ class ApiClient {
     }
   }
 
+  Future<List<dynamic>> getPayinOrders() async {
+    try {
+      final response = await _dio.get('/api/zend/payin/orders');
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> getBridgeKycStatus() async {
     try {
       final response = await _dio.get('/api/zend/bridge/kyc/status');
