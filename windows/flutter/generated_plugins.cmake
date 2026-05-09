@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   firebase_core
   flutter_secure_storage_windows
+  record_windows
   share_plus
   url_launcher_windows
 )

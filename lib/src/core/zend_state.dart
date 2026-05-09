@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/recent_contacts_store.dart';
+import '../services/sound_service.dart';
 import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
 import '../services/wallet_service.dart';
@@ -159,6 +160,52 @@ class ZendAppModel extends ChangeNotifier {
         // Server told us we missed events — do a full refresh
         unawaited(fetchBalance());
         unawaited(fetchHistory());
+      case SseEventType.poolContribution:
+        // Update the cached pool's gathered amount
+        final poolId = event.data['pool_id'] as String?;
+        final gatheredStr = event.data['gathered_amount_usdc'] as String?;
+        if (poolId != null && gatheredStr != null) {
+          final gathered = double.tryParse(gatheredStr);
+          final idx = pools.indexWhere((p) => p.id == poolId);
+          if (idx >= 0 && gathered != null) {
+            pools[idx].gathered = gathered;
+            notifyListeners();
+            // Play contribution chime (background — not currently viewing)
+            unawaited(PoolSoundService.playContributionChime());
+          } else if (idx < 0) {
+            // Pool not in local cache — refresh the full list
+            unawaited(fetchPools());
+          }
+        }
+      case SseEventType.poolStatusChanged:
+        // Update the cached pool's status
+        final poolId = event.data['pool_id'] as String?;
+        final newStatus = event.data['new_status'] as String?;
+        if (poolId != null && newStatus != null) {
+          final idx = pools.indexWhere((p) => p.id == poolId);
+          if (idx >= 0) {
+            final statusMap = {
+              'active': PoolStatus.active,
+              'completed': PoolStatus.completed,
+              'expired': PoolStatus.expired,
+              'cancelled': PoolStatus.cancelled,
+            };
+            final status = statusMap[newStatus];
+            if (status != null) {
+              pools[idx].status = status;
+              notifyListeners();
+            }
+          } else {
+            // Pool not in local cache — refresh
+            unawaited(fetchPools());
+          }
+        }
+      // poolMessage, poolReaction, poolReactionRemoved are handled
+      // directly by the MissionRoom widget — no-op at the model level
+      case SseEventType.poolMessage:
+      case SseEventType.poolReaction:
+      case SseEventType.poolReactionRemoved:
+        break;
       default:
         break;
     }
@@ -233,6 +280,8 @@ class ZendAppModel extends ChangeNotifier {
 
   final List<PaymentRequest> paymentRequests = [];
   final List<Pool> pools = [];
+  bool poolsLoading = false;
+  String? lastPoolsError;
 
   void setLocale(Locale locale) {
     _locale = locale;
@@ -522,6 +571,8 @@ class ZendAppModel extends ChangeNotifier {
     // Initialize push notifications now that the user is authenticated
     // and we have a valid session token to register the FCM token with
     unawaited(pushNotificationService.initialize());
+    // Load pools from backend
+    unawaited(fetchPools());
   }
 
   Future<void> recordTransfer({
@@ -592,12 +643,33 @@ class ZendAppModel extends ChangeNotifier {
     isLoading = false;
     loadingMessage = 'Loading';
     unawaited(recentContactsStore.clear());
+    pools.clear();
+    poolsLoading = false;
+    lastPoolsError = null;
     notifyListeners();
   }
 
   void addPaymentRequest(PaymentRequest request) {
     paymentRequests.insert(0, request);
     notifyListeners();
+  }
+
+  Future<void> fetchPools() async {
+    poolsLoading = true;
+    lastPoolsError = null;
+    notifyListeners();
+    try {
+      final fetched = await walletService.apiClient.listPools();
+      pools
+        ..clear()
+        ..addAll(fetched);
+      lastPoolsError = null;
+    } catch (e) {
+      lastPoolsError = e.toString();
+    } finally {
+      poolsLoading = false;
+      notifyListeners();
+    }
   }
 
   void addPool(Pool pool) {

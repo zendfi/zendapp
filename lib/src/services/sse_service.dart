@@ -11,6 +11,12 @@ enum SseEventType {
   balanceUpdate,
   heartbeat,
   refreshRequired,
+  // ── Pool v2 events ──
+  poolMessage,
+  poolContribution,
+  poolReaction,
+  poolReactionRemoved,
+  poolStatusChanged,
   unknown,
 }
 
@@ -28,6 +34,11 @@ class SseEvent {
       'balance_update' => SseEventType.balanceUpdate,
       'heartbeat' => SseEventType.heartbeat,
       'refresh_required' => SseEventType.refreshRequired,
+      'pool_message' => SseEventType.poolMessage,
+      'pool_contribution' => SseEventType.poolContribution,
+      'pool_reaction' => SseEventType.poolReaction,
+      'pool_reaction_removed' => SseEventType.poolReactionRemoved,
+      'pool_status_changed' => SseEventType.poolStatusChanged,
       _ => SseEventType.unknown,
     };
 

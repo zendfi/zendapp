@@ -50,6 +50,12 @@ dependencies:
   # Audio — success sound on transfer
   audioplayers: ^6.1.0
 
+  # Audio recording — voice notes in Mission Room
+  record: ^5.1.2
+
+  # Temporary file paths (used by voice note recording)
+  path_provider: ^2.1.5
+
   # Deep link / URL launch
   url_launcher: ^6.3.1
 

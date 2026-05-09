@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
 import 'pool.dart';
+import 'pool_list_drawer.dart';
 import 'pool_progress_bar.dart';
 
-/// A card summarising a single [Pool] for use inside the Pool List Drawer.
-///
-/// Shows the pool name, participant avatars (max 3 with "+N" overflow),
-/// gathered amount, a [PoolProgressBar], and the target amount.
 class PoolInfoCard extends StatelessWidget {
   const PoolInfoCard({
     super.key,
@@ -31,7 +28,6 @@ class PoolInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top row: name + avatars ──
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -46,12 +42,15 @@ class PoolInfoCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                _AvatarRow(participants: pool.participants),
+                if (pool.status != PoolStatus.active) ...[
+                  const SizedBox(width: ZendSpacing.xs),
+                  PoolStatusBadge(status: pool.status),
+                ] else
+                  _AvatarRow(participants: pool.participants),
               ],
             ),
             const SizedBox(height: ZendSpacing.xs),
 
-            // ── Gathered amount ──
             Text(
               pool.formattedGathered,
               style: const TextStyle(
@@ -63,11 +62,9 @@ class PoolInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: ZendSpacing.xs),
 
-            // ── Progress bar ──
             PoolProgressBar(progress: pool.progress),
             const SizedBox(height: ZendSpacing.xxs),
 
-            // ── Target label ──
             Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -86,7 +83,6 @@ class PoolInfoCard extends StatelessWidget {
   }
 }
 
-/// Displays up to 3 overlapping circular avatars with a "+N" overflow badge.
 class _AvatarRow extends StatelessWidget {
   const _AvatarRow({required this.participants});
 
@@ -100,7 +96,6 @@ class _AvatarRow extends StatelessWidget {
     final visible = participants.take(3).toList();
     final overflow = participants.length - 3;
 
-    // Total width: first avatar full + subsequent avatars offset.
     final count = visible.length + (overflow > 0 ? 1 : 0);
     final totalWidth =
         count == 0 ? 0.0 : _size + (_size - _overlap) * (count - 1);

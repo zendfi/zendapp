@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 
@@ -572,6 +573,202 @@ class ApiClient {
         data: data,
       );
       return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Pools v2 ────────────────────────────────────────────────────────────────
+
+  Future<Pool> createPool({
+    required String name,
+    required double targetAmountUsdc,
+    DateTime? deadline,
+    required List<Map<String, dynamic>> participants,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools',
+        data: <String, dynamic>{
+          'name': name,
+          'target_amount_usdc': targetAmountUsdc,
+          'deadline': deadline?.toUtc().toIso8601String(),
+          'participants': participants,
+        }..removeWhere((_, v) => v == null),
+      );
+      return Pool.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<Pool>> listPools({String? cursor, int? limit}) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/pools',
+        queryParameters: <String, dynamic>{
+          'cursor': cursor,
+          'limit': limit,
+        }..removeWhere((_, v) => v == null),
+      );
+      final data = response.data as Map<String, dynamic>;
+      final pools = (data['pools'] as List<dynamic>? ?? [])
+          .map((p) => Pool.fromJson(p as Map<String, dynamic>))
+          .toList();
+      return pools;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Pool> getPool(String poolId) async {
+    try {
+      final response = await _dio.get('/api/zend/pools/$poolId');
+      return Pool.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> cancelPool(String poolId) async {
+    try {
+      await _dio.delete('/api/zend/pools/$poolId');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PrepareTransferResponse> prepareContribution({
+    required String poolId,
+    required double amountUsdc,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/contribute/prepare',
+        data: {'amount_usdc': amountUsdc},
+        options: Options(
+          // ATA creation can take 15-30s for first-time recipients
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return PrepareTransferResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> submitContribution({
+    required String poolId,
+    required double amountUsdc,
+    required String partiallySignedTx,
+    String? note,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/contribute',
+        data: <String, dynamic>{
+          'amount_usdc': amountUsdc,
+          'partially_signed_tx': partiallySignedTx,
+          'note': note,
+        }..removeWhere((_, v) => v == null),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<PoolMessage>> listMessages({
+    required String poolId,
+    String? beforeId,
+    int? limit,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/pools/$poolId/messages',
+        queryParameters: <String, dynamic>{
+          'before_id': beforeId,
+          'limit': limit,
+        }..removeWhere((_, v) => v == null),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['messages'] as List<dynamic>? ?? [])
+          .map((m) => PoolMessage.fromJson(m as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PoolMessage> postMessage({
+    required String poolId,
+    required String content,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/messages',
+        data: {'content': content},
+      );
+      return PoolMessage.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PoolMessage> postVoiceNote({
+    required String poolId,
+    required List<int> audioBytes,
+    required String mimeType,
+    required int durationSeconds,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/messages/voice',
+        queryParameters: {'duration_seconds': durationSeconds},
+        data: audioBytes,
+        options: Options(
+          contentType: mimeType,
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 60),
+        ),
+      );
+      return PoolMessage.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> addReaction({
+    required String poolId,
+    required String messageId,
+    required String emoji,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/zend/pools/$poolId/messages/$messageId/react',
+        data: {'emoji': emoji},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> removeReaction({
+    required String poolId,
+    required String messageId,
+    required String emoji,
+  }) async {
+    try {
+      await _dio.delete(
+        '/api/zend/pools/$poolId/messages/$messageId/react',
+        data: {'emoji': emoji},
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }

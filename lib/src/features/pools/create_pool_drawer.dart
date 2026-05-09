@@ -5,8 +5,6 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/recent_contact.dart';
-import '../request/payment_request.dart';
-import '../request/request_utils.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
 
@@ -38,6 +36,7 @@ List<PoolParticipant> _buildRecentPoolContacts(
   List<RecentContact> contacts,
 ) {
   return contacts.take(5).map((c) => PoolParticipant(
+    id: '',
     displayName: c.name,
     avatarLabel: c.avatarLabel,
     isExternal: false,
@@ -98,6 +97,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
       setState(() {
         _participants.add(PoolParticipant(
+          id: '',
           displayName: displayName,
           avatarLabel: avatarLabel,
           isExternal: false,
@@ -117,6 +117,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     if (trimmed.isEmpty) return;
     setState(() {
       _participants.add(PoolParticipant(
+        id: '',
         displayName: trimmed,
         avatarLabel: trimmed[0].toUpperCase(),
         isExternal: true,
@@ -162,7 +163,10 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  void _onCreatePool() {
+  bool _creating = false;
+  String? _createError;
+
+  void _onCreatePool() async {
     final trimmedName = _nameController.text.trim();
     bool hasError = false;
 
@@ -182,45 +186,67 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
     if (hasError) return;
 
-    final model = ZendScope.of(context);
-    final poolId = generatePoolId();
+    setState(() {
+      _creating = true;
+      _createError = null;
+    });
 
-    final pool = Pool(
-      id: poolId,
-      name: trimmedName,
-      targetAmount: widget.targetAmount,
-      participants: List.of(_participants),
-      createdAt: DateTime.now(),
-      deadline: _deadline,
-      gathered: 0.0,
-      status: PoolStatus.active,
-    );
+    try {
+      final model = ZendScope.of(context);
 
-    // Generate payment request links for external contacts
-    for (final participant in _participants) {
-      if (participant.isExternal) {
-        final requestId = generateRequestId();
-        final link = buildRequestLink(model.username, requestId);
-        final request = PaymentRequest(
-          id: requestId,
-          link: link,
-          amount: widget.targetAmount,
-          description: 'Pool: $trimmedName — ${participant.displayName}',
-          createdAt: DateTime.now(),
-          status: PaymentRequestStatus.pending,
-        );
-        model.addPaymentRequest(request);
+      // Build participant payload for the API
+      final participantPayload = <Map<String, dynamic>>[];
+      for (final p in _participants) {
+        String? paymentRequestId;
+
+        if (p.isExternal) {
+          // Generate a payment request link for external contacts
+          try {
+            final requestData = await model.walletService.apiClient
+                .createPaymentRequest(
+              amountUsdc: widget.targetAmount,
+              description: 'Pool: $trimmedName — ${p.displayName}',
+            );
+            paymentRequestId = requestData['id'] as String?;
+          } catch (_) {
+            // Non-fatal — pool can still be created without the link
+          }
+        }
+
+        participantPayload.add({
+          'display_name': p.displayName,
+          'is_external': p.isExternal,
+          if (!p.isExternal && p.displayName.startsWith('@'))
+            'zendtag': p.displayName.substring(1),
+          'payment_request_id': paymentRequestId,
+        });
       }
-    }
 
-    model.addPool(pool);
+      // Create pool via API
+      final pool = await model.walletService.apiClient.createPool(
+        name: trimmedName,
+        targetAmountUsdc: widget.targetAmount,
+        deadline: _deadline,
+        participants: participantPayload,
+      );
 
-    if (mounted) {
+      // Add to local cache
+      model.addPool(pool);
+
+      if (!mounted) return;
+
+      // Navigate to the new pool's detail screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PoolDetailScreen(pool: pool),
         ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _creating = false;
+        _createError = 'Failed to create pool. Please try again.';
+      });
     }
   }
 
@@ -261,7 +287,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
               // ── Target amount (read-only) ──
               Text(
-                formatRequestAmount(widget.targetAmount),
+                widget.targetAmount == widget.targetAmount.roundToDouble()
+                    ? '\$${widget.targetAmount.toStringAsFixed(0)}'
+                    : '\$${widget.targetAmount.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 40,
@@ -533,10 +561,23 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               const SizedBox(height: ZendSpacing.xxl),
               const Spacer(),
 
+              // ── Create error ──
+              if (_createError != null) ...[
+                Text(
+                  _createError!,
+                  style: const TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 13,
+                    color: ZendColors.destructive,
+                  ),
+                ),
+                const SizedBox(height: ZendSpacing.xs),
+              ],
+
               // ── Create pool button ──
               PrimaryButton(
-                label: 'Create pool',
-                onPressed: _onCreatePool,
+                label: _creating ? 'Creating...' : 'Create pool',
+                onPressed: _creating ? null : _onCreatePool,
               ),
             ],
           ),
