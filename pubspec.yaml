@@ -51,7 +51,7 @@ dependencies:
   audioplayers: ^6.1.0
 
   # Audio recording — voice notes in Mission Room
-  record: ^5.1.2
+  record: 5.0.5
 
   # Temporary file paths (used by voice note recording)
   path_provider: ^2.1.5
