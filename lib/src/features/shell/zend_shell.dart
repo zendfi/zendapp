@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../activity/activity_screen.dart';
 import '../receive/receive_screen.dart';
