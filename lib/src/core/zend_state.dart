@@ -428,11 +428,12 @@ class ZendAppModel extends ChangeNotifier {
         );
       }).toList();
 
-      // Build rows from payin orders (NGN → USDC received via zdfi.me)
-      final payinRows = payinOrders.map((order) {
+      // Build rows from payin orders — only show completed ones (USDC confirmed in wallet)
+      final payinRows = payinOrders
+          .where((order) => (order['status'] as String? ?? '') == 'completed')
+          .map((order) {
         final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
         final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
-        final status = order['status'] as String? ?? '';
         final createdAtStr = order['created_at'] as String? ?? '';
         final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
 
@@ -442,20 +443,14 @@ class ZendAppModel extends ChangeNotifier {
         final note = fiatPart != null ? '$fiatPart received' : 'NGN payin';
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '+\${amountUsdc.toStringAsFixed(0)}'
-            : '+\${amountUsdc.toStringAsFixed(2)}';
-
-        final timeStr = status == 'completed'
-            ? _formatTimestamp(createdAt)
-            : status == 'pending_payment'
-                ? 'Pending'
-                : _formatTimestamp(createdAt);
+            ? '+${amountUsdc.toStringAsFixed(0)}'
+            : '+${amountUsdc.toStringAsFixed(2)}';
 
         return ZendTransaction(
           name: 'NGN Payin',
           note: note,
           amount: amtStr,
-          time: timeStr,
+          time: _formatTimestamp(createdAt),
           avatarLabel: '₦',
           amountColor: ZendColors.positive,
           entry: null,
