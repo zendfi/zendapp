@@ -1,10 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
@@ -36,12 +32,6 @@ class _MissionRoomState extends State<MissionRoom> {
   final _textController = TextEditingController();
   bool _sending = false;
 
-  bool _recording = false;
-  int _recordingSeconds = 0;
-  Timer? _recordingTimer;
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  String? _recordingPath;
-
   StreamSubscription<SseEvent>? _sseSub;
 
   @override
@@ -57,8 +47,6 @@ class _MissionRoomState extends State<MissionRoom> {
     _sseSub?.cancel();
     _scrollController.dispose();
     _textController.dispose();
-    _recordingTimer?.cancel();
-    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -271,98 +259,20 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   Future<void> _startRecording() async {
-    final hasPermission = await _audioRecorder.hasPermission();
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission required')),
-        );
-      }
-      return;
-    }
-
-    try {
-      final dir = await getTemporaryDirectory();
-      _recordingPath =
-          '${dir.path}/pool_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000),
-        path: _recordingPath!,
-      );
-
-      setState(() {
-        _recording = true;
-        _recordingSeconds = 0;
-      });
-
-      _recordingTimer =
-          Timer.periodic(const Duration(seconds: 1), (t) {
-        if (!mounted) {
-          t.cancel();
-          return;
-        }
-        setState(() => _recordingSeconds++);
-        if (_recordingSeconds >= 30) {
-          _stopRecording();
-        }
-      });
-
-      HapticFeedback.mediumImpact();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start recording: $e')),
-        );
-      }
-    }
+    // Voice recording requires a native audio plugin.
+    // The backend upload endpoint (POST /api/zend/pools/:id/messages/voice)
+    // is fully implemented and ready — wire this up with a platform-compatible
+    // recording package when the dependency conflict is resolved.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Voice notes coming soon 🎙️'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _stopRecording() async {
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-
-    final duration = _recordingSeconds;
-    final path = _recordingPath;
-
-    if (!mounted) return;
-    setState(() => _recording = false);
-
-    if (path == null || duration < 1) return;
-
-    try {
-      await _audioRecorder.stop();
-
-      final file = File(path);
-      if (!await file.exists()) return;
-      final audioBytes = await file.readAsBytes();
-      try { await file.delete(); } catch (_) {}
-
-      if (!mounted) return;
-      setState(() => _sending = true);
-
-      final model = ZendScope.of(context);
-      final msg = await model.walletService.apiClient.postVoiceNote(
-        poolId: _pool.id,
-        audioBytes: audioBytes,
-        mimeType: 'audio/m4a',
-        durationSeconds: duration,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _messages.add(msg);
-        _sending = false;
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send voice note: $e')),
-        );
-      }
-    }
+    // No-op until recording is implemented
   }
 
   void _scrollToBottom() {
@@ -486,8 +396,6 @@ class _MissionRoomState extends State<MissionRoom> {
           _InputBar(
             controller: _textController,
             sending: _sending,
-            recording: _recording,
-            recordingSeconds: _recordingSeconds,
             onSend: _sendMessage,
             onMicStart: _startRecording,
             onMicStop: _stopRecording,
@@ -501,8 +409,6 @@ class _InputBar extends StatefulWidget {
   const _InputBar({
     required this.controller,
     required this.sending,
-    required this.recording,
-    required this.recordingSeconds,
     required this.onSend,
     required this.onMicStart,
     required this.onMicStop,
@@ -510,8 +416,6 @@ class _InputBar extends StatefulWidget {
 
   final TextEditingController controller;
   final bool sending;
-  final bool recording;
-  final int recordingSeconds;
   final VoidCallback onSend;
   final Future<void> Function() onMicStart;
   final Future<void> Function() onMicStop;
@@ -542,12 +446,7 @@ class _InputBarState extends State<_InputBar> {
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: ZendColors.border)),
       ),
-      child: widget.recording
-          ? _RecordingIndicator(
-              seconds: widget.recordingSeconds,
-              onStop: widget.onMicStop,
-            )
-          : Row(
+      child: Row(
               children: [
                 // Text field
                 Expanded(
@@ -643,43 +542,6 @@ class _InputBarState extends State<_InputBar> {
                 ),
               ],
             ),
-    );
-  }
-}
-
-class _RecordingIndicator extends StatelessWidget {
-  const _RecordingIndicator({required this.seconds, required this.onStop});
-  final int seconds;
-  final Future<void> Function() onStop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.fiber_manual_record,
-            color: ZendColors.destructive, size: 14),
-        const SizedBox(width: ZendSpacing.xs),
-        Text(
-          'Recording ${seconds}s / 30s',
-          style: const TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 13,
-            color: ZendColors.textPrimary,
-          ),
-        ),
-        const Spacer(),
-        TextButton(
-          onPressed: () => unawaited(onStop()),
-          child: const Text(
-            'Stop',
-            style: TextStyle(
-              fontFamily: 'DMSans',
-              fontWeight: FontWeight.w600,
-              color: ZendColors.destructive,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
