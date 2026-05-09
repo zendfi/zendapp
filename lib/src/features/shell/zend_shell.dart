@@ -31,11 +31,15 @@ class _ZendShellState extends State<ZendShell> {
 
   void _openReceiveScreen(BuildContext context) {
     final model = ZendScope.of(context);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => ReceiveScreen(username: model.username),
       ),
-    );
+    ).then((openSend) {
+      if (openSend == true && mounted) {
+        _setTab(1);
+      }
+    });
   }
 
   @override

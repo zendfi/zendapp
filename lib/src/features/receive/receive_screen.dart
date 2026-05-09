@@ -5,7 +5,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../request/request_drawer_sheet.dart';
 
 class ReceiveScreen extends StatelessWidget {
   const ReceiveScreen({super.key, required this.username});
@@ -16,8 +15,8 @@ class ReceiveScreen extends StatelessWidget {
 
   Future<void> _shareLink(BuildContext context) async {
     await Share.share(
-      'Pay me with ZendApp 💸\n$_paymentLink',
-      subject: 'My ZendApp payment link',
+      'Pay me with Zend! App 💸\n$_paymentLink',
+      subject: 'My Zend! payment link',
     );
   }
 
@@ -43,15 +42,24 @@ class ReceiveScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: const Text(
-                'Receive',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: ZendColors.textPrimary,
-                ),
+              padding: const EdgeInsets.fromLTRB(8, 16, 20, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    color: ZendColors.textPrimary,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Text(
+                    'Receive',
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: ZendColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -157,7 +165,7 @@ class ReceiveScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       OutlineActionButton(
                         label: 'Create payment request',
-                        onPressed: () => showRequestDrawer(context),
+                        onPressed: () => Navigator.of(context).pop(true),
                       ),
                       const SizedBox(height: 22),
                       Center(
