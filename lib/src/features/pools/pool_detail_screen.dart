@@ -4,10 +4,19 @@ import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import 'contribute_sheet.dart';
 import 'manage_sheet.dart';
-import 'mission_room.dart';
+import 'mission_room_sheet.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
 
+/// Full-screen detail view for a single [Pool].
+///
+/// Shows the pool name, status badge/banner, gathered/target amounts,
+/// progress bar, participant list, and timeline.
+///
+/// Action buttons at the bottom:
+/// - "Message" — always visible for all members, opens the Mission Room sheet
+/// - "Contribute" — visible to non-creator participants when pool is active
+/// - "Manage" — visible to the creator when pool is active
 class PoolDetailScreen extends StatefulWidget {
   const PoolDetailScreen({super.key, required this.pool});
 
@@ -53,191 +62,207 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Back button ──────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
+                icon: const Icon(Icons.arrow_back,
+                    color: ZendColors.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
 
+            // ── Scrollable summary ───────────────────────────────────────
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Pool name
-                        Text(
-                          _pool.name,
-                          style: const TextStyle(
-                            fontFamily: 'InstrumentSerif',
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: ZendColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: ZendSpacing.sm),
-
-                        // Status badge
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _statusColor(_pool.status)
-                                  .withValues(alpha: 0.15),
-                              borderRadius:
-                                  BorderRadius.circular(ZendRadii.pill),
-                            ),
-                            child: Text(
-                              _pool.status.name,
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _statusColor(_pool.status),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: ZendSpacing.md),
-
-                        if (_pool.status == PoolStatus.completed)
-                          _StatusBanner(
-                            message: 'Goal reached! 🎉',
-                            color: ZendColors.accent,
-                          ),
-                        if (_pool.status == PoolStatus.expired)
-                          _StatusBanner(
-                            message: 'Pool expired',
-                            color: ZendColors.destructive,
-                          ),
-                        if (_pool.status == PoolStatus.cancelled)
-                          _StatusBanner(
-                            message: 'Pool cancelled',
-                            color: ZendColors.textSecondary,
-                          ),
-
-                        Text(
-                          '${_pool.formattedGathered} of ${_pool.formattedTarget}',
-                          style: const TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            color: ZendColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: ZendSpacing.xs),
-
-                        PoolProgressBar(progress: _pool.progress),
-                        const SizedBox(height: ZendSpacing.lg),
-
-                        const Text(
-                          'PARTICIPANTS',
-                          style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                            color: ZendColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: ZendSpacing.sm),
-                        ..._pool.participants.map(_buildParticipantRow),
-                        const SizedBox(height: ZendSpacing.lg),
-
-                        _TimelineRow(
-                          label: 'Created',
-                          value: _formatDate(_pool.createdAt),
-                        ),
-                        const SizedBox(height: ZendSpacing.xs),
-                        _TimelineRow(
-                          label: 'Deadline',
-                          value: _pool.deadline != null
-                              ? _formatDate(_pool.deadline!)
-                              : 'No deadline',
-                        ),
-                        const SizedBox(height: ZendSpacing.lg),
-                      ],
+                  // Pool name
+                  Text(
+                    _pool.name,
+                    style: const TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
+                  const SizedBox(height: ZendSpacing.sm),
 
-                  Expanded(
-                    child: MissionRoom(pool: _pool),
+                  // Status badge
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _statusColor(_pool.status)
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      ),
+                      child: Text(
+                        _pool.status.name,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor(_pool.status),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: ZendSpacing.md),
+
+                  // Status banners
+                  if (_pool.status == PoolStatus.completed)
+                    _StatusBanner(
+                      message: 'Goal reached! 🎉',
+                      color: ZendColors.accent,
+                    ),
+                  if (_pool.status == PoolStatus.expired)
+                    _StatusBanner(
+                      message: 'Pool expired',
+                      color: ZendColors.destructive,
+                    ),
+                  if (_pool.status == PoolStatus.cancelled)
+                    _StatusBanner(
+                      message: 'Pool cancelled',
+                      color: ZendColors.textSecondary,
+                    ),
+
+                  // Gathered / Target
+                  Text(
+                    '${_pool.formattedGathered} of ${_pool.formattedTarget}',
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 15,
+                      color: ZendColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: ZendSpacing.xs),
+
+                  // Progress bar
+                  PoolProgressBar(progress: _pool.progress),
+                  const SizedBox(height: ZendSpacing.xl),
+
+                  // Participants
+                  const Text(
+                    'PARTICIPANTS',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                      color: ZendColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: ZendSpacing.sm),
+                  ..._pool.participants.map(_buildParticipantRow),
+                  const SizedBox(height: ZendSpacing.xl),
+
+                  // Timeline
+                  _TimelineRow(
+                    label: 'Created',
+                    value: _formatDate(_pool.createdAt),
+                  ),
+                  const SizedBox(height: ZendSpacing.xs),
+                  _TimelineRow(
+                    label: 'Deadline',
+                    value: _pool.deadline != null
+                        ? _formatDate(_pool.deadline!)
+                        : 'No deadline',
                   ),
                 ],
               ),
             ),
 
-            if (isActive)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Row(
-                  children: [
-                    if (!isCreator) ...[
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => showContributeSheet(
-                            context,
-                            pool: _pool,
+            // ── Action buttons ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Row(
+                children: [
+                  // Contribute — non-creator, active pool only
+                  if (isActive && !isCreator) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            showContributeSheet(context, pool: _pool),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ZendColors.textPrimary,
+                          side: const BorderSide(color: ZendColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.lg),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: ZendColors.textPrimary,
-                            side: const BorderSide(color: ZendColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(ZendRadii.lg),
-                            ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            'Contribute',
-                            style: TextStyle(
-                              fontFamily: 'DMSans',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Contribute',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      const SizedBox(width: ZendSpacing.md),
-                    ],
-                    if (isCreator)
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => showManageSheet(
-                            context,
-                            pool: _pool,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: ZendColors.accent,
-                            foregroundColor: ZendColors.textOnDeep,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(ZendRadii.lg),
-                            ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            'Manage',
-                            style: TextStyle(
-                              fontFamily: 'DMSans',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
+                    ),
+                    const SizedBox(width: ZendSpacing.sm),
                   ],
-                ),
+
+                  // Manage — creator, active pool only
+                  if (isActive && isCreator) ...[
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            showManageSheet(context, pool: _pool),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ZendColors.accent,
+                          foregroundColor: ZendColors.textOnDeep,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.lg),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Manage',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: ZendSpacing.sm),
+                  ],
+
+                  // Message — always visible for all members
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          showMissionRoomSheet(context, pool: _pool),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                      label: const Text(
+                        'Message',
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ZendColors.accentBright,
+                        side: const BorderSide(color: ZendColors.accentBright),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.lg),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -305,6 +330,8 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
   }
 }
 
+// ── Status banner ─────────────────────────────────────────────────────────────
+
 class _StatusBanner extends StatelessWidget {
   const _StatusBanner({required this.message, required this.color});
   final String message;
@@ -334,6 +361,8 @@ class _StatusBanner extends StatelessWidget {
     );
   }
 }
+
+// ── Timeline row ──────────────────────────────────────────────────────────────
 
 class _TimelineRow extends StatelessWidget {
   const _TimelineRow({required this.label, required this.value});

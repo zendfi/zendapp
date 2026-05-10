@@ -39,6 +39,7 @@ List<PoolParticipant> _buildRecentPoolContacts(
     id: '',
     displayName: c.name,
     avatarLabel: c.avatarLabel,
+    zendtag: c.tag,  // carry the zendtag so the API payload is correct
     isExternal: false,
   )).toList();
 }
@@ -100,6 +101,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
           id: '',
           displayName: displayName,
           avatarLabel: avatarLabel,
+          zendtag: resolved.zendtag,  // store the resolved zendtag
           isExternal: false,
         ));
         _participantError = null;
@@ -216,8 +218,11 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
         participantPayload.add({
           'display_name': p.displayName,
           'is_external': p.isExternal,
-          if (!p.isExternal && p.displayName.startsWith('@'))
-            'zendtag': p.displayName.substring(1),
+          // Use the stored zendtag (set when user was resolved via search or
+          // selected from recent contacts). Falls back to stripping '@' from
+          // display name for legacy entries.
+          if (p.zendtag != null && p.zendtag!.isNotEmpty)
+            'zendtag': p.zendtag,
           'payment_request_id': paymentRequestId,
         });
       }

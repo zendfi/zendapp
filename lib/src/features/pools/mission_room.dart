@@ -89,8 +89,12 @@ class _MissionRoomState extends State<MissionRoom> {
     switch (event.type) {
       case SseEventType.poolMessage:
         final msg = PoolMessage.fromJson(data);
-        setState(() => _messages.add(msg));
-        _scrollToBottom();
+        // Deduplicate: the sender already added the message optimistically
+        // from the API response; skip if we already have it by ID.
+        if (!_messages.any((m) => m.id == msg.id)) {
+          setState(() => _messages.add(msg));
+          _scrollToBottom();
+        }
 
       case SseEventType.poolContribution:
         final gatheredStr = data['gathered_amount_usdc'] as String?;
@@ -200,8 +204,12 @@ class _MissionRoomState extends State<MissionRoom> {
       final msg = await model.walletService.apiClient
           .postMessage(poolId: _pool.id, content: content);
       if (!mounted) return;
+      // Add the message from the API response. The SSE event will also arrive
+      // but _onSseEvent deduplicates by ID, so it won't be added twice.
       setState(() {
-        _messages.add(msg);
+        if (!_messages.any((m) => m.id == msg.id)) {
+          _messages.add(msg);
+        }
         _sending = false;
       });
       _scrollToBottom();

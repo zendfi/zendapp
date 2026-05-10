@@ -48,6 +48,7 @@ class PoolParticipant {
     required this.displayName,
     required this.avatarLabel,
     this.userId,
+    this.zendtag,
     this.contribution = 0.0,
     this.isExternal = false,
   });
@@ -59,6 +60,9 @@ class PoolParticipant {
   /// UUID of the Zend user, null for external contacts.
   final String? userId;
 
+  /// Zendtag (without @) for Zend users — used when building the API payload.
+  final String? zendtag;
+
   final double contribution;
   final bool isExternal;
 
@@ -69,6 +73,7 @@ class PoolParticipant {
       displayName: displayName,
       avatarLabel: displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
       userId: json['user_id'] as String?,
+      zendtag: null, // not returned by API, only used locally during creation
       contribution: (json['contribution'] as num?)?.toDouble() ?? 0.0,
       isExternal: json['is_external'] as bool? ?? false,
     );
