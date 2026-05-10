@@ -50,6 +50,12 @@ dependencies:
   # Audio — success sound on transfer
   audioplayers: ^6.1.0
 
+  # Audio recording — voice notes in Mission Room (Android/iOS only)
+  record: 5.0.5
+
+  # Temporary directory for voice note recordings
+  path_provider: ^2.1.5
+
   # Deep link / URL launch
   url_launcher: ^6.3.1
 
@@ -172,3 +178,10 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/logo/Zend.png"
+
+# Force record_platform_interface to 1.1.2 to avoid the broken record_linux
+# 0.7.2 / record_platform_interface 1.5.0 combination. record 5.0.5 declares
+# a loose ^1.1.0 constraint so this override is safe.
+dependency_overrides:
+  record_platform_interface: 1.1.2
+  record_linux: 0.5.0

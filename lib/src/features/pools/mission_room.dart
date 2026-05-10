@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
@@ -31,6 +34,11 @@ class _MissionRoomState extends State<MissionRoom> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
   bool _sending = false;
+  final _audioRecorder = AudioRecorder();
+  String? _recordingPath;
+  bool _isRecording = false;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
 
   StreamSubscription<SseEvent>? _sseSub;
 
@@ -47,6 +55,8 @@ class _MissionRoomState extends State<MissionRoom> {
     _sseSub?.cancel();
     _scrollController.dispose();
     _textController.dispose();
+    _recordingTimer?.cancel();
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -267,20 +277,93 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   Future<void> _startRecording() async {
-    // Voice recording requires a native audio plugin.
-    // The backend upload endpoint (POST /api/zend/pools/:id/messages/voice)
-    // is fully implemented and ready — wire this up with a platform-compatible
-    // recording package when the dependency conflict is resolved.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice notes coming soon 🎙️'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    final hasPermission = await _audioRecorder.hasPermission();
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final dir = await getTemporaryDirectory();
+      _recordingPath =
+          '${dir.path}/pool_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000),
+        path: _recordingPath!,
+      );
+
+      setState(() {
+        _isRecording = true;
+        _recordingSeconds = 0;
+      });
+
+      _recordingTimer =
+          Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!mounted) { t.cancel(); return; }
+        setState(() => _recordingSeconds++);
+        if (_recordingSeconds >= 30) _stopRecording();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start recording: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _stopRecording() async {
-    // No-op until recording is implemented
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+
+    final duration = _recordingSeconds;
+    final path = _recordingPath;
+
+    if (!mounted) return;
+    setState(() => _isRecording = false);
+
+    if (path == null || duration < 1) return;
+
+    try {
+      await _audioRecorder.stop();
+
+      final file = File(path);
+      if (!await file.exists()) return;
+      final audioBytes = await file.readAsBytes();
+      try { await file.delete(); } catch (_) {}
+
+      if (!mounted) return;
+      setState(() => _sending = true);
+
+      final model = ZendScope.of(context);
+      final msg = await model.walletService.apiClient.postVoiceNote(
+        poolId: _pool.id,
+        audioBytes: audioBytes,
+        mimeType: 'audio/m4a',
+        durationSeconds: duration,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        if (!_messages.any((m) => m.id == msg.id)) {
+          _messages.add(msg);
+        }
+        _sending = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send voice note: $e')),
+        );
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -404,6 +487,8 @@ class _MissionRoomState extends State<MissionRoom> {
           _InputBar(
             controller: _textController,
             sending: _sending,
+            isRecording: _isRecording,
+            recordingSeconds: _recordingSeconds,
             onSend: _sendMessage,
             onMicStart: _startRecording,
             onMicStop: _stopRecording,
@@ -417,6 +502,8 @@ class _InputBar extends StatefulWidget {
   const _InputBar({
     required this.controller,
     required this.sending,
+    required this.isRecording,
+    required this.recordingSeconds,
     required this.onSend,
     required this.onMicStart,
     required this.onMicStop,
@@ -424,6 +511,8 @@ class _InputBar extends StatefulWidget {
 
   final TextEditingController controller;
   final bool sending;
+  final bool isRecording;
+  final int recordingSeconds;
   final VoidCallback onSend;
   final Future<void> Function() onMicStart;
   final Future<void> Function() onMicStop;
@@ -454,7 +543,37 @@ class _InputBarState extends State<_InputBar> {
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: ZendColors.border)),
       ),
-      child: Row(
+      child: widget.isRecording
+          // ── Recording indicator ──────────────────────────────────────
+          ? Row(
+              children: [
+                const Icon(Icons.fiber_manual_record,
+                    color: ZendColors.destructive, size: 14),
+                const SizedBox(width: ZendSpacing.xs),
+                Text(
+                  'Recording ${widget.recordingSeconds}s / 30s',
+                  style: const TextStyle(
+                    fontFamily: 'DMMono',
+                    fontSize: 13,
+                    color: ZendColors.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => unawaited(widget.onMicStop()),
+                  child: const Text(
+                    'Stop',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontWeight: FontWeight.w600,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          // ── Normal input row ─────────────────────────────────────────
+          : Row(
               children: [
                 // Text field
                 Expanded(
@@ -498,7 +617,7 @@ class _InputBarState extends State<_InputBar> {
                 ),
                 const SizedBox(width: ZendSpacing.xs),
 
-                // Mic button
+                // Mic button — hold to record
                 GestureDetector(
                   onLongPressStart: (_) => unawaited(widget.onMicStart()),
                   onLongPressEnd: (_) => unawaited(widget.onMicStop()),
