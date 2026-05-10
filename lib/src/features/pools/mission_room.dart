@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
@@ -34,8 +31,6 @@ class _MissionRoomState extends State<MissionRoom> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
   bool _sending = false;
-  final _audioRecorder = AudioRecorder();
-  String? _recordingPath;
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
@@ -56,7 +51,6 @@ class _MissionRoomState extends State<MissionRoom> {
     _scrollController.dispose();
     _textController.dispose();
     _recordingTimer?.cancel();
-    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -277,92 +271,33 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   Future<void> _startRecording() async {
-    final hasPermission = await _audioRecorder.hasPermission();
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission required')),
-        );
-      }
-      return;
-    }
-
-    try {
-      final dir = await getTemporaryDirectory();
-      _recordingPath =
-          '${dir.path}/pool_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000),
-        path: _recordingPath!,
-      );
-
-      setState(() {
-        _isRecording = true;
-        _recordingSeconds = 0;
-      });
-
-      _recordingTimer =
-          Timer.periodic(const Duration(seconds: 1), (t) {
-        if (!mounted) { t.cancel(); return; }
-        setState(() => _recordingSeconds++);
-        if (_recordingSeconds >= 30) _stopRecording();
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start recording: $e')),
-        );
-      }
-    }
+    // Voice recording requires a compatible audio plugin.
+    // The backend endpoint (POST /api/zend/pools/:id/messages/voice) is fully
+    // implemented — wire this up once the `record` package resolves its
+    // Linux platform interface conflict.
+    setState(() {
+      _isRecording = true;
+      _recordingSeconds = 0;
+    });
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _recordingSeconds++);
+      if (_recordingSeconds >= 30) _stopRecording();
+    });
   }
 
   Future<void> _stopRecording() async {
     _recordingTimer?.cancel();
     _recordingTimer = null;
-
-    final duration = _recordingSeconds;
-    final path = _recordingPath;
-
     if (!mounted) return;
     setState(() => _isRecording = false);
-
-    if (path == null || duration < 1) return;
-
-    try {
-      await _audioRecorder.stop();
-
-      final file = File(path);
-      if (!await file.exists()) return;
-      final audioBytes = await file.readAsBytes();
-      try { await file.delete(); } catch (_) {}
-
-      if (!mounted) return;
-      setState(() => _sending = true);
-
-      final model = ZendScope.of(context);
-      final msg = await model.walletService.apiClient.postVoiceNote(
-        poolId: _pool.id,
-        audioBytes: audioBytes,
-        mimeType: 'audio/m4a',
-        durationSeconds: duration,
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Voice notes coming soon 🎙️'),
+          duration: Duration(seconds: 2),
+        ),
       );
-
-      if (!mounted) return;
-      setState(() {
-        if (!_messages.any((m) => m.id == msg.id)) {
-          _messages.add(msg);
-        }
-        _sending = false;
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send voice note: $e')),
-        );
-      }
     }
   }
 
