@@ -16,8 +16,10 @@ import '../services/recent_contacts_store.dart';
 import '../services/sound_service.dart';
 import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
+import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
+import '../models/savings_models.dart';
 
 const Map<String, String> _localeGreetings = {
   'yo': 'Ẹ káàbọ̀',
@@ -85,6 +87,7 @@ class ZendAppModel extends ChangeNotifier {
     required this.sseService,
     required this.pushNotificationService,
     required this.appLockService,
+    required this.savingsService,
   });
 
   final AuthService authService;
@@ -96,6 +99,7 @@ class ZendAppModel extends ChangeNotifier {
   final SseService sseService;
   final PushNotificationService pushNotificationService;
   final AppLockService appLockService;
+  final SavingsService savingsService;
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;
@@ -282,6 +286,11 @@ class ZendAppModel extends ChangeNotifier {
   final List<Pool> pools = [];
   bool poolsLoading = false;
   String? lastPoolsError;
+
+  // ── Savings ──
+  double savingsApy = 0.0;
+  double savingsBalance = 0.0;
+  bool savingsLoading = false;
 
   void setLocale(Locale locale) {
     _locale = locale;
@@ -573,6 +582,8 @@ class ZendAppModel extends ChangeNotifier {
     unawaited(pushNotificationService.initialize());
     // Load pools from backend
     unawaited(fetchPools());
+    // Load savings snapshot
+    unawaited(fetchSavingsSnapshot());
   }
 
   Future<void> recordTransfer({
@@ -646,6 +657,9 @@ class ZendAppModel extends ChangeNotifier {
     pools.clear();
     poolsLoading = false;
     lastPoolsError = null;
+    savingsApy = 0.0;
+    savingsBalance = 0.0;
+    savingsLoading = false;
     notifyListeners();
   }
 
@@ -654,8 +668,27 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchPools() async {
-    poolsLoading = true;
+  Future<void> fetchSavingsSnapshot() async {
+    savingsLoading = true;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        savingsService.getSavingsMetrics(),
+        savingsService.getSavingsPosition(),
+      ]);
+      final metrics = results[0] as SavingsMetrics;
+      final position = results[1] as SavingsPosition;
+      savingsApy = metrics.apy;
+      savingsBalance = position.hasPosition ? position.currentValueUsd : 0.0;
+    } catch (_) {
+      // Non-fatal — failures must never crash the home screen
+    } finally {
+      savingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchPools() async {    poolsLoading = true;
     lastPoolsError = null;
     notifyListeners();
     try {

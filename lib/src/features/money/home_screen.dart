@@ -8,6 +8,7 @@ import '../../navigation/zend_routes.dart';
 import '../activity/transaction_receipt_sheet.dart';
 import '../pools/pool_list_drawer.dart';
 import '../profile/profile_screen.dart';
+import '../savings/savings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -226,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Expanded(child: OutlineActionButton(label: 'Send', onPressed: widget.onOpenSend)),
                                 ]),
                                 const SizedBox(height: 18),
-                                Row(children: [const Expanded(child: _YieldCard()), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
+                                Row(children: [Expanded(child: _SavingsCard(model: model)), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
                                 const SizedBox(height: 18),
                                 const Divider(),
                                 const SizedBox(height: 14),
@@ -324,27 +325,77 @@ class _TransactionRow extends StatelessWidget {
   }
 }
 
-class _YieldCard extends StatelessWidget {
-  const _YieldCard();
+class _SavingsCard extends StatelessWidget {
+  const _SavingsCard({required this.model});
+  final ZendAppModel model;
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Container(
-      height: 118, padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(14)),
-      child: Stack(children: [
-        Positioned(top: 0, right: 0, child: Container(width: 64, height: 48, decoration: const BoxDecoration(gradient: RadialGradient(colors: [Color(0x55A9D7BF), Color(0x00A9D7BF)])))),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Earnings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-            Icon(Icons.settings_outlined, size: 16, color: zt.textSecondary),
+    final apyStr = model.savingsApy > 0
+        ? '${model.savingsApy.toStringAsFixed(1)}%'
+        : '—';
+    final balanceStr = model.savingsBalance > 0
+        ? '\$${model.savingsBalance.toStringAsFixed(2)}'
+        : '\$0.00';
+
+    return GestureDetector(
+      onTap: () => pushZendSlide(context, const SavingsScreen()),
+      child: Container(
+        height: 118,
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        decoration: BoxDecoration(
+          color: zt.bgCard,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Stack(children: [
+          Positioned(
+            top: 0, right: 0,
+            child: Container(
+              width: 64, height: 48,
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [Color(0x55A9D7BF), Color(0x00A9D7BF)],
+                ),
+              ),
+            ),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+              Icon(Icons.savings_outlined, size: 16, color: zt.textSecondary),
+            ]),
+            const SizedBox(height: 3),
+            Text(
+              apyStr,
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 50,
+                height: 0.92,
+                color: zt.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            model.savingsLoading
+                ? SizedBox(
+                    height: 14,
+                    width: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: zt.textSecondary,
+                    ),
+                  )
+                : Text(
+                    balanceStr,
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
           ]),
-          const SizedBox(height: 3),
-          Text('4.2%', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 50, height: 0.92, color: zt.textPrimary)),
-          const Spacer(),
-          Text('CURRENT APY', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary)),
         ]),
-      ]),
+      ),
     );
   }
 }

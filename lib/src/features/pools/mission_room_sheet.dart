@@ -14,6 +14,7 @@ Future<void> showMissionRoomSheet(
     isScrollControlled: true,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
+    // Let the sheet resize when the keyboard appears
     builder: (_) => _MissionRoomSheet(pool: pool),
   );
 }
@@ -27,6 +28,7 @@ class _MissionRoomSheet extends StatelessWidget {
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
+      // Full-screen minus status bar
       height: MediaQuery.of(context).size.height - topPadding,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -34,62 +36,57 @@ class _MissionRoomSheet extends StatelessWidget {
           top: Radius.circular(ZendRadii.xxl),
         ),
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-            child: Column(
-              children: [
-                const ZendSheetHandle(),
-                const SizedBox(height: ZendSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pool.name,
-                            style: const TextStyle(
-                              fontFamily: 'InstrumentSerif',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: ZendColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+      // Scaffold inside the sheet handles keyboard insets correctly —
+      // resizeToAvoidBottomInset pushes content up when keyboard opens,
+      // exactly like WhatsApp/Telegram.
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: true,
+        body: Column(
+          children: [
+            // ── Header ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 4, 0),
+              child: Column(
+                children: [
+                  const ZendSheetHandle(),
+                  const SizedBox(height: ZendSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pool.name,
+                          style: const TextStyle(
+                            fontFamily: 'InstrumentSerif',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: ZendColors.textPrimary,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Mission Room',
-                            style: const TextStyle(
-                              fontFamily: 'DMSans',
-                              fontSize: 12,
-                              color: ZendColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: ZendColors.textSecondary,
-                        size: 20,
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: ZendColors.textSecondary,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const Divider(color: ZendColors.border, height: 16),
-              ],
+                    ],
+                  ),
+                  const Divider(color: ZendColors.border, height: 12),
+                ],
+              ),
             ),
-          ),
 
-          Expanded(
-            child: MissionRoom(pool: pool),
-          ),
-        ],
+            // ── Mission Room fills the rest ──────────────────────────────
+            Expanded(
+              child: MissionRoom(pool: pool),
+            ),
+          ],
+        ),
       ),
     );
   }

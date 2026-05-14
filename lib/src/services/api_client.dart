@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import '../models/savings_models.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -769,6 +770,96 @@ class ApiClient {
         '/api/zend/pools/$poolId/messages/$messageId/react',
         data: {'emoji': emoji},
       );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Savings ─────────────────────────────────────────────────────────────────
+
+  Future<SavingsMetrics> getSavingsMetrics() async {
+    try {
+      final response = await _dio.get('/api/zend/savings/metrics');
+      return SavingsMetrics.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPosition> getSavingsPosition() async {
+    try {
+      final response = await _dio.get('/api/zend/savings/position');
+      return SavingsPosition.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPrepareResponse> prepareSavingsDeposit(
+      double amountUsdc) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/deposit/prepare',
+        data: {'amount_usdc': amountUsdc},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return SavingsPrepareResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsSubmitResult> submitSavingsDeposit(
+      String partiallySignedTxB64) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/deposit/submit',
+        data: {'partially_signed_tx': partiallySignedTxB64},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return SavingsSubmitResult.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPrepareResponse> prepareSavingsWithdraw() async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/withdraw/prepare',
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return SavingsPrepareResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsSubmitResult> submitSavingsWithdraw(
+      String partiallySignedTxB64) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/withdraw/submit',
+        data: {'partially_signed_tx': partiallySignedTxB64},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return SavingsSubmitResult.fromJson(
+          response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
     }

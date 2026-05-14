@@ -337,6 +337,117 @@ class WalletService {
     }
   }
 
+  /// Signs a pre-built versioned transaction (v0 or legacy) from the backend.
+  ///
+  /// The backend returns an unsigned [VersionedTransaction] as base64. This method:
+  /// 1. Decrypts the user's keypair with their PIN
+  /// 2. Extracts the message bytes from the raw transaction bytes
+  /// 3. Signs the message with the keypair
+  /// 4. Places the signature in the correct slot (matching the user's pubkey)
+  /// 5. Returns the partially-signed transaction as base64
+  ///
+  /// The private key is zeroed in memory before returning, regardless of outcome.
+  /// Throws [PinDecryptionException] if the PIN is wrong.
+  Future<String> signExistingTransaction({
+    required String pin,
+    required String txBytesB64,
+  }) async {
+    final privateKeyBytes = await _decryptLocalKeypair(pin);
+    try {
+      final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: privateKeyBytes.toList(),
+      );
+
+      final txBytes = base64Decode(txBytesB64);
+
+      // VersionedTransaction wire format:
+      //   [compact-u16: num_signatures]
+      //   [num_signatures × 64 bytes: signature slots (zeros for unsigned)]
+      //   [message bytes: remainder]
+      final numSigsResult = _readCompactU16(Uint8List.fromList(txBytes), 0);
+      final numSigs = numSigsResult.value;
+      final sigsSectionStart = numSigsResult.bytesConsumed;
+      final messageStart = sigsSectionStart + numSigs * 64;
+      final messageBytes = Uint8List.fromList(txBytes.sublist(messageStart));
+
+      // Sign the raw message bytes
+      final signature = await keypair.sign(messageBytes);
+
+      // Find the user's pubkey slot in the message's accountKeys
+      final userPubkeyBytes = keypair.publicKey.bytes;
+      final sigSlot = _findPubkeySlotInMessage(messageBytes, userPubkeyBytes);
+
+      // Splice the signature into a copy of the transaction bytes
+      final result = Uint8List.fromList(txBytes);
+      final slotOffset = sigsSectionStart + sigSlot * 64;
+      result.setRange(slotOffset, slotOffset + 64, signature.bytes);
+
+      return base64Encode(result);
+    } finally {
+      for (var i = 0; i < privateKeyBytes.length; i++) {
+        privateKeyBytes[i] = 0;
+      }
+    }
+  }
+
+  /// Reads a compact-u16 from [bytes] at [offset].
+  /// Returns the decoded value and the number of bytes consumed (1, 2, or 3).
+  ///
+  /// Solana compact-u16 encoding:
+  ///   - Values 0–127: 1 byte
+  ///   - Values 128–16383: 2 bytes (low 7 bits in first byte with high bit set, next 7 bits in second byte)
+  ///   - Values 16384–32767: 3 bytes
+  ({int value, int bytesConsumed}) _readCompactU16(Uint8List bytes, int offset) {
+    int value = 0;
+    int bytesConsumed = 0;
+    for (var i = 0; i < 3; i++) {
+      final byte = bytes[offset + i];
+      value |= (byte & 0x7F) << (7 * i);
+      bytesConsumed++;
+      if ((byte & 0x80) == 0) break;
+    }
+    return (value: value, bytesConsumed: bytesConsumed);
+  }
+
+  /// Finds the index of [pubkeyBytes] in the static account keys section of a
+  /// Solana message (both legacy and v0 formats).
+  ///
+  /// Returns the slot index (0-based) where the pubkey appears.
+  /// Returns 0 as a safe fallback if the pubkey is not found (fee payer slot).
+  int _findPubkeySlotInMessage(Uint8List messageBytes, List<int> pubkeyBytes) {
+    // Both legacy and v0 messages have a 3-byte header followed by a compact-u16
+    // count of static account keys, then the keys themselves (32 bytes each).
+    //
+    // v0 messages start with a version prefix byte (0x80), legacy do not.
+    int offset = 0;
+    if (messageBytes.isNotEmpty && messageBytes[0] == 0x80) {
+      offset = 1; // skip v0 version prefix
+    }
+    offset += 3; // skip 3-byte message header
+
+    final numKeysResult = _readCompactU16(messageBytes, offset);
+    final numKeys = numKeysResult.value;
+    offset += numKeysResult.bytesConsumed;
+
+    for (var i = 0; i < numKeys; i++) {
+      final keyStart = offset + i * 32;
+      if (keyStart + 32 > messageBytes.length) break;
+      final key = messageBytes.sublist(keyStart, keyStart + 32);
+      if (_bytesEqual(key, pubkeyBytes)) return i;
+    }
+
+    return 0; // safe fallback: fee payer slot
+  }
+
+  /// Compares two byte sequences for equality.
+  bool _bytesEqual(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
   Future<void> clearLocalData() async {
     await _secureStorage.delete(key: _encryptedPrivateKeyKey);
     await _secureStorage.delete(key: _publicKeyKey);

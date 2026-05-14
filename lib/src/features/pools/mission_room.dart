@@ -7,7 +7,6 @@ import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
-import 'pool_progress_bar.dart';
 
 const _curatedEmojis = [
   '🔥', '💰', '🙏', '👑', '😭', '⚡',
@@ -24,7 +23,7 @@ class MissionRoom extends StatefulWidget {
 
 class _MissionRoomState extends State<MissionRoom> {
   late Pool _pool;
-  List<PoolMessage> _messages = [];
+  final List<PoolMessage> _messages = [];
   bool _loading = true;
   String? _loadError;
 
@@ -34,6 +33,9 @@ class _MissionRoomState extends State<MissionRoom> {
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
+
+  // Tracks IDs of messages we sent optimistically so we can skip the SSE echo
+  final Set<String> _pendingIds = {};
 
   StreamSubscription<SseEvent>? _sseSub;
 
@@ -54,6 +56,8 @@ class _MissionRoomState extends State<MissionRoom> {
     super.dispose();
   }
 
+  // ── Data loading ────────────────────────────────────────────────────────────
+
   Future<void> _loadMessages() async {
     setState(() {
       _loading = true;
@@ -65,10 +69,12 @@ class _MissionRoomState extends State<MissionRoom> {
           .listMessages(poolId: _pool.id);
       if (!mounted) return;
       setState(() {
-        _messages = msgs;
+        _messages
+          ..clear()
+          ..addAll(msgs);
         _loading = false;
       });
-      _scrollToBottom();
+      _jumpToBottom();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -77,6 +83,8 @@ class _MissionRoomState extends State<MissionRoom> {
       });
     }
   }
+
+  // ── SSE ─────────────────────────────────────────────────────────────────────
 
   void _subscribeSse() {
     final model = ZendScope.of(context);
@@ -93,28 +101,26 @@ class _MissionRoomState extends State<MissionRoom> {
     switch (event.type) {
       case SseEventType.poolMessage:
         final msg = PoolMessage.fromJson(data);
-        // Deduplicate: the sender already added the message optimistically
-        // from the API response; skip if we already have it by ID.
-        if (!_messages.any((m) => m.id == msg.id)) {
-          setState(() => _messages.add(msg));
-          _scrollToBottom();
-        }
+        // Skip if we already added this message optimistically
+        if (_pendingIds.remove(msg.id)) return;
+        // Also skip if it's already in the list (belt-and-suspenders)
+        if (_messages.any((m) => m.id == msg.id)) return;
+        setState(() => _messages.add(msg));
+        _jumpToBottom();
 
       case SseEventType.poolContribution:
         final gatheredStr = data['gathered_amount_usdc'] as String?;
         if (gatheredStr != null) {
           final gathered = double.tryParse(gatheredStr);
-          if (gathered != null) {
-            setState(() => _pool.gathered = gathered);
-          }
+          if (gathered != null) setState(() => _pool.gathered = gathered);
         }
+
       case SseEventType.poolReaction:
         final messageId = data['message_id'] as String?;
         final emoji = data['emoji'] as String?;
         final reactorZendtag = data['reactor_zendtag'] as String?;
         if (messageId != null && emoji != null) {
-          _updateReaction(
-              messageId, emoji, reactorZendtag, increment: true);
+          _updateReaction(messageId, emoji, reactorZendtag, increment: true);
         }
 
       case SseEventType.poolReactionRemoved:
@@ -122,8 +128,7 @@ class _MissionRoomState extends State<MissionRoom> {
         final emoji = data['emoji'] as String?;
         final reactorZendtag = data['reactor_zendtag'] as String?;
         if (messageId != null && emoji != null) {
-          _updateReaction(
-              messageId, emoji, reactorZendtag, increment: false);
+          _updateReaction(messageId, emoji, reactorZendtag, increment: false);
         }
 
       case SseEventType.poolStatusChanged:
@@ -136,9 +141,7 @@ class _MissionRoomState extends State<MissionRoom> {
             'cancelled': PoolStatus.cancelled,
           };
           final status = statusMap[newStatus];
-          if (status != null) {
-            setState(() => _pool.status = status);
-          }
+          if (status != null) setState(() => _pool.status = status);
         }
 
       default:
@@ -171,11 +174,7 @@ class _MissionRoomState extends State<MissionRoom> {
             reactedByMe: reactions[rIdx].reactedByMe || isMe,
           );
         } else {
-          reactions.add(PoolReactionCount(
-            emoji: emoji,
-            count: 1,
-            reactedByMe: isMe,
-          ));
+          reactions.add(PoolReactionCount(emoji: emoji, count: 1, reactedByMe: isMe));
         }
       } else {
         if (rIdx >= 0) {
@@ -196,32 +195,62 @@ class _MissionRoomState extends State<MissionRoom> {
     });
   }
 
+  // ── Sending ─────────────────────────────────────────────────────────────────
+
   Future<void> _sendMessage() async {
     final content = _textController.text.trim();
     if (content.isEmpty || content.length > 280) return;
 
-    setState(() => _sending = true);
     _textController.clear();
 
+    // Optimistic: add a temporary message immediately so the UI feels instant
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final model = ZendScope.of(context);
+    final optimistic = PoolMessage(
+      id: tempId,
+      poolId: _pool.id,
+      senderZendtag: model.currentZendtag,
+      senderUserId: model.currentUserId,
+      messageType: PoolMessageType.text,
+      content: content,
+      createdAt: DateTime.now(),
+    );
+
+    setState(() {
+      _messages.add(optimistic);
+      _sending = true;
+    });
+    _jumpToBottom();
+
     try {
-      final model = ZendScope.of(context);
       final msg = await model.walletService.apiClient
           .postMessage(poolId: _pool.id, content: content);
       if (!mounted) return;
-      // Add the message from the API response. The SSE event will also arrive
-      // but _onSseEvent deduplicates by ID, so it won't be added twice.
+
+      // Register the real ID so the SSE echo is ignored
+      _pendingIds.add(msg.id);
+
+      // Replace the optimistic message with the real one
       setState(() {
-        if (!_messages.any((m) => m.id == msg.id)) {
+        final idx = _messages.indexWhere((m) => m.id == tempId);
+        if (idx >= 0) {
+          _messages[idx] = msg;
+        } else if (!_messages.any((m) => m.id == msg.id)) {
           _messages.add(msg);
         }
         _sending = false;
       });
-      _scrollToBottom();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _sending = false);
+      // Remove the optimistic message on failure
+      setState(() {
+        _messages.removeWhere((m) => m.id == tempId);
+        _sending = false;
+      });
     }
   }
+
+  // ── Reactions ────────────────────────────────────────────────────────────────
 
   void _showReactionPicker(PoolMessage message) {
     showModalBottomSheet<void>(
@@ -240,27 +269,19 @@ class _MissionRoomState extends State<MissionRoom> {
     final model = ZendScope.of(context);
     final existing = message.reactions.firstWhere(
       (r) => r.emoji == emoji,
-      orElse: () => const PoolReactionCount(
-          emoji: '', count: 0, reactedByMe: false),
+      orElse: () => const PoolReactionCount(emoji: '', count: 0, reactedByMe: false),
     );
 
-    // Optimistic update
     _updateReaction(message.id, emoji, model.currentZendtag,
         increment: !existing.reactedByMe);
 
     try {
       if (existing.reactedByMe) {
         await model.walletService.apiClient.removeReaction(
-          poolId: _pool.id,
-          messageId: message.id,
-          emoji: emoji,
-        );
+          poolId: _pool.id, messageId: message.id, emoji: emoji);
       } else {
         await model.walletService.apiClient.addReaction(
-          poolId: _pool.id,
-          messageId: message.id,
-          emoji: emoji,
-        );
+          poolId: _pool.id, messageId: message.id, emoji: emoji);
       }
     } catch (_) {
       if (mounted) {
@@ -270,15 +291,10 @@ class _MissionRoomState extends State<MissionRoom> {
     }
   }
 
+  // ── Recording (stub) ─────────────────────────────────────────────────────────
+
   Future<void> _startRecording() async {
-    // Voice recording requires a compatible audio plugin.
-    // The backend endpoint (POST /api/zend/pools/:id/messages/voice) is fully
-    // implemented — wire this up once the `record` package resolves its
-    // Linux platform interface conflict.
-    setState(() {
-      _isRecording = true;
-      _recordingSeconds = 0;
-    });
+    setState(() { _isRecording = true; _recordingSeconds = 0; });
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
       setState(() => _recordingSeconds++);
@@ -291,69 +307,36 @@ class _MissionRoomState extends State<MissionRoom> {
     _recordingTimer = null;
     if (!mounted) return;
     setState(() => _isRecording = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Voice notes coming soon 🎙️'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Voice notes coming soon 🎙️'),
+          duration: Duration(seconds: 2)),
+    );
   }
 
-  void _scrollToBottom() {
+  // ── Scroll ───────────────────────────────────────────────────────────────────
+
+  /// Jump instantly — no animation. Feels native, avoids jank.
+  void _jumpToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
 
   bool get _isActive => _pool.status == PoolStatus.active;
 
+  // ── Build ────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    // Read model once outside the builder — avoids per-item dependency tracking
+    final model = ZendScope.of(context);
+    final currentUserId = model.currentUserId;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Divider(color: ZendColors.border, height: 1),
-              const SizedBox(height: ZendSpacing.xs),
-              PoolProgressBar(progress: _pool.progress),
-              const SizedBox(height: ZendSpacing.xxs),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _pool.formattedGathered,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: ZendColors.accentBright,
-                    ),
-                  ),
-                  Text(
-                    _pool.formattedTarget,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: ZendColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
+        // ── Closed-pool archive banner ──
         if (!_isActive)
           Container(
             width: double.infinity,
@@ -371,12 +354,12 @@ class _MissionRoomState extends State<MissionRoom> {
             ),
           ),
 
+        // ── Message list ──
         Expanded(
           child: _loading
               ? const Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        ZendColors.accentBright),
+                    valueColor: AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
                   ),
                 )
               : _loadError != null
@@ -400,24 +383,29 @@ class _MissionRoomState extends State<MissionRoom> {
                         )
                       : ListView.builder(
                           controller: _scrollController,
+                          // Keep items in memory — avoids rebuild cost on scroll
+                          cacheExtent: 500,
                           padding: const EdgeInsets.symmetric(
                               horizontal: ZendSpacing.lg,
                               vertical: ZendSpacing.xs),
                           itemCount: _messages.length,
-                          itemBuilder: (context, i) {
+                          itemBuilder: (_, i) {
                             final msg = _messages[i];
-                            final model = ZendScope.of(context);
-                            return MissionRoomMessage(
-                              message: msg,
-                              currentUserId: model.currentUserId,
-                              onLongPress: () => _showReactionPicker(msg),
-                              onReactionTap: (emoji) =>
-                                  _toggleReaction(msg, emoji),
+                            return RepaintBoundary(
+                              child: MissionRoomMessage(
+                                key: ValueKey(msg.id),
+                                message: msg,
+                                currentUserId: currentUserId,
+                                onLongPress: () => _showReactionPicker(msg),
+                                onReactionTap: (emoji) =>
+                                    _toggleReaction(msg, emoji),
+                              ),
                             );
                           },
                         ),
         ),
 
+        // ── Input bar ──
         if (_isActive)
           _InputBar(
             controller: _textController,
@@ -432,6 +420,8 @@ class _MissionRoomState extends State<MissionRoom> {
     );
   }
 }
+
+// ── Input bar ─────────────────────────────────────────────────────────────────
 
 class _InputBar extends StatefulWidget {
   const _InputBar({
@@ -462,151 +452,162 @@ class _InputBarState extends State<_InputBar> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(() {
-      setState(() => _charCount = widget.controller.text.length);
-    });
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final len = widget.controller.text.length;
+    if (len != _charCount) setState(() => _charCount = len);
   }
 
   @override
   Widget build(BuildContext context) {
     final remaining = 280 - _charCount;
     final overLimit = remaining < 0;
+    // Keyboard inset — pushes the bar above the keyboard, WhatsApp-style
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-          ZendSpacing.md, ZendSpacing.xs, ZendSpacing.md, ZendSpacing.md),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: ZendColors.border)),
-      ),
-      child: widget.isRecording
-          // ── Recording indicator ──────────────────────────────────────
-          ? Row(
-              children: [
-                const Icon(Icons.fiber_manual_record,
-                    color: ZendColors.destructive, size: 14),
-                const SizedBox(width: ZendSpacing.xs),
-                Text(
-                  'Recording ${widget.recordingSeconds}s / 30s',
-                  style: const TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 13,
-                    color: ZendColors.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => unawaited(widget.onMicStop()),
-                  child: const Text(
-                    'Stop',
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontWeight: FontWeight.w600,
-                      color: ZendColors.destructive,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+            ZendSpacing.md, ZendSpacing.xs, ZendSpacing.md, ZendSpacing.sm),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: ZendColors.border)),
+        ),
+        child: widget.isRecording
+            // ── Recording indicator ──
+            ? Row(
+                children: [
+                  const Icon(Icons.fiber_manual_record,
+                      color: ZendColors.destructive, size: 14),
+                  const SizedBox(width: ZendSpacing.xs),
+                  Text(
+                    'Recording ${widget.recordingSeconds}s / 30s',
+                    style: const TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 13,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
-                ),
-              ],
-            )
-          // ── Normal input row ─────────────────────────────────────────
-          : Row(
-              children: [
-                // Text field
-                Expanded(
-                  child: TextField(
-                    controller: widget.controller,
-                    maxLines: 4,
-                    minLines: 1,
-                    maxLength: 280,
-                    buildCounter: (_, {required currentLength,
-                        required isFocused, maxLength}) {
-                      if (!isFocused) return null;
-                      return Text(
-                        '$remaining',
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => unawaited(widget.onMicStop()),
+                    child: const Text('Stop',
                         style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: overLimit
-                              ? ZendColors.destructive
-                              : ZendColors.textSecondary,
-                        ),
-                      );
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Message the group...',
-                      hintStyle: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 14,
-                        color: ZendColors.textSecondary,
-                      ),
-                      filled: true,
-                      fillColor: ZendColors.bgSecondary,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(ZendRadii.pill),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+                          fontFamily: 'DMSans',
+                          fontWeight: FontWeight.w600,
+                          color: ZendColors.destructive,
+                        )),
                   ),
-                ),
-                const SizedBox(width: ZendSpacing.xs),
-
-                // Mic button — hold to record
-                GestureDetector(
-                  onLongPressStart: (_) => unawaited(widget.onMicStart()),
-                  onLongPressEnd: (_) => unawaited(widget.onMicStop()),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: ZendColors.bgSecondary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.mic_none,
-                      size: 20,
-                      color: ZendColors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: ZendSpacing.xs),
-
-                // Send button
-                GestureDetector(
-                  onTap: overLimit || widget.sending ? null : widget.onSend,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: overLimit || _charCount == 0
-                          ? ZendColors.bgSecondary
-                          : ZendColors.accent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: widget.sending
-                        ? const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white),
-                            ),
-                          )
-                        : Icon(
-                            Icons.send,
-                            size: 18,
-                            color: overLimit || _charCount == 0
-                                ? ZendColors.textSecondary
-                                : Colors.white,
+                ],
+              )
+            // ── Normal input row ──
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: widget.controller,
+                      maxLines: 4,
+                      minLines: 1,
+                      maxLength: 280,
+                      textInputAction: TextInputAction.newline,
+                      buildCounter: (_, {required currentLength,
+                          required isFocused, maxLength}) {
+                        if (!isFocused || !overLimit) return null;
+                        return Text(
+                          '$remaining',
+                          style: const TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 11,
+                            color: ZendColors.destructive,
                           ),
+                        );
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Message the group...',
+                        hintStyle: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 14,
+                          color: ZendColors.textSecondary,
+                        ),
+                        filled: true,
+                        fillColor: ZendColors.bgSecondary,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: ZendSpacing.xs),
+
+                  // Mic button
+                  GestureDetector(
+                    onLongPressStart: (_) => unawaited(widget.onMicStart()),
+                    onLongPressEnd: (_) => unawaited(widget.onMicStop()),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: ZendColors.bgSecondary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.mic_none,
+                          size: 20, color: ZendColors.textSecondary),
+                    ),
+                  ),
+                  const SizedBox(width: ZendSpacing.xs),
+
+                  // Send button
+                  GestureDetector(
+                    onTap: overLimit || widget.sending || _charCount == 0
+                        ? null
+                        : widget.onSend,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: overLimit || _charCount == 0
+                            ? ZendColors.bgSecondary
+                            : ZendColors.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: widget.sending
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
+                              ),
+                            )
+                          : Icon(
+                              Icons.send,
+                              size: 18,
+                              color: overLimit || _charCount == 0
+                                  ? ZendColors.textSecondary
+                                  : Colors.white,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
+
+// ── Emoji picker ──────────────────────────────────────────────────────────────
 
 class _EmojiPickerSheet extends StatelessWidget {
   const _EmojiPickerSheet({required this.onEmojiTap});
