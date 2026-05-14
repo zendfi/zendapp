@@ -112,9 +112,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
 
     return PopScope(
       canPop: _stage != _WithdrawStage.processing,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
+      child: Container(
         height: screenHeight * _heightFactor,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -548,7 +546,8 @@ class _NumericKeypad extends StatelessWidget {
           children: row.map((key) {
             return Expanded(
               child: GestureDetector(
-                onTap: () => onKey(key),
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (_) => onKey(key),
                 child: Container(
                   height: 56,
                   alignment: Alignment.center,

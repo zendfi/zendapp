@@ -381,9 +381,12 @@ class ZendAppModel extends ChangeNotifier {
   }
 
   Future<void> fetchBalance() async {
+    // Only notify for the loading state if we have no data yet (first load).
+    // Background refreshes update silently to avoid mid-transition rebuilds.
+    final firstLoad = balance == 0.0 && !balanceLoading;
     balanceLoading = true;
     lastBalanceError = null;
-    notifyListeners();
+    if (firstLoad) notifyListeners();
     try {
       final usdcBalance = await walletService.getBalance();
       balance = double.tryParse(usdcBalance) ?? 0.0;
@@ -397,9 +400,11 @@ class ZendAppModel extends ChangeNotifier {
   }
 
   Future<void> fetchHistory() async {
+    // Only show loading state on first load — background refreshes are silent.
+    final firstLoad = recentTransactions.isEmpty && !historyLoading;
     historyLoading = true;
     lastHistoryError = null;
-    notifyListeners();
+    if (firstLoad) notifyListeners();
     try {
       // Fetch zend-to-zend transfers, bank sends, and payins in parallel
       final results = await Future.wait([
@@ -669,8 +674,8 @@ class ZendAppModel extends ChangeNotifier {
   }
 
   Future<void> fetchSavingsSnapshot() async {
+    // Silent background refresh — no loading spinner for home screen card.
     savingsLoading = true;
-    notifyListeners();
     try {
       final results = await Future.wait([
         savingsService.getSavingsMetrics(),
@@ -688,9 +693,11 @@ class ZendAppModel extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchPools() async {    poolsLoading = true;
+  Future<void> fetchPools() async {
+    final firstLoad = pools.isEmpty && !poolsLoading;
+    poolsLoading = true;
     lastPoolsError = null;
-    notifyListeners();
+    if (firstLoad) notifyListeners();
     try {
       final fetched = await walletService.apiClient.listPools();
       pools

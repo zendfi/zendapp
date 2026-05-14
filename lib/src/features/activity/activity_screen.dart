@@ -125,94 +125,70 @@ class _ActivityScreenState extends State<ActivityScreen> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => model.fetchHistory(),
-                child: ZendScrollPage(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (model.historyLoading &&
-                            model.recentTransactions.isEmpty)
-                          const Padding(
-                            padding:
-                                EdgeInsets.symmetric(vertical: 48),
-                            child:
-                                Center(child: ZendLoader(size: 24)),
-                          )
-                        else if (filtered.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 48),
-                            child: Center(
-                              child: Text(
-                                _activeFilter == 'All'
-                                    ? 'No transactions yet'
-                                    : 'No ${_activeFilter.toLowerCase()} transactions',
-                                style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 14,
-                                  color: zt.textSecondary,
+                child: model.historyLoading && model.recentTransactions.isEmpty
+                    ? const Center(child: ZendLoader(size: 24))
+                    : filtered.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: 200,
+                                child: Center(
+                                  child: Text(
+                                    _activeFilter == 'All'
+                                        ? 'No transactions yet'
+                                        : 'No ${_activeFilter.toLowerCase()} transactions',
+                                    style: TextStyle(
+                                      fontFamily: 'DMSans',
+                                      fontSize: 14,
+                                      color: zt.textSecondary,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           )
-                        else
-                          Container(
-                            decoration: BoxDecoration(
-                              color: zt.bgSecondary,
-                              borderRadius:
-                                  BorderRadius.circular(24),
-                            ),
-                            child: Column(
-                              children: [
-                                for (var i = 0;
-                                    i < filtered.length;
-                                    i++) ...[
-                                  _ActivityTile(
-                                    avatarLabel:
-                                        filtered[i].avatarLabel,
-                                    name: filtered[i].name,
-                                    note: filtered[i].note,
-                                    amount: filtered[i].amount,
-                                    time: filtered[i].time,
-                                    amountColor:
-                                        filtered[i].amountColor,
-                                    onTap: filtered[i].entry != null || filtered[i].bankOrder != null
-                                        ? () => showTransactionReceipt(
-                                              context,
-                                              tx: filtered[i],
-                                            )
-                                        : null,
-                                  ),
-                                  if (i < filtered.length - 1)
-                                    Divider(
-                                        color: zt.border,
-                                        height: 1),
-                                ],
-                              ],
-                            ),
+                        : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            itemCount: filtered.length,
+                            separatorBuilder: (context, index) =>
+                                Divider(color: zt.border, height: 1),
+                            itemBuilder: (context, i) {
+                              final tx = filtered[i];
+                              return _ActivityTile(
+                                avatarLabel: tx.avatarLabel,
+                                name: tx.name,
+                                note: tx.note,
+                                amount: tx.amount,
+                                time: tx.time,
+                                amountColor: tx.amountColor,
+                                isFirst: i == 0,
+                                isLast: i == filtered.length - 1,
+                                onTap: tx.entry != null || tx.bankOrder != null
+                                    ? () => showTransactionReceipt(
+                                          context,
+                                          tx: tx,
+                                        )
+                                    : null,
+                              );
+                            },
                           ),
-                        if (model.lastHistoryError != null)
-                          Padding(
-                            padding:
-                                const EdgeInsets.only(top: 12),
-                            child: Text(
-                              'Could not load latest activity',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 12,
-                                color: zt.textSecondary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+              ),
+            ),
+            if (model.lastHistoryError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Could not load latest activity',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 12,
+                    color: zt.textSecondary,
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -229,6 +205,8 @@ class _ActivityTile extends StatelessWidget {
     required this.time,
     this.amountColor,
     this.onTap,
+    this.isFirst = false,
+    this.isLast = false,
   });
 
   final String avatarLabel;
@@ -238,76 +216,86 @@ class _ActivityTile extends StatelessWidget {
   final String time;
   final Color? amountColor;
   final VoidCallback? onTap;
+  final bool isFirst;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: zt.bgPrimary,
-              child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final radius = BorderRadius.vertical(
+      top: isFirst ? const Radius.circular(24) : Radius.zero,
+      bottom: isLast ? const Radius.circular(24) : Radius.zero,
+    );
+    return Material(
+      color: zt.bgSecondary,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: zt.bgPrimary,
+                child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: zt.textPrimary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      note,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: zt.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    amount,
                     style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: zt.textPrimary),
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 22,
+                      fontStyle: FontStyle.italic,
+                      color: amountColor ?? zt.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    note,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    time,
                     style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        color: zt.textSecondary),
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  amount,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 22,
-                    fontStyle: FontStyle.italic,
-                    color: amountColor ?? zt.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  time,
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: zt.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
