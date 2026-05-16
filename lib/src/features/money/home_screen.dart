@@ -8,7 +8,7 @@ import '../../navigation/zend_routes.dart';
 import '../activity/transaction_receipt_sheet.dart';
 import '../pools/pool_list_drawer.dart';
 import '../profile/profile_screen.dart';
-import '../savings/savings_screen.dart';
+import '../savings/pocket_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -340,7 +340,7 @@ class _SavingsCard extends StatelessWidget {
         : '\$0.00';
 
     return GestureDetector(
-      onTap: () => pushZendSlide(context, const SavingsScreen()),
+      onTap: () => pushZendSlide(context, const PocketScreen()),
       child: Container(
         height: 118,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),

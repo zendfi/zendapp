@@ -13,11 +13,20 @@ class SavingsService {
   Future<SavingsPosition> getSavingsPosition() =>
       _apiClient.getSavingsPosition();
 
-  Future<SavingsPrepareResponse> prepareDeposit(double amountUsdc) =>
-      _apiClient.prepareSavingsDeposit(amountUsdc);
+  Future<SavingsPrepareResponse> prepareDeposit(
+    double amountUsdc, {
+    String? pocketId,
+  }) =>
+      _apiClient.prepareSavingsDeposit(amountUsdc, pocketId: pocketId);
 
-  Future<SavingsSubmitResult> submitDeposit(String partiallySignedTxB64) =>
-      _apiClient.submitSavingsDeposit(partiallySignedTxB64);
+  Future<SavingsSubmitResult> submitDeposit(
+    String partiallySignedTxB64, {
+    String? pocketId,
+  }) =>
+      _apiClient.submitSavingsDeposit(
+        partiallySignedTxB64,
+        pocketId: pocketId,
+      );
 
   Future<SavingsPrepareResponse> prepareWithdraw() =>
       _apiClient.prepareSavingsWithdraw();

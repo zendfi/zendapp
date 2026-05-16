@@ -11,7 +11,17 @@ import '../../models/api_exceptions.dart';
 enum _DepositStage { amount, pin, processing, success, error }
 
 class SavingsDepositSheet extends StatefulWidget {
-  const SavingsDepositSheet({super.key});
+  const SavingsDepositSheet({
+    super.key,
+    this.pocketId,
+    this.pocketLabel,
+  });
+
+  /// If set, deposits into this specific pocket (goal or lock).
+  final String? pocketId;
+
+  /// If set, shown at the top of the amount stage instead of "Save money".
+  final String? pocketLabel;
 
   @override
   State<SavingsDepositSheet> createState() => _SavingsDepositSheetState();
@@ -110,7 +120,11 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       final walletService = model.walletService;
 
       // Step 1: prepare — backend calls Kamino, returns unsigned tx bytes
-      final prepare = await savingsService.prepareDeposit(_parsedAmount);
+      // Pass pocket_id if targeting a specific pocket
+      final prepare = await savingsService.prepareDeposit(
+        _parsedAmount,
+        pocketId: widget.pocketId,
+      );
 
       // Step 2: sign on-device with PIN
       final signedTx = await walletService.signExistingTransaction(
@@ -119,7 +133,10 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       );
 
       // Step 3: submit — backend co-signs as fee payer and broadcasts
-      await savingsService.submitDeposit(signedTx);
+      await savingsService.submitDeposit(
+        signedTx,
+        pocketId: widget.pocketId,
+      );
 
       // Optimistic balance deduction + background refresh
       model.balance =
@@ -196,6 +213,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
           amountValid: _amountValid,
           onKey: _onAmountKey,
           onConfirm: _onAmountConfirm,
+          pocketLabel: widget.pocketLabel,
         ),
       _DepositStage.pin => _PinStage(
           amount: _parsedAmount,
@@ -237,6 +255,7 @@ class _AmountStage extends StatelessWidget {
     required this.amountValid,
     required this.onKey,
     required this.onConfirm,
+    this.pocketLabel,
   });
 
   final String amountInput;
@@ -246,6 +265,7 @@ class _AmountStage extends StatelessWidget {
   final bool amountValid;
   final ValueChanged<String> onKey;
   final VoidCallback onConfirm;
+  final String? pocketLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -254,9 +274,9 @@ class _AmountStage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Save money',
-            style: TextStyle(
+          Text(
+            pocketLabel?.trim().isNotEmpty == true ? pocketLabel! : 'Save money',
+            style: const TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,

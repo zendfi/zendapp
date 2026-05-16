@@ -19,6 +19,7 @@ import 'src/services/zendtag_service.dart';
 import 'src/services/transfer_service.dart';
 import 'src/services/fx_service.dart';
 import 'src/services/savings_service.dart';
+import 'src/services/pocket_service.dart';
 
 const kApiBaseUrl = 'https://api-v2.zendfi.tech';
 
@@ -88,6 +89,8 @@ void main() async {
 
   final savingsService = SavingsService(apiClient: apiClient);
 
+  final pocketService = PocketService(apiClient: apiClient);
+
   final model = ZendAppModel(
     authService: authService,
     walletService: walletService,
@@ -99,6 +102,7 @@ void main() async {
     pushNotificationService: pushNotificationService,
     appLockService: appLockService,
     savingsService: savingsService,
+    pocketService: pocketService,
   );
 
   await model.hydrateRecentContacts();

@@ -16,9 +16,11 @@ import '../services/recent_contacts_store.dart';
 import '../services/sound_service.dart';
 import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
+import '../services/pocket_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
+import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
 const Map<String, String> _localeGreetings = {
@@ -88,6 +90,7 @@ class ZendAppModel extends ChangeNotifier {
     required this.pushNotificationService,
     required this.appLockService,
     required this.savingsService,
+    required this.pocketService,
   });
 
   final AuthService authService;
@@ -100,6 +103,7 @@ class ZendAppModel extends ChangeNotifier {
   final PushNotificationService pushNotificationService;
   final AppLockService appLockService;
   final SavingsService savingsService;
+  final PocketService pocketService;
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;
@@ -678,13 +682,17 @@ class ZendAppModel extends ChangeNotifier {
     savingsLoading = true;
     try {
       final results = await Future.wait([
+        pocketService.listPockets(),
         savingsService.getSavingsMetrics(),
-        savingsService.getSavingsPosition(),
       ]);
-      final metrics = results[0] as SavingsMetrics;
-      final position = results[1] as SavingsPosition;
+      final pockets = results[0] as List<SavingsPocket>;
+      final metrics = results[1] as SavingsMetrics;
       savingsApy = metrics.apy;
-      savingsBalance = position.hasPosition ? position.currentValueUsd : 0.0;
+      // Sum all pocket balances + yields
+      savingsBalance = pockets.fold(
+        0.0,
+        (sum, p) => sum + p.balanceUsd + p.pocketYieldUsd,
+      );
     } catch (_) {
       // Non-fatal — failures must never crash the home screen
     } finally {

@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
 class ApiClient {
@@ -796,11 +797,15 @@ class ApiClient {
   }
 
   Future<SavingsPrepareResponse> prepareSavingsDeposit(
-      double amountUsdc) async {
+      double amountUsdc, {
+      String? pocketId,
+  }) async {
     try {
+      final data = <String, dynamic>{'amount_usdc': amountUsdc};
+      if (pocketId != null) data['pocket_id'] = pocketId;
       final response = await _dio.post(
         '/api/zend/savings/deposit/prepare',
-        data: {'amount_usdc': amountUsdc},
+        data: data,
         options: Options(
           receiveTimeout: const Duration(seconds: 60),
           sendTimeout: const Duration(seconds: 30),
@@ -814,11 +819,17 @@ class ApiClient {
   }
 
   Future<SavingsSubmitResult> submitSavingsDeposit(
-      String partiallySignedTxB64) async {
+      String partiallySignedTxB64, {
+      String? pocketId,
+  }) async {
     try {
+      final data = <String, dynamic>{
+        'partially_signed_tx': partiallySignedTxB64,
+      };
+      if (pocketId != null) data['pocket_id'] = pocketId;
       final response = await _dio.post(
         '/api/zend/savings/deposit/submit',
-        data: {'partially_signed_tx': partiallySignedTxB64},
+        data: data,
         options: Options(
           receiveTimeout: const Duration(seconds: 90),
           sendTimeout: const Duration(seconds: 30),
@@ -857,6 +868,155 @@ class ApiClient {
           receiveTimeout: const Duration(seconds: 90),
           sendTimeout: const Duration(seconds: 30),
         ),
+      );
+      return SavingsSubmitResult.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Savings Pockets ─────────────────────────────────────────────────────────
+
+  Future<List<SavingsPocket>> listPockets() async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/savings/pockets',
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      final data = response.data as List<dynamic>;
+      return data
+          .map((p) => SavingsPocket.fromJson(p as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPocket> getPocket(String id) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/savings/pockets/$id',
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      return SavingsPocket.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPocket> createGoal(CreateGoalRequest req) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/goals',
+        data: req.toJson(),
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      return SavingsPocket.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> deleteGoal(String id) async {
+    try {
+      await _dio.delete(
+        '/api/zend/savings/pockets/goals/$id',
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPocket> createLock(CreateLockRequest req) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/lock',
+        data: req.toJson(),
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      return SavingsPocket.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPrepareResponse> prepareFreeWithdraw(double amountUsd) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/free/withdraw/prepare',
+        data: {'amount_usd': amountUsd},
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return SavingsPrepareResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsSubmitResult> submitFreeWithdraw(String signedTx) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/free/withdraw/submit',
+        data: {'partially_signed_tx': signedTx},
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      );
+      return SavingsSubmitResult.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPrepareResponse> prepareGoalWithdraw(String pocketId) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/goals/$pocketId/withdraw/prepare',
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return SavingsPrepareResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsSubmitResult> submitGoalWithdraw(
+      String pocketId, String signedTx) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/goals/$pocketId/withdraw/submit',
+        data: {'partially_signed_tx': signedTx},
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      );
+      return SavingsSubmitResult.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsPrepareResponse> prepareLockWithdraw() async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/lock/withdraw/prepare',
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return SavingsPrepareResponse.fromJson(
+          response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SavingsSubmitResult> submitLockWithdraw(String signedTx) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/savings/pockets/lock/withdraw/submit',
+        data: {'partially_signed_tx': signedTx},
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return SavingsSubmitResult.fromJson(
           response.data as Map<String, dynamic>);

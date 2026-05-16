@@ -9,12 +9,38 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/savings_models.dart';
 
-enum _WithdrawStage { confirm, pin, processing, success, error }
+enum _WithdrawStage { confirm, amount, pin, processing, success, error }
 
 class SavingsWithdrawSheet extends StatefulWidget {
-  const SavingsWithdrawSheet({super.key, required this.position});
+  const SavingsWithdrawSheet({
+    super.key,
+    // Legacy constructor param — kept for backward compatibility
+    this.position,
+    // New pocket-aware params
+    this.pocketId,
+    this.availableAmount,
+    this.pocketType,
+    this.lockUnlockDate,
+    this.isGoalLocked = false,
+  });
 
-  final SavingsPosition position;
+  /// Legacy: full position for old-style full withdrawal.
+  final SavingsPosition? position;
+
+  /// Pocket ID to withdraw from.
+  final String? pocketId;
+
+  /// Maximum withdrawable amount.
+  final double? availableAmount;
+
+  /// "free" | "goal" | "lock"
+  final String? pocketType;
+
+  /// For lock pockets — the unlock date string.
+  final String? lockUnlockDate;
+
+  /// For strict goals — whether withdrawal is currently blocked.
+  final bool isGoalLocked;
 
   @override
   State<SavingsWithdrawSheet> createState() => _SavingsWithdrawSheetState();
@@ -23,13 +49,59 @@ class SavingsWithdrawSheet extends StatefulWidget {
 class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
   _WithdrawStage _stage = _WithdrawStage.confirm;
 
+  // For free pocket partial withdrawal
+  String _amountInput = '';
+  String? _amountError;
+
   String _pinDigits = '';
   String? _pinError;
   String? _errorMessage;
 
-  // Amount the user will receive: principal + net yield
+  bool get _isFree => widget.pocketType == 'free';
+  bool get _isGoal => widget.pocketType == 'goal';
+  bool get _isLock => widget.pocketType == 'lock';
+  bool get _isLegacy => widget.position != null && widget.pocketId == null;
+
+  double get _availableAmount =>
+      widget.availableAmount ?? widget.position?.currentValueUsd ?? 0.0;
+
+  double get _parsedAmount {
+    if (_isFree) {
+      if (_amountInput.isEmpty) return 0.0;
+      return double.tryParse(_amountInput) ?? 0.0;
+    }
+    return _availableAmount;
+  }
+
+  bool get _amountValid =>
+      _parsedAmount > 0 && _parsedAmount <= _availableAmount;
+
+  // Amount the user will receive (legacy mode)
   double get _receiveAmount =>
-      widget.position.principalUsd + widget.position.netYieldUsd;
+      widget.position != null
+          ? widget.position!.principalUsd + widget.position!.netYieldUsd
+          : _availableAmount;
+
+  void _onAmountKey(String key) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _amountError = null;
+      if (key == 'del') {
+        if (_amountInput.isNotEmpty) {
+          _amountInput = _amountInput.substring(0, _amountInput.length - 1);
+        }
+        return;
+      }
+      if (key == '.' && _amountInput.contains('.')) return;
+      if (key == '.' && _amountInput.isEmpty) {
+        _amountInput = '0.';
+        return;
+      }
+      final dotIdx = _amountInput.indexOf('.');
+      if (dotIdx >= 0 && _amountInput.length - dotIdx > 2) return;
+      _amountInput += key;
+    });
+  }
 
   void _onPinKey(String key) {
     HapticFeedback.lightImpact();
@@ -54,20 +126,42 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
 
     try {
       final model = ZendScope.of(context);
-      final savingsService = model.savingsService;
       final walletService = model.walletService;
 
-      // Step 1: prepare — backend loads ALTs, builds v0 tx with fee instruction
-      final prepare = await savingsService.prepareWithdraw();
-
-      // Step 2: sign on-device with PIN
-      final signedTx = await walletService.signExistingTransaction(
-        pin: _pinDigits,
-        txBytesB64: prepare.txBytesB64,
-      );
-
-      // Step 3: submit — backend co-signs as fee payer and broadcasts
-      await savingsService.submitWithdraw(signedTx);
+      if (_isLegacy) {
+        // Legacy full withdrawal path
+        final savingsService = model.savingsService;
+        final prepare = await savingsService.prepareWithdraw();
+        final signedTx = await walletService.signExistingTransaction(
+          pin: _pinDigits,
+          txBytesB64: prepare.txBytesB64,
+        );
+        await savingsService.submitWithdraw(signedTx);
+      } else if (_isFree) {
+        final pocketService = model.pocketService;
+        final prepare = await pocketService.prepareFreeWithdraw(_parsedAmount);
+        final signedTx = await walletService.signExistingTransaction(
+          pin: _pinDigits,
+          txBytesB64: prepare.txBytesB64,
+        );
+        await pocketService.submitFreeWithdraw(signedTx);
+      } else if (_isGoal) {
+        final pocketService = model.pocketService;
+        final prepare = await pocketService.prepareGoalWithdraw(widget.pocketId!);
+        final signedTx = await walletService.signExistingTransaction(
+          pin: _pinDigits,
+          txBytesB64: prepare.txBytesB64,
+        );
+        await pocketService.submitGoalWithdraw(widget.pocketId!, signedTx);
+      } else if (_isLock) {
+        final pocketService = model.pocketService;
+        final prepare = await pocketService.prepareLockWithdraw();
+        final signedTx = await walletService.signExistingTransaction(
+          pin: _pinDigits,
+          txBytesB64: prepare.txBytesB64,
+        );
+        await pocketService.submitLockWithdraw(signedTx);
+      }
 
       // Refresh balance and savings snapshot
       unawaited(model.fetchBalance());
@@ -100,6 +194,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
 
   double get _heightFactor => switch (_stage) {
         _WithdrawStage.confirm => 0.60,
+        _WithdrawStage.amount => 0.82,
         _WithdrawStage.pin => 0.70,
         _WithdrawStage.processing => 0.45,
         _WithdrawStage.success => 0.50,
@@ -133,26 +228,72 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
   }
 
   Widget _buildStage() {
+    // If goal is locked, show explanation instead of PIN
+    if (_stage == _WithdrawStage.confirm && _isGoal && widget.isGoalLocked) {
+      return _GoalLockedStage(
+        onClose: () => Navigator.of(context).pop(),
+      );
+    }
+
     return switch (_stage) {
-      _WithdrawStage.confirm => _ConfirmStage(
-          position: widget.position,
-          receiveAmount: _receiveAmount,
-          onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+      _WithdrawStage.confirm => _isLegacy
+          ? _ConfirmStage(
+              position: widget.position!,
+              receiveAmount: _receiveAmount,
+              onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+            )
+          : _isFree
+              ? _FreeConfirmStage(
+                  availableAmount: _availableAmount,
+                  onConfirm: () => setState(() => _stage = _WithdrawStage.amount),
+                )
+              : _isGoal
+                  ? _GoalConfirmStage(
+                      availableAmount: _availableAmount,
+                      mode: 'flexible',
+                      onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+                    )
+                  : _LockConfirmStage(
+                      availableAmount: _availableAmount,
+                      lockUnlockDate: widget.lockUnlockDate,
+                      onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+                    ),
+      _WithdrawStage.amount => _FreeAmountStage(
+          amountInput: _amountInput,
+          amountError: _amountError,
+          availableAmount: _availableAmount,
+          amountValid: _amountValid,
+          onKey: _onAmountKey,
+          onConfirm: () {
+            if (!_amountValid) {
+              setState(() {
+                if (_parsedAmount <= 0) {
+                  _amountError = 'Enter an amount';
+                } else {
+                  _amountError =
+                      'Not enough in Free Savings (\$${_availableAmount.toStringAsFixed(2)})';
+                }
+              });
+              return;
+            }
+            setState(() => _stage = _WithdrawStage.pin);
+          },
+          onBack: () => setState(() => _stage = _WithdrawStage.confirm),
         ),
       _WithdrawStage.pin => _PinStage(
-          receiveAmount: _receiveAmount,
+          receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
           pinDigits: _pinDigits,
           pinError: _pinError,
           onKey: _onPinKey,
           onBack: () => setState(() {
             _pinDigits = '';
             _pinError = null;
-            _stage = _WithdrawStage.confirm;
+            _stage = _isFree ? _WithdrawStage.amount : _WithdrawStage.confirm;
           }),
         ),
       _WithdrawStage.processing => const _ProcessingStage(),
       _WithdrawStage.success => _SuccessStage(
-          receiveAmount: _receiveAmount,
+          receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
           onDone: () => Navigator.of(context).pop(),
         ),
       _WithdrawStage.error => _ErrorStage(
@@ -168,7 +309,306 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
   }
 }
 
-// ── Confirm stage ─────────────────────────────────────────────────────────────
+// ── Goal locked stage ─────────────────────────────────────────────────────────
+
+class _GoalLockedStage extends StatelessWidget {
+  const _GoalLockedStage({required this.onClose});
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline,
+                size: 48, color: ZendColors.accentBright),
+            const SizedBox(height: ZendSpacing.md),
+            const Text(
+              'Goal is locked',
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: ZendColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: ZendSpacing.xs),
+            const Text(
+              'This goal is set to Strict mode. Withdrawals are locked until you reach your target.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 14,
+                height: 1.45,
+                color: ZendColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: ZendSpacing.xl),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(label: 'Got it', onPressed: onClose),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Free confirm stage ────────────────────────────────────────────────────────
+
+class _FreeConfirmStage extends StatelessWidget {
+  const _FreeConfirmStage({
+    required this.availableAmount,
+    required this.onConfirm,
+  });
+  final double availableAmount;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Cash out',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: ZendColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.sm),
+          Text(
+            'Available: \$${availableAmount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 14,
+              color: ZendColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          PrimaryButton(label: 'Enter amount', onPressed: onConfirm),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Free amount stage ─────────────────────────────────────────────────────────
+
+class _FreeAmountStage extends StatelessWidget {
+  const _FreeAmountStage({
+    required this.amountInput,
+    required this.amountError,
+    required this.availableAmount,
+    required this.amountValid,
+    required this.onKey,
+    required this.onConfirm,
+    required this.onBack,
+  });
+
+  final String amountInput;
+  final String? amountError;
+  final double availableAmount;
+  final bool amountValid;
+  final ValueChanged<String> onKey;
+  final VoidCallback onConfirm;
+  final VoidCallback onBack;
+
+  String get _displayAmount =>
+      amountInput.isEmpty ? '\$0' : '\$$amountInput';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: onBack,
+              child: const Icon(Icons.arrow_back,
+                  color: ZendColors.textPrimary, size: 22),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Cash out',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: ZendColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.lg),
+          Center(
+            child: Text(
+              _displayAmount,
+              style: const TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 48,
+                fontWeight: FontWeight.w700,
+                color: ZendColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.xs),
+          Center(
+            child: Text(
+              amountError ?? 'Available: \$${availableAmount.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: amountError != null
+                    ? ZendColors.destructive
+                    : ZendColors.textSecondary,
+              ),
+            ),
+          ),
+          const Spacer(),
+          _NumericKeypad(onKey: onKey),
+          const SizedBox(height: ZendSpacing.md),
+          PrimaryButton(
+            label: 'Cash out $_displayAmount',
+            onPressed: amountValid ? onConfirm : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Goal confirm stage ────────────────────────────────────────────────────────
+
+class _GoalConfirmStage extends StatelessWidget {
+  const _GoalConfirmStage({
+    required this.availableAmount,
+    required this.mode,
+    required this.onConfirm,
+  });
+  final double availableAmount;
+  final String mode;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Withdraw from goal',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: ZendColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.lg),
+          _BreakdownRow(
+            label: "You'll receive",
+            value: '\$${availableAmount.toStringAsFixed(2)}',
+            bold: true,
+          ),
+          const SizedBox(height: ZendSpacing.sm),
+          Text(
+            mode == 'flexible'
+                ? 'Flexible goal — you can withdraw anytime.'
+                : 'Goal target reached — withdrawal is now available.',
+            style: const TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 13,
+              color: ZendColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          PrimaryButton(label: 'Confirm withdrawal', onPressed: onConfirm),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Lock confirm stage ────────────────────────────────────────────────────────
+
+class _LockConfirmStage extends StatelessWidget {
+  const _LockConfirmStage({
+    required this.availableAmount,
+    required this.lockUnlockDate,
+    required this.onConfirm,
+  });
+  final double availableAmount;
+  final String? lockUnlockDate;
+  final VoidCallback onConfirm;
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final d = DateTime.parse(dateStr);
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      return '${months[d.month - 1]} ${d.day}, ${d.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Withdraw locked savings',
+            style: TextStyle(
+              fontFamily: 'InstrumentSerif',
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: ZendColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.lg),
+          _BreakdownRow(
+            label: "You'll receive",
+            value: '\$${availableAmount.toStringAsFixed(2)}',
+            bold: true,
+          ),
+          const SizedBox(height: ZendSpacing.sm),
+          Text(
+            lockUnlockDate != null
+                ? 'Locked until ${_formatDate(lockUnlockDate)} — now unlocked.'
+                : 'Your lock has expired and is ready to withdraw.',
+            style: const TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 13,
+              color: ZendColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          PrimaryButton(label: 'Confirm withdrawal', onPressed: onConfirm),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Confirm stage (legacy) ────────────────────────────────────────────────────
 
 class _ConfirmStage extends StatelessWidget {
   const _ConfirmStage({
