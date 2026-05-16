@@ -271,7 +271,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
                   _amountError = 'Enter an amount';
                 } else {
                   _amountError =
-                      'Not enough in Free Savings (\$${_availableAmount.toStringAsFixed(2)})';
+                      'Not enough in Stash (\$${_availableAmount.toStringAsFixed(2)})';
                 }
               });
               return;

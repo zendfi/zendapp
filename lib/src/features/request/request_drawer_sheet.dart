@@ -5,7 +5,6 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
-import 'customisation_panel.dart';
 import 'request_confirmation_screen.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';
@@ -52,8 +51,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   double _amount = 0;
   DateTime? _expiryDate;
-  RequestCustomisation? _customisation;
-  bool _showCustomisation = false;
   String? _expiryError;
 
   @override
@@ -147,7 +144,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           description: _descriptionController.text.trim(),
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
-          customisation: _customisation,
           status: PaymentRequestStatus.pending,
         );
       } catch (_) {
@@ -161,7 +157,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           description: _descriptionController.text.trim(),
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
-          customisation: _customisation,
           status: PaymentRequestStatus.pending,
         );
       }
@@ -312,29 +307,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 ),
               ),
               const SizedBox(height: ZendSpacing.md),
-
-              _TappableRow(
-                label: 'Customise payment page',
-                trailing: _customisation != null
-                    ? const Icon(Icons.check_circle, size: 18, color: ZendColors.accentBright)
-                    : const Icon(Icons.chevron_right, size: 18, color: ZendColors.textSecondary),
-                onTap: () => setState(() {
-                  _showCustomisation = !_showCustomisation;
-                }),
-              ),
-              if (_showCustomisation) ...[
-                const SizedBox(height: ZendSpacing.sm),
-                CustomisationPanel(
-                  initial: _customisation,
-                  onConfirm: (value) {
-                    setState(() {
-                      _customisation = value;
-                      _showCustomisation = false;
-                    });
-                  },
-                ),
-              ],
-              const SizedBox(height: ZendSpacing.sm),
 
               _TappableRow(
                 label: _expiryDate != null

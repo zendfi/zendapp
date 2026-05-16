@@ -155,9 +155,9 @@ class _PocketScreenState extends State<PocketScreen> {
                   Text(
                     'Savings',
                     style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -295,8 +295,8 @@ class _PocketScreenState extends State<PocketScreen> {
         ),
         const SizedBox(height: ZendSpacing.xxl),
 
-        // ── Free Savings section ──────────────────────────────────────
-        _SectionHeader(label: 'Free Savings', zt: zt),
+        // ── Stash section ──────────────────────────────────────
+        _SectionHeader(label: 'Stash', zt: zt),
         const SizedBox(height: ZendSpacing.sm),
         _FreeSavingsCard(
           pocket: _freePocket,
@@ -447,7 +447,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Free Savings card ─────────────────────────────────────────────────────────
+// ── Stash card ─────────────────────────────────────────────────────────────────
 
 class _FreeSavingsCard extends StatelessWidget {
   const _FreeSavingsCard({
@@ -480,7 +480,7 @@ class _FreeSavingsCard extends StatelessWidget {
               const Text('💰', style: TextStyle(fontSize: 20)),
               const SizedBox(width: ZendSpacing.xs),
               Text(
-                'Free Savings',
+                'Stash',
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,

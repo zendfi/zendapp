@@ -1024,4 +1024,24 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── NGN Saved Accounts ───────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getNgnSavedAccounts() async {
+    try {
+      final response = await _dio.get('/api/zend/bank-send/ngn/saved-accounts');
+      final data = response.data as Map<String, dynamic>;
+      return data['accounts'] as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> deleteNgnSavedAccount(String accountId) async {
+    try {
+      await _dio.delete('/api/zend/bank-send/ngn/saved-accounts/$accountId');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 }

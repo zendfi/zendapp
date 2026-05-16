@@ -62,6 +62,7 @@ enum _BankSendStage {
   bankPicker,
   addIntlAccount,
   intlAccounts,
+  ngnAccounts,
   resolving,
   confirmation,
   pin,
@@ -142,6 +143,7 @@ class _BankSendSheetState extends State<BankSendSheet>
         _BankSendStage.bankPicker => 0.88,
         _BankSendStage.addIntlAccount => 0.88,
         _BankSendStage.intlAccounts => 0.72,
+        _BankSendStage.ngnAccounts => 0.72,
         _BankSendStage.resolving => 0.45,
         _BankSendStage.confirmation => 0.72,
         _BankSendStage.pin => 0.72,
@@ -162,14 +164,17 @@ class _BankSendSheetState extends State<BankSendSheet>
         final results = await Future.wait([
           model.walletService.apiClient.getBankSendNgnBanks(),
           model.walletService.apiClient.getBankSendNgnRates(),
+          model.walletService.apiClient.getNgnSavedAccounts(),
         ]);
         final banks = (results[0] as List<dynamic>).cast<Map<String, dynamic>>();
         final rates = results[1] as Map<String, dynamic>;
+        final savedAccounts = (results[2] as List<dynamic>).cast<Map<String, dynamic>>();
         if (!mounted) return;
         setState(() {
           _banks = banks;
           _ngnRate = (rates['rate_ngn_per_usd'] as num?)?.toDouble() ?? 0;
-          _stage = _BankSendStage.bankInput;
+          _savedAccounts = savedAccounts;
+          _stage = _BankSendStage.ngnAccounts;
         });
       } else {
         final accounts = await model.walletService.apiClient.getIntlSavedAccounts();
@@ -415,7 +420,7 @@ class _BankSendSheetState extends State<BankSendSheet>
           errorMessage: _errorMessage,
           onSelectBank: () => _goTo(_BankSendStage.bankPicker),
           onContinue: _resolveNgnAccount,
-          onBack: () => _goTo(_BankSendStage.railSelect),
+          onBack: () => _goTo(_BankSendStage.ngnAccounts),
         );
       case _BankSendStage.bankPicker:
         return _BankPickerStage(
@@ -428,6 +433,14 @@ class _BankSendSheetState extends State<BankSendSheet>
             });
           },
           onBack: () => _goTo(_BankSendStage.bankInput),
+        );
+      case _BankSendStage.ngnAccounts:
+        return _IntlAccountStage(
+          rail: _rail,
+          savedAccounts: _savedAccounts,
+          onSelect: _selectSavedAccount,
+          onBack: () => _goTo(_BankSendStage.railSelect),
+          onAddAccount: () => _goTo(_BankSendStage.bankInput),
         );
       case _BankSendStage.intlAccounts:
         return _IntlAccountStage(
@@ -463,7 +476,7 @@ class _BankSendSheetState extends State<BankSendSheet>
                   : ''),
           onConfirm: () => _goTo(_BankSendStage.pin),
           onBack: () => _goTo(
-              _rail.isIntl ? _BankSendStage.intlAccounts : _BankSendStage.bankInput),
+              _rail.isIntl ? _BankSendStage.intlAccounts : _BankSendStage.ngnAccounts),
         );
       case _BankSendStage.pin:
         return _PinStage(

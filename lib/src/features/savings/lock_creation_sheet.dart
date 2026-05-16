@@ -208,7 +208,7 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
                   _amountError = 'Enter an amount to lock';
                 } else if (_parsedAmount > widget.freePocketBalance) {
                   _amountError =
-                      'Not enough in Free Savings (\$${widget.freePocketBalance.toStringAsFixed(2)})';
+                      'Not enough in Stash (\$${widget.freePocketBalance.toStringAsFixed(2)})';
                 }
               });
               return;
@@ -294,7 +294,7 @@ class _AmountDateStage extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.xxs),
           Text(
-            'Moving from Free Savings · Available: \$${freePocketBalance.toStringAsFixed(2)}',
+            'Moving from Stash · Available: \$${freePocketBalance.toStringAsFixed(2)}',
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
@@ -465,7 +465,7 @@ class _ConfirmStage extends StatelessWidget {
                 ),
                 const SizedBox(height: ZendSpacing.xs),
                 Text(
-                  'Moving from Free Savings · Locked until ${_formatDate(unlockDate)}',
+                  'Moving from Stash · Locked until ${_formatDate(unlockDate)}',
                   style: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 13,

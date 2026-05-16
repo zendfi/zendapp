@@ -75,9 +75,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${model.greetingPrefix} ${_displayName(model.username)}',
-                        style: const TextStyle(fontFamily: 'InstrumentSerif', color: ZendColors.textOnDeep, fontSize: 26, fontWeight: FontWeight.w600),
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'Hi ',
+                              style: TextStyle(
+                                fontFamily: 'InstrumentSerif',
+                                color: ZendColors.textOnDeep,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '@${model.username}',
+                              style: const TextStyle(
+                                fontFamily: 'InstrumentSerif',
+                                color: ZendColors.textOnDeep,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w400,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       Row(children: [
                         GestureDetector(
@@ -272,12 +293,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-
-String _displayName(String value) {
-  final trimmed = value.trim();
-  if (trimmed.isEmpty) return 'there';
-  return trimmed[0].toUpperCase() + trimmed.substring(1);
-}
 
 class _TransactionRow extends StatelessWidget {
   const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor, this.onTap});
