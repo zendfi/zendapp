@@ -31,7 +31,7 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _controllers = List.generate(6, (_) => TextEditingController());
   late final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
-  late final Timer _timer;
+  late Timer _countdownTimer;
   Duration _remaining = const Duration(seconds: 42);
   String? _errorText;
   bool _resending = false;
@@ -39,7 +39,15 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_remaining.inSeconds == 0) {
         timer.cancel();
         return;
@@ -52,7 +60,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _countdownTimer.cancel();
     for (final controller in _controllers) {
       controller.dispose();
     }
@@ -84,9 +92,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   String get _subtitleText {
     if (widget.contactHint != null && widget.contactHint!.isNotEmpty) {
-      return widget.isEmail
-          ? 'Sent to ${widget.contactHint}'
-          : 'Sent to ${widget.contactHint}';
+      return 'Sent to ${widget.contactHint}';
     }
     return widget.isEmail ? 'Sent to your email' : 'Sent to your phone number';
   }
@@ -110,32 +116,19 @@ class _OtpScreenState extends State<OtpScreen> {
 
       if (!mounted) return;
 
-      // Clear all OTP boxes and restart the countdown
+      // Clear all OTP boxes and refocus the first
       for (final c in _controllers) {
         c.clear();
       }
       _focusNodes.first.requestFocus();
 
-      _timer.cancel();
+      // Reset and restart the countdown
+      _countdownTimer.cancel();
       setState(() {
         _remaining = const Duration(seconds: 42);
         _resending = false;
       });
-
-      // Restart the countdown timer
-      Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!mounted) {
-          timer.cancel();
-          return;
-        }
-        if (_remaining.inSeconds == 0) {
-          timer.cancel();
-          return;
-        }
-        setState(() {
-          _remaining -= const Duration(seconds: 1);
-        });
-      });
+      _startCountdown();
 
       messenger.showSnackBar(
         const SnackBar(
@@ -151,6 +144,8 @@ class _OtpScreenState extends State<OtpScreen> {
       );
     }
   }
+
+  Future<void> _onContinue() async {
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) return;
 
@@ -195,8 +190,7 @@ class _OtpScreenState extends State<OtpScreen> {
           model.stopLoading();
           if (!mounted) return;
           messenger.showSnackBar(
-            const SnackBar(
-                content: Text('Sign in failed. Please try again.')),
+            const SnackBar(content: Text('Sign in failed. Please try again.')),
           );
         }
       }
@@ -216,8 +210,7 @@ class _OtpScreenState extends State<OtpScreen> {
     } catch (e) {
       model.stopLoading();
       if (!mounted) return;
-      setState(
-          () => _errorText = 'Something went wrong. Please try again.');
+      setState(() => _errorText = 'Something went wrong. Please try again.');
     }
   }
 
