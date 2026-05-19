@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         text: TextSpan(
                           children: [
                             const TextSpan(
-                              text: 'Hi ',
+                              text: 'hi ',
                               style: TextStyle(
                                 fontFamily: 'InstrumentSerif',
                                 color: ZendColors.textOnDeep,
