@@ -295,12 +295,15 @@ class _OtpScreenState extends State<OtpScreen> {
                       GestureDetector(
                         onTap: _resending ? null : _resend,
                         child: _resending
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: ZendColors.textSecondary,
+                            ? const Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: ZendColors.textSecondary,
+                                  ),
                                 ),
                               )
                             : const Text(

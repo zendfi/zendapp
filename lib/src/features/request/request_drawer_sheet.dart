@@ -491,6 +491,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 ),
               ],
 
+              const SizedBox(height: ZendSpacing.md),
+
               _TappableRow(
                 label: _expiryDate != null
                     ? 'Expires ${_formatDate(_expiryDate!)}'

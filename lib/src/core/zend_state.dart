@@ -424,11 +424,13 @@ class ZendAppModel extends ChangeNotifier {
         transferService.getHistory(),
         walletService.apiClient.getBankSendOrders().catchError((_) => <dynamic>[]),
         walletService.apiClient.getPayinOrders().catchError((_) => <dynamic>[]),
+        walletService.apiClient.getCryptoDepositHistory().catchError((_) => <dynamic>[]),
       ]);
 
       final entries = results[0] as List<TransferHistoryEntry>;
       final bankOrders = results[1].cast<Map<String, dynamic>>();
       final payinOrders = results[2].cast<Map<String, dynamic>>();
+      final cryptoDeposits = results[3].cast<Map<String, dynamic>>();
       final contacts = _buildRecentContactsFromHistory(entries);
 
       // Build rows from zend-to-zend transfers
@@ -535,8 +537,38 @@ class ZendAppModel extends ChangeNotifier {
         );
       }).toList();
 
+      // Build rows from crypto deposit events (Dextopus bridge deposits)
+      final cryptoDepositRows = cryptoDeposits.map((order) {
+        final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
+        final originSymbol = order['origin_symbol'] as String? ?? 'Crypto';
+        final originBlockchain = order['origin_blockchain'] as String? ?? '';
+        final completedAtStr = order['completed_at'] as String?;
+        final createdAtStr = order['created_at'] as String? ?? '';
+        final createdAt = DateTime.tryParse(completedAtStr ?? createdAtStr) ?? DateTime.now();
+
+        final amtStr = amountUsdc == amountUsdc.roundToDouble()
+            ? '+\$${amountUsdc.toStringAsFixed(0)}'
+            : '+\$${amountUsdc.toStringAsFixed(2)}';
+
+        final note = originBlockchain.isNotEmpty
+            ? '$originSymbol via $originBlockchain'
+            : originSymbol;
+
+        return ZendTransaction(
+          name: 'Crypto Deposit',
+          note: note,
+          amount: amtStr,
+          time: _formatTimestamp(createdAt),
+          avatarLabel: '₿',
+          amountColor: ZendColors.positive,
+          entry: null,
+          bankOrder: order,
+          createdAt: createdAt,
+        );
+      }).toList();
+
       // Merge and sort newest first
-      final all = [...transferRows, ...bankRows, ...payinRows]
+      final all = [...transferRows, ...bankRows, ...payinRows, ...cryptoDepositRows]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       recentTransactions = all;
