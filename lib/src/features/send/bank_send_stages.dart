@@ -522,6 +522,27 @@ class _IntlAccountStage extends StatelessWidget {
                   final label = acct['label'] as String? ?? 'Bank account';
                   final bankName = acct['bank_name'] as String? ?? '';
                   final last4 = acct['account_last4'] as String?;
+                  final accountOwnerName = acct['account_owner_name'] as String?;
+                  final isNgn = (acct['payment_rail'] as String?) == 'ngn'
+                      || (acct['currency'] as String?) == 'NGN';
+
+                  // NGN: show "Account Holder Name" as title, "account_number · Bank Name" as subtitle
+                  // Intl: show label as title, "Bank · ••••last4 · currency" as subtitle
+                  final displayTitle = isNgn && accountOwnerName != null && accountOwnerName.isNotEmpty
+                      ? accountOwnerName
+                      : label;
+
+                  final displaySubtitle = isNgn
+                      ? [
+                          ?last4,
+                          if (bankName.isNotEmpty) bankName,
+                        ].join(' · ')
+                      : [
+                          if (bankName.isNotEmpty) bankName,
+                          if (last4 != null) '••••$last4',
+                          rail.currency,
+                        ].join(' · ');
+
                   return ListTile(
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -536,7 +557,7 @@ class _IntlAccountStage extends StatelessWidget {
                           size: 20, color: zt.textSecondary),
                     ),
                     title: Text(
-                      label,
+                      displayTitle,
                       style: TextStyle(
                           fontFamily: 'DMSans',
                           fontSize: 15,
@@ -544,11 +565,7 @@ class _IntlAccountStage extends StatelessWidget {
                           color: zt.textPrimary),
                     ),
                     subtitle: Text(
-                      [
-                        if (bankName.isNotEmpty) bankName,
-                        if (last4 != null) '••••$last4',
-                        rail.currency,
-                      ].join(' · '),
+                      displaySubtitle,
                       style: TextStyle(
                           fontFamily: 'DMSans',
                           fontSize: 12,

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../firebase_options.dart';
+import '../models/payment_request_notification.dart';
 import 'api_client.dart';
 
 class PushNotificationService {
@@ -18,6 +19,10 @@ class PushNotificationService {
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  /// Pending payment request from a notification tap (background/terminated).
+  /// Consumed once by the app after session restore.
+  static PaymentRequestNotification? pendingPaymentRequestFromNotification;
 
   PushNotificationService({required ApiClient apiClient})
       : _apiClient = apiClient;
@@ -147,11 +152,33 @@ class PushNotificationService {
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // TODO: Navigate to the relevant screen based on payload
-    // e.g., if payload contains transfer_id, navigate to activity screen
-    if (kDebugMode) {
-      debugPrint('PushNotifications: tapped notification payload=${response.payload}');
+    if (response.payload == null) return;
+
+    try {
+      final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+      final type = data['type'] as String?;
+
+      if (type == 'payment_request') {
+        final notification = PaymentRequestNotification.fromJson(data);
+        if (notification.requesterZendtag.isNotEmpty && notification.amountUsdc > 0) {
+          // Store for consumption after session restore (terminated app case)
+          // or immediate use (background app case — handled by app.dart)
+          pendingPaymentRequestFromNotification = notification;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PushNotifications: failed to parse notification payload: $e');
+      }
     }
+  }
+
+  /// Consume and return the pending payment request notification from a tap.
+  /// Returns null if there is no pending notification.
+  static PaymentRequestNotification? consumePendingPaymentRequest() {
+    final pending = pendingPaymentRequestFromNotification;
+    pendingPaymentRequestFromNotification = null;
+    return pending;
   }
 }
 

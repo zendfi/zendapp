@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -48,10 +50,19 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   late final TextEditingController _amountController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _recipientController;
 
   double _amount = 0;
   DateTime? _expiryDate;
   String? _expiryError;
+
+  // Recipient resolution state
+  String? _resolvedZendtag;       // confirmed zendtag (without @)
+  String? _resolvedDisplayName;   // display name for confirmed zendtag
+  String? _recipientEmail;        // confirmed email address
+  String? _recipientError;        // inline error on the field
+  bool _resolvingZendtag = false;
+  Timer? _resolveDebounce;
 
   @override
   void initState() {
@@ -61,16 +72,21 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
       text: _amount > 0 ? _amount.toString() : '',
     );
     _descriptionController = TextEditingController();
+    _recipientController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _resolveDebounce?.cancel();
     _amountController.dispose();
     _descriptionController.dispose();
+    _recipientController.dispose();
     super.dispose();
   }
 
   bool get _canCreate => _amount > 0;
+
+  bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
 
   String get _titleText {
     if (_amount > 0) {
@@ -79,11 +95,95 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     return 'Create payment request';
   }
 
+  String get _buttonLabel {
+    if (!_hasValidRecipient) return 'Create link';
+    if (_resolvedZendtag != null) return 'Send to @$_resolvedZendtag';
+    return 'Send to $_recipientEmail';
+  }
+
   void _onAmountChanged(String value) {
     final parsed = validateAmountInput(value);
     setState(() {
       _amount = parsed ?? 0;
     });
+  }
+
+  void _onRecipientChanged(String value) {
+    _resolveDebounce?.cancel();
+    final trimmed = value.trim();
+
+    // Clear previous resolution
+    setState(() {
+      _resolvedZendtag = null;
+      _resolvedDisplayName = null;
+      _recipientEmail = null;
+      _recipientError = null;
+      _resolvingZendtag = false;
+    });
+
+    if (trimmed.isEmpty) return;
+
+    if (trimmed.startsWith('@')) {
+      // Zendtag path — debounce 500ms then resolve
+      final tag = trimmed.substring(1).toLowerCase();
+      if (tag.isEmpty) return;
+      _resolveDebounce = Timer(const Duration(milliseconds: 500), () {
+        _resolveZendtag(tag);
+      });
+    } else if (trimmed.contains('@')) {
+      // Email path — basic format check, no backend call needed at this stage
+      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+      if (emailRegex.hasMatch(trimmed)) {
+        setState(() => _recipientEmail = trimmed);
+      }
+      // If format is invalid, treat as empty (no error shown while typing)
+    }
+    // Otherwise: not a zendtag or email — treat as empty
+  }
+
+  Future<void> _resolveZendtag(String tag) async {
+    if (!mounted) return;
+    final model = ZendScope.of(context);
+
+    // Don't allow self-requests
+    if (tag == model.currentZendtag) {
+      setState(() {
+        _recipientError = "You can't request from yourself.";
+        _resolvingZendtag = false;
+      });
+      return;
+    }
+
+    setState(() => _resolvingZendtag = true);
+
+    try {
+      final resolved = await model.zendtagService.resolve(tag);
+      if (!mounted) return;
+
+      // Check again after async gap
+      if (resolved.zendtag == model.currentZendtag) {
+        setState(() {
+          _recipientError = "You can't request from yourself.";
+          _resolvingZendtag = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _resolvedZendtag = resolved.zendtag;
+        _resolvedDisplayName = resolved.displayName;
+        _recipientError = null;
+        _resolvingZendtag = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      // Zendtag not found — treat as empty (no error, per spec)
+      setState(() {
+        _resolvedZendtag = null;
+        _resolvedDisplayName = null;
+        _resolvingZendtag = false;
+      });
+    }
   }
 
   Future<void> _pickExpiryDate() async {
@@ -135,6 +235,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               ? null
               : _descriptionController.text.trim(),
           expiresAt: _expiryDate,
+          recipientZendtag: _resolvedZendtag,
+          recipientEmail: _recipientEmail,
         );
 
         request = PaymentRequest(
@@ -145,6 +247,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
           status: PaymentRequestStatus.pending,
+          recipientZendtag: response['recipient_zendtag'] as String?,
+          recipientEmail: response['recipient_email'] as String?,
         );
       } catch (_) {
         // Fallback: generate client-side (offline mode)
@@ -308,6 +412,85 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               ),
               const SizedBox(height: ZendSpacing.md),
 
+              // ── Request from field ──
+              TextField(
+                controller: _recipientController,
+                onChanged: _onRecipientChanged,
+                decoration: InputDecoration(
+                  hintText: '@zendtag or email address',
+                  hintStyle: const TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    color: ZendColors.textSecondary,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.person_outline,
+                    size: 20,
+                    color: ZendColors.textSecondary,
+                  ),
+                  suffixIcon: _resolvingZendtag
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ZendColors.textSecondary,
+                            ),
+                          ),
+                        )
+                      : _resolvedZendtag != null
+                          ? const Icon(Icons.check_circle, size: 20, color: ZendColors.positive)
+                          : _recipientEmail != null
+                              ? const Icon(Icons.check_circle, size: 20, color: ZendColors.positive)
+                              : null,
+                  filled: true,
+                  fillColor: ZendColors.bgSecondary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: ZendSpacing.md,
+                    vertical: ZendSpacing.sm,
+                  ),
+                ),
+                style: const TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 15,
+                  color: ZendColors.textPrimary,
+                ),
+              ),
+              if (_resolvedDisplayName != null) ...[
+                const SizedBox(height: ZendSpacing.xxs),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    '$_resolvedDisplayName (@$_resolvedZendtag)',
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: ZendColors.positive,
+                    ),
+                  ),
+                ),
+              ],
+              if (_recipientError != null) ...[
+                const SizedBox(height: ZendSpacing.xxs),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    _recipientError!,
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                ),
+              ],
+
               _TappableRow(
                 label: _expiryDate != null
                     ? 'Expires ${_formatDate(_expiryDate!)}'
@@ -333,7 +516,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
               // ── Create link button ──
               PrimaryButton(
-                label: 'Create link',
+                label: _buttonLabel,
                 onPressed: _canCreate ? _onCreateLink : () {},
                 backgroundColor: _canCreate
                     ? ZendColors.accent

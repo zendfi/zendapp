@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../shell/zend_shell.dart';
+import 'crypto_chains_step.dart';
 
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({super.key});
@@ -99,12 +101,55 @@ class _PinSetupScreenState extends State<PinSetupScreen>
   Future<void> _submitPin(String pin) async {
     setState(() => _loading = true);
 
+    // Capture navigator before any async gap to avoid BuildContext-across-async-gap warnings.
+    final nav = Navigator.of(context);
+
     try {
       final model = ZendScope.of(context);
       await model.walletService.setupPinAndBackup(pin);
 
       if (!mounted) return;
-      pushAndRemoveUntilZendSlide(context, const ZendShell());
+
+      // Use flutter_secure_storage (already a project dependency) to persist
+      // the one-time flag — no need for shared_preferences.
+      const storage = FlutterSecureStorage();
+      const flagKey = 'crypto_chains_step_shown';
+      final stepShownRaw = await storage.read(key: flagKey);
+      final stepShown = stepShownRaw == 'true';
+
+      if (!mounted) return;
+
+      if (!stepShown) {
+        // Navigate to the chain selection step; it will navigate to ZendShell
+        // on completion or skip.
+        nav.pushAndRemoveUntil(
+          zendRoute(
+            page: CryptoChainSelectionStep(
+              apiClient: model.walletService.apiClient,
+              onSkip: () async {
+                await storage.write(key: flagKey, value: 'true');
+                nav.pushAndRemoveUntil(
+                  zendRoute(page: const ZendShell()),
+                  (route) => false,
+                );
+              },
+              onComplete: () async {
+                await storage.write(key: flagKey, value: 'true');
+                nav.pushAndRemoveUntil(
+                  zendRoute(page: const ZendShell()),
+                  (route) => false,
+                );
+              },
+            ),
+          ),
+          (route) => false,
+        );
+      } else {
+        nav.pushAndRemoveUntil(
+          zendRoute(page: const ZendShell()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

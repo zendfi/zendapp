@@ -252,10 +252,18 @@ class _BankSendSheetState extends State<BankSendSheet>
       Map<String, dynamic> result;
 
       if (!_rail.isIntl) {
+        // Use saved account data if one was selected, otherwise use manual input
+        final bankId = _selectedSavedAccount != null
+            ? (_selectedSavedAccount!['paj_bank_id'] as String? ?? _selectedBank!['id'] as String)
+            : _selectedBank!['id'] as String;
+        final accountNumber = _selectedSavedAccount != null
+            ? (_selectedSavedAccount!['paj_account_number'] as String? ?? _accountController.text.trim())
+            : _accountController.text.trim();
         result = await model.walletService.apiClient.prepareNgnBankSend(
           amountUsdc: widget.amount,
-          bankId: _selectedBank!['id'] as String,
-          accountNumber: _accountController.text.trim(),
+          bankId: bankId,
+          accountNumber: accountNumber,
+          savedAccountId: _selectedSavedAccount?['id'] as String?,
         );
       } else {
         result = await model.walletService.apiClient.prepareIntlBankSend(

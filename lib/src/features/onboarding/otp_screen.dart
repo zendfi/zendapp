@@ -34,6 +34,7 @@ class _OtpScreenState extends State<OtpScreen> {
   late final Timer _timer;
   Duration _remaining = const Duration(seconds: 42);
   String? _errorText;
+  bool _resending = false;
 
   @override
   void initState() {
@@ -90,7 +91,66 @@ class _OtpScreenState extends State<OtpScreen> {
     return widget.isEmail ? 'Sent to your email' : 'Sent to your phone number';
   }
 
-  Future<void> _onContinue() async {
+  Future<void> _resend() async {
+    if (_resending || widget.contactHint == null) return;
+    setState(() {
+      _resending = true;
+      _errorText = null;
+    });
+
+    final model = ZendScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      if (widget.isEmail) {
+        await model.authService.requestOtpByEmail(widget.contactHint!);
+      } else {
+        await model.authService.requestOtp(widget.contactHint!);
+      }
+
+      if (!mounted) return;
+
+      // Clear all OTP boxes and restart the countdown
+      for (final c in _controllers) {
+        c.clear();
+      }
+      _focusNodes.first.requestFocus();
+
+      _timer.cancel();
+      setState(() {
+        _remaining = const Duration(seconds: 42);
+        _resending = false;
+      });
+
+      // Restart the countdown timer
+      Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        if (_remaining.inSeconds == 0) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          _remaining -= const Duration(seconds: 1);
+        });
+      });
+
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Code resent!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _resending = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to resend. Please try again.')),
+      );
+    }
+  }
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) return;
 
@@ -229,14 +289,39 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    Text(
-                      'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                      style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 13,
-                        color: ZendColors.textSecondary,
+                    if (_remaining.inSeconds > 0)
+                      Text(
+                        'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                        style: const TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 13,
+                          color: ZendColors.textSecondary,
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _resending ? null : _resend,
+                        child: _resending
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: ZendColors.textSecondary,
+                                ),
+                              )
+                            : const Text(
+                                'Resend code',
+                                style: TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: ZendColors.accentPop,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: ZendColors.accentPop,
+                                ),
+                              ),
                       ),
-                    ),
                     const Spacer(),
                     PrimaryButton(
                       label: 'Continue',

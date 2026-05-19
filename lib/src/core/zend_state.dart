@@ -20,6 +20,7 @@ import '../services/pocket_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
+import '../models/payment_request_notification.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
@@ -214,6 +215,11 @@ class ZendAppModel extends ChangeNotifier {
       case SseEventType.poolReaction:
       case SseEventType.poolReactionRemoved:
         break;
+      case SseEventType.paymentRequest:
+        // Show in-app banner for incoming payment requests
+        final notification = PaymentRequestNotification.fromJson(event.data);
+        pendingPaymentRequest = notification;
+        notifyListeners();
       default:
         break;
     }
@@ -290,6 +296,9 @@ class ZendAppModel extends ChangeNotifier {
   final List<Pool> pools = [];
   bool poolsLoading = false;
   String? lastPoolsError;
+
+  /// Pending payment request notification from SSE — shown as in-app banner.
+  PaymentRequestNotification? pendingPaymentRequest;
 
   // ── Savings ──
   double savingsApy = 0.0;
@@ -669,11 +678,17 @@ class ZendAppModel extends ChangeNotifier {
     savingsApy = 0.0;
     savingsBalance = 0.0;
     savingsLoading = false;
+    pendingPaymentRequest = null;
     notifyListeners();
   }
 
   void addPaymentRequest(PaymentRequest request) {
     paymentRequests.insert(0, request);
+    notifyListeners();
+  }
+
+  void clearPendingPaymentRequest() {
+    pendingPaymentRequest = null;
     notifyListeners();
   }
 

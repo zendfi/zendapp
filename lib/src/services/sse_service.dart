@@ -17,6 +17,8 @@ enum SseEventType {
   poolReaction,
   poolReactionRemoved,
   poolStatusChanged,
+  // ── Payment request delivery ──
+  paymentRequest,
   unknown,
 }
 
@@ -39,6 +41,7 @@ class SseEvent {
       'pool_reaction' => SseEventType.poolReaction,
       'pool_reaction_removed' => SseEventType.poolReactionRemoved,
       'pool_status_changed' => SseEventType.poolStatusChanged,
+      'payment_request' => SseEventType.paymentRequest,
       _ => SseEventType.unknown,
     };
 

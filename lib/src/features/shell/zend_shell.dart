@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/payment_request_notification.dart';
 import '../activity/activity_screen.dart';
 import '../receive/receive_screen.dart';
 import '../send/send_flow_sheet.dart';
@@ -17,12 +20,34 @@ class ZendShell extends StatefulWidget {
 
 class _ZendShellState extends State<ZendShell> {
   int _tabIndex = 0;
+  Timer? _bannerTimer;
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
 
   void _setTab(int index) {
     if (index == _tabIndex) return;
     setState(() {
       _tabIndex = index;
     });
+  }
+
+  void _dismissBanner(ZendAppModel model) {
+    _bannerTimer?.cancel();
+    model.clearPendingPaymentRequest();
+  }
+
+  void _payFromBanner(BuildContext context, ZendAppModel model, PaymentRequestNotification notification) {
+    _dismissBanner(model);
+    showSendFlowSheet(
+      context,
+      amount: notification.amountUsdc,
+      prefilledRecipient: notification.requesterZendtag,
+      prefilledNote: notification.description,
+    );
   }
 
   Future<void> _openRecipientSheet(BuildContext context, double amount) {
@@ -44,6 +69,17 @@ class _ZendShellState extends State<ZendShell> {
 
   @override
   Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+    final pending = model.pendingPaymentRequest;
+
+    // Start auto-dismiss timer when a new notification arrives
+    if (pending != null) {
+      _bannerTimer?.cancel();
+      _bannerTimer = Timer(const Duration(seconds: 6), () {
+        if (mounted) model.clearPendingPaymentRequest();
+      });
+    }
+
     final pages = <Widget>[
       HomeScreen(
         onOpenReceive: () => _openReceiveScreen(context),
@@ -57,9 +93,25 @@ class _ZendShellState extends State<ZendShell> {
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _tabIndex,
-        children: pages,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _tabIndex,
+            children: pages,
+          ),
+          // In-app payment request banner
+          if (pending != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _PaymentRequestBanner(
+                notification: pending,
+                onPay: () => _payFromBanner(context, model, pending),
+                onDismiss: () => _dismissBanner(model),
+              ),
+            ),
+        ],
       ),
       bottomNavigationBar: ZendBottomBar(
         currentIndex: _tabIndex,
@@ -139,6 +191,164 @@ class _BottomNavIcon extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── In-app payment request banner ────────────────────────────────────────────
+
+class _PaymentRequestBanner extends StatefulWidget {
+  const _PaymentRequestBanner({
+    required this.notification,
+    required this.onPay,
+    required this.onDismiss,
+  });
+
+  final PaymentRequestNotification notification;
+  final VoidCallback onPay;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_PaymentRequestBanner> createState() => _PaymentRequestBannerState();
+}
+
+class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.notification;
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: ZendColors.bgDeep,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0x33E8F4EC)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    blurRadius: 16,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Icon
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A4ADE80),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.attach_money,
+                      size: 20,
+                      color: ZendColors.accentPop,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Text
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '@${n.requesterZendtag} is requesting ${n.formattedAmount}',
+                          style: const TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: ZendColors.textOnDeep,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (n.description != null && n.description!.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            n.description!,
+                            style: const TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 11,
+                              color: Color(0x99E8F4EC),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Pay now button
+                  GestureDetector(
+                    onTap: widget.onPay,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: ZendColors.accentPop,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Pay',
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: ZendColors.bgDeep,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Dismiss
+                  GestureDetector(
+                    onTap: widget.onDismiss,
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0x66E8F4EC),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

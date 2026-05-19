@@ -22,6 +22,8 @@ class PaymentRequest {
     this.expiryDate,
     this.customisation,
     this.status = PaymentRequestStatus.pending,
+    this.recipientZendtag,
+    this.recipientEmail,
   });
 
   final String id;
@@ -32,4 +34,8 @@ class PaymentRequest {
   final DateTime? expiryDate;
   final RequestCustomisation? customisation;
   final PaymentRequestStatus status;
+  /// Set when the request was sent to a specific Zend user.
+  final String? recipientZendtag;
+  /// Set when the request was emailed to an external address.
+  final String? recipientEmail;
 }

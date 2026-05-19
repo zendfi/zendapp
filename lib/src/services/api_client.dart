@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import '../models/crypto_send_models.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
@@ -346,6 +347,8 @@ class ApiClient {
     double? amountUsdc,
     String? description,
     DateTime? expiresAt,
+    String? recipientZendtag,
+    String? recipientEmail,
   }) async {
     try {
       final response = await _dio.post(
@@ -354,6 +357,8 @@ class ApiClient {
           'amount_usdc': amountUsdc,
           'description': description,
           'expires_at': expiresAt?.toIso8601String(),
+          'recipient_zendtag': recipientZendtag,
+          'recipient_email': recipientEmail,
         }..removeWhere((_, v) => v == null),
       );
       return response.data as Map<String, dynamic>;
@@ -1040,6 +1045,57 @@ class ApiClient {
   Future<void> deleteNgnSavedAccount(String accountId) async {
     try {
       await _dio.delete('/api/zend/bank-send/ngn/saved-accounts/$accountId');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Multichain Crypto Rails ──────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getSupportedChains() async {
+    try {
+      final resp = await _dio.get('/api/v1/public/chains');
+      return (resp.data as List).cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> setOnboardingChains(List<int> chainIds) async {
+    try {
+      await _dio.post('/api/zend/crypto/onboarding-chains', data: {
+        'chain_ids': chainIds,
+      });
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<CryptoSendQuote> getCryptoSendQuote({
+    required int chainId,
+    required String destinationAddress,
+    required double amountUsdc,
+  }) async {
+    try {
+      final resp = await _dio.post('/api/zend/crypto/send/quote', data: {
+        'chain_id': chainId,
+        'destination_address': destinationAddress,
+        'amount_usdc': amountUsdc,
+      });
+      return CryptoSendQuote.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<CryptoSendResult> executeCryptoSend({
+    required String quoteId,
+  }) async {
+    try {
+      final resp = await _dio.post('/api/zend/crypto/send/execute', data: {
+        'quote_id': quoteId,
+      });
+      return CryptoSendResult.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
     }

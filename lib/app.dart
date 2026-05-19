@@ -13,6 +13,7 @@ import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
 import 'src/features/send/send_flow_sheet.dart';
+import 'src/services/push_notification_service.dart';
 
 import 'src/navigation/zend_routes.dart';
 
@@ -42,6 +43,12 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final initial = DeepLinkHandler.initialLink;
       if (initial != null) _handleDeepLink(initial);
+
+      // Check for a payment request notification tapped while app was terminated
+      final pending = PushNotificationService.consumePendingPaymentRequest();
+      if (pending != null) {
+        _handlePaymentRequestNotification(pending);
+      }
     });
   }
 
@@ -51,6 +58,28 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     widget.model.removeListener(_onModelChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _handlePaymentRequestNotification(dynamic notification) {
+    if (!widget.model.isAuthenticated) return;
+    if (widget.model.appLockService.isLocked) return;
+
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+
+    // notification is PaymentRequestNotification — use dynamic to avoid import cycle
+    final zendtag = (notification as dynamic).requesterZendtag as String?;
+    final amount = (notification as dynamic).amountUsdc as double? ?? 0.0;
+    final description = (notification as dynamic).description as String?;
+
+    if (zendtag != null && amount > 0) {
+      showSendFlowSheet(
+        context,
+        amount: amount,
+        prefilledRecipient: zendtag,
+        prefilledNote: description,
+      );
+    }
   }
 
   void _handleDeepLink(DeepLinkPayload payload) {
@@ -183,7 +212,6 @@ class _SplashWithSessionRestoreState
       pushReplacementZendSlide(context, const PinRestoreScreen());
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return const SplashScreen();

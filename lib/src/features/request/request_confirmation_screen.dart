@@ -50,10 +50,14 @@ class RequestConfirmationScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                const Text(
-                  'Link created!',
+                Text(
+                  paymentRequest.recipientZendtag != null
+                      ? 'Request sent to @${paymentRequest.recipientZendtag}!'
+                      : paymentRequest.recipientEmail != null
+                          ? 'Request emailed!'
+                          : 'Link created!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'InstrumentSerif',
                     fontSize: 40,
                     fontWeight: FontWeight.w700,
@@ -61,6 +65,28 @@ class RequestConfirmationScreen extends StatelessWidget {
                     fontStyle: FontStyle.italic,
                   ),
                 ),
+                const SizedBox(height: 8),
+
+                if (paymentRequest.recipientZendtag != null)
+                  const Text(
+                    "They'll get a notification to pay you.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 14,
+                      color: Color(0x99E8F4EC),
+                    ),
+                  )
+                else if (paymentRequest.recipientEmail != null)
+                  Text(
+                    "Sent to ${paymentRequest.recipientEmail}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 14,
+                      color: Color(0x99E8F4EC),
+                    ),
+                  ),
                 const SizedBox(height: 16),
 
                 Text(
