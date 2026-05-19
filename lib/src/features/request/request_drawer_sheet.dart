@@ -88,6 +88,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
 
+  bool _success = false;
+  PaymentRequest? _createdRequest;
+
   String get _titleText {
     if (_amount > 0) {
       return 'Create payment request for ${formatRequestAmount(_amount)}';
@@ -220,11 +223,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     if (!_canCreate) return;
 
     final model = ZendScope.of(context);
-    final nav = Navigator.of(context);
     final ctx = context;
-
-    // Close the sheet first, then call the API
-    nav.pop();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       PaymentRequest request;
@@ -251,7 +250,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           recipientEmail: response['recipient_email'] as String?,
         );
       } catch (_) {
-        // Fallback: generate client-side (offline mode)
         final requestId = generateRequestId();
         final link = buildRequestLink(model.username, requestId);
         request = PaymentRequest(
@@ -267,12 +265,12 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
       model.addPaymentRequest(request);
 
+      // Morph the sheet into success state in-place
       if (ctx.mounted) {
-        pushZendSlide(
-          ctx,
-          RequestConfirmationScreen(paymentRequest: request),
-          rootNavigator: true,
-        );
+        setState(() {
+          _success = true;
+          _createdRequest = request;
+        });
       }
     });
   }
@@ -283,6 +281,19 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
       _descriptionController.text,
       _descriptionMaxLength,
     );
+
+    // Morph into success state in-place
+    if (_success && _createdRequest != null) {
+      return Container(
+        decoration: const BoxDecoration(
+          color: ZendColors.bgDeep,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
+        ),
+        child: RequestConfirmationContent(paymentRequest: _createdRequest!),
+      );
+    }
 
     return Container(
       decoration: const BoxDecoration(
