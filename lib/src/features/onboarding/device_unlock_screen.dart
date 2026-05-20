@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_primitives.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import '../profile/profile_screen.dart';
@@ -312,8 +313,7 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const Icon(Icons.backspace_outlined,
-                    color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
                 : Text(
                     widget.label,
                     style: const TextStyle(

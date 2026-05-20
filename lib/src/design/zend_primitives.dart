@@ -140,3 +140,55 @@ class ZendLoader extends StatelessWidget {
     );
   }
 }
+
+/// A left-pointing chevron backspace icon for keypads.
+/// Renders a bold left-arrow-head (‹) shape — cleaner than the system
+/// backspace icon and consistent across all keypads.
+class ZendBackspaceIcon extends StatelessWidget {
+  const ZendBackspaceIcon({
+    super.key,
+    this.color = ZendColors.textOnDeep,
+    this.size = 22,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _BackspacePainter(color: color),
+    );
+  }
+}
+
+class _BackspacePainter extends CustomPainter {
+  const _BackspacePainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.width * 0.12
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final arm = size.width * 0.28;
+
+    // Left-pointing chevron: two lines meeting at a point on the left
+    final path = Path()
+      ..moveTo(cx + arm, cy - arm)
+      ..lineTo(cx - arm, cy)
+      ..lineTo(cx + arm, cy + arm);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_BackspacePainter old) => old.color != color;
+}

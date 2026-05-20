@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_primitives.dart';
 import '../../navigation/zend_routes.dart';
 import '../pools/create_pool_drawer.dart';
 import '../profile/profile_screen.dart';
@@ -56,6 +57,8 @@ class _SendScreenState extends State<SendScreen>
       return _inputMode == _InputMode.usd ? r'$0' : '₦0';
     }
     if (_inputMode == _InputMode.usd) {
+      // We'll render whole and decimal parts separately in the widget,
+      // so just return the full string here for the secondary display logic.
       return _parsedRaw == _parsedRaw.roundToDouble()
           ? '\$${_parsedRaw.toStringAsFixed(0)}'
           : '\$${_parsedRaw.toStringAsFixed(2)}';
@@ -67,6 +70,23 @@ class _SendScreenState extends State<SendScreen>
           : '₦${_formatThousands(_parsedRaw.round())}';
     }
   }
+
+  /// Whole-number part of the USD amount for split rendering.
+  String get _wholePart {
+    if (_digits.isEmpty) return '0';
+    if (_digits.contains('.')) return _digits.split('.')[0];
+    return _digits;
+  }
+
+  /// Decimal part (after the dot), or null if no decimal entered yet.
+  String? get _decimalPart {
+    if (_inputMode != _InputMode.usd) return null;
+    if (!_digits.contains('.')) return null;
+    final parts = _digits.split('.');
+    return parts.length > 1 ? parts[1] : '';
+  }
+
+  bool get _hasDecimal => _digits.contains('.');
 
   String? get _secondaryDisplay {
     if (_parsedRaw <= 0) return null;
@@ -231,17 +251,25 @@ class _SendScreenState extends State<SendScreen>
 
                               AnimatedSwitcher(
                                 duration: ZendMotion.amountTick,
-                                child: Text(
-                                  _primaryDisplay,
-                                  key: ValueKey<String>(_primaryDisplay),
-                                  style: TextStyle(
-                                    fontFamily: 'InstrumentSerif',
-                                    color: ZendColors.textOnDeep,
-                                    fontSize: compact ? 64 : 72,
-                                    fontStyle: FontStyle.italic,
-                                    height: 1.0,
-                                  ),
-                                ),
+                                child: _inputMode == _InputMode.usd
+                                    ? _UsdAmountDisplay(
+                                        key: ValueKey('$_digits$_inputMode'),
+                                        wholePart: _wholePart,
+                                        decimalPart: _decimalPart,
+                                        hasDecimal: _hasDecimal,
+                                        compact: compact,
+                                      )
+                                    : Text(
+                                        _primaryDisplay,
+                                        key: ValueKey<String>(_primaryDisplay),
+                                        style: TextStyle(
+                                          fontFamily: 'InstrumentSerif',
+                                          color: ZendColors.textOnDeep,
+                                          fontSize: compact ? 72 : 84,
+                                          fontStyle: FontStyle.italic,
+                                          height: 1.0,
+                                        ),
+                                      ),
                               ),
                               const SizedBox(height: 6),
 
@@ -526,7 +554,7 @@ class _KeypadKeyState extends State<_KeypadKey> {
 
   @override
   Widget build(BuildContext context) {
-    final label = widget.label == 'del' ? '⌫' : widget.label;
+    final isDel = widget.label == 'del';
     final opacity = widget.enabled ? 1.0 : 0.25;
 
     return GestureDetector(
@@ -548,19 +576,100 @@ class _KeypadKeyState extends State<_KeypadKey> {
           child: SizedBox(
             height: widget.keyHeight,
             child: Center(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 24,
-                  color: ZendColors.textOnDeep,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
+              child: isDel
+                  ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 24)
+                  : Text(
+                      widget.label,
+                      style: const TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 24,
+                        color: ZendColors.textOnDeep,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Renders the USD amount with the decimal part as a top-right superscript.
+/// Whole part: large italic serif. Decimal part: smaller, top-aligned, dimmer.
+/// When decimal mode is active but no digits typed yet, shows a blinking cursor.
+class _UsdAmountDisplay extends StatelessWidget {
+  const _UsdAmountDisplay({
+    super.key,
+    required this.wholePart,
+    required this.decimalPart,
+    required this.hasDecimal,
+    required this.compact,
+  });
+
+  final String wholePart;
+  final String? decimalPart;
+  final bool hasDecimal;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final wholeSize = compact ? 72.0 : 84.0;
+    final decSize = compact ? 28.0 : 32.0;
+
+    final wholeStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: ZendColors.textOnDeep,
+      fontSize: wholeSize,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+
+    final decStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: const Color(0xCCE8F4EC),
+      fontSize: decSize,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+
+    final currencyStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: const Color(0x80E8F4EC),
+      fontSize: wholeSize * 0.5,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Currency symbol
+        Padding(
+          padding: EdgeInsets.only(top: wholeSize * 0.08),
+          child: Text('\$', style: currencyStyle),
+        ),
+        // Whole part
+        Text(wholePart.isEmpty ? '0' : wholePart, style: wholeStyle),
+        // Decimal part — shown top-right when decimal is active
+        if (hasDecimal) ...[
+          const SizedBox(width: 3),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                decimalPart == null || decimalPart!.isEmpty
+                    ? '—'  // placeholder while user hasn't typed decimal digits yet
+                    : decimalPart!,
+                style: decStyle,
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

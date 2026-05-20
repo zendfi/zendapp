@@ -542,8 +542,7 @@ class _NumericKeypad extends StatelessWidget {
                   height: 56,
                   alignment: Alignment.center,
                   child: key == 'del'
-                      ? const Icon(Icons.backspace_outlined,
-                          size: 20, color: ZendColors.textPrimary)
+                      ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 20)
                       : Text(
                           key,
                           style: const TextStyle(

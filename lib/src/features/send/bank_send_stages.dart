@@ -990,7 +990,6 @@ class _LightPinKeyState extends State<_LightPinKey> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final display = widget.label == 'del' ? '⌫' : widget.label;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
@@ -1006,15 +1005,17 @@ class _LightPinKeyState extends State<_LightPinKey> {
         child: SizedBox(
           height: widget.keyHeight,
           child: Center(
-            child: Text(
-              display,
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 24,
-                color: zt.textPrimary,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
+            child: widget.label == 'del'
+                ? ZendBackspaceIcon(color: zt.textPrimary, size: 24)
+                : Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 24,
+                      color: zt.textPrimary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
           ),
         ),
       ),

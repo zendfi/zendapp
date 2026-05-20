@@ -1275,7 +1275,6 @@ class _PinKeypadKeyState extends State<_PinKeypadKey> {
 
   @override
   Widget build(BuildContext context) {
-    final display = widget.label == 'del' ? '⌫' : widget.label;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
@@ -1291,15 +1290,17 @@ class _PinKeypadKeyState extends State<_PinKeypadKey> {
         child: SizedBox(
           height: widget.keyHeight,
           child: Center(
-            child: Text(
-              display,
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 24,
-                color: ZendColors.textPrimary,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
+            child: widget.label == 'del'
+                ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 24)
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 24,
+                      color: ZendColors.textPrimary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
           ),
         ),
       ),
