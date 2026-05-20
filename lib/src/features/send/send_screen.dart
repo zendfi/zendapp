@@ -595,9 +595,6 @@ class _KeypadKeyState extends State<_KeypadKey> {
   }
 }
 
-/// Renders the USD amount with the decimal part as a top-right superscript.
-/// Whole part: large italic serif. Decimal part: smaller, top-aligned, dimmer.
-/// When decimal mode is active but no digits typed yet, shows a blinking cursor.
 class _UsdAmountDisplay extends StatelessWidget {
   const _UsdAmountDisplay({
     super.key,
