@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../navigation/zend_routes.dart';
 import 'request_confirmation_screen.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';

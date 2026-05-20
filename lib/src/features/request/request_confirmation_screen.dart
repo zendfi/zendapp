@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../navigation/zend_routes.dart';
-import '../shell/zend_shell.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';
 
