@@ -7,6 +7,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
 import 'nfc_write_screen.dart';
+import 'show_qr_screen.dart';
 import 'zend_qr_card.dart';
 
 class ReceiveScreen extends StatefulWidget {
@@ -147,23 +148,18 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Branded QR card — the primary receive surface ──
-                      // Replaces the old plain QR card. Contains the Zend!
-                      // wordmark, QR code, @username, and download/share actions.
                       ZendQrCard(
                         username: widget.username,
                         paymentUrl: _paymentLink,
                       ),
                       const SizedBox(height: 12),
 
-                      // ── Share payment link ──
                       PrimaryButton(
                         label: 'Share payment link',
                         onPressed: _shareLink,
                       ),
                       const SizedBox(height: 12),
 
-                      // ── Write NFC tag ──
                       OutlineActionButton(
                         label: 'Write NFC tag',
                         onPressed: () => Navigator.of(context).push(
@@ -176,14 +172,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ── Create payment request button ──
                       OutlineActionButton(
                         label: 'Create payment request',
                         onPressed: () => Navigator.of(context).pop(true),
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Fixed-amount QR card ──
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -203,7 +197,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            // Amount input
                             TextField(
                               controller: _amountController,
                               keyboardType: const TextInputType.numberWithOptions(
@@ -243,7 +236,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                               onChanged: (_) => _buildFixedAmountUrl(),
                             ),
                             const SizedBox(height: 8),
-                            // Note input
                             TextField(
                               controller: _noteController,
                               style: TextStyle(
@@ -282,7 +274,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                             ),
                             if (_fixedAmountUrl.isNotEmpty) ...[
                               const SizedBox(height: 16),
-                              // QR preview
                               Center(
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
@@ -309,7 +300,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Share + Download row
                               Row(
                                 children: [
                                   Expanded(
@@ -328,6 +318,31 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlineActionButton(
+                                  label: 'Show QR',
+                                  onPressed: () {
+                                    final amount = double.tryParse(
+                                        _amountController.text.trim());
+                                    if (amount == null || amount <= 0) return;
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => ShowQrScreen(
+                                          username: widget.username,
+                                          amountUsdc: amount,
+                                          note: _noteController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? null
+                                              : _noteController.text.trim(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ],

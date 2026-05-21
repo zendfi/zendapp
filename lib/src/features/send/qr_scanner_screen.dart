@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
+import '../../services/qr_scanner_state.dart';
 import 'qr_payment_sheet.dart';
 
 /// Full-screen QR scanner that decodes `zdfi.me` payment URLs.
@@ -35,17 +36,23 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   void initState() {
     super.initState();
-    // Eagerly instantiate the controller so the camera pipeline starts
-    // immediately, hitting the 300 ms open target.
+    QrScannerState.setActive(true);
     _controller = MobileScannerController(
       detectionSpeed: DetectionSpeed.normal,
       facing: CameraFacing.back,
       torchEnabled: false,
+      // Return raw barcode values only — do not auto-open URLs.
+      // Without this, mobile_scanner on Android may fire an intent for
+      // URL-type barcodes, which the OS intercepts via the zdfi.me App Link
+      // filter before _onDetect receives the raw string.
+      returnImage: false,
+      formats: const [BarcodeFormat.qrCode],
     );
   }
 
   @override
   void dispose() {
+    QrScannerState.setActive(false);
     _controller.dispose();
     super.dispose();
   }

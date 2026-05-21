@@ -15,6 +15,7 @@ import 'src/features/onboarding/pin_setup_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/services/pending_deep_link_service.dart';
 import 'src/features/send/qr_payment_sheet.dart';
+import 'src/services/qr_scanner_state.dart';
 import 'src/services/push_notification_service.dart';
 
 import 'src/navigation/zend_routes.dart';
@@ -51,7 +52,6 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         _handlePaymentRequestNotification(pending);
       }
 
-      // Consume any pending deep link stored before authentication
       final pendingIntent = PendingDeepLinkService.consume();
       if (pendingIntent != null) {
         final ctx = _navigatorKey.currentContext;
@@ -109,6 +109,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       PendingDeepLinkService.store(intent);
       return;
     }
+    if (QrScannerState.isActive) return;
     showQrPaymentSheet(context, intent: intent);
   }
 

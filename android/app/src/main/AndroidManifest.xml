@@ -36,12 +36,15 @@
                 <data android:scheme="https" android:host="zdfi.me" android:pathPrefix="/u/" />
             </intent-filter>
 
-            <!-- Android App Links: all zdfi.me URLs (e.g. /@{tag} payment QR links) -->
-            <intent-filter android:autoVerify="true">
+            <!-- Android App Links: zdfi.me/@{tag} payment QR links -->
+            <!-- No autoVerify — prevents OS from intercepting URLs decoded by the
+                 in-app QR scanner. Deep links from browsers still work because
+                 Android offers the app as a handler via the chooser. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="zdfi.me" />
+                <data android:scheme="https" android:host="zdfi.me" android:pathPrefix="/@" />
             </intent-filter>
 
             <!-- Custom URI scheme fallback: zendapp://pay?zendtag=john_o&amount=10 -->
