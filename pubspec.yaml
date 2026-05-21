@@ -65,6 +65,9 @@ dependencies:
   # Save images to device gallery (iOS + Android)
   gal: ^2.3.0
 
+  # NFC tag reading and writing
+  nfc_manager: ^3.3.0
+
   # SVG rendering for country flags
   flutter_svg: ^2.0.10+1
 

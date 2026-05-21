@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
+import 'nfc_write_screen.dart';
 import 'zend_qr_card.dart';
 
 class ReceiveScreen extends StatefulWidget {
@@ -110,19 +110,6 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     );
   }
 
-  Future<void> _copyLink() async {
-    await Clipboard.setData(ClipboardData(text: _paymentLink));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link copied to clipboard'),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -160,106 +147,32 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── QR card ──
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: ZendColors.bgDeep,
-                          borderRadius: BorderRadius.circular(ZendRadii.xl),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'zdfi.me/${widget.username}',
-                              style: const TextStyle(
-                                fontFamily: 'DMMono',
-                                color: Color(0x99E8F4EC),
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            // Real QR code pointing to zdfi.me/username
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.circular(ZendRadii.lg),
-                              ),
-                              child: QrImageView(
-                                data: _paymentLink,
-                                version: QrVersions.auto,
-                                size: 160,
-                                backgroundColor: Colors.white,
-                                eyeStyle: const QrEyeStyle(
-                                  eyeShape: QrEyeShape.square,
-                                  color: Colors.black,
-                                ),
-                                dataModuleStyle: const QrDataModuleStyle(
-                                  dataModuleShape: QrDataModuleShape.square,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Scan to pay @${widget.username}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'DMSans',
-                                color: Color(0x99E8F4EC),
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Copy link row
-                            GestureDetector(
-                              onTap: _copyLink,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x1AE8F4EC),
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.pill),
-                                  border: Border.all(
-                                      color: const Color(0x26E8F4EC)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.copy_outlined,
-                                        size: 14,
-                                        color: Color(0x99E8F4EC)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _paymentLink,
-                                      style: const TextStyle(
-                                        fontFamily: 'DMMono',
-                                        color: Color(0x99E8F4EC),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      // ── Branded QR card — the primary receive surface ──
+                      // Replaces the old plain QR card. Contains the Zend!
+                      // wordmark, QR code, @username, and download/share actions.
+                      ZendQrCard(
+                        username: widget.username,
+                        paymentUrl: _paymentLink,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
 
-                      // ── Share button — opens native share sheet ──
+                      // ── Share payment link ──
                       PrimaryButton(
                         label: 'Share payment link',
                         onPressed: _shareLink,
                       ),
                       const SizedBox(height: 12),
 
-                      // ── Branded QR card — download/share a print-ready card ──
-                      ZendQrCard(
-                        username: widget.username,
-                        paymentUrl: _paymentLink,
+                      // ── Write NFC tag ──
+                      OutlineActionButton(
+                        label: 'Write NFC tag',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => NfcWriteScreen(
+                              paymentUrl: 'https://zdfi.me/@${widget.username}',
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
 
