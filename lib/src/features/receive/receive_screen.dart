@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
+import 'zend_qr_card.dart';
 
 class ReceiveScreen extends StatefulWidget {
   const ReceiveScreen({super.key, required this.username});
@@ -255,12 +256,10 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // ── Download QR button ──
-                      OutlineActionButton(
-                        label: _downloadingQr ? 'Saving…' : 'Download QR',
-                        onPressed: _downloadingQr
-                            ? () {}
-                            : () => _downloadQr(_paymentLink, 'zend_qr'),
+                      // ── Branded QR card — download/share a print-ready card ──
+                      ZendQrCard(
+                        username: widget.username,
+                        paymentUrl: _paymentLink,
                       ),
                       const SizedBox(height: 12),
 
