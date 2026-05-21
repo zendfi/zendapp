@@ -70,8 +70,8 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
   // ── FX preview ──
   double? _fxPreviewNgn;
 
-  // ── Open intent amount input ──
-  final TextEditingController _amountController = TextEditingController();
+  // ── Open intent amount input (keypad-driven, no device keyboard) ──
+  String _digits = '';
 
   // ── Whether the error was a fetch error (vs transfer error) ──
   bool _isFetchError = false;
@@ -118,7 +118,6 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
   @override
   void dispose() {
     _shakeController.dispose();
-    _amountController.dispose();
     super.dispose();
   }
 
@@ -129,9 +128,9 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
       case QrPayStage.loading:
         return 0.45;
       case QrPayStage.confirm:
-        // Open intent needs more space for the amount input
+        // Open intent needs full height for the on-screen keypad
         if (intent.amountUsdc == null && intent.requestLinkId == null) {
-          return 0.65;
+          return 0.92;
         }
         return 0.60;
       case QrPayStage.pin:
@@ -204,6 +203,39 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
     }
   }
 
+  // ── Keypad handler (open intent) ─────────────────────────────────────────
+
+  void _onAmountKey(String value) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (value == 'del') {
+        if (_digits.isNotEmpty) {
+          _digits = _digits.substring(0, _digits.length - 1);
+        }
+      } else if (value == '.') {
+        if (!_digits.contains('.')) {
+          _digits = _digits.isEmpty ? '0.' : '$_digits.';
+        }
+      } else if (RegExp(r'[0-9]').hasMatch(value)) {
+        // Max 2 decimal places
+        if (_digits.contains('.')) {
+          final parts = _digits.split('.');
+          if (parts.length == 2 && parts[1].length >= 2) return;
+        }
+        // No leading zeros
+        if (_digits == '0') {
+          if (value == '0') return;
+          _digits = value;
+        } else {
+          _digits += value;
+        }
+      }
+    });
+  }
+
+  double get _parsedAmount =>
+      _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
+
   // ── PIN key handler ───────────────────────────────────────────────────────
 
   void _onPinKey(String value) {
@@ -236,9 +268,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
     try {
       final model = ZendScope.of(context);
-      final amount = _resolvedAmount ??
-          double.tryParse(_amountController.text.replaceAll(',', '')) ??
-          0.0;
+      final amount = _resolvedAmount ?? _parsedAmount;
 
       await model.transferService.sendTransfer(
         recipientZendtag: intent.zendtag,
@@ -364,15 +394,12 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
           resolvedAmount: _resolvedAmount,
           resolvedNote: _resolvedNote,
           fxPreviewNgn: _fxPreviewNgn,
-          amountController: _amountController,
+          digits: _digits,
+          onAmountKey: _onAmountKey,
           onConfirm: () {
             // Fetch FX preview for open intent when user proceeds
             if (intent.amountUsdc == null && intent.requestLinkId == null) {
-              final amount = double.tryParse(
-                  _amountController.text.replaceAll(',', ''));
-              if (amount != null && amount > 0) {
-                _fetchFxPreview(amount);
-              }
+              if (_parsedAmount > 0) _fetchFxPreview(_parsedAmount);
             }
             setState(() {
               _pinDigits = '';
@@ -383,9 +410,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
         );
 
       case QrPayStage.pin:
-        final amount = _resolvedAmount ??
-            double.tryParse(_amountController.text.replaceAll(',', '')) ??
-            0.0;
+        final amount = _resolvedAmount ?? _parsedAmount;
         return SendPinStage(
           key: const ValueKey('pin'),
           amountFormatted: _formatAmount(amount),
@@ -406,9 +431,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
         );
 
       case QrPayStage.processing:
-        final amount = _resolvedAmount ??
-            double.tryParse(_amountController.text.replaceAll(',', '')) ??
-            0.0;
+        final amount = _resolvedAmount ?? _parsedAmount;
         return SendProcessingStage(
           key: const ValueKey('processing'),
           amountFormatted: _formatAmount(amount),
@@ -416,9 +439,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
         );
 
       case QrPayStage.success:
-        final amount = _resolvedAmount ??
-            double.tryParse(_amountController.text.replaceAll(',', '')) ??
-            0.0;
+        final amount = _resolvedAmount ?? _parsedAmount;
         return SendSuccessStage(
           key: const ValueKey('success'),
           amountFormattedExact: _formatAmountExact(amount),
@@ -491,7 +512,8 @@ class _QrConfirmStage extends StatefulWidget {
     required this.resolvedAmount,
     required this.resolvedNote,
     required this.fxPreviewNgn,
-    required this.amountController,
+    required this.digits,
+    required this.onAmountKey,
     required this.onConfirm,
   });
 
@@ -499,7 +521,9 @@ class _QrConfirmStage extends StatefulWidget {
   final double? resolvedAmount;
   final String? resolvedNote;
   final double? fxPreviewNgn;
-  final TextEditingController amountController;
+  // Open intent: keypad-driven digit string
+  final String digits;
+  final ValueChanged<String> onAmountKey;
   final VoidCallback onConfirm;
 
   @override
@@ -510,11 +534,11 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
   bool get _isOpenIntent =>
       widget.intent.amountUsdc == null && widget.intent.requestLinkId == null;
 
-  double? get _effectiveAmount {
-    if (widget.resolvedAmount != null) return widget.resolvedAmount;
-    return double.tryParse(
-        widget.amountController.text.replaceAll(',', ''));
-  }
+  double get _parsedAmount =>
+      widget.digits.isEmpty ? 0 : (double.tryParse(widget.digits) ?? 0);
+
+  double? get _effectiveAmount =>
+      widget.resolvedAmount ?? (_parsedAmount > 0 ? _parsedAmount : null);
 
   String _formatAmount(double amount) {
     if (amount == amount.roundToDouble()) {
@@ -542,6 +566,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
     final model = ZendScope.of(context);
     final balance = model.balance;
     final balanceLoading = model.balanceLoading;
+    final compact = MediaQuery.of(context).size.height < 760;
 
     final effectiveAmount = _effectiveAmount;
     final balanceUnknown = balanceLoading && balance == 0.0;
@@ -549,64 +574,68 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
         effectiveAmount != null &&
         effectiveAmount > balance;
 
-    // Determine if the confirm button should be enabled
     bool canConfirm;
     if (_isOpenIntent) {
-      canConfirm = effectiveAmount != null &&
-          effectiveAmount > 0 &&
-          !balanceUnknown &&
-          !insufficientBalance;
+      canConfirm = _parsedAmount > 0 && !balanceUnknown && !insufficientBalance;
     } else {
       canConfirm = !balanceUnknown && !insufficientBalance;
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Title
-          Text(
-            'Pay @${widget.intent.zendtag}',
-            style: const TextStyle(
-              fontFamily: 'InstrumentSerif',
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Amount section
-          if (_isOpenIntent) ...[
-            // Open intent: amount text field
-            TextField(
-              controller: widget.amountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              autofocus: false,
-              onChanged: (_) => setState(() {}),
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
-              ),
-              decoration: const InputDecoration(
-                hintText: r'$0.00',
-                hintStyle: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                  color: ZendColors.textSecondary,
+          // ── Recipient + balance row ──────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Pay @${widget.intent.zendtag}',
+                style: const TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: ZendColors.textPrimary,
                 ),
-                filled: false,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
               ),
-            ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (balanceUnknown)
+                    const ZendLoader(size: 12)
+                  else
+                    Text(
+                      '\$${balance.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 12,
+                        color: ZendColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // ── Amount display ───────────────────────────────────────────────
+          if (_isOpenIntent) ...[
+            // Keypad-driven amount — mirrors SendScreen's _UsdAmountDisplay
+            _AmountDisplay(digits: widget.digits, compact: compact),
+            const SizedBox(height: 4),
+            // NGN equivalent placeholder (shown once FX is fetched after confirm)
+            if (insufficientBalance)
+              const Text(
+                'Insufficient balance',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13,
+                  color: ZendColors.destructive,
+                ),
+              ),
           ] else ...[
-            // Fixed-amount intent: read-only amount display
+            // Fixed / request amount — read-only
             Text(
               _formatAmount(widget.resolvedAmount ?? 0),
               style: const TextStyle(
@@ -616,7 +645,6 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 color: ZendColors.textPrimary,
               ),
             ),
-            // NGN equivalent
             if (widget.fxPreviewNgn != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -628,7 +656,6 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 ),
               ),
             ],
-            // Note
             if (widget.resolvedNote != null &&
                 widget.resolvedNote!.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -643,58 +670,226 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 ),
               ),
             ],
-          ],
-
-          const SizedBox(height: 16),
-
-          // Balance row
-          Row(
-            children: [
+            const SizedBox(height: 8),
+            if (insufficientBalance)
               const Text(
-                'Balance: ',
+                'Insufficient balance',
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 13,
-                  color: ZendColors.textSecondary,
+                  color: ZendColors.destructive,
                 ),
               ),
-              if (balanceUnknown)
-                const ZendLoader(size: 14)
-              else
-                Text(
-                  '\$${balance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 13,
-                    color: ZendColors.textSecondary,
-                  ),
-                ),
-            ],
-          ),
-
-          // Insufficient balance error
-          if (insufficientBalance) ...[
-            const SizedBox(height: 6),
-            const Text(
-              'Insufficient balance',
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 13,
-                color: ZendColors.destructive,
-              ),
-            ),
           ],
 
-          const Spacer(),
+          // ── Keypad (open intent only) ────────────────────────────────────
+          if (_isOpenIntent) ...[
+            const Spacer(),
+            _AmountKeypad(
+              onTap: widget.onAmountKey,
+              keyHeight: compact ? 52 : 64,
+            ),
+            const SizedBox(height: 10),
+          ] else ...[
+            const Spacer(),
+          ],
 
-          // Confirm button
+          // ── Confirm button ───────────────────────────────────────────────
           PrimaryButton(
             label: _isOpenIntent
-                ? 'Zend'
+                ? (_parsedAmount > 0
+                    ? 'Zend ${_formatAmount(_parsedAmount)}'
+                    : 'Enter amount')
                 : 'Zend ${_formatAmount(widget.resolvedAmount ?? 0)}',
             onPressed: canConfirm ? widget.onConfirm : null,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Amount display (mirrors SendScreen's split rendering) ─────────────────────
+
+class _AmountDisplay extends StatelessWidget {
+  const _AmountDisplay({required this.digits, required this.compact});
+
+  final String digits;
+  final bool compact;
+
+  String get _wholePart {
+    if (digits.isEmpty) return '0';
+    if (digits.contains('.')) return digits.split('.')[0];
+    return digits;
+  }
+
+  String? get _decimalPart {
+    if (!digits.contains('.')) return null;
+    final parts = digits.split('.');
+    return parts.length > 1 ? parts[1] : '';
+  }
+
+  bool get _hasDecimal => digits.contains('.');
+
+  @override
+  Widget build(BuildContext context) {
+    final wholeSize = compact ? 64.0 : 76.0;
+    final decSize = compact ? 26.0 : 30.0;
+
+    final wholeStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: ZendColors.textPrimary,
+      fontSize: wholeSize,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+    final decStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: const Color(0xCC1A1A1A),
+      fontSize: decSize,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+    final currencyStyle = TextStyle(
+      fontFamily: 'InstrumentSerif',
+      color: const Color(0x801A1A1A),
+      fontSize: wholeSize * 0.5,
+      fontStyle: FontStyle.italic,
+      height: 1.0,
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: wholeSize * 0.08),
+          child: Text('\$', style: currencyStyle),
+        ),
+        Text(_wholePart, style: wholeStyle),
+        if (_hasDecimal) ...[
+          const SizedBox(width: 2),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('.', style: decStyle),
+                  Text(
+                    _decimalPart == null || _decimalPart!.isEmpty
+                        ? '—'
+                        : _decimalPart!,
+                    style: decStyle,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Amount keypad ─────────────────────────────────────────────────────────────
+
+class _AmountKeypad extends StatelessWidget {
+  const _AmountKeypad({required this.onTap, required this.keyHeight});
+
+  final ValueChanged<String> onTap;
+  final double keyHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    const keys = [
+      '1', '2', '3',
+      '4', '5', '6',
+      '7', '8', '9',
+      '.', '0', 'del',
+    ];
+
+    return Column(
+      children: [
+        for (var row = 0; row < 4; row++) ...[
+          Row(
+            children: [
+              for (var col = 0; col < 3; col++) ...[
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: col == 2 ? 0 : 10,
+                      bottom: row == 3 ? 0 : 10,
+                    ),
+                    child: _AmountKey(
+                      label: keys[row * 3 + col],
+                      keyHeight: keyHeight,
+                      onTap: () => onTap(keys[row * 3 + col]),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AmountKey extends StatefulWidget {
+  const _AmountKey({
+    required this.label,
+    required this.onTap,
+    required this.keyHeight,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final double keyHeight;
+
+  @override
+  State<_AmountKey> createState() => _AmountKeyState();
+}
+
+class _AmountKeyState extends State<_AmountKey> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDel = widget.label == 'del';
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        setState(() => _pressed = true);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: ZendMotion.keypadPress,
+        curve: Curves.easeOut,
+        scale: _pressed ? 0.94 : 1,
+        child: SizedBox(
+          height: widget.keyHeight,
+          child: Center(
+            child: isDel
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textPrimary, size: 24)
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 24,
+                      color: ZendColors.textPrimary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }
