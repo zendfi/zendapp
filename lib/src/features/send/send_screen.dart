@@ -642,49 +642,43 @@ class _UsdAmountDisplay extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Currency symbol — vertically centered relative to whole number
+        // Currency symbol
         Padding(
           padding: EdgeInsets.only(top: wholeSize * 0.08),
           child: Text('\$', style: currencyStyle),
         ),
         // Whole part
         Text(wholePart.isEmpty ? '0' : wholePart, style: wholeStyle),
-        // Decimal part — dot sits between whole and decimal, both raised
+        // Decimal part — shown top-right when decimal is active
         if (hasDecimal) ...[
-          const SizedBox(width: 1),
-          // Use a Stack so we can position the dot at the midpoint
-          // between the whole number top and the decimal superscript
-          SizedBox(
-            height: wholeSize,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Decimal digits — top-right
-                Positioned(
-                  top: 0,
-                  left: decSize * 0.35, // offset right of the dot
-                  child: Text(
-                    decimalPart == null || decimalPart!.isEmpty ? '—' : decimalPart!,
-                    style: decStyle,
-                  ),
-                ),
-                // Dot — vertically centered between top and the decimal text bottom
-                Positioned(
-                  top: decSize * 0.85,
-                  left: 0,
-                  child: Text(
+          const SizedBox(width: 2),
+          // Dot + decimal digits, both top-aligned next to the whole number
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     '.',
                     style: TextStyle(
                       fontFamily: 'InstrumentSerif',
                       color: const Color(0xCCE8F4EC),
-                      fontSize: decSize * 0.9,
+                      fontSize: decSize,
                       fontStyle: FontStyle.italic,
                       height: 1.0,
                     ),
                   ),
-                ),
-              ],
-            ),
+                  Text(
+                    decimalPart == null || decimalPart!.isEmpty ? '—' : decimalPart!,
+                    style: decStyle,
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ],
