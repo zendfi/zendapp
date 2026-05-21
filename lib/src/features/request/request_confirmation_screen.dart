@@ -18,7 +18,7 @@ class RequestConfirmationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ZendColors.bgDeep,
+      backgroundColor: ZendColors.bgPrimary,
       body: SafeArea(
         child: RequestConfirmationContent(paymentRequest: paymentRequest),
       ),
@@ -60,10 +60,10 @@ class RequestConfirmationContent extends StatelessWidget {
           children: [
             const SizedBox(height: 24),
 
-            const CircleAvatar(
+            CircleAvatar(
               radius: 48,
-              backgroundColor: ZendColors.accentPop,
-              child: Icon(Icons.check, size: 48, color: ZendColors.textPrimary),
+              backgroundColor: ZendColors.positive.withValues(alpha: 0.12),
+              child: const Icon(Icons.check_rounded, size: 48, color: ZendColors.positive),
             ),
             const SizedBox(height: 32),
 
@@ -76,9 +76,9 @@ class RequestConfirmationContent extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'InstrumentSerif',
-                fontSize: 40,
+                fontSize: 36,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textOnDeep,
+                color: ZendColors.textPrimary,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -91,7 +91,7 @@ class RequestConfirmationContent extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: ZendColors.textSecondary,
                 ),
               )
             else if (paymentRequest.recipientEmail != null)
@@ -101,7 +101,7 @@ class RequestConfirmationContent extends StatelessWidget {
                 style: const TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: ZendColors.textSecondary,
                 ),
               ),
             const SizedBox(height: 16),
@@ -111,27 +111,28 @@ class RequestConfirmationContent extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'DMMono',
-                fontSize: 16,
-                color: Color(0x99E8F4EC),
+                fontSize: 13,
+                color: ZendColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
             Text(
               formatRequestAmount(paymentRequest.amount),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'DMSans',
-                fontSize: 16,
-                color: Color(0x99E8F4EC),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: ZendColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
 
             PrimaryButton(
               label: 'Copy link',
-              backgroundColor: ZendColors.accentBright,
-              foregroundColor: ZendColors.textPrimary,
+              backgroundColor: ZendColors.accent,
+              foregroundColor: ZendColors.textOnDeep,
               onPressed: () => _copyLink(context),
             ),
             const SizedBox(height: 12),
@@ -142,8 +143,8 @@ class RequestConfirmationContent extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () => _copyLink(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: ZendColors.textOnDeep,
-                  side: const BorderSide(color: Color(0x33E8F4EC)),
+                  foregroundColor: ZendColors.textPrimary,
+                  side: const BorderSide(color: ZendColors.border),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 ),
@@ -168,7 +169,7 @@ class RequestConfirmationContent extends StatelessWidget {
                   fontFamily: 'DMSans',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: ZendColors.textOnDeep,
+                  color: ZendColors.textSecondary,
                 ),
               ),
             ),

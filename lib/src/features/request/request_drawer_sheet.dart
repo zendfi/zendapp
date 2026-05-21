@@ -88,6 +88,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
 
   bool _success = false;
+  bool _loading = false;
   PaymentRequest? _createdRequest;
 
   String get _titleText {
@@ -219,10 +220,12 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   }
 
   void _onCreateLink() {
-    if (!_canCreate) return;
+    if (!_canCreate || _loading) return;
 
     final model = ZendScope.of(context);
     final ctx = context;
+
+    setState(() => _loading = true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       PaymentRequest request;
@@ -267,6 +270,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
       // Morph the sheet into success state in-place
       if (ctx.mounted) {
         setState(() {
+          _loading = false;
           _success = true;
           _createdRequest = request;
         });
@@ -285,7 +289,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     if (_success && _createdRequest != null) {
       return Container(
         decoration: const BoxDecoration(
-          color: ZendColors.bgDeep,
+          color: ZendColors.bgPrimary,
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(ZendRadii.xxl),
           ),
@@ -529,13 +533,14 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               // ── Create link button ──
               PrimaryButton(
                 label: _buttonLabel,
-                onPressed: _canCreate ? _onCreateLink : () {},
-                backgroundColor: _canCreate
+                onPressed: _canCreate && !_loading ? _onCreateLink : () {},
+                backgroundColor: _canCreate && !_loading
                     ? ZendColors.accent
                     : ZendColors.bgSecondary,
-                foregroundColor: _canCreate
+                foregroundColor: _canCreate && !_loading
                     ? ZendColors.textOnDeep
                     : ZendColors.textSecondary,
+                isLoading: _loading,
               ),
             ],
           ),

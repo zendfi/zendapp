@@ -30,12 +30,14 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.backgroundColor,
     this.foregroundColor = ZendColors.textOnDeep,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final Color? backgroundColor;
   final Color foregroundColor;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +45,7 @@ class PrimaryButton extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? zt.accent,
           foregroundColor: foregroundColor,
@@ -51,13 +53,22 @@ class PrimaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(ZendRadii.lg)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
-        ),
+        child: isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
+                ),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
       ),
     );
   }
@@ -141,9 +152,8 @@ class ZendLoader extends StatelessWidget {
   }
 }
 
-/// A left-pointing chevron backspace icon for keypads.
-/// Renders a bold left-arrow-head (‹) shape — cleaner than the system
-/// backspace icon and consistent across all keypads.
+/// A clean backspace icon for keypads — uses the rounded backspace shape
+/// (left-pointing pentagon) that users universally recognize.
 class ZendBackspaceIcon extends StatelessWidget {
   const ZendBackspaceIcon({
     super.key,
@@ -156,39 +166,10 @@ class ZendBackspaceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _BackspacePainter(color: color),
+    return Icon(
+      Icons.backspace_rounded,
+      color: color,
+      size: size,
     );
   }
-}
-
-class _BackspacePainter extends CustomPainter {
-  const _BackspacePainter({required this.color});
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = size.width * 0.12
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final arm = size.width * 0.28;
-
-    // Left-pointing chevron: two lines meeting at a point on the left
-    final path = Path()
-      ..moveTo(cx + arm, cy - arm)
-      ..lineTo(cx - arm, cy)
-      ..lineTo(cx + arm, cy + arm);
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_BackspacePainter old) => old.color != color;
 }
