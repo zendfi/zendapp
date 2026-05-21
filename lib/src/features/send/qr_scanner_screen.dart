@@ -70,8 +70,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     final intent = QrPaymentIntent.fromUri(uri);
 
     if (intent == null) {
-      // Not a Zend! payment QR — show feedback and resume scanning.
+      // Not a Zend! payment QR — show feedback once and resume scanning.
+      // Set _hasScanned temporarily to suppress duplicate frames, then
+      // clear it after a short delay so the user can try another code.
+      _hasScanned = true;
       _showErrorSnackBar('This QR code is not a Zend! payment code');
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _hasScanned = false);
+      });
       return;
     }
 

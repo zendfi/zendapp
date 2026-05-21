@@ -24,7 +24,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   String _fixedAmountUrl = '';
   bool _downloadingQr = false;
 
-  String get _paymentLink => 'https://zdfi.me/${widget.username}';
+  String get _paymentLink => 'https://zdfi.me/@${widget.username}';
 
   @override
   void initState() {
