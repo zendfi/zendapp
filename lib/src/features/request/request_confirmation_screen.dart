@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -28,7 +30,7 @@ class RequestConfirmationScreen extends StatelessWidget {
 
 /// Embeddable confirmation content — used when morphing the request drawer
 /// sheet in-place after successful creation.
-class RequestConfirmationContent extends StatelessWidget {
+class RequestConfirmationContent extends StatefulWidget {
   const RequestConfirmationContent({
     super.key,
     required this.paymentRequest,
@@ -36,9 +38,17 @@ class RequestConfirmationContent extends StatelessWidget {
 
   final PaymentRequest paymentRequest;
 
-  void _copyLink(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: paymentRequest.link)).then((_) {
-      if (context.mounted) {
+  @override
+  State<RequestConfirmationContent> createState() =>
+      _RequestConfirmationContentState();
+}
+
+class _RequestConfirmationContentState
+    extends State<RequestConfirmationContent> {
+  void _copyLink() {
+    Clipboard.setData(ClipboardData(text: widget.paymentRequest.link))
+        .then((_) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Link copied!'),
@@ -47,6 +57,47 @@ class RequestConfirmationContent extends StatelessWidget {
         );
       }
     });
+  }
+
+  Future<void> _downloadRequestQr() async {
+    try {
+      final painter = QrPainter(
+        data: widget.paymentRequest.link,
+        version: QrVersions.auto,
+        eyeStyle: const QrEyeStyle(
+          eyeShape: QrEyeShape.square,
+          color: Color(0xFF000000),
+        ),
+        dataModuleStyle: const QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color: Color(0xFF000000),
+        ),
+      );
+      final imageData = await painter.toImageData(512);
+      if (imageData == null) throw Exception('Failed to generate QR image');
+      await Gal.putImageBytes(imageData.buffer.asUint8List());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('QR saved to gallery'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().contains('permission')
+                ? 'Storage permission required to save QR'
+                : 'Failed to save QR — please try again'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -63,14 +114,15 @@ class RequestConfirmationContent extends StatelessWidget {
             CircleAvatar(
               radius: 48,
               backgroundColor: ZendColors.positive.withValues(alpha: 0.12),
-              child: const Icon(Icons.check_rounded, size: 48, color: ZendColors.positive),
+              child: const Icon(Icons.check_rounded,
+                  size: 48, color: ZendColors.positive),
             ),
             const SizedBox(height: 32),
 
             Text(
-              paymentRequest.recipientZendtag != null
-                  ? 'Request sent to @${paymentRequest.recipientZendtag}!'
-                  : paymentRequest.recipientEmail != null
+              widget.paymentRequest.recipientZendtag != null
+                  ? 'Request sent to @${widget.paymentRequest.recipientZendtag}!'
+                  : widget.paymentRequest.recipientEmail != null
                       ? 'Request emailed!'
                       : 'Link created!',
               textAlign: TextAlign.center,
@@ -84,7 +136,7 @@ class RequestConfirmationContent extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            if (paymentRequest.recipientZendtag != null)
+            if (widget.paymentRequest.recipientZendtag != null)
               const Text(
                 "They'll get a notification to pay you.",
                 textAlign: TextAlign.center,
@@ -94,9 +146,9 @@ class RequestConfirmationContent extends StatelessWidget {
                   color: ZendColors.textSecondary,
                 ),
               )
-            else if (paymentRequest.recipientEmail != null)
+            else if (widget.paymentRequest.recipientEmail != null)
               Text(
-                "Sent to ${paymentRequest.recipientEmail}",
+                "Sent to ${widget.paymentRequest.recipientEmail}",
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'DMSans',
@@ -107,7 +159,7 @@ class RequestConfirmationContent extends StatelessWidget {
             const SizedBox(height: 16),
 
             Text(
-              paymentRequest.link,
+              widget.paymentRequest.link,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'DMMono',
@@ -118,7 +170,7 @@ class RequestConfirmationContent extends StatelessWidget {
             const SizedBox(height: 6),
 
             Text(
-              formatRequestAmount(paymentRequest.amount),
+              formatRequestAmount(widget.paymentRequest.amount),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'DMSans',
@@ -129,11 +181,40 @@ class RequestConfirmationContent extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
+            // QR code for the request link
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(ZendRadii.lg),
+              ),
+              child: QrImageView(
+                data: widget.paymentRequest.link,
+                version: QrVersions.auto,
+                size: 160,
+                backgroundColor: Colors.white,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Colors.black,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlineActionButton(
+              label: 'Download QR',
+              onPressed: _downloadRequestQr,
+            ),
+            const SizedBox(height: 16),
+
             PrimaryButton(
               label: 'Copy link',
               backgroundColor: ZendColors.accent,
               foregroundColor: ZendColors.textOnDeep,
-              onPressed: () => _copyLink(context),
+              onPressed: _copyLink,
             ),
             const SizedBox(height: 12),
 
@@ -141,7 +222,7 @@ class RequestConfirmationContent extends StatelessWidget {
               height: 48,
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => _copyLink(context),
+                onPressed: _copyLink,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: ZendColors.textPrimary,
                   side: const BorderSide(color: ZendColors.border),

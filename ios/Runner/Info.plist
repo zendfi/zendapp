@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Zend! uses your camera to scan QR codes for payments</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Zend! saves QR codes to your photo library</string>
 </dict>
 </plist>

@@ -9,6 +9,7 @@ import '../../navigation/zend_routes.dart';
 import '../pools/create_pool_drawer.dart';
 import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
+import 'qr_scanner_screen.dart';
 
 enum _InputMode { usd, ngn }
 
@@ -215,7 +216,7 @@ class _SendScreenState extends State<SendScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconPill(icon: Icons.qr_code_2, onTap: () {}),
+                          _IconPill(icon: Icons.qr_code_2, onTap: () => pushZendSlide(context, const QrScannerScreen())),
                           GestureDetector(
                             onTap: () => pushZendSlide(context, const ProfileScreen()),
                             child: const CircleAvatar(

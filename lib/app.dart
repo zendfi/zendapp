@@ -12,7 +12,9 @@ import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
-import 'src/features/send/send_flow_sheet.dart';
+import 'src/models/qr_payment_intent.dart';
+import 'src/services/pending_deep_link_service.dart';
+import 'src/features/send/qr_payment_sheet.dart';
 import 'src/services/push_notification_service.dart';
 
 import 'src/navigation/zend_routes.dart';
@@ -44,10 +46,18 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       final initial = DeepLinkHandler.initialLink;
       if (initial != null) _handleDeepLink(initial);
 
-      // Check for a payment request notification tapped while app was terminated
       final pending = PushNotificationService.consumePendingPaymentRequest();
       if (pending != null) {
         _handlePaymentRequestNotification(pending);
+      }
+
+      // Consume any pending deep link stored before authentication
+      final pendingIntent = PendingDeepLinkService.consume();
+      if (pendingIntent != null) {
+        final ctx = _navigatorKey.currentContext;
+        if (ctx != null && widget.model.isAuthenticated && !widget.model.appLockService.isLocked) {
+          showQrPaymentSheet(ctx, intent: pendingIntent);
+        }
       }
     });
   }
@@ -67,44 +77,39 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
 
-    // notification is PaymentRequestNotification — use dynamic to avoid import cycle
     final zendtag = (notification as dynamic).requesterZendtag as String?;
     final amount = (notification as dynamic).amountUsdc as double? ?? 0.0;
     final description = (notification as dynamic).description as String?;
 
     if (zendtag != null && amount > 0) {
-      showSendFlowSheet(
-        context,
-        amount: amount,
-        prefilledRecipient: zendtag,
-        prefilledNote: description,
+      final intent = QrPaymentIntent(
+        zendtag: zendtag,
+        amountUsdc: amount,
+        note: description,
       );
+      showQrPaymentSheet(context, intent: intent);
     }
   }
 
   void _handleDeepLink(DeepLinkPayload payload) {
-    if (!widget.model.isAuthenticated) return;
-    if (widget.model.appLockService.isLocked) return;
+    final intent = QrPaymentIntent(
+      zendtag: payload.zendtag,
+      amountUsdc: payload.amountUsdc,
+      note: payload.note,
+      requestLinkId: payload.requestId,
+    );
+
+    if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+      PendingDeepLinkService.store(intent);
+      return;
+    }
 
     final context = _navigatorKey.currentContext;
-    if (context == null) return;
-
-    final amount = payload.amountUsdc ?? 0.0;
-    if (amount > 0) {
-      showSendFlowSheet(
-        context,
-        amount: amount,
-        prefilledRecipient: payload.zendtag,
-        prefilledNote: payload.note,
-      );
-    } else {
-      showSendFlowSheet(
-        context,
-        amount: 0,
-        prefilledRecipient: payload.zendtag,
-        prefilledNote: payload.note,
-      );
+    if (context == null) {
+      PendingDeepLinkService.store(intent);
+      return;
     }
+    showQrPaymentSheet(context, intent: intent);
   }
 
   void _onModelChanged() {

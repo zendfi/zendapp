@@ -59,6 +59,12 @@ dependencies:
   # Native share sheet (WhatsApp, X, Telegram, etc.)
   share_plus: ^10.1.4
 
+  # QR/barcode scanning via camera
+  mobile_scanner: ^6.0.0
+
+  # Save images to device gallery (iOS + Android)
+  gal: ^2.3.0
+
   # SVG rendering for country flags
   flutter_svg: ^2.0.10+1
 

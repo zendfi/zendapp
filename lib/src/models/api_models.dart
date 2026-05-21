@@ -431,3 +431,41 @@ class UserProfileResponse {
     };
   }
 }
+
+/// Details of a public payment request link, returned by
+/// `GET /api/v1/public/zend/{zendtag}/{requestLinkId}`.
+///
+/// A 200 response always means the request is payable (pending and not expired).
+/// The backend returns 404 for non-pending or expired requests.
+class RequestLinkDetails {
+  final double amountUsdc;
+  final String? description;
+  final DateTime? expiresAt;
+
+  const RequestLinkDetails({
+    required this.amountUsdc,
+    this.description,
+    this.expiresAt,
+  });
+
+  factory RequestLinkDetails.fromJson(Map<String, dynamic> json) {
+    // The public endpoint may return amount_usdc as a string or number.
+    final rawAmount = json['amount_usdc'];
+    final double amount;
+    if (rawAmount is num) {
+      amount = rawAmount.toDouble();
+    } else if (rawAmount is String) {
+      amount = double.tryParse(rawAmount) ?? 0.0;
+    } else {
+      amount = 0.0;
+    }
+
+    final expiresAtStr = json['expires_at'] as String?;
+
+    return RequestLinkDetails(
+      amountUsdc: amount,
+      description: json['description'] as String?,
+      expiresAt: expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null,
+    );
+  }
+}

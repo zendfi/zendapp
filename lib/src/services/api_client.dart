@@ -1109,4 +1109,26 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── QR Pay — public request link resolution ─────────────────────────────────
+
+  /// Fetches the public details of a payment request link.
+  ///
+  /// Returns [RequestLinkDetails] on success (HTTP 200).
+  /// Throws [ApiException] with statusCode 404 if the request is not found,
+  /// expired, or no longer pending.
+  Future<RequestLinkDetails> getPublicUserRequestData(
+    String zendtag,
+    String requestLinkId,
+  ) async {
+    try {
+      final resp = await _dio.get(
+        '/api/v1/public/zend/$zendtag/$requestLinkId',
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      return RequestLinkDetails.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 }
