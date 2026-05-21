@@ -25,7 +25,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   String _fixedAmountUrl = '';
   bool _downloadingQr = false;
 
-  String get _paymentLink => 'https://zdfi.me/${widget.username}';
+  String get _paymentLink => 'https://zdfi.me/@${widget.username}';
 
   @override
   void initState() {
@@ -165,7 +165,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => NfcWriteScreen(
-                              paymentUrl: 'https://zdfi.me/${widget.username}',
+                              paymentUrl: 'https://zdfi.me/@${widget.username}',
                             ),
                           ),
                         ),
