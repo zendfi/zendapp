@@ -155,7 +155,13 @@ class _SendScreenState extends State<SendScreen>
           final parts = _digits.split('.');
           if (parts.length == 2 && parts[1].length >= 2) return; // already at 2dp
         }
-        _digits += value;
+        // Prevent leading zeros: "0" + "0" → stay "0"; "0" + "5" → replace with "5"
+        if (_digits == '0') {
+          if (value == '0') return; // block 00, 000, etc.
+          _digits = value;          // replace lone zero with non-zero digit
+        } else {
+          _digits += value;
+        }
       }
     });
     if (_ngnPerUsd == null) _scheduleFetchRate();

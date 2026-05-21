@@ -225,6 +225,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     final model = ZendScope.of(context);
     final ctx = context;
 
+    // Capture recipient state before async gap
+    final resolvedZendtag = _resolvedZendtag;
+    final recipientEmail = _recipientEmail;
+
     setState(() => _loading = true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -236,8 +240,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               ? null
               : _descriptionController.text.trim(),
           expiresAt: _expiryDate,
-          recipientZendtag: _resolvedZendtag,
-          recipientEmail: _recipientEmail,
+          recipientZendtag: resolvedZendtag,
+          recipientEmail: recipientEmail,
         );
 
         request = PaymentRequest(
@@ -248,8 +252,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
           status: PaymentRequestStatus.pending,
-          recipientZendtag: response['recipient_zendtag'] as String?,
-          recipientEmail: response['recipient_email'] as String?,
+          // Use local state as fallback in case backend omits the field
+          recipientZendtag: response['recipient_zendtag'] as String? ?? resolvedZendtag,
+          recipientEmail: response['recipient_email'] as String? ?? recipientEmail,
         );
       } catch (_) {
         final requestId = generateRequestId();
@@ -262,6 +267,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
           status: PaymentRequestStatus.pending,
+          // Preserve recipient info even on API failure
+          recipientZendtag: resolvedZendtag,
+          recipientEmail: recipientEmail,
         );
       }
 
