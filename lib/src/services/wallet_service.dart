@@ -23,7 +23,7 @@ class WalletService {
 
   // Current target iteration count. Stored alongside the encrypted key so
   // future changes don't break existing users.
-  static const _currentIterations = 100000;
+  static const _currentIterations = 10000;
 
   static const _usdcMintAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
