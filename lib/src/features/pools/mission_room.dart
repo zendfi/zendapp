@@ -45,15 +45,27 @@ class _MissionRoomState extends State<MissionRoom> {
     _pool = widget.pool;
     _loadMessages();
     _subscribeSse();
+    WidgetsBinding.instance.addObserver(_LifecycleObserver(onResume: _onAppResume));
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(_LifecycleObserver(onResume: _onAppResume));
     _sseSub?.cancel();
     _scrollController.dispose();
     _textController.dispose();
     _recordingTimer?.cancel();
     super.dispose();
+  }
+
+  /// Called when the app returns to the foreground.
+  /// Silently reloads messages to catch up on anything missed while backgrounded.
+  void _onAppResume() {
+    if (!mounted) return;
+    // Only reload if we're not already loading and the room is active
+    if (!_loading) {
+      _loadMessages();
+    }
   }
 
   // ── Data loading ────────────────────────────────────────────────────────────
@@ -84,6 +96,23 @@ class _MissionRoomState extends State<MissionRoom> {
     }
   }
 
+  /// Adds [msg] to [_messages] only if no message with the same ID exists.
+  /// Replaces a temp message (id starts with 'temp_') with the real one if present.
+  void _upsertMessage(PoolMessage msg) {
+    final tempIdx = _messages.indexWhere(
+        (m) => m.id.startsWith('temp_') && m.senderUserId == msg.senderUserId);
+    final realIdx = _messages.indexWhere((m) => m.id == msg.id);
+
+    if (realIdx >= 0) return; // already present — skip
+
+    if (tempIdx >= 0) {
+      // Replace the optimistic placeholder with the confirmed message
+      _messages[tempIdx] = msg;
+    } else {
+      _messages.add(msg);
+    }
+  }
+
   // ── SSE ─────────────────────────────────────────────────────────────────────
 
   void _subscribeSse() {
@@ -101,11 +130,11 @@ class _MissionRoomState extends State<MissionRoom> {
     switch (event.type) {
       case SseEventType.poolMessage:
         final msg = PoolMessage.fromJson(data);
-        // Skip if we already added this message optimistically
+        // Skip if we sent this message — the send flow handles insertion.
         if (_pendingIds.remove(msg.id)) return;
-        // Also skip if it's already in the list (belt-and-suspenders)
-        if (_messages.any((m) => m.id == msg.id)) return;
-        setState(() => _messages.add(msg));
+        setState(() {
+          _upsertMessage(msg);
+        });
         _jumpToBottom();
 
       case SseEventType.poolContribution:
@@ -235,8 +264,8 @@ class _MissionRoomState extends State<MissionRoom> {
         final idx = _messages.indexWhere((m) => m.id == tempId);
         if (idx >= 0) {
           _messages[idx] = msg;
-        } else if (!_messages.any((m) => m.id == msg.id)) {
-          _messages.add(msg);
+        } else {
+          _upsertMessage(msg);
         }
         _sending = false;
       });
@@ -328,6 +357,42 @@ class _MissionRoomState extends State<MissionRoom> {
 
   // ── Build ────────────────────────────────────────────────────────────────────
 
+  /// Builds the flat list of messages into a display list that includes
+  /// date separator items and carries grouping metadata.
+  List<_ListItem> _buildDisplayList() {
+    final items = <_ListItem>[];
+    DateTime? lastDate;
+    String? lastSenderId;
+    DateTime? lastMessageTime;
+
+    for (var i = 0; i < _messages.length; i++) {
+      final msg = _messages[i];
+      final msgDate = DateTime(
+          msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+
+      // Date separator
+      if (lastDate == null || msgDate != lastDate) {
+        items.add(_DateSeparatorItem(date: msgDate));
+        lastDate = msgDate;
+        lastSenderId = null; // reset grouping across date boundaries
+        lastMessageTime = null;
+      }
+
+      // Grouping: same sender within 2 minutes = continuation
+      final isContinuation = lastSenderId != null &&
+          lastSenderId == msg.senderUserId &&
+          lastMessageTime != null &&
+          msg.createdAt.difference(lastMessageTime).inMinutes < 2 &&
+          msg.messageType == PoolMessageType.text;
+
+      items.add(_MessageItem(message: msg, isContinuation: isContinuation));
+      lastSenderId = msg.senderUserId;
+      lastMessageTime = msg.createdAt;
+    }
+
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Read model once outside the builder — avoids per-item dependency tracking
@@ -381,27 +446,96 @@ class _MissionRoomState extends State<MissionRoom> {
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          // Keep items in memory — avoids rebuild cost on scroll
-                          cacheExtent: 500,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: ZendSpacing.lg,
-                              vertical: ZendSpacing.xs),
-                          itemCount: _messages.length,
-                          itemBuilder: (_, i) {
-                            final msg = _messages[i];
-                            return RepaintBoundary(
-                              child: MissionRoomMessage(
-                                key: ValueKey(msg.id),
-                                message: msg,
-                                currentUserId: currentUserId,
-                                onLongPress: () => _showReactionPicker(msg),
-                                onReactionTap: (emoji) =>
-                                    _toggleReaction(msg, emoji),
-                              ),
-                            );
-                          },
+                      : Stack(
+                          children: [
+                            Builder(builder: (context) {
+                              final displayList = _buildDisplayList();
+                              return ListView.builder(
+                                controller: _scrollController,
+                                cacheExtent: 500,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: ZendSpacing.lg,
+                                    vertical: ZendSpacing.xs),
+                                itemCount: displayList.length,
+                                itemBuilder: (_, i) {
+                                  final item = displayList[i];
+                                  if (item is _DateSeparatorItem) {
+                                    return _DateSeparator(date: item.date);
+                                  }
+                                  final msgItem = item as _MessageItem;
+                                  final msg = msgItem.message;
+                                  return RepaintBoundary(
+                                    child: MissionRoomMessage(
+                                      key: ValueKey(msg.id),
+                                      message: msg,
+                                      currentUserId: currentUserId,
+                                      isContinuation: msgItem.isContinuation,
+                                      onLongPress: () => _showReactionPicker(msg),
+                                      onReactionTap: (emoji) =>
+                                          _toggleReaction(msg, emoji),
+                                    ),
+                                  );
+                                },
+                              );
+                            }),
+
+                            // ── Scroll-to-bottom button ──
+                            AnimatedBuilder(
+                              animation: _scrollController,
+                              builder: (context, _) {
+                                final showButton = _scrollController.hasClients &&
+                                    _scrollController.position.maxScrollExtent > 0 &&
+                                    _scrollController.position.maxScrollExtent -
+                                            _scrollController.offset >
+                                        120;
+                                return AnimatedOpacity(
+                                  opacity: showButton ? 1.0 : 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Align(
+                                    alignment: Alignment.bottomRight,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: 12, bottom: 8),
+                                      child: GestureDetector(
+                                        onTap: showButton
+                                            ? () {
+                                                _scrollController.animateTo(
+                                                  _scrollController
+                                                      .position.maxScrollExtent,
+                                                  duration: const Duration(
+                                                      milliseconds: 300),
+                                                  curve: Curves.easeOut,
+                                                );
+                                              }
+                                            : null,
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: ZendColors.accent,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withValues(alpha: 0.15),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
         ),
 
@@ -417,6 +551,66 @@ class _MissionRoomState extends State<MissionRoom> {
             onMicStop: _stopRecording,
           ),
       ],
+    );
+  }
+}
+
+// ── Display list items ────────────────────────────────────────────────────────
+
+sealed class _ListItem {}
+
+class _DateSeparatorItem extends _ListItem {
+  _DateSeparatorItem({required this.date});
+  final DateTime date;
+}
+
+class _MessageItem extends _ListItem {
+  _MessageItem({required this.message, required this.isContinuation});
+  final PoolMessage message;
+  final bool isContinuation;
+}
+
+// ── Date separator widget ─────────────────────────────────────────────────────
+
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.date});
+  final DateTime date;
+
+  String _label() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (date == today) return 'Today';
+    if (date == yesterday) return 'Yesterday';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: ZendColors.border)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              _label(),
+              style: const TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 11,
+                color: ZendColors.textSecondary,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: ZendColors.border)),
+        ],
+      ),
     );
   }
 }
@@ -616,7 +810,13 @@ class _EmojiPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        0,
+        14,
+        0,
+        MediaQuery.of(context).padding.bottom + 16,
+      ),
       decoration: const BoxDecoration(
         color: ZendColors.bgPrimary,
         borderRadius: BorderRadius.vertical(
@@ -635,28 +835,62 @@ class _EmojiPickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ZendSpacing.md),
-          Wrap(
-            spacing: ZendSpacing.sm,
-            runSpacing: ZendSpacing.sm,
-            alignment: WrapAlignment.center,
-            children: _curatedEmojis.map((emoji) {
-              return GestureDetector(
-                onTap: () => onEmojiTap(emoji),
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: ZendColors.bgSecondary,
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
+          // Full-width row of emojis — each takes equal space
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: _curatedEmojis.map((emoji) {
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => onEmojiTap(emoji),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Container(
+                        margin: const EdgeInsets.all(3),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: ZendColors.bgSecondary,
+                          borderRadius: BorderRadius.circular(ZendRadii.md),
+                        ),
+                        child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                      ),
+                    ),
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+// ── Lifecycle observer ────────────────────────────────────────────────────────
+
+/// Lightweight [WidgetsBindingObserver] that fires [onResume] when the app
+/// returns to the foreground. Used by [MissionRoom] to reload messages after
+/// the app was backgrounded (SSE is paused while backgrounded, so messages
+/// sent by others during that window would otherwise be missed).
+class _LifecycleObserver extends WidgetsBindingObserver {
+  _LifecycleObserver({required this.onResume});
+
+  final VoidCallback onResume;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
+  }
+
+  // Two observers are equal if they have the same onResume callback reference,
+  // which allows removeObserver to find and remove the correct instance.
+  @override
+  bool operator ==(Object other) =>
+      other is _LifecycleObserver && other.onResume == onResume;
+
+  @override
+  int get hashCode => onResume.hashCode;
 }

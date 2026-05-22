@@ -10,19 +10,27 @@ class MissionRoomMessage extends StatelessWidget {
     required this.currentUserId,
     required this.onLongPress,
     required this.onReactionTap,
+    this.isContinuation = false,
   });
 
   final PoolMessage message;
   final String? currentUserId;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReactionTap;
+  /// When true, this message is from the same sender as the previous one
+  /// within 2 minutes — suppress the avatar and sender name.
+  final bool isContinuation;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onLongPress: onLongPress,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        // Tighter top padding for continuation messages — they feel grouped
+        padding: EdgeInsets.only(
+          top: isContinuation ? 2 : 6,
+          bottom: 2,
+        ),
         child: switch (message.messageType) {
           PoolMessageType.contributionEvent => _ContributionEventRow(
               message: message,
@@ -35,12 +43,14 @@ class MissionRoomMessage extends StatelessWidget {
               onLongPress: onLongPress,
               onReactionTap: onReactionTap,
               currentUserId: currentUserId,
+              isContinuation: isContinuation,
             ),
           _ => _TextMessageRow(
               message: message,
               onLongPress: onLongPress,
               onReactionTap: onReactionTap,
               currentUserId: currentUserId,
+              isContinuation: isContinuation,
             ),
         },
       ),
@@ -54,12 +64,14 @@ class _TextMessageRow extends StatelessWidget {
     required this.onLongPress,
     required this.onReactionTap,
     required this.currentUserId,
+    this.isContinuation = false,
   });
 
   final PoolMessage message;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReactionTap;
   final String? currentUserId;
+  final bool isContinuation;
 
   @override
   Widget build(BuildContext context) {
@@ -69,47 +81,54 @@ class _TextMessageRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: ZendColors.bgSecondary,
-          child: Text(
-            avatarLabel,
-            style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: ZendColors.textPrimary,
+        // Avatar — shown only on first message in a run; replaced by spacer on continuations
+        if (isContinuation)
+          const SizedBox(width: 28) // 14*2 = avatar diameter
+        else
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: ZendColors.bgSecondary,
+            child: Text(
+              avatarLabel,
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: ZendColors.textPrimary,
+              ),
             ),
           ),
-        ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text(
-                    '@$sender',
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: ZendColors.textPrimary,
+              // Sender name + timestamp — only on first message in a run
+              if (!isContinuation) ...[
+                Row(
+                  children: [
+                    Text(
+                      '@$sender',
+                      style: const TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ZendColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: ZendSpacing.xs),
-                  Text(
-                    _formatTime(message.createdAt),
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 11,
-                      color: ZendColors.textSecondary,
+                    const SizedBox(width: ZendSpacing.xs),
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: const TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 11,
+                        color: ZendColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
+                  ],
+                ),
+                const SizedBox(height: 2),
+              ],
               Text(
                 message.content ?? '',
                 style: const TextStyle(
@@ -204,12 +223,14 @@ class _VoiceNoteRow extends StatelessWidget {
     required this.onLongPress,
     required this.onReactionTap,
     required this.currentUserId,
+    this.isContinuation = false,
   });
 
   final PoolMessage message;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReactionTap;
   final String? currentUserId;
+  final bool isContinuation;
 
   @override
   Widget build(BuildContext context) {
@@ -220,47 +241,52 @@ class _VoiceNoteRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: ZendColors.bgSecondary,
-          child: Text(
-            avatarLabel,
-            style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: ZendColors.textPrimary,
+        if (isContinuation)
+          const SizedBox(width: 28)
+        else
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: ZendColors.bgSecondary,
+            child: Text(
+              avatarLabel,
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: ZendColors.textPrimary,
+              ),
             ),
           ),
-        ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text(
-                    '@$sender',
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: ZendColors.textPrimary,
+              if (!isContinuation) ...[
+                Row(
+                  children: [
+                    Text(
+                      '@$sender',
+                      style: const TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: ZendColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: ZendSpacing.xs),
-                  Text(
-                    _formatTime(message.createdAt),
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 11,
-                      color: ZendColors.textSecondary,
+                    const SizedBox(width: ZendSpacing.xs),
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: const TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 11,
+                        color: ZendColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
+                  ],
+                ),
+                const SizedBox(height: 4),
+              ],
               // Voice note player row
               Container(
                 padding: const EdgeInsets.symmetric(

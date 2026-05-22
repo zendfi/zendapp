@@ -244,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             sliver: SliverList(
                               delegate: SliverChildListDelegate([
                                 Row(children: [
-                                  Expanded(child: OutlineActionButton(label: 'Fund', onPressed: widget.onOpenReceive)),
+                                  Expanded(child: OutlineActionButton(label: 'Receive', onPressed: widget.onOpenReceive)),
                                   const SizedBox(width: 12),
                                   Expanded(child: OutlineActionButton(label: 'Send', onPressed: widget.onOpenSend)),
                                 ]),
