@@ -258,16 +258,16 @@ class _MissionRoomState extends State<MissionRoom> {
           .postMessage(poolId: _pool.id, content: content);
       if (!mounted) return;
 
-      // Register the real ID so the SSE echo is ignored
+      // Register the real ID BEFORE setState so any concurrent SSE echo
+      // that arrives between now and the setState is suppressed.
       _pendingIds.add(msg.id);
 
-      // Replace the optimistic message with the real one
       setState(() {
-        final idx = _messages.indexWhere((m) => m.id == tempId);
-        if (idx >= 0) {
-          _messages[idx] = msg;
-        } else {
-          _upsertMessage(msg);
+        // Remove the optimistic temp regardless
+        _messages.removeWhere((m) => m.id == tempId);
+        // Add the real message only if SSE hasn't already added it
+        if (!_messages.any((m) => m.id == msg.id)) {
+          _messages.add(msg);
         }
         _sending = false;
       });
@@ -482,63 +482,8 @@ class _MissionRoomState extends State<MissionRoom> {
                             }),
 
                             // ── Scroll-to-bottom button ──
-                            AnimatedBuilder(
-                              animation: _scrollController,
-                              builder: (context, _) {
-                                if (!_scrollController.hasClients) {
-                                  return const SizedBox.shrink();
-                                }
-                                final maxExtent = _scrollController.position.maxScrollExtent;
-                                final showButton = maxExtent > 0 &&
-                                    maxExtent - _scrollController.offset > 120;
-                                return AnimatedOpacity(
-                                  opacity: showButton ? 1.0 : 0.0,
-                                  duration: const Duration(milliseconds: 200),
-                                  // IgnorePointer when invisible so it doesn't block taps
-                                  child: IgnorePointer(
-                                    ignoring: !showButton,
-                                    child: Align(
-                                      alignment: Alignment.bottomRight,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                            right: 12, bottom: 8),
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            _scrollController.animateTo(
-                                              _scrollController
-                                                  .position.maxScrollExtent,
-                                              duration: const Duration(
-                                                  milliseconds: 300),
-                                              curve: Curves.easeOut,
-                                            );
-                                          },
-                                          child: Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: ZendColors.accent,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.15),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Icon(
-                                              Icons.keyboard_arrow_down_rounded,
-                                              color: Colors.white,
-                                              size: 22,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                            _ScrollToBottomButton(
+                              scrollController: _scrollController,
                             ),
                           ],
                         ),
@@ -615,6 +560,84 @@ class _DateSeparator extends StatelessWidget {
           ),
           const Expanded(child: Divider(color: ZendColors.border)),
         ],
+      ),
+    );
+  }
+}
+
+// ── Scroll-to-bottom button ──────────────────────────────────────────────────
+
+/// Self-contained scroll-to-bottom button that attaches its own listener
+/// to the scroll controller. This avoids the AnimatedBuilder-on-unattached-
+/// controller issue that caused a transparent overlay on first open.
+class _ScrollToBottomButton extends StatefulWidget {
+  const _ScrollToBottomButton({required this.scrollController});
+  final ScrollController scrollController;
+
+  @override
+  State<_ScrollToBottomButton> createState() => _ScrollToBottomButtonState();
+}
+
+class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
+  bool _show = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final shouldShow = pos.maxScrollExtent > 0 &&
+        pos.maxScrollExtent - pos.pixels > 120;
+    if (shouldShow != _show) {
+      setState(() => _show = shouldShow);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_show) return const SizedBox.shrink();
+    return Positioned(
+      right: 12,
+      bottom: 8,
+      child: GestureDetector(
+        onTap: () {
+          if (!widget.scrollController.hasClients) return;
+          widget.scrollController.animateTo(
+            widget.scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        },
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: ZendColors.accent,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
       ),
     );
   }
