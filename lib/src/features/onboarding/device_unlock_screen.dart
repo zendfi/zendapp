@@ -7,9 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
-import '../../services/pending_deep_link_service.dart';
 import '../profile/profile_screen.dart';
-import '../send/qr_payment_sheet.dart';
 import '../shell/zend_shell.dart';
 import 'welcome_screen.dart';
 
@@ -96,18 +94,6 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
 
       if (!mounted) return;
       pushAndRemoveUntilZendSlide(context, const ZendShell());
-
-      // Consume any pending deep link that arrived before the user unlocked.
-      // We use a post-frame callback so the shell is fully mounted first.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final pendingIntent = PendingDeepLinkService.consume();
-        if (pendingIntent == null) return;
-        // Use a small additional delay so the shell's navigator is ready.
-        Future<void>.delayed(const Duration(milliseconds: 300), () {
-          if (!mounted) return;
-          showQrPaymentSheet(context, intent: pendingIntent);
-        });
-      });
     } on PinDecryptionException {
       if (!mounted) return;
       _attempts++;

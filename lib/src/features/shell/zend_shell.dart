@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_notification.dart';
+import '../../services/pending_deep_link_service.dart';
 import '../activity/activity_screen.dart';
 import '../receive/receive_screen.dart';
+import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
 import '../send/send_screen.dart';
 import '../money/home_screen.dart';
@@ -21,6 +23,20 @@ class ZendShell extends StatefulWidget {
 class _ZendShellState extends State<ZendShell> {
   int _tabIndex = 0;
   Timer? _bannerTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Consume any pending deep link that was stored before the user
+    // completed device unlock (PIN screen). The shell is the first
+    // authenticated screen, so this is the right place to pick it up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pendingIntent = PendingDeepLinkService.consume();
+      if (pendingIntent == null) return;
+      showQrPaymentSheet(context, intent: pendingIntent);
+    });
+  }
 
   @override
   void dispose() {
