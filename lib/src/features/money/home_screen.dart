@@ -227,6 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, scrollController) {
                 return RepaintBoundary(
                   child: Container(
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: Theme.of(context).scaffoldBackgroundColor,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
