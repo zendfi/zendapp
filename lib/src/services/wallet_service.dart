@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -469,6 +470,7 @@ class WalletService {
     final salt = base64Decode(saltB64);
     final nonce = base64Decode(nonceB64);
 
+    // Try current iteration count first (fast path).
     final derivedKey =
         await _deriveKeyFromPin(pin, Uint8List.fromList(salt));
 
@@ -479,15 +481,68 @@ class WalletService {
         derivedKey,
       );
     } catch (_) {
-      throw PinDecryptionException();
+      // Decryption failed — could be wrong PIN, or could be legacy 100k-iteration
+      // data from before the iteration count was lowered. Try the legacy count.
+      final legacyKey =
+          await _deriveKeyFromPinWithIterations(pin, Uint8List.fromList(salt), 100000);
+      final Uint8List plaintext;
+      try {
+        plaintext = await _decryptAesGcm(
+          Uint8List.fromList(ciphertext),
+          Uint8List.fromList(nonce),
+          legacyKey,
+        );
+      } catch (_) {
+        // Both iteration counts failed — PIN is genuinely wrong.
+        throw PinDecryptionException();
+      }
+
+      // Migration: re-encrypt with the current (fast) iteration count so
+      // subsequent unlocks don't need the slow fallback.
+      unawaited(_migrateToCurrentIterations(plaintext, pin));
+
+      return plaintext;
+    }
+  }
+
+  /// Re-encrypts the plaintext keypair with the current iteration count and
+  /// persists it. Errors are silently swallowed — the migration is best-effort
+  /// and will be retried on the next unlock if it fails.
+  Future<void> _migrateToCurrentIterations(
+      Uint8List privateKeyBytes, String pin) async {
+    try {
+      final newSalt = _generateRandomBytes(32);
+      final newKey = await _deriveKeyFromPin(pin, newSalt);
+      final (newCiphertext, newNonce) =
+          await _encryptAesGcm(privateKeyBytes, newKey);
+
+      await _secureStorage.write(
+        key: _encryptedPrivateKeyKey,
+        value: base64Encode(newCiphertext),
+      );
+      await _secureStorage.write(
+        key: _pinSaltKey,
+        value: base64Encode(newSalt),
+      );
+      await _secureStorage.write(
+        key: _encryptionNonceKey,
+        value: base64Encode(newNonce),
+      );
+    } catch (_) {
+      // Best-effort — ignore failures
     }
   }
 
   Future<SecretKey> _deriveKeyFromPin(String pin, Uint8List salt) async {
+    return _deriveKeyFromPinWithIterations(pin, salt, 10000);
+  }
+
+  Future<SecretKey> _deriveKeyFromPinWithIterations(
+      String pin, Uint8List salt, int iterations) async {
     final pbkdf2 = Pbkdf2(
       macAlgorithm: Hmac.sha256(),
-      iterations: 10000, // 4-digit PIN space (10k combos) is the real security
-      bits: 256,         // boundary — high iterations add latency without benefit
+      iterations: iterations,
+      bits: 256,
     );
     return pbkdf2.deriveKey(
       secretKey: SecretKey(utf8.encode(pin)),
