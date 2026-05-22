@@ -491,30 +491,49 @@ class WalletService {
     final salt = base64Decode(saltB64);
     final nonce = base64Decode(nonceB64);
 
-    // Use the stored iteration count. If not stored (legacy data), default to
-    // 100000 — that was the only value ever used before this key was introduced.
-    final iterations = int.tryParse(iterationsStr ?? '') ?? 100000;
+    // Use the stored iteration count. If not stored (legacy data or old build),
+    // try both 100000 (old default) and 10000 (new default) to handle the
+    // transition period where the device may be running a mixed build.
+    final storedIterations = int.tryParse(iterationsStr ?? '');
 
-    final derivedKey =
-        await _deriveKeyFromPinWithIterations(pin, Uint8List.fromList(salt), iterations);
-
-    try {
-      final plaintext = await _decryptAesGcm(
-        Uint8List.fromList(ciphertext),
-        Uint8List.fromList(nonce),
-        derivedKey,
-      );
-
-      // If the stored iteration count differs from the current target, migrate
-      // transparently so the next unlock uses the current count.
-      if (iterations != _currentIterations) {
-        unawaited(_migrateToCurrentIterations(plaintext, pin));
+    if (storedIterations != null) {
+      // Stored count is authoritative — use it directly.
+      final derivedKey = await _deriveKeyFromPinWithIterations(
+          pin, Uint8List.fromList(salt), storedIterations);
+      try {
+        final plaintext = await _decryptAesGcm(
+          Uint8List.fromList(ciphertext),
+          Uint8List.fromList(nonce),
+          derivedKey,
+        );
+        if (storedIterations != _currentIterations) {
+          unawaited(_migrateToCurrentIterations(plaintext, pin));
+        }
+        return plaintext;
+      } catch (_) {
+        throw PinDecryptionException();
       }
-
-      return plaintext;
-    } catch (_) {
-      throw PinDecryptionException();
     }
+
+    // No stored iteration count — try both known values to handle devices
+    // that registered on a build before the iterations key was introduced.
+    for (final iterations in [100000, 10000]) {
+      final derivedKey = await _deriveKeyFromPinWithIterations(
+          pin, Uint8List.fromList(salt), iterations);
+      try {
+        final plaintext = await _decryptAesGcm(
+          Uint8List.fromList(ciphertext),
+          Uint8List.fromList(nonce),
+          derivedKey,
+        );
+        // Found the right count — migrate to current and store the key.
+        unawaited(_migrateToCurrentIterations(plaintext, pin));
+        return plaintext;
+      } catch (_) {
+        continue;
+      }
+    }
+    throw PinDecryptionException();
   }
 
   /// Re-encrypts the plaintext keypair with the current iteration count and
