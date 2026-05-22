@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'request_confirmation_screen.dart';
+import '../../services/sound_service.dart';
 import 'payment_request.dart';
+import 'request_qr_sheet.dart';
 import 'request_utils.dart';
 
 Future<void> showRequestDrawer(
@@ -87,8 +88,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
 
-  bool _success = false;
-  bool _loading = false;
+  // ── Stage ──
+  // null = form, true = loading, false = success
+  bool? _stage; // null=form, true=loading, false=success
   PaymentRequest? _createdRequest;
 
   String get _titleText {
@@ -220,16 +222,13 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   }
 
   void _onCreateLink() {
-    if (!_canCreate || _loading) return;
+    if (!_canCreate || _stage == true) return;
 
     final model = ZendScope.of(context);
-    final ctx = context;
-
-    // Capture recipient state before async gap
     final resolvedZendtag = _resolvedZendtag;
     final recipientEmail = _recipientEmail;
 
-    setState(() => _loading = true);
+    setState(() => _stage = true); // loading
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       PaymentRequest request;
@@ -252,7 +251,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
           status: PaymentRequestStatus.pending,
-          // Use local state as fallback in case backend omits the field
           recipientZendtag: response['recipient_zendtag'] as String? ?? resolvedZendtag,
           recipientEmail: response['recipient_email'] as String? ?? recipientEmail,
         );
@@ -267,7 +265,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           createdAt: DateTime.now(),
           expiryDate: _expiryDate,
           status: PaymentRequestStatus.pending,
-          // Preserve recipient info even on API failure
           recipientZendtag: resolvedZendtag,
           recipientEmail: recipientEmail,
         );
@@ -275,11 +272,11 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
       model.addPaymentRequest(request);
 
-      // Morph the sheet into success state in-place
-      if (ctx.mounted) {
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        unawaited(SoundService.playZentSuccess());
         setState(() {
-          _loading = false;
-          _success = true;
+          _stage = false; // success
           _createdRequest = request;
         });
       }
@@ -293,19 +290,46 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
       _descriptionMaxLength,
     );
 
-    // Morph into success state in-place
-    if (_success && _createdRequest != null) {
+    // ── Loading stage ──────────────────────────────────────────────────────
+    if (_stage == true) {
       return Container(
         decoration: const BoxDecoration(
           color: ZendColors.bgPrimary,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(ZendRadii.xxl),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        ),
+        child: const SizedBox(
+          height: 280,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ZendLoader(size: 32),
+                SizedBox(height: 20),
+                Text(
+                  'Creating request…',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    color: ZendColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        child: RequestConfirmationContent(paymentRequest: _createdRequest!),
       );
     }
 
+    // ── Success stage ──────────────────────────────────────────────────────
+    if (_stage == false && _createdRequest != null) {
+      return _RequestSuccessStage(
+        request: _createdRequest!,
+        onDone: () => Navigator.of(context).pop(),
+        onShowQr: () => showRequestQrSheet(context, request: _createdRequest!),
+      );
+    }
+
+    // ── Form stage ─────────────────────────────────────────────────────────
     return Container(
       decoration: const BoxDecoration(
         color: ZendColors.bgPrimary,
@@ -434,7 +458,6 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               ),
               const SizedBox(height: ZendSpacing.md),
 
-              // ── Request from field ──
               TextField(
                 controller: _recipientController,
                 onChanged: _onRecipientChanged,
@@ -534,21 +557,18 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 ),
               ],
 
-              // ── Spacer to push button to bottom ──
               const SizedBox(height: ZendSpacing.xxl),
               const Spacer(),
 
-              // ── Create link button ──
               PrimaryButton(
                 label: _buttonLabel,
-                onPressed: _canCreate && !_loading ? _onCreateLink : () {},
-                backgroundColor: _canCreate && !_loading
+                onPressed: _canCreate ? _onCreateLink : () {},
+                backgroundColor: _canCreate
                     ? ZendColors.accent
                     : ZendColors.bgSecondary,
-                foregroundColor: _canCreate && !_loading
+                foregroundColor: _canCreate
                     ? ZendColors.textOnDeep
                     : ZendColors.textSecondary,
-                isLoading: _loading,
               ),
             ],
           ),
@@ -596,6 +616,165 @@ class _TappableRow extends StatelessWidget {
               ),
             ),
             trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Request success stage ─────────────────────────────────────────────────────
+
+class _RequestSuccessStage extends StatefulWidget {
+  const _RequestSuccessStage({
+    required this.request,
+    required this.onDone,
+    required this.onShowQr,
+  });
+
+  final PaymentRequest request;
+  final VoidCallback onDone;
+  final VoidCallback onShowQr;
+
+  @override
+  State<_RequestSuccessStage> createState() => _RequestSuccessStageState();
+}
+
+class _RequestSuccessStageState extends State<_RequestSuccessStage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _checkController;
+  late final Animation<double> _checkScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _checkScale = CurvedAnimation(
+      parent: _checkController,
+      curve: Curves.elasticOut,
+    );
+    _checkController.forward();
+  }
+
+  @override
+  void dispose() {
+    _checkController.dispose();
+    super.dispose();
+  }
+
+  String _headline() {
+    if (widget.request.recipientZendtag != null) {
+      return 'Zent It!';
+    }
+    if (widget.request.recipientEmail != null) {
+      return 'Request emailed!';
+    }
+    return 'Link created!';
+  }
+
+  String _subline() {
+    if (widget.request.recipientZendtag != null) {
+      return '@${widget.request.recipientZendtag} will get a notification.';
+    }
+    if (widget.request.recipientEmail != null) {
+      return 'Sent to ${widget.request.recipientEmail}';
+    }
+    return 'Share the link or show the QR.';
+  }
+
+  String _formatAmount(double amount) {
+    if (amount == amount.roundToDouble()) {
+      return '\$${amount.toStringAsFixed(0)}';
+    }
+    return '\$${amount.toStringAsFixed(2)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: ZendColors.bgPrimary,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ZendSheetHandle(),
+            const SizedBox(height: 32),
+
+            // ── Check icon ──────────────────────────────────────────────────
+            ScaleTransition(
+              scale: _checkScale,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: ZendColors.positive,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Headline ────────────────────────────────────────────────────
+            Text(
+              _headline(),
+              style: const TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontStyle: FontStyle.italic,
+                fontSize: 40,
+                color: ZendColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // ── Amount ──────────────────────────────────────────────────────
+            Text(
+              _formatAmount(widget.request.amount),
+              style: const TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 16,
+                color: ZendColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+
+            // ── Subline ─────────────────────────────────────────────────────
+            Text(
+              _subline(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 14,
+                color: ZendColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // ── Show QR (primary) ───────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Show QR',
+                onPressed: widget.onShowQr,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Done ────────────────────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: OutlineActionButton(
+                label: 'Done',
+                onPressed: widget.onDone,
+              ),
+            ),
           ],
         ),
       ),
