@@ -15,7 +15,7 @@ import 'send_shared_widgets.dart';
 
 enum QrPayStage { loading, confirm, pin, processing, success, error }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+// ── Entry points ──────────────────────────────────────────────────────────────
 
 Future<void> showQrPaymentSheet(
   BuildContext context, {
@@ -23,6 +23,24 @@ Future<void> showQrPaymentSheet(
 }) {
   return showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
+    useRootNavigator: true,
+    backgroundColor: Colors.transparent,
+    isDismissible: true,
+    enableDrag: true,
+    builder: (_) => QrPaymentSheet(intent: intent),
+  );
+}
+
+/// Variant that accepts a [NavigatorState] instead of a [BuildContext].
+/// Use this when calling from an async gap (e.g. after Future.delayed) to
+/// avoid the use_build_context_synchronously lint warning.
+Future<void> showQrPaymentSheetFromNavigator(
+  NavigatorState navigator, {
+  required QrPaymentIntent intent,
+}) {
+  return showModalBottomSheet(
+    context: navigator.context,
     isScrollControlled: true,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,

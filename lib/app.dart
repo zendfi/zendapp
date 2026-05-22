@@ -39,6 +39,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     super.initState();
     _themeMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
     widget.model.addListener(_onModelChanged);
+    // Listen for app-lock state changes so we can consume a pending deep link
+    // the moment the user unlocks the app.
+    widget.model.appLockService.addListener(_onLockStateChanged);
     WidgetsBinding.instance.addObserver(this);
 
     _deepLinkSub = DeepLinkHandler.stream.listen(_handleDeepLink);
@@ -66,8 +69,29 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   void dispose() {
     _deepLinkSub?.cancel();
     widget.model.removeListener(_onModelChanged);
+    widget.model.appLockService.removeListener(_onLockStateChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Fires whenever the app-lock state changes (locked ↔ unlocked).
+  /// Consumes any pending deep link intent the moment the app is unlocked.
+  void _onLockStateChanged() {
+    if (widget.model.appLockService.isLocked) return; // just locked — nothing to do
+    if (!widget.model.isAuthenticated) return;
+
+    final pendingIntent = PendingDeepLinkService.consume();
+    if (pendingIntent == null) return;
+
+    // Small delay to let the lock overlay finish its fade-out animation
+    // before presenting the payment sheet on top.
+    // Use NavigatorState (not BuildContext) to avoid use_build_context_synchronously.
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final navigator = _navigatorKey.currentState;
+      if (navigator == null) return;
+      showQrPaymentSheetFromNavigator(navigator, intent: pendingIntent);
+    });
   }
 
   void _handlePaymentRequestNotification(dynamic notification) {
