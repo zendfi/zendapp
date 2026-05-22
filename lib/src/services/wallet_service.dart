@@ -16,6 +16,7 @@ class WalletService {
   final FlutterSecureStorage _secureStorage;
 
   static const _encryptedPrivateKeyKey = 'zend_wallet_encrypted_private_key';
+  static const _rawPrivateKeyKey = 'zend_wallet_raw_private_key'; // cleared after PIN setup
   static const _publicKeyKey = 'zend_wallet_public_key';
   static const _pinSaltKey = 'zend_pin_salt';
   static const _encryptionNonceKey = 'zend_encryption_nonce';
@@ -43,8 +44,11 @@ class WalletService {
     final extractedKey = await keypair.extract();
     final keypairBytes = extractedKey.bytes;
 
+    // Store raw bytes in a dedicated slot. setupPinAndBackup reads from here
+    // and moves the encrypted result to _encryptedPrivateKeyKey. Using separate
+    // slots prevents double-encryption if setupPinAndBackup is retried.
     await _secureStorage.write(
-      key: _encryptedPrivateKeyKey,
+      key: _rawPrivateKeyKey,
       value: base64Encode(Uint8List.fromList(keypairBytes)),
     );
 
@@ -76,7 +80,10 @@ class WalletService {
   }
 
   Future<void> setupPinAndBackup(String pin) async {
-    final rawKeyB64 = await _secureStorage.read(key: _encryptedPrivateKeyKey);
+    // Read from the raw key slot. If not present, fall back to the encrypted
+    // slot for devices that registered on an older build.
+    final rawKeyB64 = await _secureStorage.read(key: _rawPrivateKeyKey)
+        ?? await _secureStorage.read(key: _encryptedPrivateKeyKey);
     if (rawKeyB64 == null) {
       throw StateError('No keypair found. Call generateKeypair first.');
     }
@@ -104,6 +111,9 @@ class WalletService {
       key: _pbkdf2IterationsKey,
       value: _currentIterations.toString(),
     );
+
+    // Clear the raw key slot now that the encrypted version is stored.
+    await _secureStorage.delete(key: _rawPrivateKeyKey);
 
     final walletAddress = await _secureStorage.read(key: _publicKeyKey);
     if (walletAddress == null) {
@@ -470,6 +480,7 @@ class WalletService {
 
   Future<void> clearLocalData() async {
     await _secureStorage.delete(key: _encryptedPrivateKeyKey);
+    await _secureStorage.delete(key: _rawPrivateKeyKey);
     await _secureStorage.delete(key: _publicKeyKey);
     await _secureStorage.delete(key: _pinSaltKey);
     await _secureStorage.delete(key: _encryptionNonceKey);
