@@ -19,6 +19,11 @@ class WalletService {
   static const _publicKeyKey = 'zend_wallet_public_key';
   static const _pinSaltKey = 'zend_pin_salt';
   static const _encryptionNonceKey = 'zend_encryption_nonce';
+  static const _pbkdf2IterationsKey = 'zend_pbkdf2_iterations';
+
+  // Current target iteration count. Stored alongside the encrypted key so
+  // future changes don't break existing users.
+  static const _currentIterations = 100000;
 
   static const _usdcMintAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
@@ -95,6 +100,10 @@ class WalletService {
       key: _encryptionNonceKey,
       value: base64Encode(nonce),
     );
+    await _secureStorage.write(
+      key: _pbkdf2IterationsKey,
+      value: _currentIterations.toString(),
+    );
 
     final walletAddress = await _secureStorage.read(key: _publicKeyKey);
     if (walletAddress == null) {
@@ -156,6 +165,12 @@ class WalletService {
       key: _encryptionNonceKey,
       value: base64Encode(nonceBytes),
     );
+    // Backup was always created with _currentIterations — record it so
+    // _decryptLocalKeypair knows which count to use.
+    await _secureStorage.write(
+      key: _pbkdf2IterationsKey,
+      value: _currentIterations.toString(),
+    );
 
     for (var i = 0; i < privateKeyBytes.length; i++) {
       privateKeyBytes[i] = 0;
@@ -181,6 +196,10 @@ class WalletService {
     await _secureStorage.write(
       key: _encryptionNonceKey,
       value: base64Encode(newNonce),
+    );
+    await _secureStorage.write(
+      key: _pbkdf2IterationsKey,
+      value: _currentIterations.toString(),
     );
 
     final walletAddress = await _secureStorage.read(key: _publicKeyKey);
@@ -454,6 +473,7 @@ class WalletService {
     await _secureStorage.delete(key: _publicKeyKey);
     await _secureStorage.delete(key: _pinSaltKey);
     await _secureStorage.delete(key: _encryptionNonceKey);
+    await _secureStorage.delete(key: _pbkdf2IterationsKey);
   }
 
   Future<Uint8List> _decryptLocalKeypair(String pin) async {
@@ -461,6 +481,7 @@ class WalletService {
         await _secureStorage.read(key: _encryptedPrivateKeyKey);
     final saltB64 = await _secureStorage.read(key: _pinSaltKey);
     final nonceB64 = await _secureStorage.read(key: _encryptionNonceKey);
+    final iterationsStr = await _secureStorage.read(key: _pbkdf2IterationsKey);
 
     if (encryptedB64 == null || saltB64 == null || nonceB64 == null) {
       throw StateError('No encrypted keypair found in secure storage.');
@@ -470,38 +491,29 @@ class WalletService {
     final salt = base64Decode(saltB64);
     final nonce = base64Decode(nonceB64);
 
-    // Try current iteration count first (fast path).
+    // Use the stored iteration count. If not stored (legacy data), default to
+    // 100000 — that was the only value ever used before this key was introduced.
+    final iterations = int.tryParse(iterationsStr ?? '') ?? 100000;
+
     final derivedKey =
-        await _deriveKeyFromPin(pin, Uint8List.fromList(salt));
+        await _deriveKeyFromPinWithIterations(pin, Uint8List.fromList(salt), iterations);
 
     try {
-      return await _decryptAesGcm(
+      final plaintext = await _decryptAesGcm(
         Uint8List.fromList(ciphertext),
         Uint8List.fromList(nonce),
         derivedKey,
       );
-    } catch (_) {
-      // Decryption failed — could be wrong PIN, or could be legacy 100k-iteration
-      // data from before the iteration count was lowered. Try the legacy count.
-      final legacyKey =
-          await _deriveKeyFromPinWithIterations(pin, Uint8List.fromList(salt), 100000);
-      final Uint8List plaintext;
-      try {
-        plaintext = await _decryptAesGcm(
-          Uint8List.fromList(ciphertext),
-          Uint8List.fromList(nonce),
-          legacyKey,
-        );
-      } catch (_) {
-        // Both iteration counts failed — PIN is genuinely wrong.
-        throw PinDecryptionException();
+
+      // If the stored iteration count differs from the current target, migrate
+      // transparently so the next unlock uses the current count.
+      if (iterations != _currentIterations) {
+        unawaited(_migrateToCurrentIterations(plaintext, pin));
       }
 
-      // Migration: re-encrypt with the current (fast) iteration count so
-      // subsequent unlocks don't need the slow fallback.
-      unawaited(_migrateToCurrentIterations(plaintext, pin));
-
       return plaintext;
+    } catch (_) {
+      throw PinDecryptionException();
     }
   }
 
@@ -512,7 +524,7 @@ class WalletService {
       Uint8List privateKeyBytes, String pin) async {
     try {
       final newSalt = _generateRandomBytes(32);
-      final newKey = await _deriveKeyFromPin(pin, newSalt);
+      final newKey = await _deriveKeyFromPinWithIterations(pin, newSalt, _currentIterations);
       final (newCiphertext, newNonce) =
           await _encryptAesGcm(privateKeyBytes, newKey);
 
@@ -528,13 +540,17 @@ class WalletService {
         key: _encryptionNonceKey,
         value: base64Encode(newNonce),
       );
+      await _secureStorage.write(
+        key: _pbkdf2IterationsKey,
+        value: _currentIterations.toString(),
+      );
     } catch (_) {
       // Best-effort — ignore failures
     }
   }
 
   Future<SecretKey> _deriveKeyFromPin(String pin, Uint8List salt) async {
-    return _deriveKeyFromPinWithIterations(pin, salt, 10000);
+    return _deriveKeyFromPinWithIterations(pin, salt, 100000);
   }
 
   Future<SecretKey> _deriveKeyFromPinWithIterations(
