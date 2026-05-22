@@ -126,21 +126,17 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
   double get _sheetHeightFraction {
     switch (_stage) {
       case QrPayStage.loading:
-        return 0.45;
+        return 0.92;
       case QrPayStage.confirm:
-        // Open intent needs full height for the on-screen keypad
-        if (intent.amountUsdc == null && intent.requestLinkId == null) {
-          return 0.92;
-        }
-        return 0.60;
+        return 0.92;
       case QrPayStage.pin:
-        return 0.70;
+        return 0.92;
       case QrPayStage.processing:
-        return 0.45;
+        return 0.92;
       case QrPayStage.success:
-        return 0.50;
+        return 0.92;
       case QrPayStage.error:
-        return 0.55;
+        return 0.92;
     }
   }
 

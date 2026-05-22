@@ -449,8 +449,11 @@ class RequestLinkDetails {
   });
 
   factory RequestLinkDetails.fromJson(Map<String, dynamic> json) {
-    // The public endpoint may return amount_usdc as a string or number.
-    final rawAmount = json['amount_usdc'];
+    // The backend wraps request data under a 'request' key.
+    // Fall back to top-level for any legacy callers.
+    final requestData = json['request'] as Map<String, dynamic>? ?? json;
+
+    final rawAmount = requestData['amount_usdc'];
     final double amount;
     if (rawAmount is num) {
       amount = rawAmount.toDouble();
@@ -460,11 +463,11 @@ class RequestLinkDetails {
       amount = 0.0;
     }
 
-    final expiresAtStr = json['expires_at'] as String?;
+    final expiresAtStr = requestData['expires_at'] as String?;
 
     return RequestLinkDetails(
       amountUsdc: amount,
-      description: json['description'] as String?,
+      description: requestData['description'] as String?,
       expiresAt: expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null,
     );
   }
