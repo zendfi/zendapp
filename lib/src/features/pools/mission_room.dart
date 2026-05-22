@@ -97,16 +97,18 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   /// Adds [msg] to [_messages] only if no message with the same ID exists.
-  /// Replaces a temp message (id starts with 'temp_') with the real one if present.
+  /// Replaces a temp message by matching on both sender and content.
   void _upsertMessage(PoolMessage msg) {
-    final tempIdx = _messages.indexWhere(
-        (m) => m.id.startsWith('temp_') && m.senderUserId == msg.senderUserId);
     final realIdx = _messages.indexWhere((m) => m.id == msg.id);
-
     if (realIdx >= 0) return; // already present — skip
 
+    // Find a temp placeholder from the same sender with the same content
+    final tempIdx = _messages.indexWhere((m) =>
+        m.id.startsWith('temp_') &&
+        m.senderUserId == msg.senderUserId &&
+        m.content == msg.content);
+
     if (tempIdx >= 0) {
-      // Replace the optimistic placeholder with the confirmed message
       _messages[tempIdx] = msg;
     } else {
       _messages.add(msg);
@@ -483,50 +485,53 @@ class _MissionRoomState extends State<MissionRoom> {
                             AnimatedBuilder(
                               animation: _scrollController,
                               builder: (context, _) {
-                                final showButton = _scrollController.hasClients &&
-                                    _scrollController.position.maxScrollExtent > 0 &&
-                                    _scrollController.position.maxScrollExtent -
-                                            _scrollController.offset >
-                                        120;
+                                if (!_scrollController.hasClients) {
+                                  return const SizedBox.shrink();
+                                }
+                                final maxExtent = _scrollController.position.maxScrollExtent;
+                                final showButton = maxExtent > 0 &&
+                                    maxExtent - _scrollController.offset > 120;
                                 return AnimatedOpacity(
                                   opacity: showButton ? 1.0 : 0.0,
                                   duration: const Duration(milliseconds: 200),
-                                  child: Align(
-                                    alignment: Alignment.bottomRight,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                          right: 12, bottom: 8),
-                                      child: GestureDetector(
-                                        onTap: showButton
-                                            ? () {
-                                                _scrollController.animateTo(
-                                                  _scrollController
-                                                      .position.maxScrollExtent,
-                                                  duration: const Duration(
-                                                      milliseconds: 300),
-                                                  curve: Curves.easeOut,
-                                                );
-                                              }
-                                            : null,
-                                        child: Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: ZendColors.accent,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.15),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: const Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            color: Colors.white,
-                                            size: 22,
+                                  // IgnorePointer when invisible so it doesn't block taps
+                                  child: IgnorePointer(
+                                    ignoring: !showButton,
+                                    child: Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            right: 12, bottom: 8),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            _scrollController.animateTo(
+                                              _scrollController
+                                                  .position.maxScrollExtent,
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              curve: Curves.easeOut,
+                                            );
+                                          },
+                                          child: Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: ZendColors.accent,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.15),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.keyboard_arrow_down_rounded,
+                                              color: Colors.white,
+                                              size: 22,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -835,32 +840,35 @@ class _EmojiPickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ZendSpacing.md),
-          // Full-width row of emojis — each takes equal space
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _curatedEmojis.map((emoji) {
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => onEmojiTap(emoji),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Container(
-                        margin: const EdgeInsets.all(3),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: ZendColors.bgSecondary,
-                          borderRadius: BorderRadius.circular(ZendRadii.md),
+          // Two rows of 6 emojis — each cell square, full width
+          for (var row = 0; row < 2; row++) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: List.generate(6, (col) {
+                  final emoji = _curatedEmojis[row * 6 + col];
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => onEmojiTap(emoji),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          margin: const EdgeInsets.all(4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: ZendColors.bgSecondary,
+                            borderRadius: BorderRadius.circular(ZendRadii.md),
+                          ),
+                          child: Text(emoji, style: const TextStyle(fontSize: 22)),
                         ),
-                        child: Text(emoji, style: const TextStyle(fontSize: 22)),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }),
+              ),
             ),
-          ),
+            if (row == 0) const SizedBox(height: 4),
+          ],
         ],
       ),
     );
