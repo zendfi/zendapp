@@ -486,8 +486,8 @@ class WalletService {
   Future<SecretKey> _deriveKeyFromPin(String pin, Uint8List salt) async {
     final pbkdf2 = Pbkdf2(
       macAlgorithm: Hmac.sha256(),
-      iterations: 100000,
-      bits: 256,
+      iterations: 10000, // 4-digit PIN space (10k combos) is the real security
+      bits: 256,         // boundary — high iterations add latency without benefit
     );
     return pbkdf2.deriveKey(
       secretKey: SecretKey(utf8.encode(pin)),
