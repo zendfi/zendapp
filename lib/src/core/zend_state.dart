@@ -289,6 +289,16 @@ class ZendAppModel extends ChangeNotifier {
   bool isDarkMode = false;
   String selectedCurrency = 'USD';
 
+  // Waitlist hold-over fields — set by the OTP verify response when
+  // the visitor's email matches a Zend! consumer-waitlist row, then
+  // consumed by the NameScreen and UsernameScreen so the onboarding
+  // flow can greet returning visitors and prefill what they already
+  // told us. Cleared on `setAuthenticated` and `signOut` so they
+  // don't leak across sessions.
+  bool pendingWaitlistMatch = false;
+  String? pendingReservedZendtag;
+  String? pendingWaitlistFullName;
+
   bool isLoading = false;
   String loadingMessage = 'Loading';
 
@@ -362,6 +372,30 @@ class ZendAppModel extends ChangeNotifier {
 
   void setUsername(String value) {
     username = value.trim().isEmpty ? 'blessed' : value.trim().toLowerCase();
+    notifyListeners();
+  }
+
+  /// Capture waitlist hold-over fields from the OTP verify response.
+  /// Called by the OTP screen on the new-user path. The values are
+  /// then read by NameScreen (full name prefill + welcome line) and
+  /// UsernameScreen (zendtag prefill + "RESERVED FOR YOU" eyebrow).
+  void setPendingWaitlistInfo({
+    required bool matched,
+    String? reservedZendtag,
+    String? fullName,
+  }) {
+    pendingWaitlistMatch = matched;
+    pendingReservedZendtag = reservedZendtag;
+    pendingWaitlistFullName = fullName;
+    notifyListeners();
+  }
+
+  /// Drop the waitlist hold-over so the next visitor on a shared device
+  /// (or a re-used logout/login session) doesn't see stale prefill.
+  void clearPendingWaitlistInfo() {
+    pendingWaitlistMatch = false;
+    pendingReservedZendtag = null;
+    pendingWaitlistFullName = null;
     notifyListeners();
   }
 
@@ -623,6 +657,12 @@ class ZendAppModel extends ChangeNotifier {
     currentDisplayName = displayName;
     if (walletAddr != null) walletAddress = walletAddr;
     username = zendtag;
+    // Onboarding done — drop any waitlist hold-over so it can't leak
+    // into a future session if this device is later signed out and
+    // signed back in by a different visitor.
+    pendingWaitlistMatch = false;
+    pendingReservedZendtag = null;
+    pendingWaitlistFullName = null;
     notifyListeners();
     startPolling();
     // Start the inactivity lock timer now that the user is authenticated
@@ -698,6 +738,9 @@ class ZendAppModel extends ChangeNotifier {
     historyLoading = false;
     lastHistoryError = null;
     username = 'blessed';
+    pendingWaitlistMatch = false;
+    pendingReservedZendtag = null;
+    pendingWaitlistFullName = null;
     balanceHidden = false;
     isDarkMode = false;
     selectedCurrency = 'USD';

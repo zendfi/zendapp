@@ -24,10 +24,21 @@ class OtpVerifyResponse {
   final String phoneNumber;
   final bool userExists;
 
+  /// When the verified email matches a Zend! consumer waitlist entry,
+  /// the backend echoes the reserved zendtag (if any) and full name
+  /// (if any) so the onboarding flow can greet the visitor and
+  /// prefill the username/name screens.
+  final bool waitlistMatch;
+  final String? reservedZendtag;
+  final String? waitlistFullName;
+
   OtpVerifyResponse({
     required this.verificationToken,
     required this.phoneNumber,
     required this.userExists,
+    this.waitlistMatch = false,
+    this.reservedZendtag,
+    this.waitlistFullName,
   });
 
   factory OtpVerifyResponse.fromJson(Map<String, dynamic> json) {
@@ -35,6 +46,9 @@ class OtpVerifyResponse {
       verificationToken: json['verification_token'] as String,
       phoneNumber: json['phone_number'] as String,
       userExists: json['user_exists'] as bool,
+      waitlistMatch: (json['waitlist_match'] as bool?) ?? false,
+      reservedZendtag: json['reserved_zendtag'] as String?,
+      waitlistFullName: json['waitlist_full_name'] as String?,
     );
   }
 
@@ -43,6 +57,9 @@ class OtpVerifyResponse {
       'verification_token': verificationToken,
       'phone_number': phoneNumber,
       'user_exists': userExists,
+      'waitlist_match': waitlistMatch,
+      if (reservedZendtag != null) 'reserved_zendtag': reservedZendtag,
+      if (waitlistFullName != null) 'waitlist_full_name': waitlistFullName,
     };
   }
 }

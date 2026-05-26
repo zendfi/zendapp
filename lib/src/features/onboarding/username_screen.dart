@@ -19,6 +19,34 @@ class _UsernameScreenState extends State<UsernameScreen> {
   Timer? _debounce;
   bool? _available;
 
+  /// True when the input currently holds the reserved zendtag from
+  /// the waitlist (i.e. nothing's been typed over it). Drives the
+  /// "RESERVED FOR YOU" eyebrow above the input — we hide it the
+  /// moment the user starts editing so the chrome doesn't lie.
+  bool _showingReservedBadge = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Prefill the input with the waitlist-reserved zendtag, if any.
+    // The tag is already lowercased and validated server-side; we
+    // also treat a still-available reservation as "available" so
+    // Continue is unblocked immediately on first paint without
+    // waiting for the debounced check to round-trip.
+    final model = ZendScope.of(context);
+    final reserved = model.pendingReservedZendtag;
+    if (reserved != null && reserved.isNotEmpty) {
+      _controller.text = reserved;
+      _showingReservedBadge = true;
+      _available = true;
+      // Mirror into the model so the username preview card and any
+      // downstream code that reads `model.username` reflect the
+      // prefilled value before the user types.
+      model.setUsername(reserved);
+    }
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -30,6 +58,10 @@ class _UsernameScreenState extends State<UsernameScreen> {
     _debounce?.cancel();
     setState(() {
       _available = null; // Clear indicator while in flight
+      // Once the user has touched the field, the "RESERVED FOR YOU"
+      // eyebrow is no longer accurate — the new input might be a
+      // different tag entirely. Hide it.
+      _showingReservedBadge = false;
     });
 
     final tag = value.trim().toLowerCase();
@@ -71,14 +103,40 @@ class _UsernameScreenState extends State<UsernameScreen> {
                   children: [
                     const SizedBox(height: 40),
                     Text(
-                      'Choose your @',
+                      _showingReservedBadge
+                          ? 'Your @, as you reserved it.'
+                          : 'Choose your @',
                       style: const TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+                    if (_showingReservedBadge) ...[
+                      const SizedBox(height: 6),
+                      const Text(
+                        "We held it for you. Keep it, or pick a different one.",
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 14,
+                          color: ZendColors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
+                    if (_showingReservedBadge) ...[
+                      const Text(
+                        'RESERVED FOR YOU',
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 11,
+                          letterSpacing: 1.8,
+                          color: ZendColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [

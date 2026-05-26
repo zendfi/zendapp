@@ -162,6 +162,14 @@ class _OtpScreenState extends State<OtpScreen> {
       if (!mounted) return;
 
       if (!response.userExists) {
+        // Capture waitlist hold-over so the NameScreen can greet the
+        // visitor and the UsernameScreen can prefill the reserved @.
+        // No-op when the response carries no waitlist match.
+        model.setPendingWaitlistInfo(
+          matched: response.waitlistMatch,
+          reservedZendtag: response.reservedZendtag,
+          fullName: response.waitlistFullName,
+        );
         navigator.push(zendRoute(page: const NameScreen()));
       } else {
         model.startLoading('Signing in...');
