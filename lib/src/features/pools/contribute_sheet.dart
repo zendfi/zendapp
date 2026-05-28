@@ -271,6 +271,7 @@ class _AmountStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final parsedAmount = double.tryParse(amountInput) ?? 0.0;
     final isValid = parsedAmount >= 0.01 && hasSufficientBalance;
 
@@ -281,11 +282,11 @@ class _AmountStage extends StatelessWidget {
         children: [
           Text(
             pool.name,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.xs),
@@ -293,10 +294,10 @@ class _AmountStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.xxs),
           Text(
             '${pool.formattedGathered} of ${pool.formattedTarget}',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMMono',
               fontSize: 12,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
@@ -304,11 +305,11 @@ class _AmountStage extends StatelessWidget {
           Center(
             child: Text(
               _displayAmount,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
           ),
@@ -322,7 +323,7 @@ class _AmountStage extends StatelessWidget {
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
-                    : ZendColors.textSecondary,
+                    : zt.textSecondary,
               ),
             ),
           ),
@@ -360,6 +361,7 @@ class _PinStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Column(
@@ -368,19 +370,18 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: const Icon(Icons.arrow_back,
-                  color: ZendColors.textPrimary, size: 22),
+              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'Contribute \$${amount.toStringAsFixed(2)} to ${pool.name}',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: 28),
@@ -394,10 +395,8 @@ class _PinStage extends StatelessWidget {
                 height: 14,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: filled
-                      ? ZendColors.textPrimary
-                      : ZendColors.bgSecondary,
-                  border: Border.all(color: ZendColors.border),
+                  color: filled ? zt.accent : Colors.transparent,
+                  border: Border.all(color: filled ? zt.accent : zt.border),
                 ),
               );
             }),
@@ -408,9 +407,7 @@ class _PinStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
-              color: pinError != null
-                  ? ZendColors.destructive
-                  : ZendColors.textSecondary,
+              color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -429,22 +426,22 @@ class _ProcessingStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(
-            valueColor:
-                AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
           ),
           const SizedBox(height: 20),
           Text(
             'Contributing \$${amount.toStringAsFixed(2)} to ${pool.name}...',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
         ],
@@ -465,6 +462,7 @@ class _SuccessStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -481,23 +479,23 @@ class _SuccessStage extends StatelessWidget {
               child: const Icon(Icons.check, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Contributed! 🔥',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 32,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '\$${amount.toStringAsFixed(2)} added to ${pool.name}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
@@ -524,6 +522,7 @@ class _ErrorStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -543,10 +542,10 @@ class _ErrorStage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 24),
@@ -556,8 +555,8 @@ class _ErrorStage extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onCancel,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: ZendColors.textSecondary,
-                      side: const BorderSide(color: ZendColors.border),
+                      foregroundColor: zt.textSecondary,
+                      side: BorderSide(color: zt.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZendRadii.lg),
                       ),
@@ -593,6 +592,7 @@ class _NumericKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Column(
       children: _keys.map((row) {
         return Row(
@@ -605,14 +605,14 @@ class _NumericKeypad extends StatelessWidget {
                   height: 56,
                   alignment: Alignment.center,
                   child: key == 'del'
-                      ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 20)
+                      ? ZendBackspaceIcon(color: zt.textPrimary, size: 20)
                       : Text(
                           key,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'DMSans',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
-                            color: ZendColors.textPrimary,
+                            color: zt.textPrimary,
                           ),
                         ),
                 ),

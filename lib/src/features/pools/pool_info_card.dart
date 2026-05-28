@@ -17,12 +17,13 @@ class PoolInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: ZendColors.bgSecondary,
+          color: zt.bgCard,
           borderRadius: BorderRadius.circular(ZendRadii.md),
         ),
         child: Column(
@@ -34,11 +35,11 @@ class PoolInfoCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     pool.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                     ),
                   ),
                 ),
@@ -53,11 +54,11 @@ class PoolInfoCard extends StatelessWidget {
 
             Text(
               pool.formattedGathered,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 22,
                 fontStyle: FontStyle.italic,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: ZendSpacing.xs),
@@ -69,10 +70,10 @@ class PoolInfoCard extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: Text(
                 pool.formattedTarget,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMMono',
                   fontSize: 11,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               ),
             ),
@@ -93,6 +94,7 @@ class _AvatarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final visible = participants.take(3).toList();
     final overflow = participants.length - 3;
 
@@ -110,10 +112,10 @@ class _AvatarRow extends StatelessWidget {
               left: i * (_size - _overlap),
               child: CircleAvatar(
                 radius: _size / 2,
-                backgroundColor: ZendColors.accent,
+                backgroundColor: zt.accent,
                 child: Text(
                   visible[i].avatarLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -127,14 +129,14 @@ class _AvatarRow extends StatelessWidget {
               left: visible.length * (_size - _overlap),
               child: CircleAvatar(
                 radius: _size / 2,
-                backgroundColor: ZendColors.bgDeep,
+                backgroundColor: zt.bgSecondary,
                 child: Text(
                   '+$overflow',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
-                    color: ZendColors.textOnDeep,
+                    color: zt.textSecondary,
                   ),
                 ),
               ),

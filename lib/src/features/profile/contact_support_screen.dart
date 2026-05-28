@@ -8,8 +8,9 @@ class ContactSupportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -21,21 +22,21 @@ class ContactSupportScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: ZendColors.bgSecondary,
+                  color: zt.bgCard,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'We respond in under 2 hours.',
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendColors.textSecondary),
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
                     ),
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14),
                     _SupportRow(icon: Icons.email_outlined, label: 'support@zendfi.com'),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _SupportRow(icon: Icons.chat_bubble_outline, label: 'Live chat'),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     _SupportRow(icon: Icons.article_outlined, label: 'Help center'),
                   ],
                 ),
@@ -58,13 +59,14 @@ class _SupportRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 18, color: ZendColors.textSecondary),
+        Icon(icon, size: 18, color: zt.textSecondary),
         const SizedBox(width: 10),
         Text(
           label,
-          style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendColors.textPrimary),
+          style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
         ),
       ],
     );
@@ -78,22 +80,23 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
         ),

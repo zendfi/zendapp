@@ -242,9 +242,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     return PopScope(
       canPop: _stage != SendStage.processing,
-      child: MediaQuery(
-        data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
-        child: AnimatedContainer(
+      child: AnimatedContainer(
           duration: _sheetResize,
           curve: Curves.easeOutCubic,
           height: screenHeight * _sheetHeightFraction,
@@ -281,7 +279,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -377,9 +374,6 @@ class _RecipientStageState extends State<_RecipientStage> {
   String? _resolveError;
   String? _resolvedDisplayName;
 
-  // Whether the keyboard is up (for floating Pay button)
-  bool _keyboardVisible = false;
-
   @override
   void initState() {
     super.initState();
@@ -389,7 +383,7 @@ class _RecipientStageState extends State<_RecipientStage> {
     _toValue = widget.prefilledRecipient ?? '';
 
     _forFocus.addListener(() {
-      setState(() => _keyboardVisible = _forFocus.hasFocus);
+      // No-op — keyboard visibility tracked via MediaQuery.viewInsets
     });
     _toFocus.addListener(() {
       if (!_toFocus.hasFocus && _toValue.isNotEmpty) {
@@ -472,16 +466,20 @@ class _RecipientStageState extends State<_RecipientStage> {
     final model = ZendScope.of(context);
     final zt = ZendTheme.of(context);
     final recentContacts = model.recentContacts.take(15).toList();
+    // Track keyboard visibility via MediaQuery — more reliable than focus listeners
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardOpen = keyboardHeight > 50;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      // Let the sheet resize when keyboard appears
-      resizeToAvoidBottomInset: true,
-      body: Column(
+      resizeToAvoidBottomInset: false, // We handle keyboard offset manually
+      body: Stack(
         children: [
-          Expanded(
+          // ── Scrollable content ──────────────────────────────────────
+          Positioned.fill(
+            bottom: 72 + (keyboardOpen ? keyboardHeight : 0),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -515,23 +513,32 @@ class _RecipientStageState extends State<_RecipientStage> {
                       decoration: InputDecoration(
                         hintText: '@username',
                         hintStyle: TextStyle(color: zt.textSecondary),
+                        // No border at all — we draw our own divider below
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                         filled: false,
+                        // Constrained suffix so it doesn't blow out the row width
+                        suffixIconConstraints: const BoxConstraints(
+                          maxWidth: 24,
+                          maxHeight: 24,
+                        ),
                         suffixIcon: _resolving
-                            ? const Padding(
-                                padding: EdgeInsets.only(right: 4),
-                                child: ZendLoader(size: 16, strokeWidth: 1.5),
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: zt.textSecondary,
+                                ),
                               )
                             : _resolvedDisplayName != null
-                                ? Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Icon(
-                                      Icons.check_circle_outline,
-                                      size: 16,
-                                      color: ZendColors.accentBright,
-                                    ),
+                                ? Icon(
+                                    Icons.check_circle_outline,
+                                    size: 16,
+                                    color: zt.accentBright,
                                   )
                                 : null,
                       ),
@@ -552,7 +559,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                         style: TextStyle(
                           fontFamily: 'DMMono',
                           fontSize: 12,
-                          color: ZendColors.accentBright,
+                          color: zt.accentBright,
                         ),
                       ),
                     )
@@ -585,6 +592,8 @@ class _RecipientStageState extends State<_RecipientStage> {
                         hintText: 'optional',
                         hintStyle: TextStyle(color: zt.textSecondary),
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                         filled: false,
@@ -616,7 +625,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                     ),
 
                   // ── Previous contacts ─────────────────────────────────
-                  if (recentContacts.isNotEmpty) ...[
+                  if (recentContacts.isNotEmpty && !keyboardOpen) ...[
                     Text(
                       'PREVIOUS',
                       style: TextStyle(
@@ -633,28 +642,19 @@ class _RecipientStageState extends State<_RecipientStage> {
                           onTap: () => _selectContact(contact),
                         )),
                   ],
-
-                  // Bottom padding so content isn't hidden behind Pay button
-                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
 
-          // ── Pay button — floats above keyboard when "For" is focused ──
-          AnimatedPadding(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            padding: EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              _keyboardVisible
-                  ? MediaQuery.of(context).viewInsets.bottom + 8
-                  : 24,
-            ),
-            child: SizedBox(
-              width: double.infinity,
+          // ── Pay button — always visible, floats above keyboard ──────
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: (keyboardOpen ? keyboardHeight : 0) + 16,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
               child: PrimaryButton(
                 label: 'Pay ${widget.amountFormatted}',
                 onPressed: _canPay ? _onPay : null,

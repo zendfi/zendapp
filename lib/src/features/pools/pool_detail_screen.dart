@@ -43,16 +43,17 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
   static String _formatDate(DateTime date) =>
       '${_months[date.month - 1]} ${date.day}, ${date.year}';
 
-  Color _statusColor(PoolStatus status) => switch (status) {
-        PoolStatus.active => ZendColors.accentBright,
-        PoolStatus.completed => ZendColors.accent,
+  Color _statusColor(PoolStatus status, ZendTheme zt) => switch (status) {
+        PoolStatus.active => zt.accentBright,
+        PoolStatus.completed => zt.accent,
         PoolStatus.expired => ZendColors.destructive,
-        PoolStatus.cancelled => ZendColors.textSecondary,
+        PoolStatus.cancelled => zt.textSecondary,
       };
 
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
+    final zt = ZendTheme.of(context);
     final isCreator = model.currentUserId == _pool.creatorUserId;
     final isActive = _pool.status == PoolStatus.active;
 
@@ -66,8 +67,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back,
-                    color: ZendColors.textPrimary),
+                icon: Icon(Icons.arrow_back, color: zt.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -80,11 +80,11 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   // Pool name
                   Text(
                     _pool.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'InstrumentSerif',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                     ),
                   ),
                   const SizedBox(height: ZendSpacing.sm),
@@ -96,7 +96,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _statusColor(_pool.status)
+                        color: _statusColor(_pool.status, zt)
                             .withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(ZendRadii.pill),
                       ),
@@ -106,7 +106,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                           fontFamily: 'DMSans',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: _statusColor(_pool.status),
+                          color: _statusColor(_pool.status, zt),
                         ),
                       ),
                     ),
@@ -117,7 +117,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   if (_pool.status == PoolStatus.completed)
                     _StatusBanner(
                       message: 'Goal reached! 🎉',
-                      color: ZendColors.accent,
+                      color: zt.accent,
                     ),
                   if (_pool.status == PoolStatus.expired)
                     _StatusBanner(
@@ -127,16 +127,16 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   if (_pool.status == PoolStatus.cancelled)
                     _StatusBanner(
                       message: 'Pool cancelled',
-                      color: ZendColors.textSecondary,
+                      color: zt.textSecondary,
                     ),
 
                   // Gathered / Target
                   Text(
                     '${_pool.formattedGathered} of ${_pool.formattedTarget}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 15,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                     ),
                   ),
                   const SizedBox(height: ZendSpacing.xs),
@@ -146,14 +146,14 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   const SizedBox(height: ZendSpacing.xl),
 
                   // Participants
-                  const Text(
+                  Text(
                     'PARTICIPANTS',
                     style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1,
-                      color: ZendColors.textSecondary,
+                      color: zt.textSecondary,
                     ),
                   ),
                   const SizedBox(height: ZendSpacing.sm),
@@ -188,8 +188,8 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                         onPressed: () =>
                             showContributeSheet(context, pool: _pool),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: ZendColors.textPrimary,
-                          side: const BorderSide(color: ZendColors.border),
+                          foregroundColor: zt.textPrimary,
+                          side: BorderSide(color: zt.border),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(ZendRadii.lg),
                           ),
@@ -215,7 +215,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                         onPressed: () =>
                             showManageSheet(context, pool: _pool),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: ZendColors.accent,
+                          backgroundColor: zt.accent,
                           foregroundColor: ZendColors.textOnDeep,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -251,8 +251,8 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: ZendColors.accentBright,
-                        side: const BorderSide(color: ZendColors.accentBright),
+                        foregroundColor: zt.accentBright,
+                        side: BorderSide(color: zt.accentBright),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(ZendRadii.lg),
                         ),
@@ -270,6 +270,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
   }
 
   Widget _buildParticipantRow(PoolParticipant p) {
+    final zt = ZendTheme.of(context);
     final contribution = p.contribution == 0
         ? '\$0.00'
         : '\$${p.contribution.toStringAsFixed(2)}';
@@ -280,14 +281,14 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
         children: [
           CircleAvatar(
             radius: 11,
-            backgroundColor: ZendColors.bgSecondary,
+            backgroundColor: zt.bgCard,
             child: Text(
               p.avatarLabel,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
           ),
@@ -298,19 +299,19 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
               children: [
                 Text(
                   p.displayName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 15,
-                    color: ZendColors.textPrimary,
+                    color: zt.textPrimary,
                   ),
                 ),
                 if (p.isExternal)
-                  const Text(
+                  Text(
                     'external',
                     style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 11,
-                      color: ZendColors.textSecondary,
+                      color: zt.textSecondary,
                     ),
                   ),
               ],
@@ -318,10 +319,10 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
           ),
           Text(
             contribution,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMMono',
               fontSize: 13,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
         ],
@@ -371,23 +372,24 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'DMSans',
             fontSize: 13,
-            color: ZendColors.textSecondary,
+            color: zt.textSecondary,
           ),
         ),
         const SizedBox(width: ZendSpacing.xs),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'DMSans',
             fontSize: 13,
-            color: ZendColors.textPrimary,
+            color: zt.textPrimary,
           ),
         ),
       ],

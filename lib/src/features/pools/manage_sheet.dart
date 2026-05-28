@@ -82,7 +82,6 @@ class _ManageSheetState extends State<ManageSheet> {
               fontFamily: 'InstrumentSerif',
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.xl),
@@ -115,11 +114,11 @@ class _ManageSheetState extends State<ManageSheet> {
                       ),
                     ),
                     const SizedBox(width: ZendSpacing.sm),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Cancel pool',
                             style: TextStyle(
                               fontFamily: 'DMSans',
@@ -128,22 +127,22 @@ class _ManageSheetState extends State<ManageSheet> {
                               color: ZendColors.destructive,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
                             'Closes the pool and Mission Room',
                             style: TextStyle(
                               fontFamily: 'DMSans',
                               fontSize: 12,
-                              color: ZendColors.textSecondary,
+                              color: ZendTheme.of(context).textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right,
                       size: 18,
-                      color: ZendColors.textSecondary,
+                      color: ZendTheme.of(context).textSecondary,
                     ),
                   ],
                 ),
@@ -153,19 +152,19 @@ class _ManageSheetState extends State<ManageSheet> {
             Container(
               padding: const EdgeInsets.all(ZendSpacing.md),
               decoration: BoxDecoration(
-                color: ZendColors.bgSecondary,
+                color: ZendTheme.of(context).bgCard,
                 borderRadius: BorderRadius.circular(ZendRadii.md),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Cancel this pool?',
                     style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: ZendColors.textPrimary,
+                      color: ZendTheme.of(context).textPrimary,
                     ),
                   ),
                   const SizedBox(height: ZendSpacing.xs),
@@ -173,10 +172,10 @@ class _ManageSheetState extends State<ManageSheet> {
                     'This will permanently close "${widget.pool.name}" and the Mission Room. '
                     'Contributors are not automatically refunded — contributions were sent '
                     'directly to your wallet.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 14,
-                      color: ZendColors.textSecondary,
+                      color: ZendTheme.of(context).textSecondary,
                       height: 1.5,
                     ),
                   ),
@@ -205,8 +204,8 @@ class _ManageSheetState extends State<ManageSheet> {
                         ? null
                         : () => setState(() => _confirmed = false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: ZendColors.textSecondary,
-                      side: const BorderSide(color: ZendColors.border),
+                      foregroundColor: ZendTheme.of(context).textSecondary,
+                      side: BorderSide(color: ZendTheme.of(context).border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZendRadii.lg),
                       ),

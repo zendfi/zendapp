@@ -192,6 +192,12 @@ ThemeData buildZendDarkTheme() {
       thickness: 1,
     ),
     cardColor: const Color(0xFF1E1E1E),
+    // Subtle dark scrim behind sheets/dialogs — helps distinguish sheet from background
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Color(0xFF0D0D0D),
+      modalBackgroundColor: Color(0xFF0D0D0D),
+      modalBarrierColor: Color(0x80000000),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFF161616),
