@@ -110,7 +110,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   double get _sheetHeightFraction {
     switch (_stage) {
       case SendStage.recipient:
-        return 0.92;
+        return 1.0;   // full app height
       case SendStage.pin:
         return 0.70;
       case SendStage.processing:

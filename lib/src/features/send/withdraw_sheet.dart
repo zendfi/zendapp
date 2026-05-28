@@ -81,7 +81,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
   }
 
   double get _sheetHeightFraction =>
-      _stage == _WithdrawStage.amount ? 0.88 : 0.55;
+      _stage == _WithdrawStage.amount ? 1.0 : 0.55;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +175,7 @@ class _AmountStage extends StatelessWidget {
     final compact = MediaQuery.of(context).size.height < 760;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         children: [
           const SizedBox(height: 8),
@@ -188,7 +188,7 @@ class _AmountStage extends StatelessWidget {
               color: zt.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             'Balance: \$${model.balance.toStringAsFixed(2)}',
             style: TextStyle(
@@ -211,7 +211,7 @@ class _AmountStage extends StatelessWidget {
                 ),
               ),
             ),
-          SizedBox(height: compact ? 24 : 40),
+          const Spacer(),
 
           // ── Amount display ──────────────────────────────────────────
           _WithdrawAmountDisplay(
@@ -221,15 +221,15 @@ class _AmountStage extends StatelessWidget {
             compact: compact,
           ),
 
-          SizedBox(height: compact ? 16 : 28),
+          const Spacer(),
 
           // ── Keypad ──────────────────────────────────────────────────
           _WithdrawKeypad(
             onTap: onKey,
-            keyHeight: compact ? 52 : 68,
+            keyHeight: compact ? 60 : 72,
           ),
 
-          SizedBox(height: compact ? 10 : 16),
+          const SizedBox(height: 20),
 
           // ── Continue button ─────────────────────────────────────────
           SizedBox(
@@ -239,7 +239,6 @@ class _AmountStage extends StatelessWidget {
               onPressed: canContinue ? onContinue : null,
             ),
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );

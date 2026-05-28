@@ -17,7 +17,7 @@ Future<void> showCreatePoolDrawer(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (_) => FractionallySizedBox(
-      heightFactor: 0.92,
+      heightFactor: 1.0,
       child: CreatePoolDrawer(targetAmount: targetAmount),
     ),
   );
