@@ -115,7 +115,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,17 +125,16 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    color: ZendColors.textPrimary,
+                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  const Text(
+                  Text(
                     'Receive',
                     style: TextStyle(
                       fontFamily: 'InstrumentSerif',
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                     ),
                   ),
                 ],
@@ -350,11 +349,11 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                       ),
                       const SizedBox(height: 22),
                       Center(
-                        child: const Text(
+                        child: Text(
                           'Customise your page',
                           style: TextStyle(
                             fontFamily: 'DMSans',
-                            color: ZendColors.accent,
+                            color: zt.accent,
                             fontSize: 15,
                           ),
                         ),

@@ -31,6 +31,7 @@ class SendPinStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final compact = MediaQuery.of(context).size.height < 760;
 
     return Padding(
@@ -41,18 +42,17 @@ class SendPinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: const Icon(Icons.arrow_back,
-                  color: ZendColors.textPrimary, size: 22),
+              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '$amountFormatted to @$recipientZendtag',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           if (note.isNotEmpty) ...[
@@ -61,10 +61,10 @@ class SendPinStage extends StatelessWidget {
               note,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 13,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
           ],
@@ -86,9 +86,7 @@ class SendPinStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
-              color: pinError != null
-                  ? ZendColors.destructive
-                  : ZendColors.textSecondary,
+              color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -108,6 +106,7 @@ class SendPinDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(4, (index) {
@@ -120,9 +119,9 @@ class SendPinDots extends StatelessWidget {
             height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? ZendColors.accent : Colors.transparent,
+              color: filled ? zt.accent : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accent : ZendColors.border,
+                color: filled ? zt.accent : zt.border,
                 width: 2,
               ),
             ),
@@ -201,6 +200,7 @@ class _SendPinKeypadKeyState extends State<SendPinKeypadKey> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
@@ -217,13 +217,13 @@ class _SendPinKeypadKeyState extends State<SendPinKeypadKey> {
           height: widget.keyHeight,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 24)
+                ? ZendBackspaceIcon(color: zt.textPrimary, size: 24)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 24,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                       fontWeight: FontWeight.w300,
                     ),
                   ),
@@ -247,6 +247,7 @@ class SendProcessingStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -255,10 +256,10 @@ class SendProcessingStage extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Sending $amountFormatted to @$recipientZendtag...',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
         ],
@@ -311,6 +312,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -322,7 +324,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
               child: Container(
                 width: 64,
                 height: 64,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
@@ -330,22 +332,22 @@ class _SendSuccessStageState extends State<SendSuccessStage>
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Zent It!',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 40,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '${widget.amountFormattedExact} to @${widget.recipientZendtag}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
@@ -378,6 +380,7 @@ class SendErrorStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -394,22 +397,22 @@ class SendErrorStage extends StatelessWidget {
               child: const Icon(Icons.close, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Oops',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 32,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               errorMessage,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),

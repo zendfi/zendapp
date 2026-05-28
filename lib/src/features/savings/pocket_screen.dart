@@ -279,16 +279,16 @@ class _PocketScreenState extends State<PocketScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: ZendColors.accentBright.withValues(alpha: 0.15),
+              color: zt.accentBright.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(ZendRadii.pill),
             ),
             child: Text(
               apyStr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: ZendColors.accentBright,
+                color: zt.accentBright,
               ),
             ),
           ),
@@ -343,8 +343,8 @@ class _PocketScreenState extends State<PocketScreen> {
             style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600),
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: ZendColors.accentBright,
-            side: const BorderSide(color: ZendColors.accentBright),
+            foregroundColor: zt.accentBright,
+            side: BorderSide(color: zt.accentBright),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(ZendRadii.lg),
             ),
@@ -372,7 +372,7 @@ class _PocketScreenState extends State<PocketScreen> {
                       ),
                     ),
                     style: TextButton.styleFrom(
-                      foregroundColor: ZendColors.accentBright,
+                      foregroundColor: zt.accentBright,
                     ),
                   )
                 : null,

@@ -11,6 +11,7 @@ import '../receive/receive_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
 import '../send/send_screen.dart';
+import '../send/withdraw_sheet.dart';
 import '../money/home_screen.dart';
 
 class ZendShell extends StatefulWidget {
@@ -99,7 +100,7 @@ class _ZendShellState extends State<ZendShell> {
     final pages = <Widget>[
       HomeScreen(
         onOpenReceive: () => _openReceiveScreen(context),
-        onOpenSend: () => _setTab(1),
+        onOpenWithdraw: () => showWithdrawSheet(context),
         onViewAll: () => _setTab(2),
       ),
       SendScreen(
@@ -145,12 +146,17 @@ class ZendBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On the send tab (index 1), the screen background is forest green (bgDeep).
+    // Match the nav bar to it so there's no jarring color break at the bottom.
+    final onSendTab = currentIndex == 1;
+    final bgColor = onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D);
+    final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
+
     return Container(
       height: 64,
-      decoration: const BoxDecoration(
-        // Bottom nav on neutral black — blends with system nav bar
-        color: Color(0xFF0D0D0D),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border(top: BorderSide(color: borderColor)),
       ),
       child: SafeArea(
         top: false,
@@ -161,16 +167,19 @@ class ZendBottomBar extends StatelessWidget {
               icon: Icons.account_balance_wallet_outlined,
               active: currentIndex == 0,
               onTap: () => onChanged(0),
+              onDeepBg: onSendTab,
             ),
             _BottomNavIcon(
               icon: Icons.attach_money,
               active: currentIndex == 1,
               onTap: () => onChanged(1),
+              onDeepBg: onSendTab,
             ),
             _BottomNavIcon(
               icon: Icons.access_time,
               active: currentIndex == 2,
               onTap: () => onChanged(2),
+              onDeepBg: onSendTab,
             ),
           ],
         ),
@@ -180,14 +189,21 @@ class ZendBottomBar extends StatelessWidget {
 }
 
 class _BottomNavIcon extends StatelessWidget {
-  const _BottomNavIcon({required this.icon, required this.active, required this.onTap});
+  const _BottomNavIcon({required this.icon, required this.active, required this.onTap, required this.onDeepBg});
 
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
+  /// Whether this icon sits on the forest-green bgDeep background (send tab).
+  final bool onDeepBg;
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = onDeepBg ? ZendColors.accentPop : ZendColors.accentPop;
+    final inactiveColor = onDeepBg
+        ? const Color(0x66F0F0F0)
+        : const Color(0x66F0F0F0);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -196,7 +212,7 @@ class _BottomNavIcon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: active ? ZendColors.accentPop : const Color(0x66F0F0F0), size: 24),
+            Icon(icon, color: active ? activeColor : inactiveColor, size: 24),
             const SizedBox(height: 4),
             AnimatedOpacity(
               opacity: active ? 1 : 0,
@@ -204,7 +220,7 @@ class _BottomNavIcon extends StatelessWidget {
               child: Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(color: ZendColors.accentPop, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: activeColor, shape: BoxShape.circle),
               ),
             ),
           ],

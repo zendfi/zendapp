@@ -14,12 +14,12 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.onOpenReceive,
-    required this.onOpenSend,
+    required this.onOpenWithdraw,
     required this.onViewAll,
   });
 
   final VoidCallback onOpenReceive;
-  final VoidCallback onOpenSend;
+  final VoidCallback onOpenWithdraw;
   final VoidCallback onViewAll;
 
   @override
@@ -248,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Row(children: [
                                   Expanded(child: OutlineActionButton(label: 'Receive', onPressed: widget.onOpenReceive)),
                                   const SizedBox(width: 12),
-                                  Expanded(child: OutlineActionButton(label: 'Send', onPressed: widget.onOpenSend)),
+                                  Expanded(child: OutlineActionButton(label: 'Withdraw', onPressed: widget.onOpenWithdraw)),
                                 ]),
                                 const SizedBox(height: 18),
                                 Row(children: [Expanded(child: _SavingsCard(model: model)), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
@@ -368,17 +368,6 @@ class _SavingsCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Stack(children: [
-          Positioned(
-            top: 0, right: 0,
-            child: Container(
-              width: 64, height: 48,
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  colors: [Color(0x55A9D7BF), Color(0x00A9D7BF)],
-                ),
-              ),
-            ),
-          ),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),

@@ -860,21 +860,28 @@ class ZendAppModel extends ChangeNotifier {
       final tag = counterparty.trim();
       if (tag.isEmpty || seen.contains(tag)) continue;
       seen.add(tag);
+      // Check if we already have a richer contact record cached (with display name)
+      final cached = recentContacts.firstWhere(
+        (c) => c.tag == tag,
+        orElse: () => RecentContact(name: '', tag: tag, avatarLabel: ''),
+      );
+      final name = cached.name.isNotEmpty ? cached.name : '@$tag';
+      final avatarLabel = name.isNotEmpty ? name[0].toUpperCase() : '?';
       contacts.add(
         RecentContact(
-          name: '@$tag',
+          name: name,
           tag: tag,
-          avatarLabel: tag[0].toUpperCase(),
+          avatarLabel: avatarLabel,
         ),
       );
     }
 
-    return contacts.take(20).toList();
+    return contacts.take(15).toList();
   }
 
   List<RecentContact> _mergeRecentContacts(RecentContact contact) {
     final remaining = recentContacts.where((c) => c.tag != contact.tag);
-    return [contact, ...remaining].take(20).toList();
+    return [contact, ...remaining].take(15).toList();
   }
 }
 

@@ -9,11 +9,12 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/recent_contact.dart';
 import '../../services/sound_service.dart';
-import 'bank_send_sheet.dart';
-import 'crypto_send_sheet.dart';
 import 'send_shared_widgets.dart';
 
-enum SendStage { recipient, note, pin, processing, success, error }
+// Note: bank send and crypto send are now accessed via the Withdraw sheet,
+// not from the send flow. The send flow is strictly zend-to-zend.
+
+enum SendStage { recipient, pin, processing, success, error }
 
 Future<void> showSendFlowSheet(
   BuildContext context, {
@@ -60,25 +61,17 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   String? _recipientZendtag;
   String? _recipientDisplayName;
-  // ignore: unused_field
-  String? _recipientWalletAddress;
 
   final _noteController = TextEditingController();
-
-  double? _fxPreviewNgn;
 
   String _pinDigits = '';
   int _pinAttempts = 0;
   String? _pinError;
 
   String? _errorMessage;
-  // ignore: unused_field
-  String? _transferResult; // tx signature on success
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
-
-  bool _resolving = false;
 
   @override
   void initState() {
@@ -100,12 +93,10 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     if (widget.prefilledRecipient != null) {
       _recipientZendtag = widget.prefilledRecipient;
-      _recipientDisplayName = '@${widget.prefilledRecipient}';
-      _stage = SendStage.note;
+      _recipientDisplayName = widget.prefilledRecipient;
       if (widget.prefilledNote != null) {
         _noteController.text = widget.prefilledNote!;
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchFxPreview());
     }
   }
 
@@ -120,8 +111,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     switch (_stage) {
       case SendStage.recipient:
         return 0.92;
-      case SendStage.note:
-        return 0.65;
       case SendStage.pin:
         return 0.70;
       case SendStage.processing:
@@ -147,44 +136,12 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     setState(() => _stage = stage);
   }
 
-  Future<void> _onContactTap(String tag, String displayName) async {
-    if (_resolving) return;
-    setState(() => _resolving = true);
-
-    try {
-      final model = ZendScope.of(context);
-      final resolved = await model.zendtagService.resolve(tag);
-      if (!mounted) return;
-      setState(() {
-        _recipientZendtag = resolved.zendtag;
-        _recipientDisplayName = resolved.displayName;
-        _recipientWalletAddress = resolved.walletAddress;
-        _resolving = false;
-        _stage = SendStage.note;
-      });
-      _fetchFxPreview();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _resolving = false);
-      setState(() {
-        _recipientZendtag = tag;
-        _recipientDisplayName = displayName;
-        _recipientWalletAddress = null;
-        _stage = SendStage.note;
-      });
-      _fetchFxPreview();
-    }
-  }
-
-  Future<void> _fetchFxPreview() async {
-    try {
-      final model = ZendScope.of(context);
-      final preview = await model.fxService.getPreview(widget.amount);
-      if (!mounted) return;
-      setState(() => _fxPreviewNgn = preview.amountNgn);
-    } catch (_) {
-      // Silently ignore, cos FX preview is optional
-    }
+  void _onRecipientConfirmed(String tag, String displayName) {
+    setState(() {
+      _recipientZendtag = tag;
+      _recipientDisplayName = displayName;
+      _stage = SendStage.pin;
+    });
   }
 
   void _onPinKey(String value) {
@@ -215,7 +172,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     try {
       final model = ZendScope.of(context);
-      final result = await model.transferService.sendTransfer(
+      await model.transferService.sendTransfer(
         recipientZendtag: _recipientZendtag!,
         amountUsdc: widget.amount,
         pin: pin,
@@ -239,7 +196,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       unawaited(model.fetchHistory());
 
       setState(() {
-        _transferResult = result.transactionSignature;
         _stage = SendStage.success;
       });
 
@@ -336,23 +292,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           key: const ValueKey('recipient'),
           amount: widget.amount,
           amountFormatted: _amountFormatted,
-          resolving: _resolving,
-          onContactTap: _onContactTap,
-        );
-      case SendStage.note:
-        return _NoteStage(
-          key: const ValueKey('note'),
-          amountFormatted: _amountFormatted,
-          recipientName: _recipientDisplayName ?? '',
           noteController: _noteController,
-          fxPreviewNgn: _fxPreviewNgn,
-          onBack: () {
-            setState(() {
-              _stage = SendStage.recipient;
-              _fxPreviewNgn = null;
-            });
-          },
-          onConfirm: () => _goTo(SendStage.pin),
+          prefilledRecipient: widget.prefilledRecipient,
+          onConfirm: _onRecipientConfirmed,
         );
       case SendStage.pin:
         return SendPinStage(
@@ -369,7 +311,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
             setState(() {
               _pinDigits = '';
               _pinError = null;
-              _stage = SendStage.note;
+              _stage = SendStage.recipient;
             });
           },
         );
@@ -403,414 +345,321 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   }
 }
 
+// ── Recipient Stage ───────────────────────────────────────────────────────────
+
 class _RecipientStage extends StatefulWidget {
   const _RecipientStage({
     super.key,
     required this.amount,
     required this.amountFormatted,
-    required this.resolving,
-    required this.onContactTap,
+    required this.noteController,
+    required this.onConfirm,
+    this.prefilledRecipient,
   });
 
   final double amount;
   final String amountFormatted;
-  final bool resolving;
-  final Future<void> Function(String tag, String displayName) onContactTap;
+  final TextEditingController noteController;
+  final String? prefilledRecipient;
+  final void Function(String tag, String displayName) onConfirm;
 
   @override
   State<_RecipientStage> createState() => _RecipientStageState();
 }
 
 class _RecipientStageState extends State<_RecipientStage> {
-  late final TextEditingController _searchController;
-  String _searchQuery = '';
-  List<(String name, String tag, String avatar)> _searchResults = [];
-  bool _searching = false;
+  late final TextEditingController _toController;
+  final FocusNode _toFocus = FocusNode();
+  final FocusNode _forFocus = FocusNode();
+
+  String _toValue = '';
+  bool _resolving = false;
+  String? _resolveError;
+  String? _resolvedDisplayName;
+
+  // Whether the keyboard is up (for floating Pay button)
+  bool _keyboardVisible = false;
 
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
+    _toController = TextEditingController(
+      text: widget.prefilledRecipient ?? '',
+    );
+    _toValue = widget.prefilledRecipient ?? '';
+
+    _forFocus.addListener(() {
+      setState(() => _keyboardVisible = _forFocus.hasFocus);
+    });
+    _toFocus.addListener(() {
+      if (!_toFocus.hasFocus && _toValue.isNotEmpty) {
+        _resolveTag(_toValue);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _toController.dispose();
+    _toFocus.dispose();
+    _forFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _onSearchChanged(String query) async {
-    setState(() => _searchQuery = query);
+  Future<void> _resolveTag(String raw) async {
+    final tag = raw.trim().toLowerCase().replaceAll('@', '');
+    if (tag.isEmpty) return;
 
-    final normalized = query.trim().toLowerCase();
-
-    if (normalized.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _searching = false;
-      });
-      return;
-    }
-
-    final searchTag = normalized.startsWith('@')
-        ? normalized.substring(1)
-        : normalized;
-
-    if (searchTag.length < 3) {
-      setState(() => _searching = false);
-      return;
-    }
-
-    setState(() => _searching = true);
+    setState(() {
+      _resolving = true;
+      _resolveError = null;
+      _resolvedDisplayName = null;
+    });
 
     try {
       final model = ZendScope.of(context);
-      final resolved = await model.zendtagService.resolve(searchTag);
+      final resolved = await model.zendtagService.resolve(tag);
       if (!mounted) return;
-
-      final displayName = resolved.displayName.trim().isEmpty
-          ? '@${resolved.zendtag}'
-          : resolved.displayName;
-      final avatarLabel = displayName.isNotEmpty
-          ? displayName[0].toUpperCase()
-          : resolved.zendtag.isNotEmpty
-              ? resolved.zendtag[0].toUpperCase()
-              : '?';
-
       setState(() {
-        _searchResults = [
-          (displayName, resolved.zendtag, avatarLabel),
-        ];
-        _searching = false;
+        _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
+            ? resolved.displayName
+            : '@${resolved.zendtag}';
+        _resolving = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _searchResults = [];
-        _searching = false;
+        _resolveError = 'User not found';
+        _resolving = false;
       });
     }
+  }
+
+  void _selectContact(RecentContact contact) {
+    _toController.text = contact.tag;
+    _toValue = contact.tag;
+    _resolvedDisplayName = contact.name;
+    _resolveError = null;
+    _toFocus.unfocus();
+    _forFocus.unfocus();
+    setState(() {});
+  }
+
+  bool get _canPay {
+    final model = ZendScope.of(context);
+    final tag = _toValue.trim().replaceAll('@', '');
+    return tag.isNotEmpty &&
+        _resolveError == null &&
+        !_resolving &&
+        widget.amount > 0 &&
+        widget.amount <= model.balance;
+  }
+
+  bool get _insufficientBalance {
+    final model = ZendScope.of(context);
+    return widget.amount > 0 && widget.amount > model.balance;
+  }
+
+  void _onPay() {
+    if (!_canPay) return;
+    final tag = _toValue.trim().replaceAll('@', '');
+    final displayName = _resolvedDisplayName ?? '@$tag';
+    widget.onConfirm(tag, displayName);
   }
 
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
-    final recentContacts = _buildRecentContacts(model.recentContacts);
-    
-    final contactsToShow = _searchQuery.isNotEmpty ? _searchResults : recentContacts;
-    final showingSearchResults = _searchQuery.isNotEmpty;
+    final zt = ZendTheme.of(context);
+    final recentContacts = model.recentContacts.take(15).toList();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      // Let the sheet resize when keyboard appears
+      resizeToAvoidBottomInset: true,
+      body: Column(
         children: [
-          Text(
-            'Pay ${widget.amountFormatted} to',
-            style: const TextStyle(
-              fontFamily: 'InstrumentSerif',
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _searchController,
-            onChanged: _onSearchChanged,
-            decoration: InputDecoration(
-              hintText: 'Name, @username, phone...',
-              prefixIcon: const Icon(Icons.search,
-                  size: 20, color: ZendColors.textSecondary),
-              filled: true,
-              fillColor: ZendColors.bgSecondary,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.pill),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            showingSearchResults ? 'SEARCH RESULTS' : 'RECENT ZEND USERS',
-            style: TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.1,
-              color: ZendColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Contact list
-          if (widget.resolving || _searching)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: ZendLoader(size: 24)),
-            )
-          else if (contactsToShow.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                showingSearchResults
-                    ? 'No users found with that zendtag'
-                    : 'No recent recipients yet',
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 13,
-                  color: ZendColors.textSecondary,
-                ),
-              ),
-            )
-          else
-            ...List.generate(contactsToShow.length, (i) {
-              final (name, tag, avatar) = contactsToShow[i];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _ContactTile(
-                  name: name,
-                  handle: '@$tag',
-                  avatarLabel: avatar,
-                  onTap: () => widget.onContactTap(tag, name),
-                ),
-              );
-            }),
-          const SizedBox(height: 18),
-          Text(
-            'EXTERNAL',
-            style: TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.1,
-              color: ZendColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () {
-              if (widget.amount <= 0) {
-                // Amount not set — close this sheet and let the user enter
-                // an amount on the keypad first. The send screen's Pay button
-                // already guards against 0, so this handles edge cases like
-                // deep-link opens with no amount.
-                Navigator.of(context).pop();
-                return;
-              }
-              Navigator.of(context).pop();
-              showBankSendSheet(context, amount: widget.amount);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: ZendColors.bgPrimary,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: ZendColors.border),
-              ),
-              child: Row(
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: ZendColors.bgSecondary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.account_balance_outlined),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Send to bank account',
-                            style: TextStyle(fontSize: 15)),
-                        SizedBox(height: 2),
-                        Text(
-                          'Nigeria, UK, USA, Europe',
-                          style: TextStyle(
-                              fontSize: 12, color: ZendColors.textSecondary),
-                        ),
-                      ],
+                  // ── Header ──────────────────────────────────────────
+                  Text(
+                    'Pay ${widget.amountFormatted}',
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
                     ),
                   ),
-                  const Icon(Icons.chevron_right,
-                      size: 18, color: ZendColors.textSecondary),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () {
-              if (widget.amount <= 0) {
-                Navigator.of(context).pop();
-                return;
-              }
-              Navigator.of(context).pop();
-              showCryptoSendSheet(context, amount: widget.amount);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: ZendColors.bgPrimary,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: ZendColors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: ZendColors.bgSecondary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.currency_bitcoin_outlined),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Send to crypto wallet',
-                            style: TextStyle(fontSize: 15)),
-                        SizedBox(height: 2),
-                        Text(
-                          'Any chain — Tron, Ethereum, BNB...',
-                          style: TextStyle(
-                              fontSize: 12, color: ZendColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right,
-                      size: 18, color: ZendColors.textSecondary),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                  const SizedBox(height: 20),
 
-List<(String name, String tag, String avatar)> _buildRecentContacts(
-  List<RecentContact> contacts,
-) {
-  return contacts
-      .take(5)
-      .map((contact) => (contact.name, contact.tag, contact.avatarLabel))
-      .toList();
-}
-
-class _NoteStage extends StatelessWidget {
-  const _NoteStage({
-    super.key,
-    required this.amountFormatted,
-    required this.recipientName,
-    required this.noteController,
-    required this.fxPreviewNgn,
-    required this.onBack,
-    required this.onConfirm,
-  });
-
-  final String amountFormatted;
-  final String recipientName;
-  final TextEditingController noteController;
-  final double? fxPreviewNgn;
-  final VoidCallback onBack;
-  final VoidCallback onConfirm;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Back button
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: onBack,
-              child: const Icon(Icons.arrow_back,
-                  color: ZendColors.textPrimary, size: 22),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Pay $amountFormatted to ',
-                  style: const TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: ZendColors.textPrimary,
-                  ),
-                ),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: CircleAvatar(
-                      radius: 11,
-                      backgroundColor: ZendColors.bgSecondary,
-                      child: Text(
-                        recipientName.isNotEmpty
-                            ? recipientName[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                            fontSize: 11, color: ZendColors.textPrimary),
+                  // ── To field ─────────────────────────────────────────
+                  _FieldRow(
+                    label: 'To',
+                    child: TextField(
+                      controller: _toController,
+                      focusNode: _toFocus,
+                      onChanged: (v) {
+                        setState(() {
+                          _toValue = v;
+                          _resolvedDisplayName = null;
+                          _resolveError = null;
+                        });
+                      },
+                      onSubmitted: (_) => _resolveTag(_toValue),
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        hintText: '@username',
+                        hintStyle: TextStyle(color: zt.textSecondary),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        filled: false,
+                        suffixIcon: _resolving
+                            ? const Padding(
+                                padding: EdgeInsets.only(right: 4),
+                                child: ZendLoader(size: 16, strokeWidth: 1.5),
+                              )
+                            : _resolvedDisplayName != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.check_circle_outline,
+                                      size: 16,
+                                      color: ZendColors.accentBright,
+                                    ),
+                                  )
+                                : null,
+                      ),
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 15,
+                        color: zt.textPrimary,
                       ),
                     ),
                   ),
-                ),
-                TextSpan(
-                  text: '$recipientName for',
-                  style: const TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: ZendColors.textPrimary,
+
+                  // Resolved name or error
+                  if (_resolvedDisplayName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48, top: 4),
+                      child: Text(
+                        _resolvedDisplayName!,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 12,
+                          color: ZendColors.accentBright,
+                        ),
+                      ),
+                    )
+                  else if (_resolveError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48, top: 4),
+                      child: Text(
+                        _resolveError!,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 12,
+                          color: ZendColors.destructive,
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 4),
+                  Divider(color: zt.border, height: 1),
+                  const SizedBox(height: 4),
+
+                  // ── For field ─────────────────────────────────────────
+                  _FieldRow(
+                    label: 'For',
+                    child: TextField(
+                      controller: widget.noteController,
+                      focusNode: _forFocus,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _forFocus.unfocus(),
+                      decoration: InputDecoration(
+                        hintText: 'optional',
+                        hintStyle: TextStyle(color: zt.textSecondary),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        filled: false,
+                      ),
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 15,
+                        color: zt.textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          // Note text field
-          TextField(
-            controller: noteController,
-            autofocus: true,
-            minLines: 1,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: "What's it for?",
-              filled: false,
-              border: InputBorder.none,
-            ),
-            style: const TextStyle(
-                fontSize: 18, color: ZendColors.textPrimary),
-          ),
-          const SizedBox(height: 16),
-          // FX preview
-          if (fxPreviewNgn != null)
-            Text(
-              '≈ ₦${_formatNgn(fxPreviewNgn!)}',
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 14,
-                color: ZendColors.textSecondary,
+
+                  const SizedBox(height: 4),
+                  Divider(color: zt.border, height: 1),
+                  const SizedBox(height: 20),
+
+                  // ── Balance warning ───────────────────────────────────
+                  if (_insufficientBalance)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Insufficient balance · \$${model.balance.toStringAsFixed(2)} available',
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 12,
+                          color: ZendColors.destructive,
+                        ),
+                      ),
+                    ),
+
+                  // ── Previous contacts ─────────────────────────────────
+                  if (recentContacts.isNotEmpty) ...[
+                    Text(
+                      'PREVIOUS',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.1,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...recentContacts.map((contact) => _ContactTile(
+                          contact: contact,
+                          onTap: () => _selectContact(contact),
+                        )),
+                  ],
+
+                  // Bottom padding so content isn't hidden behind Pay button
+                  const SizedBox(height: 80),
+                ],
               ),
             ),
-          const Spacer(),
-          PrimaryButton(
-            label: 'Zend $amountFormatted',
-            onPressed: onConfirm,
+          ),
+
+          // ── Pay button — floats above keyboard when "For" is focused ──
+          AnimatedPadding(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              _keyboardVisible
+                  ? MediaQuery.of(context).viewInsets.bottom + 8
+                  : 24,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Pay ${widget.amountFormatted}',
+                onPressed: _canPay ? _onPay : null,
+              ),
+            ),
           ),
         ],
       ),
@@ -818,21 +667,57 @@ class _NoteStage extends StatelessWidget {
   }
 }
 
-class _ContactTile extends StatelessWidget {
-  const _ContactTile({
-    required this.name,
-    required this.handle,
-    required this.avatarLabel,
-    required this.onTap,
-  });
+// ── Field row (label + input) ─────────────────────────────────────────────────
 
-  final String name;
-  final String handle;
-  final String avatarLabel;
+class _FieldRow extends StatelessWidget {
+  const _FieldRow({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 36,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Contact tile ──────────────────────────────────────────────────────────────
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.contact, required this.onTap});
+
+  final RecentContact contact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    // Determine display: if name starts with '@' it's just a tag, otherwise it's a real name
+    final isTagOnly = contact.name.startsWith('@');
+    final displayName = isTagOnly ? null : contact.name;
+    final handle = '@${contact.tag}';
+
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,
@@ -841,38 +726,46 @@ class _ContactTile extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              radius: 20,
-              backgroundColor: ZendColors.bgSecondary,
-              child: Text(avatarLabel,
-                  style: const TextStyle(color: ZendColors.textPrimary)),
+              radius: 18,
+              backgroundColor: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
+              child: Text(
+                contact.avatarLabel,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: zt.isDark ? ZendColors.accentPop : zt.textPrimary,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                  if (displayName != null)
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
                   Text(
                     handle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMMono',
-                      fontSize: 13,
-                      color: ZendColors.textSecondary,
+                      fontSize: 12,
+                      color: displayName != null
+                          ? zt.textSecondary
+                          : zt.textPrimary,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right,
-                size: 18, color: ZendColors.textSecondary),
           ],
         ),
       ),
@@ -880,6 +773,7 @@ class _ContactTile extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 String _formatNgn(double value) {
   final rounded = value.round();
   final text = rounded.toString();

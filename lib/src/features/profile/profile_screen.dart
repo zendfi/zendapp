@@ -37,7 +37,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
+                    icon: Icon(Icons.arrow_back, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF0F0F0) : ZendColors.textPrimary),
                   ),
                 ],
               ),
@@ -79,7 +79,7 @@ class ProfileScreen extends StatelessWidget {
                             style: const TextStyle(
                               fontFamily: 'DMMono',
                               fontSize: 12,
-                              color: Color(0x80E8F4EC),
+                              color: Color(0x80F0F0F0),
                             ),
                           ),
                         ],
@@ -233,14 +233,15 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'DMSans',
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.1,
-        color: ZendColors.textSecondary,
+        color: zt.textSecondary,
       ),
     );
   }
