@@ -105,11 +105,15 @@ ThemeData buildZendTheme() {
 
 ThemeData buildZendDarkTheme() {
   final base = ThemeData.dark(useMaterial3: true);
+
+  const darkTextPrimary = Color(0xFFF0F0F0);
+  const darkTextSecondary = Color(0xFF8A8A8A);
+
   final textTheme = base.textTheme
       .apply(
         fontFamily: 'DMSans',
-        bodyColor: ZendColors.textOnDeep,
-        displayColor: ZendColors.textOnDeep,
+        bodyColor: darkTextPrimary,
+        displayColor: darkTextPrimary,
       )
       .copyWith(
         displayLarge: const TextStyle(
@@ -117,55 +121,55 @@ ThemeData buildZendDarkTheme() {
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         displayMedium: const TextStyle(
           fontFamily: 'InstrumentSerif',
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         headlineMedium: const TextStyle(
           fontFamily: 'InstrumentSerif',
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         headlineSmall: const TextStyle(
           fontFamily: 'InstrumentSerif',
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         titleLarge: const TextStyle(
           fontSize: 18,
           height: 1.2,
           fontWeight: FontWeight.w600,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         titleMedium: const TextStyle(
           fontSize: 15,
           height: 1.2,
           fontWeight: FontWeight.w600,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         bodyLarge: const TextStyle(
           fontSize: 15,
           height: 1.35,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
         bodyMedium: const TextStyle(
           fontSize: 13,
           height: 1.35,
-          color: Color(0x99E8F4EC),
+          color: darkTextSecondary,
         ),
         labelLarge: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: ZendColors.textOnDeep,
+          color: darkTextPrimary,
         ),
       );
 
@@ -173,21 +177,24 @@ ThemeData buildZendDarkTheme() {
     useMaterial3: true,
     fontFamily: 'DMSans',
     colorScheme: const ColorScheme.dark(
-      primary: ZendColors.accentBright,
-      secondary: ZendColors.accentPop,
-      surface: Color(0xFF111A12),       // bgPrimary dark
-      onPrimary: ZendColors.textPrimary,
-      onSurface: ZendColors.textOnDeep,
-      error: ZendColors.destructive,
+      primary: Color(0xFF52B788), 
+      secondary: Color(0xFF95D5B2),
+      surface: Color(0xFF0D0D0D),
+      onPrimary: Color(0xFF0D0D0D),
+      onSurface: darkTextPrimary,
+      error: Color(0xFFE05C3A),
     ),
-    scaffoldBackgroundColor: const Color(0xFF111A12),
+    scaffoldBackgroundColor: const Color(0xFF0D0D0D),
     textTheme: textTheme,
     splashFactory: NoSplash.splashFactory,
-    dividerTheme: const DividerThemeData(color: Color(0x26E8F4EC), thickness: 1),
-    cardColor: const Color(0xFF1C2B1E),
+    dividerTheme: const DividerThemeData(
+      color: Color(0xFF2A2A2A),
+      thickness: 1,
+    ),
+    cardColor: const Color(0xFF1E1E1E),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF1C2B1E),
+      fillColor: const Color(0xFF161616),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
@@ -200,7 +207,7 @@ ThemeData buildZendDarkTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(ZendRadii.xl),
-        borderSide: const BorderSide(color: ZendColors.accentBright, width: 1.2),
+        borderSide: const BorderSide(color: Color(0xFF6FCF97), width: 1.2),
       ),
     ),
   );

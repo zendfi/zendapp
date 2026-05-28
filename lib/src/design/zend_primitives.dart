@@ -133,7 +133,7 @@ class ZendLoader extends StatelessWidget {
       {super.key,
       this.size = 22,
       this.strokeWidth = 2,
-      this.color = ZendColors.accentPop});
+      this.color = ZendColors.accentPop});  // accentPop = #95D5B2 — works on both themes
 
   final double size;
   final double strokeWidth;

@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 
 class ZendColors {
-  // ── Light palette (static constants — used for hardcoded dark screens like PIN) ──
   static const bgPrimary = Color(0xFFFAFAF7);
   static const bgSecondary = Color(0xFFF2F0EA);
-  static const bgDeep = Color(0xFF1C2B1E);
   static const accent = Color(0xFF2D6A4F);
   static const accentBright = Color(0xFF52B788);
   static const accentPop = Color(0xFF95D5B2);
   static const textPrimary = Color(0xFF1A1A1A);
   static const textSecondary = Color(0xFF6B7A6E);
-  static const textOnDeep = Color(0xFFE8F4EC);
+  static const textOnDeep = Color(0xFFF0F0F0);
   static const positive = Color(0xFF52B788);
   static const negative = Color(0xFF1A1A1A);
   static const destructive = Color(0xFFC94F2A);
   static const border = Color(0xFFE5E2DA);
+  static const bgDeep = Color(0xFF122018);
+  static const bgAccentSurface = Color(0xFF0A1A0D);
 }
 
-/// Theme-aware color palette. Use `ZendTheme.of(context)` in widgets
-/// that need to respond to light/dark mode.
 class ZendTheme {
   const ZendTheme._({
     required this.bgPrimary,
     required this.bgSecondary,
     required this.bgCard,
+    required this.bgElevated,
+    required this.bgAccentSurface,
     required this.textPrimary,
     required this.textSecondary,
     required this.border,
@@ -38,6 +38,8 @@ class ZendTheme {
   final Color bgPrimary;
   final Color bgSecondary;
   final Color bgCard;
+  final Color bgElevated;
+  final Color bgAccentSurface;
   final Color textPrimary;
   final Color textSecondary;
   final Color border;
@@ -52,6 +54,8 @@ class ZendTheme {
     bgPrimary: Color(0xFFFAFAF7),
     bgSecondary: Color(0xFFF2F0EA),
     bgCard: Color(0xFFF2F0EA),
+    bgElevated: Color(0xFFFFFFFF),
+    bgAccentSurface: Color(0xFFF2F0EA),
     textPrimary: Color(0xFF1A1A1A),
     textSecondary: Color(0xFF6B7A6E),
     border: Color(0xFFE5E2DA),
@@ -64,17 +68,19 @@ class ZendTheme {
   );
 
   static const _dark = ZendTheme._(
-    bgPrimary: Color(0xFF111A12),   // very dark green-black
-    bgSecondary: Color(0xFF1C2B1E), // bgDeep — the forest green
-    bgCard: Color(0xFF243326),      // slightly lighter card surface
-    textPrimary: Color(0xFFE8F4EC),
-    textSecondary: Color(0x99E8F4EC),
-    border: Color(0x26E8F4EC),
+    bgPrimary: Color(0xFF0D0D0D),
+    bgSecondary: Color(0xFF161616),
+    bgCard: Color(0xFF1E1E1E),
+    bgElevated: Color(0xFF252525),
+    bgAccentSurface: Color(0xFF0A1A0D),
+    textPrimary: Color(0xFFF0F0F0),
+    textSecondary: Color(0xFF8A8A8A),
+    border: Color(0xFF2A2A2A),
     accent: Color(0xFF52B788),
-    accentBright: Color(0xFF95D5B2),
+    accentBright: Color(0xFF6FCF97),
     accentPop: Color(0xFF95D5B2),
     positive: Color(0xFF52B788),
-    destructive: Color(0xFFC94F2A),
+    destructive: Color(0xFFE05C3A),
     isDark: true,
   );
 

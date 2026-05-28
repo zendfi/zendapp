@@ -200,6 +200,7 @@ class _SendScreenState extends State<SendScreen>
     final isNgn = _inputMode == _InputMode.ngn;
 
     return Container(
+      // Send screen lives on the intentional deep green brand surface
       color: ZendColors.bgDeep,
       child: SafeArea(
         bottom: false,
@@ -221,7 +222,7 @@ class _SendScreenState extends State<SendScreen>
                             onTap: () => pushZendSlide(context, const ProfileScreen()),
                             child: const CircleAvatar(
                               radius: 18,
-                              backgroundColor: Color(0x332D6A4F),
+                              backgroundColor: Color(0x3095D5B2),
                               child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 18),
                             ),
                           ),
@@ -247,8 +248,8 @@ class _SendScreenState extends State<SendScreen>
                                   style: TextStyle(
                                     fontFamily: 'DMMono',
                                     color: isNgn
-                                        ? const Color(0xCCE8F4EC)
-                                        : const Color(0x80E8F4EC),
+                                        ? const Color(0xCCF0F0F0)
+                                        : const Color(0x80F0F0F0),
                                     fontSize: 11,
                                     letterSpacing: 1.4,
                                   ),
@@ -291,11 +292,11 @@ class _SendScreenState extends State<SendScreen>
                                           horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: isNgn
-                                            ? const Color(0x22E8F4EC)
+                                            ? const Color(0x22F0F0F0)
                                             : Colors.transparent,
                                         borderRadius: BorderRadius.circular(ZendRadii.pill),
                                         border: isNgn
-                                            ? Border.all(color: const Color(0x33E8F4EC))
+                                            ? Border.all(color: const Color(0x33F0F0F0))
                                             : null,
                                       ),
                                       child: Row(
@@ -305,14 +306,14 @@ class _SendScreenState extends State<SendScreen>
                                             _secondaryDisplay!,
                                             style: const TextStyle(
                                               fontFamily: 'DMMono',
-                                              color: Color(0x99E8F4EC),
+                                              color: Color(0x99F0F0F0),
                                               fontSize: 13,
                                             ),
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
                                             Icons.swap_vert_rounded,
-                                            color: Color(0x66E8F4EC),
+                                            color: Color(0x66F0F0F0),
                                             size: 14,
                                           ),
                                         ],
@@ -330,14 +331,14 @@ class _SendScreenState extends State<SendScreen>
                                         isNgn ? 'Switch to USD' : 'Switch to NGN',
                                         style: const TextStyle(
                                           fontFamily: 'DMMono',
-                                          color: Color(0x44E8F4EC),
+                                          color: Color(0x44F0F0F0),
                                           fontSize: 11,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
                                         Icons.swap_vert_rounded,
-                                        color: Color(0x44E8F4EC),
+                                        color: Color(0x44F0F0F0),
                                         size: 12,
                                       ),
                                     ],
@@ -421,9 +422,9 @@ class _GlassPill extends StatelessWidget {
       child: Container(
         height: 48,
         decoration: BoxDecoration(
-          color: const Color(0x1AE8F4EC),
+          color: const Color(0x1AF0F0F0),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: Border.all(color: const Color(0x26E8F4EC)),
+          border: Border.all(color: const Color(0x26F0F0F0)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -478,11 +479,11 @@ class _IconPill extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: const Color(0x1AE8F4EC),
+          color: const Color(0x1AF0F0F0),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0x26E8F4EC)),
+          border: Border.all(color: const Color(0x26F0F0F0)),
         ),
-        child: Icon(icon, color: const Color(0x99E8F4EC), size: 20),
+        child: Icon(icon, color: const Color(0x99F0F0F0), size: 20),
       ),
     );
   }
@@ -631,7 +632,7 @@ class _UsdAmountDisplay extends StatelessWidget {
 
     final decStyle = TextStyle(
       fontFamily: 'InstrumentSerif',
-      color: const Color(0xCCE8F4EC),
+      color: const Color(0xCCF0F0F0),
       fontSize: decSize,
       fontStyle: FontStyle.italic,
       height: 1.0,
@@ -639,7 +640,7 @@ class _UsdAmountDisplay extends StatelessWidget {
 
     final currencyStyle = TextStyle(
       fontFamily: 'InstrumentSerif',
-      color: const Color(0x80E8F4EC),
+      color: const Color(0x80F0F0F0),
       fontSize: wholeSize * 0.5,
       fontStyle: FontStyle.italic,
       height: 1.0,
@@ -673,7 +674,7 @@ class _UsdAmountDisplay extends StatelessWidget {
                     '.',
                     style: TextStyle(
                       fontFamily: 'InstrumentSerif',
-                      color: const Color(0xCCE8F4EC),
+                      color: const Color(0xCCF0F0F0),
                       fontSize: decSize,
                       fontStyle: FontStyle.italic,
                       height: 1.0,

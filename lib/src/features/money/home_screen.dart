@@ -63,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Stack(
           children: [
+            // Home header background — intentional deep green brand surface
             Container(color: ZendColors.bgDeep),
 
             // ── Header row ──
@@ -103,7 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(children: [
                         GestureDetector(
                           onTap: () => pushZendSlide(context, const ProfileScreen()),
-                          child: const CircleAvatar(radius: 18, backgroundColor: Color(0x332D6A4F), child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 18)),
+                          // Avatar on deep green — use a lighter green tint
+                          child: const CircleAvatar(radius: 18, backgroundColor: Color(0x3095D5B2), child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 18)),
                         ),
                       ]),
                     ],
@@ -139,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 'Zend Balance',
                                 style: TextStyle(
                                   fontFamily: 'DMMono',
-                                  color: Color(0x80E8F4EC),
+                                  color: Color(0x99F0F0F0),
                                   fontSize: 11,
                                   letterSpacing: 0.8,
                                 ),
@@ -164,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     onTap: model.toggleBalanceHidden,
                                     child: Icon(
                                       model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                      color: const Color(0x99E8F4EC),
+                                      color: const Color(0x80F0F0F0),
                                       size: 20,
                                     ),
                                   ),
@@ -205,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   onTap: model.toggleBalanceHidden,
                                   child: Icon(
                                     model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                    color: const Color(0x99E8F4EC),
+                                    color: const Color(0x80F0F0F0),
                                     size: 18,
                                   ),
                                 ),
@@ -361,7 +363,8 @@ class _SavingsCard extends StatelessWidget {
         height: 118,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         decoration: BoxDecoration(
-          color: zt.bgCard,
+          // In dark mode use the intentional deep green accent surface
+          color: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Stack(children: [
@@ -437,7 +440,9 @@ class _PoolsCard extends StatelessWidget {
         height: 118,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         decoration: BoxDecoration(
-            color: zt.bgCard, borderRadius: BorderRadius.circular(14)),
+            // In dark mode use the intentional deep green accent surface
+            color: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
+            borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Pools',
@@ -497,7 +502,7 @@ class _PoolAvatar extends StatelessWidget {
       width: 22,
       height: 22,
       decoration: const BoxDecoration(
-          color: ZendColors.bgDeep, shape: BoxShape.circle),
+          color: Color(0xFF122018), shape: BoxShape.circle),
       alignment: Alignment.center,
       child: Text(label,
           style: const TextStyle(

@@ -148,8 +148,9 @@ class ZendBottomBar extends StatelessWidget {
     return Container(
       height: 64,
       decoration: const BoxDecoration(
-        color: ZendColors.bgDeep,
-        border: Border(top: BorderSide(color: Color(0x14000000))),
+        // Bottom nav on neutral black — blends with system nav bar
+        color: Color(0xFF0D0D0D),
+        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
       ),
       child: SafeArea(
         top: false,
@@ -195,7 +196,7 @@ class _BottomNavIcon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: active ? ZendColors.accentPop : const Color(0x66E8F4EC), size: 24),
+            Icon(icon, color: active ? ZendColors.accentPop : const Color(0x66F0F0F0), size: 24),
             const SizedBox(height: 4),
             AnimatedOpacity(
               opacity: active ? 1 : 0,
@@ -269,12 +270,13 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: ZendColors.bgDeep,
+                // Banner uses elevated dark surface — neutral, not green
+                color: const Color(0xFF252525),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0x33E8F4EC)),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x40000000),
+                    color: Color(0x60000000),
                     blurRadius: 16,
                     offset: Offset(0, 4),
                   ),
@@ -309,7 +311,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                             fontFamily: 'DMSans',
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: ZendColors.textOnDeep,
+                            color: Color(0xFFF0F0F0),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -321,7 +323,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                             style: const TextStyle(
                               fontFamily: 'DMSans',
                               fontSize: 11,
-                              color: Color(0x99E8F4EC),
+                              color: Color(0x99F0F0F0),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -358,7 +360,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                     child: const Icon(
                       Icons.close,
                       size: 16,
-                      color: Color(0x66E8F4EC),
+                      color: Color(0x66F0F0F0),
                     ),
                   ),
                 ],
