@@ -37,10 +37,14 @@ class ZendAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final size = radius * 2;
+    // Border thickness scales with size — 1.5px for small, up to 2.5px for large
+    final borderWidth = (radius * 0.07).clamp(1.5, 2.5);
+
+    Widget avatar;
 
     // ── Network photo ──────────────────────────────────────────────────────
     if (photoUrl != null && photoUrl!.isNotEmpty) {
-      return ClipOval(
+      avatar = ClipOval(
         child: CachedNetworkImage(
           imageUrl: photoUrl!,
           width: size,
@@ -60,14 +64,28 @@ class ZendAvatar extends StatelessWidget {
           ),
         ),
       );
+    } else {
+      // ── Initials / icon fallback ─────────────────────────────────────────
+      avatar = _FallbackCircle(
+        radius: radius,
+        initials: initials,
+        backgroundColor: backgroundColor,
+        zt: zt,
+      );
     }
 
-    // ── Initials / icon fallback ───────────────────────────────────────────
-    return _FallbackCircle(
-      radius: radius,
-      initials: initials,
-      backgroundColor: backgroundColor,
-      zt: zt,
+    // Wrap with a black border ring
+    return Container(
+      width: size + borderWidth * 2,
+      height: size + borderWidth * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black,
+          width: borderWidth,
+        ),
+      ),
+      child: ClipOval(child: avatar),
     );
   }
 }
