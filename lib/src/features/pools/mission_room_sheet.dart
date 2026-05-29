@@ -56,27 +56,23 @@ class _MissionRoomSheet extends StatelessWidget {
                       Expanded(
                         child: Text(
                           pool.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'InstrumentSerif',
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: ZendColors.textPrimary,
+                            color: ZendTheme.of(context).textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          color: ZendColors.textSecondary,
-                          size: 20,
-                        ),
+                        icon: Icon(Icons.close, color: ZendTheme.of(context).textSecondary, size: 20),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
-                  const Divider(color: ZendColors.border, height: 12),
+                  Divider(color: ZendTheme.of(context).border, height: 12),
                 ],
               ),
             ),

@@ -17,8 +17,6 @@ class MissionRoomMessage extends StatelessWidget {
   final String? currentUserId;
   final VoidCallback onLongPress;
   final ValueChanged<String> onReactionTap;
-  /// When true, this message is from the same sender as the previous one
-  /// within 2 minutes — suppress the avatar and sender name.
   final bool isContinuation;
 
   @override
@@ -26,32 +24,19 @@ class MissionRoomMessage extends StatelessWidget {
     return GestureDetector(
       onLongPress: onLongPress,
       child: Padding(
-        // Tighter top padding for continuation messages — they feel grouped
-        padding: EdgeInsets.only(
-          top: isContinuation ? 2 : 6,
-          bottom: 2,
-        ),
+        padding: EdgeInsets.only(top: isContinuation ? 2 : 6, bottom: 2),
         child: switch (message.messageType) {
           PoolMessageType.contributionEvent => _ContributionEventRow(
-              message: message,
-              onLongPress: onLongPress,
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-            ),
+              message: message, onLongPress: onLongPress,
+              onReactionTap: onReactionTap, currentUserId: currentUserId),
           PoolMessageType.voiceNote => _VoiceNoteRow(
-              message: message,
-              onLongPress: onLongPress,
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-              isContinuation: isContinuation,
-            ),
+              message: message, onLongPress: onLongPress,
+              onReactionTap: onReactionTap, currentUserId: currentUserId,
+              isContinuation: isContinuation),
           _ => _TextMessageRow(
-              message: message,
-              onLongPress: onLongPress,
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-              isContinuation: isContinuation,
-            ),
+              message: message, onLongPress: onLongPress,
+              onReactionTap: onReactionTap, currentUserId: currentUserId,
+              isContinuation: isContinuation),
         },
       ),
     );
@@ -60,10 +45,8 @@ class MissionRoomMessage extends StatelessWidget {
 
 class _TextMessageRow extends StatelessWidget {
   const _TextMessageRow({
-    required this.message,
-    required this.onLongPress,
-    required this.onReactionTap,
-    required this.currentUserId,
+    required this.message, required this.onLongPress,
+    required this.onReactionTap, required this.currentUserId,
     this.isContinuation = false,
   });
 
@@ -75,76 +58,38 @@ class _TextMessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final sender = message.senderZendtag ?? '?';
     final avatarLabel = sender.isNotEmpty ? sender[0].toUpperCase() : '?';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar — shown only on first message in a run; replaced by spacer on continuations
         if (isContinuation)
-          const SizedBox(width: 28) // 14*2 = avatar diameter
+          const SizedBox(width: 28)
         else
           CircleAvatar(
             radius: 14,
-            backgroundColor: ZendColors.bgSecondary,
-            child: Text(
-              avatarLabel,
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
-              ),
-            ),
+            backgroundColor: zt.bgCard,
+            child: Text(avatarLabel, style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, color: zt.textPrimary)),
           ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Sender name + timestamp — only on first message in a run
               if (!isContinuation) ...[
-                Row(
-                  children: [
-                    Text(
-                      '@$sender',
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: ZendColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: ZendSpacing.xs),
-                    Text(
-                      _formatTime(message.createdAt),
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 11,
-                        color: ZendColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                Row(children: [
+                  Text('@$sender', style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                  const SizedBox(width: ZendSpacing.xs),
+                  Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMSans', fontSize: 11, color: zt.textSecondary)),
+                ]),
                 const SizedBox(height: 2),
               ],
-              Text(
-                message.content ?? '',
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 14,
-                  color: ZendColors.textPrimary,
-                  height: 1.4,
-                ),
-              ),
+              Text(message.content ?? '', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary, height: 1.4)),
               if (message.reactions.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                _ReactionRow(
-                  reactions: message.reactions,
-                  currentUserId: currentUserId,
-                  onTap: onReactionTap,
-                ),
+                _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
               ],
             ],
           ),
@@ -156,10 +101,8 @@ class _TextMessageRow extends StatelessWidget {
 
 class _ContributionEventRow extends StatelessWidget {
   const _ContributionEventRow({
-    required this.message,
-    required this.onLongPress,
-    required this.onReactionTap,
-    required this.currentUserId,
+    required this.message, required this.onLongPress,
+    required this.onReactionTap, required this.currentUserId,
   });
 
   final PoolMessage message;
@@ -169,47 +112,24 @@ class _ContributionEventRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: ZendSpacing.sm, vertical: ZendSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.sm, vertical: ZendSpacing.xs),
       decoration: BoxDecoration(
-        color: ZendColors.accentBright.withValues(alpha: 0.08),
+        color: zt.accentBright.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(ZendRadii.md),
-        border: Border.all(color: ZendColors.accentBright.withValues(alpha: 0.2)),
+        border: Border.all(color: zt.accentBright.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  message.content ?? '',
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: ZendColors.textPrimary,
-                  ),
-                ),
-              ),
-              Text(
-                _formatTime(message.createdAt),
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 11,
-                  color: ZendColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
+          Row(children: [
+            Expanded(child: Text(message.content ?? '', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
+            Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMSans', fontSize: 11, color: zt.textSecondary)),
+          ]),
           if (message.reactions.isNotEmpty) ...[
             const SizedBox(height: 4),
-            _ReactionRow(
-              reactions: message.reactions,
-              currentUserId: currentUserId,
-              onTap: onReactionTap,
-            ),
+            _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
           ],
         ],
       ),
@@ -219,10 +139,8 @@ class _ContributionEventRow extends StatelessWidget {
 
 class _VoiceNoteRow extends StatelessWidget {
   const _VoiceNoteRow({
-    required this.message,
-    required this.onLongPress,
-    required this.onReactionTap,
-    required this.currentUserId,
+    required this.message, required this.onLongPress,
+    required this.onReactionTap, required this.currentUserId,
     this.isContinuation = false,
   });
 
@@ -234,6 +152,7 @@ class _VoiceNoteRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final sender = message.senderZendtag ?? '?';
     final avatarLabel = sender.isNotEmpty ? sender[0].toUpperCase() : '?';
     final duration = message.voiceNoteDurationSeconds ?? 0;
@@ -246,16 +165,8 @@ class _VoiceNoteRow extends StatelessWidget {
         else
           CircleAvatar(
             radius: 14,
-            backgroundColor: ZendColors.bgSecondary,
-            child: Text(
-              avatarLabel,
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
-              ),
-            ),
+            backgroundColor: zt.bgCard,
+            child: Text(avatarLabel, style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, color: zt.textPrimary)),
           ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(
@@ -263,75 +174,33 @@ class _VoiceNoteRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isContinuation) ...[
-                Row(
-                  children: [
-                    Text(
-                      '@$sender',
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: ZendColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: ZendSpacing.xs),
-                    Text(
-                      _formatTime(message.createdAt),
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 11,
-                        color: ZendColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                Row(children: [
+                  Text('@$sender', style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                  const SizedBox(width: ZendSpacing.xs),
+                  Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMSans', fontSize: 11, color: zt.textSecondary)),
+                ]),
                 const SizedBox(height: 4),
               ],
-              // Voice note player row
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.sm, vertical: ZendSpacing.xs),
-                decoration: BoxDecoration(
-                  color: ZendColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.sm, vertical: ZendSpacing.xs),
+                decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.play_circle_outline,
-                      size: 24,
-                      color: ZendColors.accent,
-                    ),
+                    Icon(Icons.play_circle_outline, size: 24, color: zt.accent),
                     const SizedBox(width: ZendSpacing.xs),
-                    // Waveform placeholder
                     Container(
-                      width: 80,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: ZendColors.accentBright.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                      ),
+                      width: 80, height: 20,
+                      decoration: BoxDecoration(color: zt.accentBright.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(ZendRadii.pill)),
                     ),
                     const SizedBox(width: ZendSpacing.xs),
-                    Text(
-                      '${duration}s',
-                      style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 12,
-                        color: ZendColors.textSecondary,
-                      ),
-                    ),
+                    Text('${duration}s', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary)),
                   ],
                 ),
               ),
               if (message.reactions.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                _ReactionRow(
-                  reactions: message.reactions,
-                  currentUserId: currentUserId,
-                  onTap: onReactionTap,
-                ),
+                _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
               ],
             ],
           ),
@@ -342,11 +211,7 @@ class _VoiceNoteRow extends StatelessWidget {
 }
 
 class _ReactionRow extends StatelessWidget {
-  const _ReactionRow({
-    required this.reactions,
-    required this.currentUserId,
-    required this.onTap,
-  });
+  const _ReactionRow({required this.reactions, required this.currentUserId, required this.onTap});
 
   final List<PoolReactionCount> reactions;
   final String? currentUserId;
@@ -354,6 +219,7 @@ class _ReactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Wrap(
       spacing: 4,
       runSpacing: 4,
@@ -363,20 +229,11 @@ class _ReactionRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: r.reactedByMe
-                  ? ZendColors.accentBright.withValues(alpha: 0.2)
-                  : ZendColors.bgSecondary,
+              color: r.reactedByMe ? zt.accentBright.withValues(alpha: 0.2) : zt.bgCard,
               borderRadius: BorderRadius.circular(ZendRadii.pill),
-              border: Border.all(
-                color: r.reactedByMe
-                    ? ZendColors.accentBright.withValues(alpha: 0.5)
-                    : ZendColors.border,
-              ),
+              border: Border.all(color: r.reactedByMe ? zt.accentBright.withValues(alpha: 0.5) : zt.border),
             ),
-            child: Text(
-              '${r.emoji} ${r.count}',
-              style: const TextStyle(fontSize: 12),
-            ),
+            child: Text('${r.emoji} ${r.count}', style: const TextStyle(fontSize: 12)),
           ),
         );
       }).toList(),

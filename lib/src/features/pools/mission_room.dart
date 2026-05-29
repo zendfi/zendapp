@@ -405,47 +405,40 @@ class _MissionRoomState extends State<MissionRoom> {
       children: [
         // ── Closed-pool archive banner ──
         if (!_isActive)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-                horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
-            color: ZendColors.bgSecondary,
-            child: const Text(
-              'This pool has closed — messages are read-only',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 12,
-                color: ZendColors.textSecondary,
+          Builder(builder: (context) {
+            final zt = ZendTheme.of(context);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
+              color: zt.bgSecondary,
+              child: Text(
+                'This pool has closed — messages are read-only',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
               ),
-            ),
-          ),
+            );
+          }),
 
         // ── Message list ──
         Expanded(
           child: _loading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
+                    valueColor: AlwaysStoppedAnimation<Color>(ZendTheme.of(context).accentBright),
                   ),
                 )
               : _loadError != null
                   ? Center(
                       child: TextButton(
                         onPressed: _loadMessages,
-                        child: const Text('Retry',
-                            style: TextStyle(color: ZendColors.accentBright)),
+                        child: Text('Retry', style: TextStyle(color: ZendTheme.of(context).accentBright)),
                       ),
                     )
                   : _messages.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'No messages yet. Say something! 👋',
-                            style: TextStyle(
-                              fontFamily: 'DMSans',
-                              fontSize: 14,
-                              color: ZendColors.textSecondary,
-                            ),
+                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
                           ),
                         )
                       : Stack(
@@ -541,24 +534,20 @@ class _DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: ZendColors.border)),
+          Expanded(child: Divider(color: zt.border)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               _label(),
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                color: ZendColors.textSecondary,
-                letterSpacing: 0.4,
-              ),
+              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary, letterSpacing: 0.4),
             ),
           ),
-          const Expanded(child: Divider(color: ZendColors.border)),
+          Expanded(child: Divider(color: zt.border)),
         ],
       ),
     );
@@ -622,21 +611,11 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: ZendColors.accent,
+            color: ZendTheme.of(context).accent,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
           ),
-          child: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: Colors.white,
-            size: 22,
-          ),
+          child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 22),
         ),
       ),
     );
@@ -698,39 +677,26 @@ class _InputBarState extends State<_InputBar> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(
-            ZendSpacing.md, ZendSpacing.xs, ZendSpacing.md, ZendSpacing.sm),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: ZendColors.border)),
+        padding: const EdgeInsets.fromLTRB(ZendSpacing.md, ZendSpacing.xs, ZendSpacing.md, ZendSpacing.sm),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: ZendTheme.of(context).border)),
         ),
         child: widget.isRecording
-            // ── Recording indicator ──
             ? Row(
                 children: [
-                  const Icon(Icons.fiber_manual_record,
-                      color: ZendColors.destructive, size: 14),
+                  const Icon(Icons.fiber_manual_record, color: ZendColors.destructive, size: 14),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Recording ${widget.recordingSeconds}s / 30s',
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 13,
-                      color: ZendColors.textPrimary,
-                    ),
+                    style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: ZendTheme.of(context).textPrimary),
                   ),
                   const Spacer(),
                   TextButton(
                     onPressed: () => unawaited(widget.onMicStop()),
-                    child: const Text('Stop',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontWeight: FontWeight.w600,
-                          color: ZendColors.destructive,
-                        )),
+                    child: const Text('Stop', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
                   ),
                 ],
               )
-            // ── Normal input row ──
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -741,85 +707,42 @@ class _InputBarState extends State<_InputBar> {
                       minLines: 1,
                       maxLength: 280,
                       textInputAction: TextInputAction.newline,
-                      buildCounter: (_, {required currentLength,
-                          required isFocused, maxLength}) {
+                      buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
                         if (!isFocused || !overLimit) return null;
-                        return Text(
-                          '$remaining',
-                          style: const TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 11,
-                            color: ZendColors.destructive,
-                          ),
-                        );
+                        return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
                       },
                       decoration: InputDecoration(
                         hintText: 'Message the group...',
-                        hintStyle: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 14,
-                          color: ZendColors.textSecondary,
-                        ),
+                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
                         filled: true,
-                        fillColor: ZendColors.bgSecondary,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(ZendRadii.pill),
-                          borderSide: BorderSide.none,
-                        ),
+                        fillColor: ZendTheme.of(context).bgSecondary,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
                       ),
                     ),
                   ),
                   const SizedBox(width: ZendSpacing.xs),
-
-                  // Mic button
                   GestureDetector(
                     onLongPressStart: (_) => unawaited(widget.onMicStart()),
                     onLongPressEnd: (_) => unawaited(widget.onMicStop()),
                     child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: ZendColors.bgSecondary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.mic_none,
-                          size: 20, color: ZendColors.textSecondary),
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(color: ZendTheme.of(context).bgSecondary, shape: BoxShape.circle),
+                      child: Icon(Icons.mic_none, size: 20, color: ZendTheme.of(context).textSecondary),
                     ),
                   ),
                   const SizedBox(width: ZendSpacing.xs),
-
-                  // Send button
                   GestureDetector(
-                    onTap: overLimit || widget.sending || _charCount == 0
-                        ? null
-                        : widget.onSend,
+                    onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 40, height: 40,
                       decoration: BoxDecoration(
-                        color: overLimit || _charCount == 0
-                            ? ZendColors.bgSecondary
-                            : ZendColors.accent,
+                        color: overLimit || _charCount == 0 ? ZendTheme.of(context).bgSecondary : ZendTheme.of(context).accent,
                         shape: BoxShape.circle,
                       ),
                       child: widget.sending
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white),
-                              ),
-                            )
-                          : Icon(
-                              Icons.send,
-                              size: 18,
-                              color: overLimit || _charCount == 0
-                                  ? ZendColors.textSecondary
-                                  : Colors.white,
-                            ),
+                          ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                          : Icon(Icons.send, size: 18, color: overLimit || _charCount == 0 ? ZendTheme.of(context).textSecondary : Colors.white),
                     ),
                   ),
                 ],
@@ -837,33 +760,22 @@ class _EmojiPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        0,
-        14,
-        0,
-        MediaQuery.of(context).padding.bottom + 16,
-      ),
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(ZendRadii.xxl),
-        ),
+      padding: EdgeInsets.fromLTRB(0, 14, 0, MediaQuery.of(context).padding.bottom + 16),
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: ZendColors.border,
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-            ),
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
           ),
           const SizedBox(height: ZendSpacing.md),
-          // Two rows of 6 emojis — each cell square, full width
           for (var row = 0; row < 2; row++) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -878,10 +790,7 @@ class _EmojiPickerSheet extends StatelessWidget {
                         child: Container(
                           margin: const EdgeInsets.all(4),
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: ZendColors.bgSecondary,
-                            borderRadius: BorderRadius.circular(ZendRadii.md),
-                          ),
+                          decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.md)),
                           child: Text(emoji, style: const TextStyle(fontSize: 22)),
                         ),
                       ),
