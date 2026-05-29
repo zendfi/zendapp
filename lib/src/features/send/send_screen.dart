@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../navigation/zend_routes.dart';
@@ -220,10 +221,15 @@ class _SendScreenState extends State<SendScreen>
                           _IconPill(icon: Icons.qr_code_2, onTap: () => pushZendSlide(context, const QrScannerScreen())),
                           GestureDetector(
                             onTap: () => pushZendSlide(context, const ProfileScreen()),
-                            child: const CircleAvatar(
+                            child: ZendAvatar(
                               radius: 18,
-                              backgroundColor: Color(0x3095D5B2),
-                              child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 18),
+                              photoUrl: ZendScope.of(context).currentAvatarUrl,
+                              initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
+                                  ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
+                                  : ZendScope.of(context).username.isNotEmpty
+                                      ? ZendScope.of(context).username[0].toUpperCase()
+                                      : null,
+                              backgroundColor: const Color(0x3095D5B2),
                             ),
                           ),
                         ],

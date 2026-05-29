@@ -184,7 +184,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         home: _SplashWithSessionRestore(model: widget.model),
         localeResolutionCallback: (locale, _) {
           if (locale != null) {
-            scheduleMicrotask(() => widget.model.setLocale(locale));
+            widget.model.setLocale(locale);
           }
           return locale;
         },

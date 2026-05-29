@@ -326,6 +326,14 @@ class ZendAppModel extends ChangeNotifier {
   bool savingsLoading = false;
 
   void setLocale(Locale locale) {
+    // Guard: only notify if the locale actually changed to avoid rebuild loops.
+    // localeResolutionCallback fires on every MaterialApp build, so without
+    // this guard it creates a cycle: setLocale → notifyListeners → setState →
+    // MaterialApp rebuild → localeResolutionCallback → setLocale → ...
+    if (_locale.languageCode == locale.languageCode &&
+        _locale.countryCode == locale.countryCode) {
+      return;
+    }
     _locale = locale;
     greetingPrefix = _greetingForLocale(locale);
     notifyListeners();
