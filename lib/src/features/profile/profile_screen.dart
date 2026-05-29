@@ -481,7 +481,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       child: Stack(
         children: [
           ZendAvatar(
-            radius: 28,
+            radius: 32,
             photoUrl: model.currentAvatarUrl,
             initials: widget.displayName.isNotEmpty
                 ? widget.displayName[0].toUpperCase()

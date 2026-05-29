@@ -303,6 +303,10 @@ class TransferHistoryEntry {
   final String? note;
   final String status;
   final DateTime createdAt;
+  final String? senderAvatarUrl;
+  final String? recipientAvatarUrl;
+  final String? senderDisplayName;
+  final String? recipientDisplayName;
 
   TransferHistoryEntry({
     required this.id,
@@ -313,6 +317,10 @@ class TransferHistoryEntry {
     this.note,
     required this.status,
     required this.createdAt,
+    this.senderAvatarUrl,
+    this.recipientAvatarUrl,
+    this.senderDisplayName,
+    this.recipientDisplayName,
   });
 
   factory TransferHistoryEntry.fromJson(Map<String, dynamic> json) {
@@ -325,6 +333,10 @@ class TransferHistoryEntry {
       note: json['note'] as String?,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      senderAvatarUrl: json['sender_avatar_url'] as String?,
+      recipientAvatarUrl: json['recipient_avatar_url'] as String?,
+      senderDisplayName: json['sender_display_name'] as String?,
+      recipientDisplayName: json['recipient_display_name'] as String?,
     );
   }
 
@@ -338,6 +350,10 @@ class TransferHistoryEntry {
       'note': note,
       'status': status,
       'created_at': createdAt.toIso8601String(),
+      'sender_avatar_url': senderAvatarUrl,
+      'recipient_avatar_url': recipientAvatarUrl,
+      'sender_display_name': senderDisplayName,
+      'recipient_display_name': recipientDisplayName,
     };
   }
 }

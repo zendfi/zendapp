@@ -13,6 +13,7 @@ class AuthService {
   static const _zendtagKey = 'zend_zendtag';
   static const _displayNameKey = 'zend_display_name';
   static const _walletAddressKey = 'zend_wallet_address';
+  static const _avatarUrlKey = 'zend_avatar_url';
 
   String? _otpSessionId;       // In-memory only
   String? _verificationToken;  // In-memory only
@@ -93,6 +94,11 @@ class AuthService {
     if (profile.walletAddress != null) {
       await _secureStorage.write(key: _walletAddressKey, value: profile.walletAddress!);
     }
+    // Persist avatar URL — write null as empty string, restore as null
+    await _secureStorage.write(
+      key: _avatarUrlKey,
+      value: profile.avatarUrl ?? '',
+    );
   }
 
   Future<UserProfileResponse?> tryRestoreUserIdentity() async {
@@ -100,6 +106,10 @@ class AuthService {
     final zendtag = await _secureStorage.read(key: _zendtagKey);
     final displayName = await _secureStorage.read(key: _displayNameKey);
     final walletAddress = await _secureStorage.read(key: _walletAddressKey);
+    final avatarUrlRaw = await _secureStorage.read(key: _avatarUrlKey);
+    final avatarUrl = (avatarUrlRaw != null && avatarUrlRaw.isNotEmpty)
+        ? avatarUrlRaw
+        : null;
 
     if (userId == null || zendtag == null || displayName == null) {
       return null;
@@ -110,7 +120,13 @@ class AuthService {
       zendtag: zendtag,
       displayName: displayName,
       walletAddress: walletAddress,
+      avatarUrl: avatarUrl,
     );
+  }
+
+  /// Update the persisted avatar URL without re-fetching the full profile.
+  Future<void> updateAvatarUrl(String? url) async {
+    await _secureStorage.write(key: _avatarUrlKey, value: url ?? '');
   }
 
   Future<void> _clearAll() async {
@@ -119,6 +135,7 @@ class AuthService {
     await _secureStorage.delete(key: _zendtagKey);
     await _secureStorage.delete(key: _displayNameKey);
     await _secureStorage.delete(key: _walletAddressKey);
+    await _secureStorage.delete(key: _avatarUrlKey);
     await _secureStorage.delete(key: 'zend_wallet_encrypted_private_key');
     await _secureStorage.delete(key: 'zend_wallet_public_key');
     await _secureStorage.delete(key: 'zend_pin_salt');

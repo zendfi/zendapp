@@ -744,7 +744,7 @@ class _ContactTile extends StatelessWidget {
         child: Row(
           children: [
             ZendAvatar(
-              radius: 18,
+              radius: 22,
               photoUrl: contact.avatarUrl,
               initials: contact.avatarLabel,
             ),

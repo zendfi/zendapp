@@ -257,9 +257,9 @@ class _ActivityTile extends StatelessWidget {
             children: [
               // Country flag for bank sends, avatar for zend-to-zend
               country != null
-                  ? ZendCountryFlag(country: country, size: 44)
+                  ? ZendCountryFlag(country: country, size: 48)
                   : ZendAvatar(
-                      radius: 22,
+                      radius: 26,
                       photoUrl: avatarUrl,
                       initials: avatarLabel,
                     ),

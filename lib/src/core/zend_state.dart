@@ -352,6 +352,7 @@ class ZendAppModel extends ChangeNotifier {
           zendtag: profile.zendtag,
           displayName: profile.displayName,
           walletAddr: profile.walletAddress,
+          avatarUrl: profile.avatarUrl,
         );
         return;
       }
@@ -421,6 +422,8 @@ class ZendAppModel extends ChangeNotifier {
   void setAvatarUrl(String? url) {
     currentAvatarUrl = url;
     notifyListeners();
+    // Persist so it survives app restarts
+    unawaited(authService.updateAvatarUrl(url));
   }
 
   void setCurrency(String value) {
@@ -491,11 +494,8 @@ class ZendAppModel extends ChangeNotifier {
         final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
         final sign = isSent ? '-' : '+';
         final amt = entry.amountUsdc;
-        // Look up cached avatar URL from recent contacts
-        final cached = recentContacts.firstWhere(
-          (c) => c.tag == counterparty,
-          orElse: () => RecentContact(name: '', tag: counterparty, avatarLabel: ''),
-        );
+        // Avatar URL comes directly from the history entry (backend JOIN)
+        final avatarUrl = isSent ? entry.recipientAvatarUrl : entry.senderAvatarUrl;
         return ZendTransaction(
           name: '@$counterparty',
           note: entry.note ?? '',
@@ -504,7 +504,7 @@ class ZendAppModel extends ChangeNotifier {
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
           amountColor: isSent ? null : ZendColors.positive,
           entry: entry,
-          avatarUrl: cached.avatarUrl,
+          avatarUrl: avatarUrl,
           createdAt: entry.createdAt,
         );
       }).toList();
@@ -895,26 +895,38 @@ class ZendAppModel extends ChangeNotifier {
     for (final entry in entries) {
       final isSent = entry.senderZendtag == currentZendtag;
       final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
+      final counterpartyAvatarUrl = isSent ? entry.recipientAvatarUrl : entry.senderAvatarUrl;
+      // Display name comes directly from the history entry now
+      final counterpartyDisplayName = isSent
+          ? entry.recipientDisplayName
+          : entry.senderDisplayName;
       final tag = counterparty.trim();
       if (tag.isEmpty || seen.contains(tag)) continue;
       seen.add(tag);
-      // Check if we already have a richer contact record cached (with display name)
+
+      // Use the display name from the history entry if available,
+      // otherwise fall back to any cached name we already have
       final cached = recentContacts.firstWhere(
         (c) => c.tag == tag,
         orElse: () => RecentContact(name: '', tag: tag, avatarLabel: ''),
       );
-      // Use cached name if it's a real display name (not empty, not just the tag)
-      final name = (cached.name.isNotEmpty && cached.name != tag && cached.name != '@$tag')
-          ? cached.name
-          : ''; // empty = no display name, tile will show only @tag
+      final name = (counterpartyDisplayName != null && counterpartyDisplayName.trim().isNotEmpty)
+          ? counterpartyDisplayName.trim()
+          : (cached.name.isNotEmpty && cached.name != tag && cached.name != '@$tag')
+              ? cached.name
+              : '';
+
       final avatarLabel = name.isNotEmpty
           ? name[0].toUpperCase()
           : tag.isNotEmpty ? tag[0].toUpperCase() : '?';
+      // Prefer the freshest avatar URL: history entry > cached contact
+      final avatarUrl = counterpartyAvatarUrl ?? cached.avatarUrl;
       contacts.add(
         RecentContact(
           name: name,
           tag: tag,
           avatarLabel: avatarLabel,
+          avatarUrl: avatarUrl,
         ),
       );
     }

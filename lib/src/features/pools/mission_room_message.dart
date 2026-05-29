@@ -67,10 +67,10 @@ class _TextMessageRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isContinuation)
-          const SizedBox(width: 28)
+          const SizedBox(width: 36) // matches radius 18 * 2
         else
           ZendAvatar(
-            radius: 14,
+            radius: 18,
             photoUrl: message.senderAvatarUrl,
             initials: avatarLabel,
           ),
@@ -162,10 +162,10 @@ class _VoiceNoteRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isContinuation)
-          const SizedBox(width: 28)
+          const SizedBox(width: 36) // matches radius 18 * 2
         else
           ZendAvatar(
-            radius: 14,
+            radius: 18,
             photoUrl: message.senderAvatarUrl,
             initials: avatarLabel,
           ),
