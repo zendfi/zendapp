@@ -802,8 +802,8 @@ class _ConfirmStage extends StatelessWidget {
                 height: 14,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: filled ? ZendColors.textPrimary : ZendColors.bgSecondary,
-                  border: Border.all(color: ZendColors.border),
+                  color: filled ? zt.textPrimary : zt.bgSecondary,
+                  border: Border.all(color: zt.border),
                 ),
               );
             }),
@@ -817,7 +817,7 @@ class _ConfirmStage extends StatelessWidget {
               fontSize: 13,
               color: (pinError != null || errorMessage != null)
                   ? ZendColors.destructive
-                  : ZendColors.textSecondary,
+                  : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -844,6 +844,7 @@ class _NumericKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Column(
       children: _keys.map((row) {
         return Row(
@@ -856,14 +857,14 @@ class _NumericKeypad extends StatelessWidget {
                   height: 56,
                   alignment: Alignment.center,
                   child: key == 'del'
-                      ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 20)
+                      ? ZendBackspaceIcon(color: zt.textPrimary, size: 20)
                       : Text(
                           key,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'DMSans',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
-                            color: ZendColors.textPrimary,
+                            color: zt.textPrimary,
                           ),
                         ),
                 ),

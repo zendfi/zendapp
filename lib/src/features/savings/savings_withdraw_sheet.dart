@@ -317,6 +317,7 @@ class _GoalLockedStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -326,24 +327,24 @@ class _GoalLockedStage extends StatelessWidget {
             const Icon(Icons.lock_outline,
                 size: 48, color: ZendColors.accentBright),
             const SizedBox(height: ZendSpacing.md),
-            const Text(
+            Text(
               'Goal is locked',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: ZendSpacing.xs),
-            const Text(
+            Text(
               'This goal is set to Strict mode. Withdrawals are locked until you reach your target.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 14,
                 height: 1.45,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: ZendSpacing.xl),
@@ -370,27 +371,28 @@ class _FreeConfirmStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Cash out',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.sm),
           Text(
             'Available: \$${availableAmount.toStringAsFixed(2)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 14,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -427,6 +429,7 @@ class _FreeAmountStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       child: Column(
@@ -436,29 +439,28 @@ class _FreeAmountStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: const Icon(Icons.arrow_back,
-                  color: ZendColors.textPrimary, size: 22),
+              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Cash out',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
           Center(
             child: Text(
               _displayAmount,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
           ),
@@ -471,7 +473,7 @@ class _FreeAmountStage extends StatelessWidget {
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
-                    : ZendColors.textSecondary,
+                    : zt.textSecondary,
               ),
             ),
           ),
@@ -502,18 +504,19 @@ class _GoalConfirmStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Withdraw from goal',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
@@ -527,10 +530,10 @@ class _GoalConfirmStage extends StatelessWidget {
             mode == 'flexible'
                 ? 'Flexible goal — you can withdraw anytime.'
                 : 'Goal target reached — withdrawal is now available.',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -569,18 +572,19 @@ class _LockConfirmStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Withdraw locked savings',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
@@ -594,10 +598,10 @@ class _LockConfirmStage extends StatelessWidget {
             lockUnlockDate != null
                 ? 'Locked until ${_formatDate(lockUnlockDate)} — now unlocked.'
                 : 'Your lock has expired and is ready to withdraw.',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -625,18 +629,19 @@ class _ConfirmStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Cash out',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
@@ -646,7 +651,7 @@ class _ConfirmStage extends StatelessWidget {
             label: 'Saved',
             value: _fmt(position.principalUsd),
           ),
-          const Divider(color: ZendColors.border, height: 24),
+          Divider(color: zt.border, height: 24),
           _BreakdownRow(
             label: 'Money earned',
             value: _fmt(position.grossYieldUsd),
@@ -656,14 +661,14 @@ class _ConfirmStage extends StatelessWidget {
           _BreakdownRow(
             label: 'ZendFi fee (${(position.feeBps / 100).toStringAsFixed(0)}%)',
             value: '−${_fmt(position.feeUsd)}',
-            valueColor: ZendColors.textSecondary,
-            labelStyle: const TextStyle(
+            valueColor: zt.textSecondary,
+            labelStyle: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
-          const Divider(color: ZendColors.border, height: 24),
+          Divider(color: zt.border, height: 24),
           _BreakdownRow(
             label: "You'll receive",
             value: _fmt(receiveAmount),
@@ -699,6 +704,7 @@ class _BreakdownRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -710,7 +716,7 @@ class _BreakdownRow extends StatelessWidget {
                 fontSize: bold ? 15 : 14,
                 fontWeight:
                     bold ? FontWeight.w600 : FontWeight.w400,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
         ),
         Text(
@@ -719,7 +725,7 @@ class _BreakdownRow extends StatelessWidget {
             fontFamily: 'DMMono',
             fontSize: bold ? 15 : 14,
             fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-            color: valueColor ?? ZendColors.textPrimary,
+            color: valueColor ?? zt.textPrimary,
           ),
         ),
       ],
@@ -746,6 +752,7 @@ class _PinStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: Column(
@@ -754,19 +761,18 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: const Icon(Icons.arrow_back,
-                  color: ZendColors.textPrimary, size: 22),
+              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'Cash out \$${receiveAmount.toStringAsFixed(2)}',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: 28),
@@ -780,10 +786,8 @@ class _PinStage extends StatelessWidget {
                 height: 14,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: filled
-                      ? ZendColors.textPrimary
-                      : ZendColors.bgSecondary,
-                  border: Border.all(color: ZendColors.border),
+                  color: filled ? zt.textPrimary : zt.bgSecondary,
+                  border: Border.all(color: zt.border),
                 ),
               );
             }),
@@ -796,7 +800,7 @@ class _PinStage extends StatelessWidget {
               fontSize: 13,
               color: pinError != null
                   ? ZendColors.destructive
-                  : ZendColors.textSecondary,
+                  : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -815,22 +819,22 @@ class _ProcessingStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             valueColor:
                 AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Text(
             'Cashing out...',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
-              color: ZendColors.textSecondary,
+              color: ZendTheme.of(context).textSecondary,
             ),
           ),
         ],
@@ -848,6 +852,7 @@ class _SuccessStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -864,23 +869,23 @@ class _SuccessStage extends StatelessWidget {
               child: const Icon(Icons.check, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Cashed out! 💸',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 32,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'You received \$${receiveAmount.toStringAsFixed(2)}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
@@ -909,6 +914,7 @@ class _ErrorStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -928,10 +934,10 @@ class _ErrorStage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 24),
@@ -941,8 +947,8 @@ class _ErrorStage extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onCancel,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: ZendColors.textSecondary,
-                      side: const BorderSide(color: ZendColors.border),
+                      foregroundColor: zt.textSecondary,
+                      side: BorderSide(color: zt.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZendRadii.lg),
                       ),
@@ -980,6 +986,7 @@ class _NumericKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Column(
       children: _keys.map((row) {
         return Row(
@@ -992,14 +999,14 @@ class _NumericKeypad extends StatelessWidget {
                   height: 56,
                   alignment: Alignment.center,
                   child: key == 'del'
-                      ? const ZendBackspaceIcon(color: ZendColors.textPrimary, size: 20)
+                      ? ZendBackspaceIcon(color: zt.textPrimary, size: 20)
                       : Text(
                           key,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'DMSans',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
-                            color: ZendColors.textPrimary,
+                            color: zt.textPrimary,
                           ),
                         ),
                 ),
