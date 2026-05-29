@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -433,7 +434,12 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     if (choice == 'remove') {
       setState(() => _uploading = true);
       try {
+        final oldUrl = model.currentAvatarUrl;
         await model.walletService.apiClient.deleteAvatar();
+        // Evict the old image from the disk cache so it doesn't reappear
+        if (oldUrl != null) {
+          await CachedNetworkImage.evictFromCache(oldUrl);
+        }
         model.setAvatarUrl(null);
       } catch (_) {
         if (mounted) {
@@ -460,7 +466,12 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
 
     setState(() => _uploading = true);
     try {
+      final oldUrl = model.currentAvatarUrl;
       final url = await model.walletService.apiClient.uploadAvatar(File(picked.path));
+      // Evict the old cached image so the new one loads fresh
+      if (oldUrl != null) {
+        await CachedNetworkImage.evictFromCache(oldUrl);
+      }
       model.setAvatarUrl(url);
     } catch (_) {
       if (mounted) {

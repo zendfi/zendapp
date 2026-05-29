@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
@@ -104,8 +106,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(children: [
                         GestureDetector(
                           onTap: () => pushZendSlide(context, const ProfileScreen()),
-                          // Avatar on deep green — use a lighter green tint
-                          child: const CircleAvatar(radius: 18, backgroundColor: Color(0x3095D5B2), child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 18)),
+                          child: ZendAvatar(
+                            radius: 18,
+                            photoUrl: model.currentAvatarUrl,
+                            initials: model.currentDisplayName?.isNotEmpty == true
+                                ? model.currentDisplayName![0].toUpperCase()
+                                : model.username.isNotEmpty
+                                    ? model.username[0].toUpperCase()
+                                    : null,
+                            backgroundColor: const Color(0x3095D5B2),
+                          ),
                         ),
                       ]),
                     ],
@@ -298,27 +308,64 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
 class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({required this.name, required this.note, required this.amount, required this.time, required this.avatarLabel, this.amountColor, this.onTap});
+  const _TransactionRow({
+    required this.name,
+    required this.note,
+    required this.amount,
+    required this.time,
+    required this.avatarLabel,
+    this.avatarUrl,
+    this.countryCode,
+    this.amountColor,
+    this.onTap,
+  });
   final String name;
   final String note;
   final String amount;
   final String time;
   final String avatarLabel;
+  final String? avatarUrl;
+  final String? countryCode;
   final Color? amountColor;
   final VoidCallback? onTap;
 
   factory _TransactionRow.fromTransaction(ZendTransaction tx, {VoidCallback? onTap}) =>
-      _TransactionRow(name: tx.name, note: tx.note, amount: tx.amount, time: tx.time, avatarLabel: tx.avatarLabel, amountColor: tx.amountColor, onTap: onTap);
+      _TransactionRow(
+        name: tx.name,
+        note: tx.note,
+        amount: tx.amount,
+        time: tx.time,
+        avatarLabel: tx.avatarLabel,
+        avatarUrl: tx.avatarUrl,
+        countryCode: tx.countryCode,
+        amountColor: tx.amountColor,
+        onTap: onTap,
+      );
+
+  ZendCountry? get _country => switch (countryCode) {
+        'ng' => ZendCountry.ng,
+        'us' => ZendCountry.us,
+        'gb' => ZendCountry.gb,
+        'eu' => ZendCountry.eu,
+        _ => null,
+      };
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final country = _country;
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(children: [
-          CircleAvatar(radius: 20, backgroundColor: zt.bgCard, child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary))),
+          country != null
+              ? ZendCountryFlag(country: country, size: 44)
+              : ZendAvatar(
+                  radius: 22,
+                  photoUrl: avatarUrl,
+                  initials: avatarLabel,
+                ),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name,
