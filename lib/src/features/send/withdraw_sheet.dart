@@ -12,6 +12,7 @@ Future<void> showWithdrawSheet(BuildContext context) {
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,

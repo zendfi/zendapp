@@ -37,7 +37,11 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _themeMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+    // Default to system theme — follows device dark/light mode automatically.
+    // The profile toggle overrides this to explicit dark or light.
+    _themeMode = widget.model.hasExplicitTheme
+        ? (widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light)
+        : ThemeMode.system;
     widget.model.addListener(_onModelChanged);
     // Listen for app-lock state changes so we can consume a pending deep link
     // the moment the user unlocks the app.
@@ -138,7 +142,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   }
 
   void _onModelChanged() {
-    final newMode = widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+    final newMode = widget.model.hasExplicitTheme
+        ? (widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light)
+        : ThemeMode.system;
     if (newMode != _themeMode) {
       setState(() => _themeMode = newMode);
     }

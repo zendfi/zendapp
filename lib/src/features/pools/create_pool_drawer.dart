@@ -15,6 +15,7 @@ Future<void> showCreatePoolDrawer(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => FractionallySizedBox(
       heightFactor: 1.0,
@@ -257,13 +258,14 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final recentContacts = _buildRecentPoolContacts(model.recentContacts);
     final nameRemaining = _nameMaxLength - _nameController.text.length;
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: zt.bgPrimary,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(ZendRadii.xxl),
         ),
@@ -278,34 +280,31 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               const ZendSheetHandle(),
               const SizedBox(height: ZendSpacing.lg),
 
-              // ── Title ──
-              const Text(
+              Text(
                 'Create a pool',
                 style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               const SizedBox(height: ZendSpacing.xl),
 
-              // ── Target amount (read-only) ──
               Text(
                 widget.targetAmount == widget.targetAmount.roundToDouble()
                     ? '\$${widget.targetAmount.toStringAsFixed(0)}'
                     : '\$${widget.targetAmount.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 40,
                   fontWeight: FontWeight.w700,
                   fontStyle: FontStyle.italic,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               const SizedBox(height: ZendSpacing.lg),
 
-              // ── Pool name field ──
               TextField(
                 controller: _nameController,
                 inputFormatters: [
@@ -316,13 +315,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 }),
                 decoration: InputDecoration(
                   hintText: 'Pool name',
-                  hintStyle: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: ZendColors.textSecondary,
-                  ),
+                  hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
                   filled: true,
-                  fillColor: ZendColors.bgSecondary,
+                  fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                     borderSide: BorderSide.none,
@@ -332,11 +327,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: ZendColors.textPrimary,
-                ),
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xxs),
               Align(
@@ -346,50 +337,30 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   style: TextStyle(
                     fontFamily: 'DMMono',
                     fontSize: 11,
-                    color: nameRemaining < 10
-                        ? ZendColors.destructive
-                        : ZendColors.textSecondary,
+                    color: nameRemaining < 10 ? ZendColors.destructive : zt.textSecondary,
                   ),
                 ),
               ),
               if (_nameError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(
-                  _nameError!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 12,
-                    color: ZendColors.destructive,
-                  ),
-                ),
+                Text(_nameError!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
-              // ── Add participants section ──
-              const Text(
+              Text(
                 'Add participants',
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: ZendColors.textPrimary,
-                ),
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
-              // Known Zend contacts — tap to toggle selection
               _SectionLabel('Recent Zend users'),
               const SizedBox(height: ZendSpacing.xxs),
               if (recentContacts.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'No recent Zend users yet',
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 13,
-                      color: ZendColors.textSecondary,
-                    ),
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
                   ),
                 )
               else
@@ -416,21 +387,16 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 }),
               const SizedBox(height: ZendSpacing.xs),
 
-              // Add new Zend user by username
               TextField(
                 controller: _zendUserController,
                 textInputAction: TextInputAction.done,
                 onSubmitted: _addZendUser,
                 decoration: InputDecoration(
                   hintText: 'Add @username',
-                  hintStyle: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 14,
-                    color: ZendColors.textSecondary,
-                  ),
-                  prefixIcon: const Icon(Icons.person_add_outlined, size: 18, color: ZendColors.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                  prefixIcon: Icon(Icons.person_add_outlined, size: 18, color: zt.textSecondary),
                   filled: true,
-                  fillColor: ZendColors.bgSecondary,
+                  fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                     borderSide: BorderSide.none,
@@ -440,11 +406,10 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendColors.textPrimary),
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.md),
 
-              // External contact via email or phone
               _SectionLabel('Invite via email or phone'),
               const SizedBox(height: ZendSpacing.xxs),
               TextField(
@@ -454,14 +419,10 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 onSubmitted: _addExternalContact,
                 decoration: InputDecoration(
                   hintText: 'Email or phone number',
-                  hintStyle: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 14,
-                    color: ZendColors.textSecondary,
-                  ),
-                  prefixIcon: const Icon(Icons.mail_outline, size: 18, color: ZendColors.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                  prefixIcon: Icon(Icons.mail_outline, size: 18, color: zt.textSecondary),
                   filled: true,
-                  fillColor: ZendColors.bgSecondary,
+                  fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                     borderSide: BorderSide.none,
@@ -471,11 +432,10 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendColors.textPrimary),
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
-              // Selected participant chips
               if (_participants.isNotEmpty) ...[
                 Wrap(
                   spacing: ZendSpacing.xs,
@@ -485,40 +445,32 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     return Chip(
                       avatar: CircleAvatar(
                         radius: 12,
-                        backgroundColor: p.isExternal
-                            ? ZendColors.bgSecondary
-                            : ZendColors.accent,
+                        backgroundColor: p.isExternal ? zt.bgSecondary : zt.accent,
                         child: Text(
                           p.avatarLabel,
                           style: TextStyle(
                             fontFamily: 'DMSans',
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: p.isExternal
-                                ? ZendColors.textPrimary
-                                : ZendColors.textOnDeep,
+                            color: p.isExternal ? zt.textPrimary : ZendColors.textOnDeep,
                           ),
                         ),
                       ),
                       label: Text(
                         p.displayName,
-                        style: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 13,
-                          color: ZendColors.textPrimary,
-                        ),
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary),
                       ),
-                      deleteIcon: const Icon(Icons.close, size: 16),
+                      deleteIcon: Icon(Icons.close, size: 16, color: zt.textSecondary),
                       onDeleted: () => _removeParticipant(index),
                       backgroundColor: p.isExternal
-                          ? ZendColors.bgSecondary
-                          : ZendColors.accentPop.withValues(alpha: 0.2),
+                          ? zt.bgSecondary
+                          : zt.accentPop.withValues(alpha: 0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZendRadii.pill),
                         side: BorderSide(
                           color: p.isExternal
-                              ? ZendColors.border
-                              : ZendColors.accentBright.withValues(alpha: 0.3),
+                              ? zt.border
+                              : zt.accentBright.withValues(alpha: 0.3),
                         ),
                       ),
                     );
@@ -527,59 +479,30 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ],
               if (_participantError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(
-                  _participantError!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 12,
-                    color: ZendColors.destructive,
-                  ),
-                ),
+                Text(_participantError!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
-              // ── Set deadline row ──
               _TappableRow(
                 label: _deadline != null
                     ? 'Deadline: ${_formatDate(_deadline!)}'
                     : 'Set deadline',
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: ZendColors.textSecondary,
-                ),
+                trailing: Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
                 onTap: _pickDeadline,
               ),
               if (_deadlineError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(
-                  _deadlineError!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 12,
-                    color: ZendColors.destructive,
-                  ),
-                ),
+                Text(_deadlineError!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
               ],
 
-              // ── Spacer to push button to bottom ──
               const SizedBox(height: ZendSpacing.xxl),
               const Spacer(),
 
-              // ── Create error ──
               if (_createError != null) ...[
-                Text(
-                  _createError!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 13,
-                    color: ZendColors.destructive,
-                  ),
-                ),
+                Text(_createError!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive)),
                 const SizedBox(height: ZendSpacing.xs),
               ],
 
-              // ── Create pool button ──
               PrimaryButton(
                 label: _creating ? 'Creating...' : 'Create pool',
                 onPressed: _creating ? null : _onCreatePool,
@@ -593,42 +516,23 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 }
 
 class _TappableRow extends StatelessWidget {
-  const _TappableRow({
-    required this.label,
-    required this.trailing,
-    required this.onTap,
-  });
-
+  const _TappableRow({required this.label, required this.trailing, required this.onTap});
   final String label;
   final Widget trailing;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(ZendRadii.sm),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ZendSpacing.md,
-          vertical: ZendSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: ZendColors.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.sm),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.md, vertical: ZendSpacing.sm),
+        decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.sm)),
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: ZendColors.textPrimary,
-                ),
-              ),
-            ),
+            Expanded(child: Text(label, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary))),
             trailing,
           ],
         ),
@@ -643,69 +547,45 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
-        fontFamily: 'DMSans',
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.0,
-        color: ZendColors.textSecondary,
-      ),
+      style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
     );
   }
 }
 
 class _SelectableContactTile extends StatelessWidget {
-  const _SelectableContactTile({
-    required this.participant,
-    required this.selected,
-    required this.onTap,
-  });
-
+  const _SelectableContactTile({required this.participant, required this.selected, required this.onTap});
   final PoolParticipant participant;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
-          color: selected ? ZendColors.accentPop.withValues(alpha: 0.12) : Colors.transparent,
+          color: selected ? zt.accentPop.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(ZendRadii.sm),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: selected ? ZendColors.accent : ZendColors.bgSecondary,
+              backgroundColor: selected ? zt.accent : zt.bgSecondary,
               child: Text(
                 participant.avatarLabel,
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? ZendColors.textOnDeep : ZendColors.textPrimary,
-                ),
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                participant.displayName,
-                style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 14,
-                  color: ZendColors.textPrimary,
-                ),
-              ),
-            ),
-            if (selected)
-              const Icon(Icons.check_circle, size: 20, color: ZendColors.accentBright),
+            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary))),
+            if (selected) Icon(Icons.check_circle, size: 20, color: zt.accentBright),
           ],
         ),
       ),

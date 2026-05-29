@@ -363,8 +363,8 @@ class _SavingsCard extends StatelessWidget {
         height: 118,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         decoration: BoxDecoration(
-          // In dark mode use the intentional deep green accent surface
-          color: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
+          // In dark mode use bgDeep (forest green) — matches the send screen background
+          color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Stack(children: [
@@ -429,8 +429,8 @@ class _PoolsCard extends StatelessWidget {
         height: 118,
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         decoration: BoxDecoration(
-            // In dark mode use the intentional deep green accent surface
-            color: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
+            // In dark mode use bgDeep (forest green) — matches the send screen background
+            color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
             borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

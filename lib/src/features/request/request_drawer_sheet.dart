@@ -19,6 +19,7 @@ Future<void> showRequestDrawer(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => FractionallySizedBox(
       heightFactor: 1.0,
@@ -292,25 +293,26 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
     // ── Loading stage ──────────────────────────────────────────────────────
     if (_stage == true) {
+      final zt = ZendTheme.of(context);
       return Container(
-        decoration: const BoxDecoration(
-          color: ZendColors.bgPrimary,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        decoration: BoxDecoration(
+          color: zt.bgPrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
         ),
-        child: const SizedBox(
+        child: SizedBox(
           height: 280,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ZendLoader(size: 32),
-                SizedBox(height: 20),
+                const ZendLoader(size: 32),
+                const SizedBox(height: 20),
                 Text(
                   'Creating request…',
                   style: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 15,
-                    color: ZendColors.textSecondary,
+                    color: zt.textSecondary,
                   ),
                 ),
               ],
@@ -330,10 +332,11 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     }
 
     // ── Form stage ─────────────────────────────────────────────────────────
+    final zt = ZendTheme.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(ZendRadii.xxl),
         ),
       ),
@@ -349,11 +352,11 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
               Text(
                 _titleText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               const SizedBox(height: ZendSpacing.xl),
@@ -361,12 +364,12 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               if (widget.amountReadOnly) ...[
                 Text(
                   formatRequestAmount(_amount),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'InstrumentSerif',
                     fontSize: 40,
                     fontWeight: FontWeight.w700,
                     fontStyle: FontStyle.italic,
-                    color: ZendColors.textPrimary,
+                    color: zt.textPrimary,
                   ),
                 ),
               ] else ...[
@@ -374,29 +377,29 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: _onAmountChanged,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DMMono',
                     fontSize: 28,
                     fontWeight: FontWeight.w500,
-                    color: ZendColors.textPrimary,
+                    color: zt.textPrimary,
                   ),
                   decoration: InputDecoration(
                     prefixText: r'$ ',
-                    prefixStyle: const TextStyle(
+                    prefixStyle: TextStyle(
                       fontFamily: 'DMMono',
                       fontSize: 28,
                       fontWeight: FontWeight.w500,
-                      color: ZendColors.textSecondary,
+                      color: zt.textSecondary,
                     ),
                     hintText: '0.00',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       fontFamily: 'DMMono',
                       fontSize: 28,
                       fontWeight: FontWeight.w500,
-                      color: ZendColors.textSecondary,
+                      color: zt.textSecondary,
                     ),
                     filled: true,
-                    fillColor: ZendColors.bgSecondary,
+                    fillColor: zt.bgSecondary,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(ZendRadii.md),
                       borderSide: BorderSide.none,
@@ -420,13 +423,13 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: 'Description (optional)',
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 15,
-                    color: ZendColors.textSecondary,
+                    color: zt.textSecondary,
                   ),
                   filled: true,
-                  fillColor: ZendColors.bgSecondary,
+                  fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                     borderSide: BorderSide.none,
@@ -436,10 +439,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               const SizedBox(height: ZendSpacing.xxs),
@@ -452,7 +455,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                     fontSize: 11,
                     color: descRemaining < 20
                         ? ZendColors.destructive
-                        : ZendColors.textSecondary,
+                        : zt.textSecondary,
                   ),
                 ),
               ),
@@ -463,35 +466,35 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 onChanged: _onRecipientChanged,
                 decoration: InputDecoration(
                   hintText: '@zendtag or email address',
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     fontFamily: 'DMSans',
                     fontSize: 15,
-                    color: ZendColors.textSecondary,
+                    color: zt.textSecondary,
                   ),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.person_outline,
                     size: 20,
-                    color: ZendColors.textSecondary,
+                    color: zt.textSecondary,
                   ),
                   suffixIcon: _resolvingZendtag
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
+                      ? Padding(
+                          padding: const EdgeInsets.all(12),
                           child: SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: ZendColors.textSecondary,
+                              color: zt.textSecondary,
                             ),
                           ),
                         )
                       : _resolvedZendtag != null
-                          ? const Icon(Icons.check_circle, size: 20, color: ZendColors.positive)
+                          ? Icon(Icons.check_circle, size: 20, color: zt.positive)
                           : _recipientEmail != null
-                              ? const Icon(Icons.check_circle, size: 20, color: ZendColors.positive)
+                              ? Icon(Icons.check_circle, size: 20, color: zt.positive)
                               : null,
                   filled: true,
-                  fillColor: ZendColors.bgSecondary,
+                  fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                     borderSide: BorderSide.none,
@@ -501,10 +504,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               if (_resolvedDisplayName != null) ...[
@@ -513,10 +516,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     '$_resolvedDisplayName (@$_resolvedZendtag)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 12,
-                      color: ZendColors.positive,
+                      color: zt.positive,
                     ),
                   ),
                 ),
@@ -542,7 +545,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                 label: _expiryDate != null
                     ? 'Expires ${_formatDate(_expiryDate!)}'
                     : 'Set expiry date',
-                trailing: const Icon(Icons.chevron_right, size: 18, color: ZendColors.textSecondary),
+                trailing: Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
                 onTap: _pickExpiryDate,
               ),
               if (_expiryError != null) ...[
@@ -563,12 +566,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
               PrimaryButton(
                 label: _buttonLabel,
                 onPressed: _canCreate ? _onCreateLink : () {},
-                backgroundColor: _canCreate
-                    ? ZendColors.accent
-                    : ZendColors.bgSecondary,
-                foregroundColor: _canCreate
-                    ? ZendColors.textOnDeep
-                    : ZendColors.textSecondary,
+                backgroundColor: _canCreate ? zt.accent : zt.bgSecondary,
+                foregroundColor: _canCreate ? ZendColors.textOnDeep : zt.textSecondary,
               ),
             ],
           ),
@@ -591,6 +590,7 @@ class _TappableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(ZendRadii.sm),
       onTap: onTap,
@@ -600,7 +600,7 @@ class _TappableRow extends StatelessWidget {
           vertical: ZendSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: ZendColors.bgSecondary,
+          color: zt.bgSecondary,
           borderRadius: BorderRadius.circular(ZendRadii.sm),
         ),
         child: Row(
@@ -608,10 +608,10 @@ class _TappableRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
             ),
@@ -694,10 +694,11 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: ZendColors.bgPrimary,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
@@ -706,8 +707,6 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
           children: [
             const ZendSheetHandle(),
             const SizedBox(height: 32),
-
-            // ── Check icon ──────────────────────────────────────────────────
             ScaleTransition(
               scale: _checkScale,
               child: Container(
@@ -721,43 +720,35 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
               ),
             ),
             const SizedBox(height: 20),
-
-            // ── Headline ────────────────────────────────────────────────────
             Text(
               _headline(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 40,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
-
-            // ── Amount ──────────────────────────────────────────────────────
             Text(
               _formatAmount(widget.request.amount),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMMono',
                 fontSize: 16,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 4),
-
-            // ── Subline ─────────────────────────────────────────────────────
             Text(
               _subline(),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 14,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),
-
-            // ── Show QR (primary) ───────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: PrimaryButton(
@@ -766,8 +757,6 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
               ),
             ),
             const SizedBox(height: 12),
-
-            // ── Done ────────────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: OutlineActionButton(

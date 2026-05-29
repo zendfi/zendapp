@@ -287,6 +287,9 @@ class ZendAppModel extends ChangeNotifier {
   String username = 'blessed';
   bool balanceHidden = false;
   bool isDarkMode = false;
+  /// True once the user has explicitly toggled dark/light mode.
+  /// False = follow system theme.
+  bool hasExplicitTheme = false;
   String selectedCurrency = 'USD';
 
   // Waitlist hold-over fields — set by the OTP verify response when
@@ -366,6 +369,7 @@ class ZendAppModel extends ChangeNotifier {
   }
 
   void toggleDarkMode() {
+    hasExplicitTheme = true;
     isDarkMode = !isDarkMode;
     notifyListeners();
   }
@@ -743,6 +747,7 @@ class ZendAppModel extends ChangeNotifier {
     pendingWaitlistFullName = null;
     balanceHidden = false;
     isDarkMode = false;
+    hasExplicitTheme = false;
     selectedCurrency = 'USD';
     isLoading = false;
     loadingMessage = 'Loading';

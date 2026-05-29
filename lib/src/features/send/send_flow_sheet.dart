@@ -26,6 +26,7 @@ Future<void> showSendFlowSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
