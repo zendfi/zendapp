@@ -116,6 +116,8 @@ class _UsernameScreenState extends State<UsernameScreen> {
                             decoration: InputDecoration(
                               filled: false,
                               border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
+                              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
+                              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide.none),
                               hintText: 'yourname',
                               hintStyle: TextStyle(color: zt.textSecondary),
                             ),

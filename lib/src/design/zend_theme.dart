@@ -95,9 +95,10 @@ ThemeData buildZendTheme() {
         borderRadius: BorderRadius.circular(ZendRadii.xl),
         borderSide: BorderSide.none,
       ),
+      // No focus highlight — clean, no border on focus
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(ZendRadii.xl),
-        borderSide: const BorderSide(color: ZendColors.accent, width: 1.2),
+        borderSide: BorderSide.none,
       ),
     ),
   );
@@ -211,9 +212,10 @@ ThemeData buildZendDarkTheme() {
         borderRadius: BorderRadius.circular(ZendRadii.xl),
         borderSide: BorderSide.none,
       ),
+      // No focus highlight — clean, no border on focus
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(ZendRadii.xl),
-        borderSide: const BorderSide(color: Color(0xFF6FCF97), width: 1.2),
+        borderSide: BorderSide.none,
       ),
     ),
   );

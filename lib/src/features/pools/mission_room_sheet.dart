@@ -13,8 +13,8 @@ Future<void> showMissionRoomSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
-    // Let the sheet resize when the keyboard appears
     builder: (_) => _MissionRoomSheet(pool: pool),
   );
 }
@@ -25,63 +25,56 @@ class _MissionRoomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
-    return Container(
-      // Full-screen minus status bar
-      height: MediaQuery.of(context).size.height - topPadding,
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(ZendRadii.xxl),
+    return FractionallySizedBox(
+      heightFactor: 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
-      ),
-      // Scaffold inside the sheet handles keyboard insets correctly —
-      // resizeToAvoidBottomInset pushes content up when keyboard opens,
-      // exactly like WhatsApp/Telegram.
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: true,
-        body: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 4, 0),
-              child: Column(
-                children: [
-                  const ZendSheetHandle(),
-                  const SizedBox(height: ZendSpacing.sm),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          pool.name,
-                          style: TextStyle(
-                            fontFamily: 'InstrumentSerif',
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: ZendTheme.of(context).textPrimary,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: true,
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 4, 0),
+                child: Column(
+                  children: [
+                    const ZendSheetHandle(),
+                    const SizedBox(height: ZendSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            pool.name,
+                            style: TextStyle(
+                              fontFamily: 'InstrumentSerif',
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: ZendTheme.of(context).textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: ZendTheme.of(context).textSecondary, size: 20),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                  Divider(color: ZendTheme.of(context).border, height: 12),
-                ],
+                        IconButton(
+                          icon: Icon(Icons.close, color: ZendTheme.of(context).textSecondary, size: 20),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    Divider(color: ZendTheme.of(context).border, height: 12),
+                  ],
+                ),
               ),
-            ),
-
-            // ── Mission Room fills the rest ──────────────────────────────
-            Expanded(
-              child: MissionRoom(pool: pool),
-            ),
-          ],
+              Expanded(
+                child: MissionRoom(pool: pool),
+              ),
+            ],
+          ),
         ),
       ),
     );

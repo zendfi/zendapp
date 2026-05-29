@@ -227,9 +227,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                                   borderSide: BorderSide(color: zt.border),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.accent),
+                                  borderRadius: BorderRadius.circular(ZendRadii.md),
+                                  borderSide: BorderSide.none,
                                 ),
                               ),
                               onChanged: (_) => _buildFixedAmountUrl(),
@@ -254,19 +253,16 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                                 contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 10),
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
+                                  borderRadius: BorderRadius.circular(ZendRadii.md),
                                   borderSide: BorderSide(color: zt.border),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
+                                  borderRadius: BorderRadius.circular(ZendRadii.md),
                                   borderSide: BorderSide(color: zt.border),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.accent),
+                                  borderRadius: BorderRadius.circular(ZendRadii.md),
+                                  borderSide: BorderSide.none,
                                 ),
                               ),
                               onChanged: (_) => _buildFixedAmountUrl(),

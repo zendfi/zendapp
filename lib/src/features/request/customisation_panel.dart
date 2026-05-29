@@ -110,7 +110,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(ZendRadii.sm),
-                borderSide: const BorderSide(color: ZendColors.accent),
+                borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.all(ZendSpacing.sm),
             ),
