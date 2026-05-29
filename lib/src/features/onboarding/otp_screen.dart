@@ -224,7 +224,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: ZendScrollPage(
           child: Center(
@@ -236,38 +238,23 @@ class _OtpScreenState extends State<OtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 44),
-                    const Text(
-                      'Enter the code',
-                      style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text('Enter the code', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                     const SizedBox(height: 6),
-                    Text(
-                      _subtitleText,
-                      style: const TextStyle(
-                          color: ZendColors.textSecondary, fontSize: 14),
-                    ),
+                    Text(_subtitleText, style: TextStyle(color: zt.textSecondary, fontSize: 14)),
                     const SizedBox(height: 20),
                     Row(
                       children: List.generate(6, (index) {
                         return Expanded(
                           child: Padding(
-                            padding:
-                                EdgeInsets.only(right: index == 5 ? 0 : 6),
+                            padding: EdgeInsets.only(right: index == 5 ? 0 : 6),
                             child: _OtpBox(
                               controller: _controllers[index],
                               focusNode: _focusNodes[index],
                               onChanged: (value) {
                                 if (value.isNotEmpty) {
                                   if (value.length > 1) {
-                                    _controllers[index].text =
-                                        value.characters.last.toString();
-                                    _controllers[index].selection =
-                                        const TextSelection.collapsed(
-                                            offset: 1);
+                                    _controllers[index].text = value.characters.last.toString();
+                                    _controllers[index].selection = const TextSelection.collapsed(offset: 1);
                                   }
                                   _focusNext(index);
                                 }
@@ -280,46 +267,29 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     if (_errorText != null) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        _errorText!,
-                        style: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 13,
-                          color: ZendColors.destructive,
-                        ),
-                      ),
+                      Text(_errorText!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive)),
                     ],
                     const SizedBox(height: 12),
                     if (_remaining.inSeconds > 0)
                       Text(
                         'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                        style: const TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 13,
-                          color: ZendColors.textSecondary,
-                        ),
+                        style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary),
                       )
                     else
                       GestureDetector(
                         onTap: _resending ? null : _resend,
                         child: _resending
-                            ? const Align(
+                            ? Align(
                                 alignment: Alignment.centerLeft,
                                 child: SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: ZendColors.textSecondary,
-                                  ),
+                                  height: 16, width: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: zt.textSecondary),
                                 ),
                               )
                             : const Text(
                                 'Resend code',
                                 style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600,
                                   color: ZendColors.accentPop,
                                   decoration: TextDecoration.underline,
                                   decorationColor: ZendColors.accentPop,
@@ -327,10 +297,7 @@ class _OtpScreenState extends State<OtpScreen> {
                               ),
                       ),
                     const Spacer(),
-                    PrimaryButton(
-                      label: 'Continue',
-                      onPressed: _onContinue,
-                    ),
+                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -358,14 +325,11 @@ class _OtpBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Focus(
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey == LogicalKeyboardKey.backspace) {
-          if (controller.text.isEmpty) {
-            onBackspace();
-            return KeyEventResult.handled;
-          }
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (controller.text.isEmpty) { onBackspace(); return KeyEventResult.handled; }
         }
         return KeyEventResult.ignored;
       },
@@ -379,22 +343,15 @@ class _OtpBox extends StatelessWidget {
           maxLength: 1,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: ZendColors.textPrimary,
-          ),
-          decoration: const InputDecoration(
+          style: TextStyle(fontFamily: 'DMSans', fontSize: 24, fontWeight: FontWeight.w700, color: zt.textPrimary),
+          decoration: InputDecoration(
             counterText: '',
             isDense: true,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
             filled: true,
-            fillColor: ZendColors.bgSecondary,
-            border: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.all(Radius.circular(ZendRadii.lg)),
+            fillColor: zt.bgSecondary,
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(ZendRadii.lg)),
               borderSide: BorderSide.none,
             ),
           ),

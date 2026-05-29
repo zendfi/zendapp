@@ -102,7 +102,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontFamily: 'DMMono',
-                      color: Color(0x80E8F4EC),
+                      color: Color(0x80F0F0F0),
                       fontSize: 13,
                     ),
                   ),
@@ -111,7 +111,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     'Your payment link is live. Share it anywhere.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0x99E8F4EC),
+                      color: Color(0x99F0F0F0),
                       fontSize: 14,
                       height: 1.4,
                     ),

@@ -140,7 +140,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: ZendScrollPage(
           child: Center(
@@ -153,42 +155,27 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   children: [
                     const SizedBox(height: 48),
                     Text(
-                      _mode == _InputMode.phone
-                          ? "What's your number?"
-                          : "What's your email?",
-                      style: const TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 32,
-                        height: 1.08,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      _mode == _InputMode.phone ? "What's your number?" : "What's your email?",
+                      style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 32, height: 1.08, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     const SizedBox(height: 20),
                     if (_mode == _InputMode.phone) ...[
                       Row(
                         children: [
-                          _CountryPill(
-                              code: _countryCode, onTap: _pickCountryCode),
+                          _CountryPill(code: _countryCode, onTap: _pickCountryCode),
                           const SizedBox(width: 14),
                           Expanded(
                             child: TextField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly
-                              ],
-                              style: const TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 24,
-                                color: ZendColors.textPrimary,
-                              ),
-                              decoration: const InputDecoration(
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              style: TextStyle(fontFamily: 'DMMono', fontSize: 24, color: zt.textPrimary),
+                              decoration: InputDecoration(
                                 hintText: '0000 000 000',
                                 filled: false,
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
-                                hintStyle:
-                                    TextStyle(color: ZendColors.textSecondary),
+                                hintStyle: TextStyle(color: zt.textSecondary),
                               ),
                             ),
                           ),
@@ -199,48 +186,30 @@ class _PhoneScreenState extends State<PhoneScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
-                        style: const TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 20,
-                          color: ZendColors.textPrimary,
-                        ),
-                        decoration: const InputDecoration(
+                        style: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textPrimary),
+                        decoration: InputDecoration(
                           hintText: 'you@example.com',
                           filled: false,
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
-                          hintStyle:
-                              TextStyle(color: ZendColors.textSecondary),
+                          hintStyle: TextStyle(color: zt.textSecondary),
                         ),
                       ),
                     ],
                     const SizedBox(height: 8),
-                    const Divider(color: ZendColors.border),
+                    Divider(color: zt.border),
                     const SizedBox(height: 16),
-                    // Toggle between phone and email
                     GestureDetector(
                       onTap: () => setState(() {
-                        _mode = _mode == _InputMode.phone
-                            ? _InputMode.email
-                            : _InputMode.phone;
+                        _mode = _mode == _InputMode.phone ? _InputMode.email : _InputMode.phone;
                       }),
                       child: Text(
-                        _mode == _InputMode.phone
-                            ? 'Use email instead'
-                            : 'Use phone number instead',
-                        style: const TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 14,
-                          color: ZendColors.accent,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        _mode == _InputMode.phone ? 'Use email instead' : 'Use phone number instead',
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.accent, fontWeight: FontWeight.w500),
                       ),
                     ),
                     const Spacer(),
-                    PrimaryButton(
-                      label: 'Continue',
-                      onPressed: _onContinue,
-                    ),
+                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -261,41 +230,25 @@ class _CountryPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(ZendRadii.pill),
       child: Container(
         height: 42,
         padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: ZendColors.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.pill),
-        ),
+        decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
         child: Row(
           children: [
             Container(
-              width: 18,
-              height: 18,
-              decoration: const BoxDecoration(
-                color: ZendColors.bgDeep,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text('◉',
-                    style: TextStyle(
-                        fontSize: 10, color: ZendColors.accentBright)),
-              ),
+              width: 18, height: 18,
+              decoration: const BoxDecoration(color: ZendColors.bgDeep, shape: BoxShape.circle),
+              child: const Center(child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright))),
             ),
             const SizedBox(width: 8),
-            Text(
-              code,
-              style: const TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600),
-            ),
+            Text(code, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down, size: 18),
+            Icon(Icons.keyboard_arrow_down, size: 18, color: zt.textSecondary),
           ],
         ),
       ),

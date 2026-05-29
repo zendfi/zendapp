@@ -9,7 +9,9 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: ZendScrollPage(
           child: Center(
@@ -24,39 +26,28 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 96),
                     Text(
                       'Money,\neverywhere.',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 56,
                         height: 1.08,
                         fontWeight: FontWeight.w700,
-                        color: ZendColors.textPrimary,
+                        color: zt.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Text(
+                    Text(
                       'One link. Every country. Instantly.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: ZendColors.textSecondary,
-                        height: 1.35,
-                      ),
+                      style: TextStyle(fontSize: 16, color: zt.textSecondary, height: 1.35),
                     ),
                     const SizedBox(height: 36),
                     PrimaryButton(
                       label: 'Get started',
-                      onPressed: () {
-                        pushZendSlide(context, const PhoneScreen());
-                      },
+                      onPressed: () => pushZendSlide(context, const PhoneScreen()),
                     ),
                     const SizedBox(height: 14),
                     TextButton(
-                      onPressed: () {
-                        pushZendSlide(context, const PhoneScreen());
-                      },
-                      child: const Text(
-                        'I already have an account',
-                        style: TextStyle(color: ZendColors.textSecondary),
-                      ),
+                      onPressed: () => pushZendSlide(context, const PhoneScreen()),
+                      child: Text('I already have an account', style: TextStyle(color: zt.textSecondary)),
                     ),
                     const SizedBox(height: 24),
                   ],

@@ -58,17 +58,13 @@ class _NameScreenState extends State<NameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final waitlistMatched = model.pendingWaitlistMatch;
-    // Pull the first name out of the stored value for the warm
-    // greeting. Falls back to a gentler line when no name was given
-    // during waitlist signup.
-    final waitlistFirstName = (model.pendingWaitlistFullName ?? '')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .first;
+    final waitlistFirstName = (model.pendingWaitlistFullName ?? '').trim().split(RegExp(r'\s+')).first;
 
     return Scaffold(
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: ZendScrollPage(
           child: Center(
@@ -81,75 +77,45 @@ class _NameScreenState extends State<NameScreen> {
                   children: [
                     const SizedBox(height: 40),
                     if (waitlistMatched) ...[
-                      // Quiet eyebrow above the headline. DM Mono small
-                      // caps for the chrome label, Instrument Serif
-                      // italic for the headline below it. Uses the
-                      // existing palette — no new accent introduced.
-                      Text(
-                        'YOU MADE IT',
-                        style: const TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          letterSpacing: 1.8,
-                          color: ZendColors.textSecondary,
-                        ),
-                      ),
+                      Text('YOU MADE IT', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
                       const SizedBox(height: 8),
                       Text(
-                        waitlistFirstName.isEmpty
-                            ? "Welcome in. Let's set up your account."
-                            : "Welcome in, $waitlistFirstName.",
-                        style: const TextStyle(
-                          fontFamily: 'InstrumentSerif',
-                          fontSize: 28,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        waitlistFirstName.isEmpty ? "Welcome in. Let's set up your account." : "Welcome in, $waitlistFirstName.",
+                        style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: zt.textPrimary),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         "We've been holding a spot for you. A couple of details and you're in.",
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 14,
-                          color: ZendColors.textSecondary,
-                          height: 1.5,
-                        ),
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary, height: 1.5),
                       ),
                       const SizedBox(height: 32),
                     ] else ...[
-                      const Text(
-                        "What's your name?",
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSerif',
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Text("What's your name?", style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                       const SizedBox(height: 24),
                     ],
                     TextField(
                       controller: _firstName,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'First name',
                         filled: false,
-                        border: UnderlineInputBorder(borderSide: BorderSide(color: ZendColors.border)),
+                        border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
+                        hintStyle: TextStyle(color: zt.textSecondary),
                       ),
+                      style: TextStyle(color: zt.textPrimary),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _lastName,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Last name',
                         filled: false,
-                        border: UnderlineInputBorder(borderSide: BorderSide(color: ZendColors.border)),
+                        border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
+                        hintStyle: TextStyle(color: zt.textSecondary),
                       ),
+                      style: TextStyle(color: zt.textPrimary),
                     ),
                     const Spacer(),
-                    PrimaryButton(
-                      label: 'Continue',
-                      onPressed: _onContinue,
-                    ),
+                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
                     const SizedBox(height: 24),
                   ],
                 ),

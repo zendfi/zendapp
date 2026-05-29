@@ -69,23 +69,10 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              _error!,
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 14,
-                color: ZendColors.textSecondary,
-              ),
-            ),
+            Text(_error!, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary)),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () {
-                setState(() {
-                  _loading = true;
-                  _error = null;
-                });
-                _loadChains();
-              },
+              onPressed: () { setState(() { _loading = true; _error = null; }); _loadChains(); },
               child: const Text('Retry'),
             ),
           ],
@@ -95,71 +82,32 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
 
     return ListView.separated(
       itemCount: _chains.length,
-      separatorBuilder: (context, index) =>
-          const Divider(height: 1, color: ZendColors.border),
+      separatorBuilder: (context, index) => Divider(height: 1, color: ZendTheme.of(context).border),
       itemBuilder: (context, index) {
+        final zt = ZendTheme.of(context);
         final chain = _chains[index];
         final chainId = chain['chain_id'] as int;
         final displayName = chain['display_name'] as String? ?? '';
         final symbol = chain['symbol'] as String? ?? '';
         final blockchainName = chain['blockchain_name'] as String? ?? '';
-        final initial = blockchainName.isNotEmpty
-            ? blockchainName[0].toUpperCase()
-            : displayName.isNotEmpty
-                ? displayName[0].toUpperCase()
-                : '?';
+        final initial = blockchainName.isNotEmpty ? blockchainName[0].toUpperCase() : displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
         final isSelected = _selectedChainIds.contains(chainId);
 
         return ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
           leading: CircleAvatar(
             radius: 18,
-            backgroundColor: ZendColors.bgSecondary,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
-              ),
-            ),
+            backgroundColor: zt.bgSecondary,
+            child: Text(initial, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
           ),
-          title: Text(
-            displayName,
-            style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 15,
-              color: ZendColors.textPrimary,
-            ),
-          ),
-          subtitle: Text(
-            symbol,
-            style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 12,
-              color: ZendColors.textSecondary,
-            ),
-          ),
+          title: Text(displayName, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary)),
+          subtitle: Text(symbol, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
           trailing: Checkbox(
             value: isSelected,
-            activeColor: ZendColors.accent,
-            onChanged: (v) => setState(() {
-              if (v == true) {
-                _selectedChainIds.add(chainId);
-              } else {
-                _selectedChainIds.remove(chainId);
-              }
-            }),
+            activeColor: zt.accent,
+            onChanged: (v) => setState(() { if (v == true) { _selectedChainIds.add(chainId); } else { _selectedChainIds.remove(chainId); } }),
           ),
-          onTap: () => setState(() {
-            if (isSelected) {
-              _selectedChainIds.remove(chainId);
-            } else {
-              _selectedChainIds.add(chainId);
-            }
-          }),
+          onTap: () => setState(() { if (isSelected) { _selectedChainIds.remove(chainId); } else { _selectedChainIds.add(chainId); } }),
         );
       },
     );
