@@ -276,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             )
                                         : null,
                                   ),
-                                  if (i != model.recentTransactions.take(5).length - 1) const Divider(color: ZendColors.border),
+                                  if (i != model.recentTransactions.take(5).length - 1) Divider(color: ZendTheme.of(context).border.withValues(alpha: 0.5), height: 1),
                                 ],
                                 const SizedBox(height: 26),
                               ]),

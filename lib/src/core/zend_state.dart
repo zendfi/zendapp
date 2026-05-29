@@ -702,9 +702,9 @@ class ZendAppModel extends ChangeNotifier {
 
     final contactName = recipientDisplayName.isNotEmpty
         ? recipientDisplayName
-        : '@$recipientZendtag';
-    final contactAvatar = recipientDisplayName.isNotEmpty
-        ? recipientDisplayName[0].toUpperCase()
+        : ''; // empty = no display name, tile shows only @tag
+    final contactAvatar = contactName.isNotEmpty
+        ? contactName[0].toUpperCase()
         : recipientZendtag.isNotEmpty
             ? recipientZendtag[0].toUpperCase()
             : '?';
@@ -870,8 +870,13 @@ class ZendAppModel extends ChangeNotifier {
         (c) => c.tag == tag,
         orElse: () => RecentContact(name: '', tag: tag, avatarLabel: ''),
       );
-      final name = cached.name.isNotEmpty ? cached.name : '@$tag';
-      final avatarLabel = name.isNotEmpty ? name[0].toUpperCase() : '?';
+      // Use cached name if it's a real display name (not empty, not just the tag)
+      final name = (cached.name.isNotEmpty && cached.name != tag && cached.name != '@$tag')
+          ? cached.name
+          : ''; // empty = no display name, tile will show only @tag
+      final avatarLabel = name.isNotEmpty
+          ? name[0].toUpperCase()
+          : tag.isNotEmpty ? tag[0].toUpperCase() : '?';
       contacts.add(
         RecentContact(
           name: name,

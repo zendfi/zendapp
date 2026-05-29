@@ -13,9 +13,10 @@ Future<void> showPoolListDrawer(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => const FractionallySizedBox(
-      heightFactor: 0.85,
+      heightFactor: 1.0,
       child: PoolListDrawer(),
     ),
   );
@@ -42,11 +43,12 @@ class PoolListDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: zt.bgPrimary,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(ZendRadii.xxl),
         ),
@@ -57,56 +59,46 @@ class PoolListDrawer extends StatelessWidget {
         children: [
           const ZendSheetHandle(),
           const SizedBox(height: ZendSpacing.lg),
-          const Text(
+          Text(
             'Pools',
             style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),
-          Expanded(child: _buildBody(context, model)),
+          Expanded(child: _buildBody(context, model, zt)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ZendAppModel model) {
-    // Loading state
+  Widget _buildBody(BuildContext context, ZendAppModel model, ZendTheme zt) {
     if (model.poolsLoading && model.pools.isEmpty) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
+          valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
         ),
       );
     }
 
-    // Error state
     if (model.lastPoolsError != null && model.pools.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Failed to load pools',
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 15,
-                color: ZendColors.textSecondary,
-              ),
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
             ),
             const SizedBox(height: ZendSpacing.sm),
             TextButton(
               onPressed: () => model.fetchPools(),
-              child: const Text(
+              child: Text(
                 'Retry',
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontWeight: FontWeight.w600,
-                  color: ZendColors.accentBright,
-                ),
+                style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: zt.accentBright),
               ),
             ),
           ],
@@ -114,30 +106,20 @@ class PoolListDrawer extends StatelessWidget {
       );
     }
 
-    // Partition pools by status
-    final active =
-        model.pools.where((p) => p.status == PoolStatus.active).toList();
-    final completed =
-        model.pools.where((p) => p.status == PoolStatus.completed).toList();
-    final expired =
-        model.pools.where((p) => p.status == PoolStatus.expired).toList();
-    final cancelled =
-        model.pools.where((p) => p.status == PoolStatus.cancelled).toList();
+    final active = model.pools.where((p) => p.status == PoolStatus.active).toList();
+    final completed = model.pools.where((p) => p.status == PoolStatus.completed).toList();
+    final expired = model.pools.where((p) => p.status == PoolStatus.expired).toList();
+    final cancelled = model.pools.where((p) => p.status == PoolStatus.cancelled).toList();
 
     if (model.pools.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No pools yet',
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 15,
-            color: ZendColors.textSecondary,
-          ),
+          style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
         ),
       );
     }
 
-    // Build a flat list of section headers + cards
     final items = <Widget>[];
 
     void addSection(String title, List<Pool> pools) {
@@ -147,10 +129,7 @@ class PoolListDrawer extends StatelessWidget {
         items.add(
           Padding(
             padding: const EdgeInsets.only(bottom: ZendSpacing.sm),
-            child: PoolInfoCard(
-              pool: pool,
-              onTap: () => _navigateToPool(context, pool),
-            ),
+            child: PoolInfoCard(pool: pool, onTap: () => _navigateToPool(context, pool)),
           ),
         );
       }
@@ -171,15 +150,16 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: ZendSpacing.xs, top: ZendSpacing.xs),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'DMSans',
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: ZendColors.textSecondary,
+          color: zt.textSecondary,
           letterSpacing: 0.5,
         ),
       ),
@@ -187,7 +167,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Status badge for non-active pools shown on [PoolInfoCard].
 class PoolStatusBadge extends StatelessWidget {
   const PoolStatusBadge({super.key, required this.status});
   final PoolStatus status;
@@ -195,12 +174,13 @@ class PoolStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == PoolStatus.active) return const SizedBox.shrink();
+    final zt = ZendTheme.of(context);
 
     final (label, color) = switch (status) {
-      PoolStatus.completed => ('Completed', ZendColors.accent),
+      PoolStatus.completed => ('Completed', zt.accent),
       PoolStatus.expired => ('Expired', ZendColors.destructive),
-      PoolStatus.cancelled => ('Cancelled', ZendColors.textSecondary),
-      _ => ('', ZendColors.textSecondary),
+      PoolStatus.cancelled => ('Cancelled', zt.textSecondary),
+      _ => ('', zt.textSecondary),
     };
 
     return Container(

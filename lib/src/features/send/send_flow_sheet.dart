@@ -714,10 +714,11 @@ class _ContactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    // Determine display: if name starts with '@' it's just a tag, otherwise it's a real name
-    final isTagOnly = contact.name.startsWith('@');
-    final displayName = isTagOnly ? null : contact.name;
     final handle = '@${contact.tag}';
+    // Show name if it's different from just the handle (i.e. a real display name exists)
+    final hasRealName = contact.name.isNotEmpty &&
+        contact.name != handle &&
+        contact.name != contact.tag;
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
@@ -744,9 +745,9 @@ class _ContactTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (displayName != null)
+                  if (hasRealName)
                     Text(
-                      displayName,
+                      contact.name,
                       style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 14,
@@ -759,9 +760,7 @@ class _ContactTile extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'DMMono',
                       fontSize: 12,
-                      color: displayName != null
-                          ? zt.textSecondary
-                          : zt.textPrimary,
+                      color: hasRealName ? zt.textSecondary : zt.textPrimary,
                     ),
                   ),
                 ],

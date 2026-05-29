@@ -18,17 +18,18 @@ Future<void> showTransactionReceipt(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ReceiptSheet(tx: tx, entry: tx.entry!),
     );
   }
 
-  // Bank send
   if (tx.bankOrder != null) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BankSendReceiptSheet(tx: tx, order: tx.bankOrder!),
     );
