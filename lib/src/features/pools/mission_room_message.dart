@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import 'pool.dart';
 
@@ -68,10 +69,10 @@ class _TextMessageRow extends StatelessWidget {
         if (isContinuation)
           const SizedBox(width: 28)
         else
-          CircleAvatar(
+          ZendAvatar(
             radius: 14,
-            backgroundColor: zt.bgCard,
-            child: Text(avatarLabel, style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            photoUrl: message.senderAvatarUrl,
+            initials: avatarLabel,
           ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(
@@ -163,10 +164,10 @@ class _VoiceNoteRow extends StatelessWidget {
         if (isContinuation)
           const SizedBox(width: 28)
         else
-          CircleAvatar(
+          ZendAvatar(
             radius: 14,
-            backgroundColor: zt.bgCard,
-            child: Text(avatarLabel, style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            photoUrl: message.senderAvatarUrl,
+            initials: avatarLabel,
           ),
         const SizedBox(width: ZendSpacing.xs),
         Expanded(

@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
@@ -54,10 +58,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Color(0x332D6A4F),
-                      child: Icon(Icons.person, color: ZendColors.textOnDeep, size: 26),
+                    _AvatarUploadButton(
+                      displayName: displayName,
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -354,6 +356,214 @@ class _ProfileToggleTile extends StatelessWidget {
             activeTrackColor: ZendColors.accentBright.withValues(alpha: 0.4),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Avatar upload button ──────────────────────────────────────────────────────
+
+class _AvatarUploadButton extends StatefulWidget {
+  const _AvatarUploadButton({required this.displayName});
+  final String displayName;
+
+  @override
+  State<_AvatarUploadButton> createState() => _AvatarUploadButtonState();
+}
+
+class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
+  bool _uploading = false;
+
+  Future<void> _pickAndUpload() async {
+    final model = ZendScope.of(context);
+    final hasPhoto = model.currentAvatarUrl != null;
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final zt = ZendTheme.of(ctx);
+        return Container(
+          decoration: BoxDecoration(
+            color: zt.bgCard,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _SheetOption(
+                icon: Icons.camera_alt_outlined,
+                label: 'Take photo',
+                onTap: () => Navigator.pop(ctx, 'camera'),
+                zt: zt,
+              ),
+              _SheetOption(
+                icon: Icons.photo_library_outlined,
+                label: 'Choose from library',
+                onTap: () => Navigator.pop(ctx, 'gallery'),
+                zt: zt,
+              ),
+              if (hasPhoto)
+                _SheetOption(
+                  icon: Icons.delete_outline,
+                  label: 'Remove photo',
+                  onTap: () => Navigator.pop(ctx, 'remove'),
+                  zt: zt,
+                  destructive: true,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (choice == null || !mounted) return;
+
+    if (choice == 'remove') {
+      setState(() => _uploading = true);
+      try {
+        await model.walletService.apiClient.deleteAvatar();
+        model.setAvatarUrl(null);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to remove photo')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _uploading = false);
+      }
+      return;
+    }
+
+    final source =
+        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _uploading = true);
+    try {
+      final url = await model.walletService.apiClient.uploadAvatar(File(picked.path));
+      model.setAvatarUrl(url);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload photo')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+    return GestureDetector(
+      onTap: _uploading ? null : _pickAndUpload,
+      child: Stack(
+        children: [
+          ZendAvatar(
+            radius: 28,
+            photoUrl: model.currentAvatarUrl,
+            initials: widget.displayName.isNotEmpty
+                ? widget.displayName[0].toUpperCase()
+                : null,
+            backgroundColor: const Color(0x332D6A4F),
+          ),
+          if (_uploading)
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0x66000000),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  color: ZendColors.accentBright,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit, size: 10, color: Colors.white),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetOption extends StatelessWidget {
+  const _SheetOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.zt,
+    this.destructive = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final ZendTheme zt;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? ZendColors.destructive : zt.textPrimary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

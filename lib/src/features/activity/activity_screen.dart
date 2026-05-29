@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'transaction_receipt_sheet.dart';
@@ -158,6 +160,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               final tx = filtered[i];
                               return _ActivityTile(
                                 avatarLabel: tx.avatarLabel,
+                                avatarUrl: tx.avatarUrl,
+                                countryCode: tx.countryCode,
                                 name: tx.name,
                                 note: tx.note,
                                 amount: tx.amount,
@@ -203,6 +207,8 @@ class _ActivityTile extends StatelessWidget {
     required this.note,
     required this.amount,
     required this.time,
+    this.avatarUrl,
+    this.countryCode,
     this.amountColor,
     this.onTap,
     this.isFirst = false,
@@ -210,6 +216,8 @@ class _ActivityTile extends StatelessWidget {
   });
 
   final String avatarLabel;
+  final String? avatarUrl;
+  final String? countryCode;
   final String name;
   final String note;
   final String amount;
@@ -219,6 +227,16 @@ class _ActivityTile extends StatelessWidget {
   final bool isFirst;
   final bool isLast;
 
+  ZendCountry? get _country {
+    return switch (countryCode) {
+      'ng' => ZendCountry.ng,
+      'us' => ZendCountry.us,
+      'gb' => ZendCountry.gb,
+      'eu' => ZendCountry.eu,
+      _ => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -226,6 +244,7 @@ class _ActivityTile extends StatelessWidget {
       top: isFirst ? const Radius.circular(24) : Radius.zero,
       bottom: isLast ? const Radius.circular(24) : Radius.zero,
     );
+    final country = _country;
     return Material(
       color: zt.bgSecondary,
       borderRadius: radius,
@@ -236,11 +255,14 @@ class _ActivityTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: zt.bgPrimary,
-                child: Text(avatarLabel, style: TextStyle(color: zt.textPrimary)),
-              ),
+              // Country flag for bank sends, avatar for zend-to-zend
+              country != null
+                  ? ZendCountryFlag(country: country, size: 44)
+                  : ZendAvatar(
+                      radius: 22,
+                      photoUrl: avatarUrl,
+                      initials: avatarLabel,
+                    ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

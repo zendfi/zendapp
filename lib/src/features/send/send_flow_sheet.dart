@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -374,6 +375,7 @@ class _RecipientStageState extends State<_RecipientStage> {
   bool _resolving = false;
   String? _resolveError;
   String? _resolvedDisplayName;
+  String? _resolvedAvatarUrl;
 
   @override
   void initState() {
@@ -419,6 +421,7 @@ class _RecipientStageState extends State<_RecipientStage> {
         _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
             ? resolved.displayName
             : '@${resolved.zendtag}';
+        _resolvedAvatarUrl = resolved.avatarUrl;
         _resolving = false;
       });
     } catch (_) {
@@ -434,6 +437,7 @@ class _RecipientStageState extends State<_RecipientStage> {
     _toController.text = contact.tag;
     _toValue = contact.tag;
     _resolvedDisplayName = contact.name;
+    _resolvedAvatarUrl = contact.avatarUrl;
     _resolveError = null;
     _toFocus.unfocus();
     _forFocus.unfocus();
@@ -555,13 +559,25 @@ class _RecipientStageState extends State<_RecipientStage> {
                   if (_resolvedDisplayName != null)
                     Padding(
                       padding: const EdgeInsets.only(left: 48, top: 4),
-                      child: Text(
-                        _resolvedDisplayName!,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          color: zt.accentBright,
-                        ),
+                      child: Row(
+                        children: [
+                          if (_resolvedAvatarUrl != null) ...[
+                            ZendAvatar(
+                              radius: 10,
+                              photoUrl: _resolvedAvatarUrl,
+                              initials: _resolvedDisplayName![0].toUpperCase(),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(
+                            _resolvedDisplayName!,
+                            style: TextStyle(
+                              fontFamily: 'DMMono',
+                              fontSize: 12,
+                              color: zt.accentBright,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   else if (_resolveError != null)
@@ -727,17 +743,10 @@ class _ContactTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            CircleAvatar(
+            ZendAvatar(
               radius: 18,
-              backgroundColor: zt.isDark ? ZendColors.bgAccentSurface : zt.bgCard,
-              child: Text(
-                contact.avatarLabel,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: zt.isDark ? ZendColors.accentPop : zt.textPrimary,
-                ),
-              ),
+              photoUrl: contact.avatarUrl,
+              initials: contact.avatarLabel,
             ),
             const SizedBox(width: 12),
             Expanded(

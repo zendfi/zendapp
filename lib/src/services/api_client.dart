@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -330,6 +332,44 @@ class ApiClient {
     } on DioException catch (e) {
       throw e.error ?? e;
     }
+  }
+
+  /// Upload a profile photo. Sends raw bytes with Content-Type header.
+  /// Returns the CDN URL of the uploaded avatar.
+  Future<String> uploadAvatar(File imageFile) async {
+    try {
+      final mimeType = _mimeTypeFromPath(imageFile.path);
+      final bytes = await imageFile.readAsBytes();
+      final response = await _dio.post(
+        '/api/zend/user/avatar',
+        data: bytes,
+        options: Options(
+          contentType: mimeType,
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 60),
+        ),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['avatar_url'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Remove the current user's avatar.
+  Future<void> deleteAvatar() async {
+    try {
+      await _dio.delete('/api/zend/user/avatar');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  static String _mimeTypeFromPath(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
   }
 
   Future<void> registerFcmToken(String fcmToken) async {

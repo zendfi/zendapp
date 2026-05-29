@@ -154,12 +154,14 @@ class ZendtagResolveResponse {
   final String displayName;
   final String walletAddress;
   final String accountType;
+  final String? avatarUrl;
 
   ZendtagResolveResponse({
     required this.zendtag,
     required this.displayName,
     required this.walletAddress,
     required this.accountType,
+    this.avatarUrl,
   });
 
   factory ZendtagResolveResponse.fromJson(Map<String, dynamic> json) {
@@ -168,6 +170,7 @@ class ZendtagResolveResponse {
       displayName: json['display_name'] as String,
       walletAddress: json['wallet_address'] as String,
       accountType: json['account_type'] as String,
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 
@@ -177,6 +180,7 @@ class ZendtagResolveResponse {
       'display_name': displayName,
       'wallet_address': walletAddress,
       'account_type': accountType,
+      'avatar_url': avatarUrl,
     };
   }
 }
@@ -422,12 +426,14 @@ class UserProfileResponse {
   final String zendtag;
   final String displayName;
   final String? walletAddress;
+  final String? avatarUrl;
 
   UserProfileResponse({
     required this.userId,
     required this.zendtag,
     required this.displayName,
     this.walletAddress,
+    this.avatarUrl,
   });
 
   factory UserProfileResponse.fromJson(Map<String, dynamic> json) {
@@ -436,6 +442,7 @@ class UserProfileResponse {
       zendtag: json['zendtag'] as String,
       displayName: json['display_name'] as String,
       walletAddress: json['wallet_address'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 
@@ -445,6 +452,7 @@ class UserProfileResponse {
       'zendtag': zendtag,
       'display_name': displayName,
       'wallet_address': walletAddress,
+      'avatar_url': avatarUrl,
     };
   }
 }

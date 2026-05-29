@@ -63,6 +63,8 @@ class ZendTransaction {
     this.amountColor,
     this.entry,
     this.bankOrder,
+    this.avatarUrl,
+    this.countryCode,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -77,6 +79,10 @@ class ZendTransaction {
   final TransferHistoryEntry? entry;
   /// Raw bank send order map — present for bank send transactions.
   final Map<String, dynamic>? bankOrder;
+  /// CDN URL of the counterparty's profile photo (zend-to-zend only).
+  final String? avatarUrl;
+  /// ISO country code for bank send transactions (e.g. 'ng', 'us', 'gb', 'eu').
+  final String? countryCode;
 }
 
 class ZendAppModel extends ChangeNotifier {
@@ -265,6 +271,7 @@ class ZendAppModel extends ChangeNotifier {
   String? currentUserId;
   String? currentZendtag;
   String? currentDisplayName;
+  String? currentAvatarUrl;
 
   String? walletAddress;
   bool hasWallet = false;
@@ -356,6 +363,7 @@ class ZendAppModel extends ChangeNotifier {
         zendtag: apiProfile.zendtag,
         displayName: apiProfile.displayName,
         walletAddr: apiProfile.walletAddress,
+        avatarUrl: apiProfile.avatarUrl,
       );
     } catch (e) {
       lastHistoryError = 'Failed to restore user identity: $e';
@@ -406,6 +414,12 @@ class ZendAppModel extends ChangeNotifier {
   void setDisplayName(String value) {
     final trimmed = value.trim();
     currentDisplayName = trimmed.isEmpty ? null : trimmed;
+    notifyListeners();
+  }
+
+  /// Update the current user's avatar URL and notify listeners.
+  void setAvatarUrl(String? url) {
+    currentAvatarUrl = url;
     notifyListeners();
   }
 
@@ -477,6 +491,11 @@ class ZendAppModel extends ChangeNotifier {
         final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
         final sign = isSent ? '-' : '+';
         final amt = entry.amountUsdc;
+        // Look up cached avatar URL from recent contacts
+        final cached = recentContacts.firstWhere(
+          (c) => c.tag == counterparty,
+          orElse: () => RecentContact(name: '', tag: counterparty, avatarLabel: ''),
+        );
         return ZendTransaction(
           name: '@$counterparty',
           note: entry.note ?? '',
@@ -485,11 +504,10 @@ class ZendAppModel extends ChangeNotifier {
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
           amountColor: isSent ? null : ZendColors.positive,
           entry: entry,
+          avatarUrl: cached.avatarUrl,
           createdAt: entry.createdAt,
         );
       }).toList();
-
-      // Build rows from bank send orders
       final bankRows = bankOrders.map((order) {
         final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
         final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
@@ -540,6 +558,7 @@ class ZendAppModel extends ChangeNotifier {
           amountColor: null,
           entry: null,
           bankOrder: order,
+          countryCode: _countryCodeFromCurrency(fiatCurrency),
           createdAt: createdAt,
         );
       }).toList();
@@ -621,6 +640,17 @@ class ZendAppModel extends ChangeNotifier {
     }
   }
 
+  /// Maps fiat currency code to ISO country code for flag display.
+  static String? _countryCodeFromCurrency(String currency) {
+    return switch (currency.toUpperCase()) {
+      'NGN' => 'ng',
+      'USD' => 'us',
+      'GBP' => 'gb',
+      'EUR' => 'eu',
+      _ => null,
+    };
+  }
+
   String _toTitleCase(String s) {
     if (s.isEmpty) return s;
     return s.split(' ').map((w) {
@@ -654,12 +684,14 @@ class ZendAppModel extends ChangeNotifier {
     required String zendtag,
     required String displayName,
     String? walletAddr,
+    String? avatarUrl,
   }) {
     isAuthenticated = true;
     currentUserId = userId;
     currentZendtag = zendtag;
     currentDisplayName = displayName;
     if (walletAddr != null) walletAddress = walletAddr;
+    if (avatarUrl != null) currentAvatarUrl = avatarUrl;
     username = zendtag;
     // Onboarding done — drop any waitlist hold-over so it can't leak
     // into a future session if this device is later signed out and
@@ -730,6 +762,7 @@ class ZendAppModel extends ChangeNotifier {
     currentUserId = null;
     currentZendtag = null;
     currentDisplayName = null;
+    currentAvatarUrl = null;
     walletAddress = null;
     hasWallet = false;
     hasPinSetup = false;

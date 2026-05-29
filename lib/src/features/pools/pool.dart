@@ -49,6 +49,7 @@ class PoolParticipant {
     required this.avatarLabel,
     this.userId,
     this.zendtag,
+    this.avatarUrl,
     this.contribution = 0.0,
     this.isExternal = false,
   });
@@ -63,6 +64,9 @@ class PoolParticipant {
   /// Zendtag (without @) for Zend users — used when building the API payload.
   final String? zendtag;
 
+  /// CDN URL of the participant's profile photo.
+  final String? avatarUrl;
+
   final double contribution;
   final bool isExternal;
 
@@ -74,6 +78,7 @@ class PoolParticipant {
       avatarLabel: displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
       userId: json['user_id'] as String?,
       zendtag: null, // not returned by API, only used locally during creation
+      avatarUrl: json['avatar_url'] as String?,
       contribution: (json['contribution'] as num?)?.toDouble() ?? 0.0,
       isExternal: json['is_external'] as bool? ?? false,
     );
@@ -209,6 +214,7 @@ class PoolMessage {
     required this.createdAt,
     this.senderZendtag,
     this.senderUserId,
+    this.senderAvatarUrl,
     this.content,
     this.contributionId,
     this.voiceNoteUrl,
@@ -220,6 +226,8 @@ class PoolMessage {
   final String poolId;
   final String? senderZendtag;
   final String? senderUserId;
+  /// CDN URL of the sender's profile photo.
+  final String? senderAvatarUrl;
   final PoolMessageType messageType;
   final String? content;
   final String? contributionId;
@@ -236,6 +244,7 @@ class PoolMessage {
       poolId: json['pool_id'] as String? ?? '',
       senderZendtag: json['sender_zendtag'] as String?,
       senderUserId: json['sender_user_id'] as String?,
+      senderAvatarUrl: json['sender_avatar_url'] as String?,
       messageType:
           _messageTypeFromString(json['message_type'] as String? ?? 'text'),
       content: json['content'] as String?,
@@ -259,6 +268,7 @@ class PoolMessage {
         poolId: poolId,
         senderZendtag: senderZendtag,
         senderUserId: senderUserId,
+        senderAvatarUrl: senderAvatarUrl,
         messageType: messageType,
         content: content,
         contributionId: contributionId,
