@@ -59,11 +59,16 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         _handlePaymentRequestNotification(pending);
       }
 
-      final pendingIntent = PendingDeepLinkService.consume();
-      if (pendingIntent != null) {
+      // Only consume the pending deep link here if we can actually act on it
+      // right now (authenticated + unlocked). Otherwise leave it stored so
+      // ZendShell.initState() or _onLockStateChanged() can pick it up later.
+      if (PendingDeepLinkService.hasPending) {
         final ctx = _navigatorKey.currentContext;
         if (ctx != null && widget.model.isAuthenticated && !widget.model.appLockService.isLocked) {
-          showQrPaymentSheet(ctx, intent: pendingIntent);
+          final pendingIntent = PendingDeepLinkService.consume();
+          if (pendingIntent != null) {
+            showQrPaymentSheet(ctx, intent: pendingIntent);
+          }
         }
       }
     });
