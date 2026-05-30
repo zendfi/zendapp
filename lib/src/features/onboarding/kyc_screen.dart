@@ -34,9 +34,9 @@ class KycScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'Required to send money. Takes 30 seconds.',
-                      style: TextStyle(color: ZendColors.textSecondary, fontSize: 14),
+                      style: TextStyle(color: ZendTheme.of(context).textSecondary, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
                     TextField(
@@ -49,9 +49,9 @@ class KycScreen extends StatelessWidget {
                     TextButton(
                       onPressed: () {},
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
-                      child: const Text(
+                      child: Text(
                         'Why we need this ›',
-                        style: TextStyle(color: ZendColors.textSecondary),
+                        style: TextStyle(color: ZendTheme.of(context).textSecondary),
                       ),
                     ),
                     const Spacer(),

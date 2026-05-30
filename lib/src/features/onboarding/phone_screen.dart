@@ -45,8 +45,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                 title: Text(option.name,
                     style: const TextStyle(fontFamily: 'DMSans')),
                 subtitle: Text(option.isoCode,
-                    style:
-                        const TextStyle(color: ZendColors.textSecondary)),
+                    style: TextStyle(color: ZendTheme.of(context).textSecondary)),
                 trailing: Text(option.dialCode,
                     style: const TextStyle(fontFamily: 'DMMono')),
                 onTap: () => Navigator.of(context).pop(option),

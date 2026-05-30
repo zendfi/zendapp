@@ -80,8 +80,8 @@ class _SuccessScreenState extends State<SuccessScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 34,
-                    backgroundColor: ZendColors.bgSecondary,
-                    child: Icon(Icons.person, color: ZendColors.textPrimary),
+                    backgroundColor: Color(0x33E8F4EC),
+                    child: Icon(Icons.person, color: ZendColors.textOnDeep),
                   ),
                   const SizedBox(height: 24),
                   Text(

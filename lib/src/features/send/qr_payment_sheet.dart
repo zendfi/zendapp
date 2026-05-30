@@ -874,6 +874,7 @@ class _AmountKeyState extends State<_AmountKey> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final isDel = widget.label == 'del';
 
     return GestureDetector(
@@ -892,14 +893,13 @@ class _AmountKeyState extends State<_AmountKey> {
           height: widget.keyHeight,
           child: Center(
             child: isDel
-                ? const ZendBackspaceIcon(
-                    color: ZendColors.textPrimary, size: 24)
+                ? ZendBackspaceIcon(color: zt.textPrimary, size: 24)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 24,
-                      color: ZendColors.textPrimary,
+                      color: zt.textPrimary,
                       fontWeight: FontWeight.w300,
                     ),
                   ),

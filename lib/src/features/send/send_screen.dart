@@ -449,6 +449,7 @@ class _PayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -458,11 +459,11 @@ class _PayButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         alignment: Alignment.center,
-        child: const Text(
+        child: Text(
           'Pay',
           style: TextStyle(
             fontFamily: 'DMSans',
-            color: ZendColors.textPrimary,
+            color: zt.isDark ? ZendColors.bgDeep : ZendColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),

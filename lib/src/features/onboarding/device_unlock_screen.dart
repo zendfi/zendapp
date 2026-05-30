@@ -211,7 +211,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 },
                 child: const Text(
                   'PIN settings',
-                  style: TextStyle(color: ZendColors.textSecondary),
+                  style: TextStyle(color: Color(0x66E8F4EC)),
                 ),
               ),
               TextButton(
@@ -224,7 +224,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 },
                 child: const Text(
                   'Use phone number instead',
-                  style: TextStyle(color: ZendColors.textSecondary),
+                  style: TextStyle(color: Color(0x66E8F4EC)),
                 ),
               ),
               SizedBox(height: compact ? 12 : 24),
