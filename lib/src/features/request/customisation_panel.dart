@@ -61,25 +61,26 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final remaining = remainingCharacters(_noteController.text, _noteMaxLength);
 
     return Container(
       padding: const EdgeInsets.all(ZendSpacing.md),
       decoration: BoxDecoration(
-        color: ZendColors.bgSecondary,
+        color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Personal note',
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const SizedBox(height: ZendSpacing.xs),
@@ -91,33 +92,33 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
               LengthLimitingTextInputFormatter(_noteMaxLength),
             ],
             onChanged: (_) => setState(() {}),
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 14,
+              color: zt.textPrimary,
+            ),
             decoration: InputDecoration(
               hintText: 'Add a personal message...',
-              hintStyle: const TextStyle(
+              hintStyle: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 14,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
               filled: true,
-              fillColor: ZendColors.bgPrimary,
+              fillColor: zt.bgPrimary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(ZendRadii.sm),
-                borderSide: const BorderSide(color: ZendColors.border),
+                borderSide: BorderSide(color: zt.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(ZendRadii.sm),
-                borderSide: const BorderSide(color: ZendColors.border),
+                borderSide: BorderSide(color: zt.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(ZendRadii.sm),
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.all(ZendSpacing.sm),
-            ),
-            style: const TextStyle(
-              fontFamily: 'DMSans',
-              fontSize: 14,
-              color: ZendColors.textPrimary,
             ),
           ),
           const SizedBox(height: ZendSpacing.xxs),
@@ -130,18 +131,18 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
                 fontSize: 11,
                 color: remaining < 30
                     ? ZendColors.destructive
-                    : ZendColors.textSecondary,
+                    : zt.textSecondary,
               ),
             ),
           ),
           const SizedBox(height: ZendSpacing.md),
-          const Text(
+          Text(
             'Theme colour',
             style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: ZendColors.textSecondary,
+              color: zt.textSecondary,
             ),
           ),
           const SizedBox(height: ZendSpacing.xs),
@@ -162,7 +163,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
                       color: color,
                       shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(color: ZendColors.textPrimary, width: 2.5)
+                          ? Border.all(color: zt.textPrimary, width: 2.5)
                           : null,
                     ),
                     child: isSelected

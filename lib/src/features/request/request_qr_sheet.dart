@@ -141,33 +141,38 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
           // ── Amount + description ──────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Text(
-                  _formatAmount(widget.request.amount),
-                  style: const TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontStyle: FontStyle.italic,
-                    fontSize: 40,
-                    color: ZendColors.textPrimary,
-                    height: 1.0,
-                  ),
-                ),
-                if (widget.request.description.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    widget.request.description,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 14,
-                      color: ZendColors.textSecondary,
+            child: Builder(
+              builder: (context) {
+                final zt = ZendTheme.of(context);
+                return Column(
+                  children: [
+                    Text(
+                      _formatAmount(widget.request.amount),
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontStyle: FontStyle.italic,
+                        fontSize: 40,
+                        color: zt.textPrimary,
+                        height: 1.0,
+                      ),
                     ),
-                  ),
-                ],
-              ],
+                    if (widget.request.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.request.description,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
           const SizedBox(height: 24),

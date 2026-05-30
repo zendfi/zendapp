@@ -19,8 +19,9 @@ class RequestConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: ZendColors.bgPrimary,
+      backgroundColor: zt.bgPrimary,
       body: SafeArea(
         child: RequestConfirmationContent(paymentRequest: paymentRequest),
       ),
@@ -102,6 +103,7 @@ class _RequestConfirmationContentState
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -126,34 +128,34 @@ class _RequestConfirmationContentState
                       ? 'Request emailed!'
                       : 'Link created!',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 36,
                 fontWeight: FontWeight.w700,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
                 fontStyle: FontStyle.italic,
               ),
             ),
             const SizedBox(height: 8),
 
             if (widget.paymentRequest.recipientZendtag != null)
-              const Text(
+              Text(
                 "They'll get a notification to pay you.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               )
             else if (widget.paymentRequest.recipientEmail != null)
               Text(
                 "Sent to ${widget.paymentRequest.recipientEmail}",
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               ),
             const SizedBox(height: 16),
@@ -161,10 +163,10 @@ class _RequestConfirmationContentState
             Text(
               widget.paymentRequest.link,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMMono',
                 fontSize: 13,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 6),
@@ -172,11 +174,11 @@ class _RequestConfirmationContentState
             Text(
               formatRequestAmount(widget.paymentRequest.amount),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 40),
@@ -212,7 +214,7 @@ class _RequestConfirmationContentState
 
             PrimaryButton(
               label: 'Copy link',
-              backgroundColor: ZendColors.accent,
+              backgroundColor: zt.accent,
               foregroundColor: ZendColors.textOnDeep,
               onPressed: _copyLink,
             ),
@@ -224,8 +226,8 @@ class _RequestConfirmationContentState
               child: OutlinedButton(
                 onPressed: _copyLink,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: ZendColors.textPrimary,
-                  side: const BorderSide(color: ZendColors.border),
+                  foregroundColor: zt.textPrimary,
+                  side: BorderSide(color: zt.border),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 ),
@@ -244,13 +246,13 @@ class _RequestConfirmationContentState
               onPressed: () {
                 Navigator.of(context, rootNavigator: true).pop();
               },
-              child: const Text(
+              child: Text(
                 'Done',
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               ),
             ),

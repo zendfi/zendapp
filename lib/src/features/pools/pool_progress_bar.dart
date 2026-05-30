@@ -5,8 +5,8 @@ import '../../design/zend_tokens.dart';
 /// A horizontal progress bar showing the filled ratio of a pool.
 ///
 /// [progress] is clamped to 0.0–1.0. The filled portion uses
-/// [ZendColors.accentBright] and the unfilled portion uses
-/// [ZendColors.bgSecondary]. Both ends are rounded with [ZendRadii.pill].
+/// [ZendTheme.accentBright] and the unfilled portion uses
+/// [ZendTheme.bgSecondary]. Both ends are rounded with [ZendRadii.pill].
 class PoolProgressBar extends StatelessWidget {
   const PoolProgressBar({
     super.key,
@@ -23,13 +23,14 @@ class PoolProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clamped = progress.clamp(0.0, 1.0);
+    final zt = ZendTheme.of(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(ZendRadii.pill),
       child: Container(
         height: height,
-        decoration: const BoxDecoration(
-          color: ZendColors.bgSecondary,
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -39,7 +40,7 @@ class PoolProgressBar extends StatelessWidget {
                 width: constraints.maxWidth * clamped,
                 height: height,
                 decoration: BoxDecoration(
-                  color: ZendColors.accentBright,
+                  color: zt.accentBright,
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
               ),

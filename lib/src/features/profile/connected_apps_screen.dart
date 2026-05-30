@@ -67,22 +67,23 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Row(
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: ZendColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'InstrumentSerif',
               fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: ZendColors.textPrimary,
+              color: zt.textPrimary,
             ),
           ),
         ),

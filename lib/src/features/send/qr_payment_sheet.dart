@@ -505,10 +505,10 @@ class _QrLoadingStage extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Loading payment request...',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DMSans',
               fontSize: 15,
-              color: ZendColors.textSecondary,
+              color: ZendTheme.of(context).textSecondary,
             ),
           ),
         ],
@@ -606,11 +606,11 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             children: [
               Text(
                 'Pay @${widget.intent.zendtag}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: ZendColors.textPrimary,
+                  color: ZendTheme.of(context).textPrimary,
                 ),
               ),
               Row(
@@ -621,10 +621,10 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                   else
                     Text(
                       '\$${balance.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DMMono',
                         fontSize: 12,
-                        color: ZendColors.textSecondary,
+                        color: ZendTheme.of(context).textSecondary,
                       ),
                     ),
                 ],
@@ -640,7 +640,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             const SizedBox(height: 4),
             // NGN equivalent placeholder (shown once FX is fetched after confirm)
             if (insufficientBalance)
-              const Text(
+              Text(
                 'Insufficient balance',
                 style: TextStyle(
                   fontFamily: 'DMSans',
@@ -652,21 +652,21 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             // Fixed / request amount — read-only
             Text(
               _formatAmount(widget.resolvedAmount ?? 0),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 40,
-                color: ZendColors.textPrimary,
+                color: ZendTheme.of(context).textPrimary,
               ),
             ),
             if (widget.fxPreviewNgn != null) ...[
               const SizedBox(height: 4),
               Text(
                 '≈ ₦${_formatNgn(widget.fxPreviewNgn!)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMMono',
                   fontSize: 14,
-                  color: ZendColors.textSecondary,
+                  color: ZendTheme.of(context).textSecondary,
                 ),
               ),
             ],
@@ -677,16 +677,16 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 widget.resolvedNote!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 14,
-                  color: ZendColors.textSecondary,
+                  color: ZendTheme.of(context).textSecondary,
                 ),
               ),
             ],
             const SizedBox(height: 8),
             if (insufficientBalance)
-              const Text(
+              Text(
                 'Insufficient balance',
                 style: TextStyle(
                   fontFamily: 'DMSans',
@@ -747,26 +747,27 @@ class _AmountDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final wholeSize = compact ? 64.0 : 76.0;
     final decSize = compact ? 26.0 : 30.0;
 
     final wholeStyle = TextStyle(
       fontFamily: 'InstrumentSerif',
-      color: ZendColors.textPrimary,
+      color: zt.textPrimary,
       fontSize: wholeSize,
       fontStyle: FontStyle.italic,
       height: 1.0,
     );
     final decStyle = TextStyle(
       fontFamily: 'InstrumentSerif',
-      color: const Color(0xCC1A1A1A),
+      color: zt.textPrimary.withValues(alpha: 0.8),
       fontSize: decSize,
       fontStyle: FontStyle.italic,
       height: 1.0,
     );
     final currencyStyle = TextStyle(
       fontFamily: 'InstrumentSerif',
-      color: const Color(0x801A1A1A),
+      color: zt.textPrimary.withValues(alpha: 0.5),
       fontSize: wholeSize * 0.5,
       fontStyle: FontStyle.italic,
       height: 1.0,

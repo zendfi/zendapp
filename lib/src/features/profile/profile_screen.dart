@@ -23,6 +23,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
         ? model.currentDisplayName!
@@ -42,7 +43,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFF0F0F0) : ZendColors.textPrimary),
+                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
                   ),
                 ],
               ),

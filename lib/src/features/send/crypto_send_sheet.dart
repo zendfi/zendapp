@@ -697,6 +697,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
   // ── Stage: Error ────────────────────────────────────────────────────────────
 
   Widget _buildErrorStage() {
+    final zt = ZendTheme.of(context);
     return KeyedSubtree(
       key: const ValueKey('error'),
       child: Center(
@@ -715,22 +716,22 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 child: const Icon(Icons.close, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Oops',
                 style: TextStyle(
                   fontFamily: 'InstrumentSerif',
                   fontSize: 32,
-                  color: ZendColors.textPrimary,
+                  color: zt.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 _errorMessage ?? 'Something went wrong.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 15,
-                  color: ZendColors.textSecondary,
+                  color: zt.textSecondary,
                 ),
               ),
               const SizedBox(height: 32),
@@ -805,6 +806,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -825,22 +827,22 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Sent!',
               style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontStyle: FontStyle.italic,
                 fontSize: 40,
-                color: ZendColors.textPrimary,
+                color: zt.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '${widget.amountFormattedExact} → ${widget.destinationChainDisplay}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 15,
-                color: ZendColors.textSecondary,
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),

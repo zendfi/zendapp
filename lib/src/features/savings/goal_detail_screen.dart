@@ -180,13 +180,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     value: '\$${balance.toStringAsFixed(2)}',
                     zt: zt,
                   ),
-                  const Divider(color: ZendColors.border, height: 24),
+                  Divider(color: zt.border, height: 24),
                   _StatRow(
                     label: 'Target',
                     value: '\$${target.toStringAsFixed(2)}',
                     zt: zt,
                   ),
-                  const Divider(color: ZendColors.border, height: 24),
+                  Divider(color: zt.border, height: 24),
                   _StatRow(
                     label: 'Earned',
                     value: '\$${yield_.toStringAsFixed(2)}',
@@ -194,14 +194,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     zt: zt,
                   ),
                   if (_pocket.goalDeadline != null) ...[
-                    const Divider(color: ZendColors.border, height: 24),
+                    Divider(color: zt.border, height: 24),
                     _StatRow(
                       label: 'Deadline',
                       value: _deadlineLabel,
                       zt: zt,
                     ),
                   ],
-                  const Divider(color: ZendColors.border, height: 24),
+                  Divider(color: zt.border, height: 24),
                   _StatRow(
                     label: 'Mode',
                     value: _pocket.goalMode == 'strict' ? 'Strict' : 'Flexible',
