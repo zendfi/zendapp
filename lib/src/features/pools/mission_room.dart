@@ -52,6 +52,8 @@ class _MissionRoomState extends State<MissionRoom> {
   // ── Read receipts ─────────────────────────────────────────────────────────────
   /// Maps zendtag → last_read_message_id (server_id) for other pool members.
   final Map<String, String> _readReceipts = {};
+  /// Maps zendtag → avatar_url for read receipt display.
+  final Map<String, String?> _readerAvatars = {};
   String? _myLastReadMessageId;
 
   // ── Voice note recording ──────────────────────────────────────────────────────
@@ -270,8 +272,40 @@ class _MissionRoomState extends State<MissionRoom> {
       case WsFrameType.readReceipt:
         final readerTag = frame.data['reader_zendtag'] as String?;
         final lastReadId = frame.data['last_read_message_id'] as String?;
+        final readerUserId = frame.data['reader_user_id'] as String?;
         if (readerTag != null && lastReadId != null) {
-          setState(() => _readReceipts[readerTag] = lastReadId);
+          // Look up avatar from pool participants.
+          String? avatarUrl;
+          if (readerUserId != null) {
+            try {
+              final participant = _pool.participants.firstWhere(
+                (p) => p.userId == readerUserId,
+              );
+              avatarUrl = participant.avatarUrl;
+            } catch (_) {
+              // Participant not found — avatar stays null, initials will show.
+            }
+          }
+          setState(() {
+            _readReceipts[readerTag] = lastReadId;
+            _readerAvatars[readerTag] = avatarUrl;
+          });
+        }
+
+      case WsFrameType.reaction:
+        final messageId = frame.data['message_id'] as String?;
+        final emoji = frame.data['emoji'] as String?;
+        final reactorZendtag = frame.data['reactor_zendtag'] as String?;
+        if (messageId != null && emoji != null) {
+          _updateReaction(messageId, emoji, reactorZendtag, increment: true);
+        }
+
+      case WsFrameType.reactionRemoved:
+        final messageId = frame.data['message_id'] as String?;
+        final emoji = frame.data['emoji'] as String?;
+        final reactorZendtag = frame.data['reactor_zendtag'] as String?;
+        if (messageId != null && emoji != null) {
+          _updateReaction(messageId, emoji, reactorZendtag, increment: false);
         }
 
       default:
@@ -303,6 +337,24 @@ class _MissionRoomState extends State<MissionRoom> {
         break;
       }
     }
+  }
+
+  /// Returns a map of {zendtag → avatarUrl} for readers who have read up to or past [messageServerId].
+  Map<String, String?> _readersOf(String? messageServerId) {
+    if (messageServerId == null || _readReceipts.isEmpty) return const {};
+    final serverIdToIndex = <String, int>{};
+    for (var i = 0; i < _messages.length; i++) {
+      final sid = _messages[i].serverId;
+      if (sid != null) serverIdToIndex[sid] = i;
+    }
+    final msgIndex = serverIdToIndex[messageServerId];
+    if (msgIndex == null) return const {};
+
+    return {
+      for (final e in _readReceipts.entries)
+        if ((serverIdToIndex[e.value] ?? -1) >= msgIndex)
+          e.key: _readerAvatars[e.key],
+    };
   }
 
   // ── Infinite scroll ──────────────────────────────────────────────────────────
@@ -396,21 +448,7 @@ class _MissionRoomState extends State<MissionRoom> {
           if (gathered != null) setState(() => _pool.gathered = gathered);
         }
 
-      case SseEventType.poolReaction:
-        final messageId = data['message_id'] as String?;
-        final emoji = data['emoji'] as String?;
-        final reactorZendtag = data['reactor_zendtag'] as String?;
-        if (messageId != null && emoji != null) {
-          _updateReaction(messageId, emoji, reactorZendtag, increment: true);
-        }
-
-      case SseEventType.poolReactionRemoved:
-        final messageId = data['message_id'] as String?;
-        final emoji = data['emoji'] as String?;
-        final reactorZendtag = data['reactor_zendtag'] as String?;
-        if (messageId != null && emoji != null) {
-          _updateReaction(messageId, emoji, reactorZendtag, increment: false);
-        }
+      // Reactions are now handled via WebSocket — skip SSE reaction events.
 
       case SseEventType.poolStatusChanged:
         final newStatus = data['new_status'] as String?;
@@ -494,6 +532,7 @@ class _MissionRoomState extends State<MissionRoom> {
       clientId: clientId,
       senderZendtag: model.currentZendtag,
       senderUserId: model.currentUserId,
+      senderAvatarUrl: model.currentAvatarUrl,
       messageType: 'text',
       content: content,
       localStatus: LocalStatus.sending,
@@ -808,8 +847,10 @@ class _MissionRoomState extends State<MissionRoom> {
                                   isContinuation: msgItem.isContinuation,
                                   onLongPress: () => _showReactionPicker(msg),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
-                                  readReceipts: _readReceipts,
-                                  isLastMessage: listIdx == displayList.length - 1,
+                                  // Only show read receipt avatars on my own messages.
+                                  readers: msg.senderUserId == currentUserId
+                                      ? _readersOf(msg.serverId)
+                                      : const {},
                                   player: _playerFor(msg.id),
                                   onPlayTap: msg.messageTypeEnum == PoolMessageType.voiceNote
                                       ? () => _togglePlayback(msg)
@@ -825,8 +866,6 @@ class _MissionRoomState extends State<MissionRoom> {
                                             _outboxQueue.enqueue(msg.clientId!, msg.content!);
                                           } else if (msg.messageTypeEnum == PoolMessageType.voiceNote &&
                                               msg.clientId != null) {
-                                            // Voice note retry — re-upload from local file if still exists.
-                                            // If file is gone, just mark failed permanently.
                                             _repository.updateStatus(msg.clientId!, LocalStatus.failed);
                                           }
                                         }

@@ -14,8 +14,7 @@ class MissionRoomMessage extends StatelessWidget {
     required this.onReactionTap,
     this.isContinuation = false,
     this.onRetry,
-    this.readReceipts = const {},
-    this.isLastMessage = false,
+    this.readers = const {},
     this.player,
     this.onPlayTap,
   });
@@ -27,25 +26,15 @@ class MissionRoomMessage extends StatelessWidget {
   final bool isContinuation;
   final VoidCallback? onRetry;
 
-  /// Map of zendtag → last_read_message_id for other pool members.
-  final Map<String, String> readReceipts;
-
-  /// Whether this is the last message in the list (used for read receipt display).
-  final bool isLastMessage;
+  /// Map of {zendtag → avatarUrl} for members who have read up to or past this message.
+  /// Pre-computed by MissionRoom — only non-empty for the sender's own messages.
+  final Map<String, String?> readers;
 
   /// AudioPlayer for this message (non-null only for voice notes currently playing/paused).
   final AudioPlayer? player;
 
   /// Called when the play/pause button is tapped on a voice note.
   final VoidCallback? onPlayTap;
-
-  /// Zendtags of members who have read up to this message.
-  List<String> _readersOf(String messageId) {
-    return readReceipts.entries
-        .where((e) => e.value == messageId)
-        .map((e) => e.key)
-        .toList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,19 +46,17 @@ class MissionRoomMessage extends StatelessWidget {
           PoolMessageType.contributionEvent => _ContributionEventRow(
               message: message, onLongPress: onLongPress,
               onReactionTap: onReactionTap, currentUserId: currentUserId,
-              onRetry: onRetry,
-              readers: _readersOf(message.serverId ?? message.id)),
+              onRetry: onRetry, readers: readers),
           PoolMessageType.voiceNote => _VoiceNoteRow(
               message: message, onLongPress: onLongPress,
               onReactionTap: onReactionTap, currentUserId: currentUserId,
               isContinuation: isContinuation, onRetry: onRetry,
-              player: player, onPlayTap: onPlayTap,
-              readers: _readersOf(message.serverId ?? message.id)),
+              player: player, onPlayTap: onPlayTap, readers: readers),
           _ => _TextMessageRow(
               message: message, onLongPress: onLongPress,
               onReactionTap: onReactionTap, currentUserId: currentUserId,
               isContinuation: isContinuation, onRetry: onRetry,
-              readers: _readersOf(message.serverId ?? message.id)),
+              readers: readers),
         },
       ),
     );
@@ -103,36 +90,35 @@ class _DeliveryStatus extends StatelessWidget {
 
 // ── Read receipt avatar stack ─────────────────────────────────────────────────
 
-/// Shows small overlapping avatar initials for each reader.
+/// Shows small overlapping avatars for each reader (up to 3).
 class _ReadReceiptAvatars extends StatelessWidget {
   const _ReadReceiptAvatars({required this.readers});
-  final List<String> readers;
+
+  /// Map of {zendtag → avatarUrl}.
+  final Map<String, String?> readers;
 
   @override
   Widget build(BuildContext context) {
     if (readers.isEmpty) return const SizedBox.shrink();
-    // Show at most 3 avatars.
-    final visible = readers.take(3).toList();
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: visible.length * 12.0 + 4,
-          height: 16,
-          child: Stack(
-            children: [
-              for (var i = 0; i < visible.length; i++)
-                Positioned(
-                  left: i * 12.0,
-                  child: ZendAvatar(
-                    radius: 8,
-                    initials: visible[i].isNotEmpty ? visible[i][0].toUpperCase() : '?',
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+    final entries = readers.entries.take(3).toList();
+    return SizedBox(
+      width: entries.length * 12.0 + 4,
+      height: 16,
+      child: Stack(
+        children: [
+          for (var i = 0; i < entries.length; i++)
+            Positioned(
+              left: i * 12.0,
+              child: ZendAvatar(
+                radius: 8,
+                photoUrl: entries[i].value,
+                initials: entries[i].key.isNotEmpty
+                    ? entries[i].key[0].toUpperCase()
+                    : '?',
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -144,7 +130,7 @@ class _TextMessageRow extends StatelessWidget {
     required this.message, required this.onLongPress,
     required this.onReactionTap, required this.currentUserId,
     this.isContinuation = false, this.onRetry,
-    this.readers = const [],
+    this.readers = const {},
   });
 
   final PoolMessageLocal message;
@@ -153,7 +139,7 @@ class _TextMessageRow extends StatelessWidget {
   final String? currentUserId;
   final bool isContinuation;
   final VoidCallback? onRetry;
-  final List<String> readers;
+  final Map<String, String?> readers;
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +203,7 @@ class _ContributionEventRow extends StatelessWidget {
   const _ContributionEventRow({
     required this.message, required this.onLongPress,
     required this.onReactionTap, required this.currentUserId,
-    this.onRetry, this.readers = const [],
+    this.onRetry, this.readers = const {},
   });
 
   final PoolMessageLocal message;
@@ -225,7 +211,7 @@ class _ContributionEventRow extends StatelessWidget {
   final ValueChanged<String> onReactionTap;
   final String? currentUserId;
   final VoidCallback? onRetry;
-  final List<String> readers;
+  final Map<String, String?> readers;
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +262,7 @@ class _VoiceNoteRow extends StatelessWidget {
     required this.onReactionTap, required this.currentUserId,
     this.isContinuation = false, this.onRetry,
     this.player, this.onPlayTap,
-    this.readers = const [],
+    this.readers = const {},
   });
 
   final PoolMessageLocal message;
@@ -287,7 +273,7 @@ class _VoiceNoteRow extends StatelessWidget {
   final VoidCallback? onRetry;
   final AudioPlayer? player;
   final VoidCallback? onPlayTap;
-  final List<String> readers;
+  final Map<String, String?> readers;
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +314,6 @@ class _VoiceNoteRow extends StatelessWidget {
                 ]),
                 const SizedBox(height: 4),
               ],
-              // Voice note player pill
               GestureDetector(
                 onTap: message.localStatus == LocalStatus.sending ? null : onPlayTap,
                 child: Container(
@@ -340,7 +325,6 @@ class _VoiceNoteRow extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Play/pause or sending indicator
                       if (message.localStatus == LocalStatus.sending)
                         SizedBox(
                           width: 24, height: 24,
@@ -353,22 +337,16 @@ class _VoiceNoteRow extends StatelessWidget {
                           color: zt.accent,
                         ),
                       const SizedBox(width: ZendSpacing.xs),
-                      // Waveform progress bar
                       SizedBox(
                         width: 80,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(ZendRadii.pill),
-                              child: LinearProgressIndicator(
-                                value: progress.toDouble(),
-                                minHeight: 4,
-                                backgroundColor: zt.accentBright.withValues(alpha: 0.2),
-                                valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
-                              ),
-                            ),
-                          ],
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          child: LinearProgressIndicator(
+                            value: progress.toDouble(),
+                            minHeight: 4,
+                            backgroundColor: zt.accentBright.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
+                          ),
                         ),
                       ),
                       const SizedBox(width: ZendSpacing.xs),

@@ -6,7 +6,7 @@ import 'package:web_socket_channel/status.dart' as ws_status;
 
 enum WsConnectionState { disconnected, connecting, connected, reconnecting }
 
-enum WsFrameType { ack, message, typing, readReceipt, error, unknown }
+enum WsFrameType { ack, message, typing, readReceipt, reaction, reactionRemoved, error, unknown }
 
 class WsServerFrame {
   final WsFrameType type;
@@ -21,6 +21,8 @@ class WsServerFrame {
       'message' => WsFrameType.message,
       'typing' => WsFrameType.typing,
       'read_receipt' => WsFrameType.readReceipt,
+      'reaction' => WsFrameType.reaction,
+      'reaction_removed' => WsFrameType.reactionRemoved,
       'error' => WsFrameType.error,
       _ => WsFrameType.unknown,
     };
