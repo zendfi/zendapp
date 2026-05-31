@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:uuid/uuid.dart';
 
@@ -59,7 +58,7 @@ class _MissionRoomState extends State<MissionRoom> {
   String? _myLastReadMessageId;
 
   // ── Voice note recording ──────────────────────────────────────────────────────
-  final AudioRecorder _recorder = AudioRecorder();
+  final Record _recorder = Record();
   String? _recordingPath;
 
   // ── Voice note playback ───────────────────────────────────────────────────────
@@ -561,9 +560,9 @@ class _MissionRoomState extends State<MissionRoom> {
   // ── Recording ────────────────────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
-    // Request microphone permission.
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
+    // In record 4.x, hasPermission() handles the permission request internally.
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Microphone permission required for voice notes')),
@@ -576,8 +575,10 @@ class _MissionRoomState extends State<MissionRoom> {
     _recordingPath = '${dir.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
     await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000, sampleRate: 44100),
       path: _recordingPath!,
+      encoder: AudioEncoder.aacLc,
+      bitRate: 64000,
+      samplingRate: 44100,
     );
 
     setState(() { _isRecording = true; _recordingSeconds = 0; });

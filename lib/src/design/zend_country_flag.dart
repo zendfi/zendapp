@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'zend_tokens.dart';
 
-/// ISO 3166-1 alpha-2 country codes supported by the local SVG assets.
-/// Add entries here as new flags are added to assets/countries/.
+/// ISO 3166-1 alpha-2 country codes supported by the local PNG assets.
+/// Add entries here as new flags are added to assets/countries/flags/.
 enum ZendCountry {
   ng,  // Nigeria
   us,  // United States
@@ -16,13 +15,12 @@ enum ZendCountry {
 
 extension ZendCountryExt on ZendCountry {
   String get assetPath => switch (this) {
-        ZendCountry.ng => 'assets/countries/ngn_flag_circle.svg',
-        ZendCountry.us => 'assets/countries/us_flag_circle.svg',
-        ZendCountry.gb => 'assets/countries/uk_flag_circle.svg',
-        ZendCountry.eu => 'assets/countries/eu_flag_circle.svg',
-        // Mexico and Colombia don't have SVGs yet — fall back to initials badge
-        ZendCountry.mx => '',
-        ZendCountry.co => '',
+        ZendCountry.ng => 'assets/countries/flags/nigeria.png',
+        ZendCountry.us => 'assets/countries/flags/usa.png',
+        ZendCountry.gb => 'assets/countries/flags/uk.png',
+        ZendCountry.eu => 'assets/countries/flags/eu.png',
+        ZendCountry.mx => 'assets/countries/flags/mexico.png',
+        ZendCountry.co => 'assets/countries/flags/columbia.png',
       };
 
   String get initials => switch (this) {
@@ -46,8 +44,8 @@ extension ZendCountryExt on ZendCountry {
 
 /// A circular country flag widget.
 ///
-/// Uses the SVG asset from assets/countries/ when available, and falls back
-/// to a colored initials badge for countries without an SVG yet.
+/// Uses the PNG asset from assets/countries/flags/ and falls back
+/// to a colored initials badge if the image fails to load.
 class ZendCountryFlag extends StatelessWidget {
   const ZendCountryFlag({
     super.key,
@@ -60,22 +58,18 @@ class ZendCountryFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final path = country.assetPath;
-
-    if (path.isNotEmpty) {
-      return SvgPicture.asset(
-        path,
+    return ClipOval(
+      child: Image.asset(
+        country.assetPath,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholderBuilder: (_) => _InitialsBadge(
+        errorBuilder: (context, error, stackTrace) => _InitialsBadge(
           country: country,
           size: size,
         ),
-      );
-    }
-
-    return _InitialsBadge(country: country, size: size);
+      ),
+    );
   }
 }
 

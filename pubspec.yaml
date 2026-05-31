@@ -54,15 +54,16 @@ dependencies:
   audioplayers: ^6.1.0
 
   # Voice note recording (M4A output, cross-platform)
-  # Pinned to 5.0.0 — versions 5.1.x pull in record_platform_interface 1.6.0
-  # which has a broken Linux implementation that fails to compile even on Android builds.
-  record: 5.0.0
+  # Using 4.x — the 5.x series has a broken Linux platform plugin that fails
+  # to compile even on Android/iOS builds due to record_platform_interface 1.6.0
+  # incompatibility with record_linux.
+  record: ^4.4.4
 
   # Voice note playback
   just_audio: ^0.9.40
 
-  # Microphone / audio permission requests
-  permission_handler: ^11.3.1
+  # Microphone / audio permission requests (handled by record 4.x internally)
+  # permission_handler: ^11.3.1  # removed — record 4.x calls hasPermission() natively
 
   # Deep link / URL launch
   url_launcher: ^6.3.1
@@ -81,9 +82,6 @@ dependencies:
 
   # NFC tag reading and writing
   nfc_manager: ^3.3.0
-
-  # SVG rendering for country flags
-  flutter_svg: ^2.0.10+1
 
   # Network image caching (profile photos)
   cached_network_image: ^3.4.1
@@ -216,9 +214,3 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/logo/Zend.png"
-
-# Pin record_linux to a version compatible with record 5.0.0 / record_platform_interface 1.5.x.
-# record_linux 0.7.x broke the interface contract (missing startStream, changed hasPermission
-# signature) and is not needed for Android/iOS builds.
-dependency_overrides:
-  record_linux: 0.6.0
