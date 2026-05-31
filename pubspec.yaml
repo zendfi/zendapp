@@ -140,6 +140,7 @@ flutter:
     - assets/logo/Zend.png
     - assets/sounds/
     - assets/countries/
+    - assets/countries/flags/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

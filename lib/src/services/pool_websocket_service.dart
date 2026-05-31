@@ -93,8 +93,12 @@ class PoolWebSocketService {
     }
 
     try {
-      final uri = Uri.parse(
-        '$baseWsUrl/api/zend/pools/$poolId/ws?token=$token',
+      final uri = Uri(
+        scheme: baseWsUrl.startsWith('wss') ? 'wss' : 'ws',
+        host: Uri.parse(baseWsUrl).host,
+        port: Uri.parse(baseWsUrl).port,
+        path: '/api/zend/pools/$poolId/ws',
+        queryParameters: {'token': token},
       );
       _channel = WebSocketChannel.connect(uri);
       await _channel!.ready;
