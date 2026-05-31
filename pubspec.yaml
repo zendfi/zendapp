@@ -38,6 +38,9 @@ dependencies:
   # Networking
   dio: 5.4.3+1
 
+  # WebSocket client for pool real-time messaging
+  web_socket_channel: ^2.4.0
+
   # Secure storage (iOS Keychain / Android Keystore)
   flutter_secure_storage: 9.2.4
 
@@ -49,6 +52,15 @@ dependencies:
 
   # Audio — success sound on transfer
   audioplayers: ^6.1.0
+
+  # Voice note recording (M4A output, cross-platform)
+  record: ^5.1.2
+
+  # Voice note playback
+  just_audio: ^0.9.40
+
+  # Microphone / audio permission requests
+  permission_handler: ^11.3.1
 
   # Deep link / URL launch
   url_launcher: ^6.3.1
@@ -82,10 +94,25 @@ dependencies:
   firebase_messaging: ^15.2.5
   flutter_local_notifications: ^18.0.1
 
+  # Local SQLite persistence via drift
+  drift: ^2.18.0
+  drift_flutter: ^0.2.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
+
+  # Direct SQLite access (no code generation required)
+  sqflite: ^2.3.0
+
+  # UUID generation for client-side message IDs
+  uuid: ^4.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
+  drift_dev: ^2.18.0
+  build_runner: ^2.4.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

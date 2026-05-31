@@ -70,6 +70,8 @@
 	<string>Zend! uses your camera to scan QR codes for payments</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Zend! saves QR codes to your photo library</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zend! uses your microphone to record voice notes in pool chats</string>
 	<key>NFCReaderUsageDescription</key>
 	<string>Zend! writes your payment link to NFC tags so customers can tap to pay</string>
 </dict>

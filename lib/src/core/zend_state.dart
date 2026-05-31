@@ -20,6 +20,7 @@ import '../services/pocket_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
+import '../data/local/app_database.dart';
 import '../models/payment_request_notification.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
@@ -98,6 +99,7 @@ class ZendAppModel extends ChangeNotifier {
     required this.appLockService,
     required this.savingsService,
     required this.pocketService,
+    required this.localDb,
   });
 
   final AuthService authService;
@@ -111,6 +113,9 @@ class ZendAppModel extends ChangeNotifier {
   final AppLockService appLockService;
   final SavingsService savingsService;
   final PocketService pocketService;
+
+  /// On-device SQLite database for pool message persistence.
+  final AppDatabase localDb;
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;

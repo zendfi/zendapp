@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 import 'src/core/zend_state.dart';
+import 'src/data/local/app_database.dart';
 import 'src/services/api_client.dart';
 import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/services/app_lock_service.dart';
@@ -91,6 +92,9 @@ void main() async {
 
   final pocketService = PocketService(apiClient: apiClient);
 
+  // Initialise the local SQLite database (warm up the connection).
+  final localDb = AppDatabase.instance;
+
   final model = ZendAppModel(
     authService: authService,
     walletService: walletService,
@@ -103,6 +107,7 @@ void main() async {
     appLockService: appLockService,
     savingsService: savingsService,
     pocketService: pocketService,
+    localDb: localDb,
   );
 
   await model.hydrateRecentContacts();

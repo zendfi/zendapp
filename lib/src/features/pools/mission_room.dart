@@ -1,9 +1,20 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
+import '../../data/local/pool_message_repository.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/pool_message_local.dart';
+import '../../services/outbox_queue.dart';
+import '../../services/pool_websocket_service.dart';
 import '../../services/sse_service.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
@@ -23,9 +34,37 @@ class MissionRoom extends StatefulWidget {
 
 class _MissionRoomState extends State<MissionRoom> {
   late Pool _pool;
-  final List<PoolMessage> _messages = [];
+  final List<PoolMessageLocal> _messages = [];
   bool _loading = true;
-  String? _loadError;
+
+  // ── WebSocket + LocalDB ──────────────────────────────────────────────────────
+  late PoolMessageRepository _repository;
+  late PoolWebSocketService _wsService;
+  late OutboxQueue _outboxQueue;
+  StreamSubscription<WsServerFrame>? _wsSub;
+  bool _hasConnectedOnce = false;
+  bool _showReconnecting = false;
+
+  // ── Infinite scroll ──────────────────────────────────────────────────────────
+  bool _fullyLoaded = false;
+  bool _loadingOlder = false;
+
+  // ── Typing indicators ────────────────────────────────────────────────────────
+  final Map<String, Timer> _typingTimers = {};
+  final Set<String> _typingUsers = {};
+
+  // ── Read receipts ─────────────────────────────────────────────────────────────
+  /// Maps zendtag → last_read_message_id (server_id) for other pool members.
+  final Map<String, String> _readReceipts = {};
+  String? _myLastReadMessageId;
+
+  // ── Voice note recording ──────────────────────────────────────────────────────
+  final AudioRecorder _recorder = AudioRecorder();
+  String? _recordingPath;
+
+  // ── Voice note playback ───────────────────────────────────────────────────────
+  /// Currently playing message id → AudioPlayer instance.
+  final Map<String, AudioPlayer> _players = {};
 
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
@@ -34,86 +73,307 @@ class _MissionRoomState extends State<MissionRoom> {
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
 
-  // Tracks IDs of messages we sent optimistically so we can skip the SSE echo
-  final Set<String> _pendingIds = {};
-
   StreamSubscription<SseEvent>? _sseSub;
+
+  static const String _kApiBaseUrl = 'https://api-v2.zendfi.tech';
+  static const String _kTokenKey = 'zend_session_token';
 
   @override
   void initState() {
     super.initState();
     _pool = widget.pool;
-    _loadMessages();
-    _subscribeSse();
     WidgetsBinding.instance.addObserver(_LifecycleObserver(onResume: _onAppResume));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
+  }
+
+  Future<void> _init() async {
+    if (!mounted) return;
+    final model = ZendScope.of(context);
+
+    // Set up local DB layer
+    _repository = PoolMessageRepository(model.localDb);
+
+    // Load from local DB immediately — no spinner if we have cached messages
+    final cached = await _repository.getRecentMessages(_pool.id);
+    if (!mounted) return;
+    if (cached.isNotEmpty) {
+      setState(() {
+        _messages.addAll(cached);
+        _loading = false;
+      });
+      _jumpToBottom();
+      // Send read receipt after WS connects (deferred so _wsService is ready).
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendReadReceipt());
+    }
+
+    // Set up WebSocket service
+    const storage = FlutterSecureStorage();
+    final wsBaseUrl = _kApiBaseUrl.replaceFirst('https://', 'wss://').replaceFirst('http://', 'ws://');
+    _wsService = PoolWebSocketService(
+      poolId: _pool.id,
+      baseWsUrl: wsBaseUrl,
+      getToken: () => storage.read(key: _kTokenKey),
+      onReconnected: _onWsReconnected,
+    );
+
+    // Set up outbox queue
+    _outboxQueue = OutboxQueue(
+      wsService: _wsService,
+      repository: _repository,
+      poolId: _pool.id,
+    );
+
+    // Restore any pending messages from DB into the outbox
+    await _outboxQueue.restoreFromDb();
+
+    // Listen to WS frames
+    _wsSub = _wsService.frames.listen(_onWsFrame);
+
+    // Listen to connection state for reconnecting banner
+    _wsService.connectionState.addListener(_onConnectionStateChanged);
+
+    // Connect
+    await _wsService.connect();
+
+    // Subscribe to SSE for non-message events
+    _subscribeSse();
+
+    // If no cached messages, show loading until WS delivers or we fall back
+    if (cached.isEmpty && mounted) {
+      setState(() => _loading = false);
+    }
+
+    // Add scroll listener for infinite scroll
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onConnectionStateChanged() {
+    if (!mounted) return;
+    final state = _wsService.connectionState.value;
+    final shouldShow = _hasConnectedOnce &&
+        (state == WsConnectionState.reconnecting ||
+            state == WsConnectionState.disconnected);
+    if (shouldShow != _showReconnecting) {
+      setState(() => _showReconnecting = shouldShow);
+    }
+    if (state == WsConnectionState.connected) {
+      _hasConnectedOnce = true;
+      if (_showReconnecting) setState(() => _showReconnecting = false);
+    }
+  }
+
+  Future<void> _onWsReconnected() async {
+    // Sync messages missed during disconnection
+    if (_messages.isEmpty) return;
+    final lastServerId = _messages.lastWhere(
+      (m) => m.serverId != null,
+      orElse: () => _messages.last,
+    ).serverId;
+    if (lastServerId == null) return;
+
+    try {
+      final model = ZendScope.of(context);
+      final missed = await model.walletService.apiClient.listMessages(
+        poolId: _pool.id,
+        // The API doesn't have after_id yet, so we just reload recent
+      );
+      if (!mounted) return;
+      for (final msg in missed) {
+        final local = PoolMessageLocal.fromPoolMessage(msg);
+        await _repository.upsertMessage(local);
+        _upsertMessageLocal(local);
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(_LifecycleObserver(onResume: _onAppResume));
     _sseSub?.cancel();
+    _wsSub?.cancel();
+    _wsService.connectionState.removeListener(_onConnectionStateChanged);
+    _wsService.dispose();
+    _outboxQueue.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _textController.dispose();
     _recordingTimer?.cancel();
+    _recorder.dispose();
+    for (final p in _players.values) { p.dispose(); }
+    for (final t in _typingTimers.values) { t.cancel(); }
     super.dispose();
   }
 
   /// Called when the app returns to the foreground.
-  /// Silently reloads messages to catch up on anything missed while backgrounded.
   void _onAppResume() {
     if (!mounted) return;
-    // Only reload if we're not already loading and the room is active
-    if (!_loading) {
-      _loadMessages();
+    // Reconnect WebSocket if disconnected
+    if (_wsService.connectionState.value == WsConnectionState.disconnected) {
+      _wsService.connect();
     }
   }
 
-  // ── Data loading ────────────────────────────────────────────────────────────
+  // ── WebSocket frame handling ─────────────────────────────────────────────────
 
-  Future<void> _loadMessages() async {
-    setState(() {
-      _loading = true;
-      _loadError = null;
-    });
-    try {
-      final model = ZendScope.of(context);
-      final msgs = await model.walletService.apiClient
-          .listMessages(poolId: _pool.id);
-      if (!mounted) return;
-      setState(() {
-        _messages
-          ..clear()
-          ..addAll(msgs);
-        _loading = false;
-      });
-      _jumpToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loadError = e.toString();
-        _loading = false;
-      });
+  void _onWsFrame(WsServerFrame frame) {
+    if (!mounted) return;
+    switch (frame.type) {
+      case WsFrameType.message:
+        final msg = PoolMessageLocal.fromWsFrame(frame.data);
+        _repository.upsertMessage(msg);
+        setState(() => _upsertMessageLocal(msg));
+        _jumpToBottom();
+        _sendReadReceipt();
+
+      case WsFrameType.ack:
+        final clientId = frame.data['client_id'] as String?;
+        final serverId = frame.data['server_id'] as String?;
+        final createdAtStr = frame.data['created_at'] as String?;
+        if (clientId != null) {
+          _repository.updateStatus(
+            clientId,
+            LocalStatus.delivered,
+            serverId: serverId,
+            serverCreatedAt: createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+          );
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.clientId == clientId);
+            if (idx >= 0) {
+              _messages[idx] = _messages[idx].copyWith(
+                localStatus: LocalStatus.delivered,
+                serverId: serverId,
+                createdAt: createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+              );
+            }
+          });
+        }
+
+      case WsFrameType.typing:
+        final senderTag = frame.data['sender_zendtag'] as String?;
+        final isTyping = frame.data['is_typing'] as bool? ?? false;
+        if (senderTag == null) break;
+        if (isTyping) {
+          _typingTimers[senderTag]?.cancel();
+          _typingTimers[senderTag] = Timer(const Duration(seconds: 5), () {
+            if (mounted) setState(() { _typingUsers.remove(senderTag); _typingTimers.remove(senderTag); });
+          });
+          setState(() => _typingUsers.add(senderTag));
+        } else {
+          _typingTimers[senderTag]?.cancel();
+          _typingTimers.remove(senderTag);
+          setState(() => _typingUsers.remove(senderTag));
+        }
+
+      case WsFrameType.error:
+        final code = frame.data['code'] as String?;
+        if (code == 'POOL_NOT_ACTIVE') {
+          setState(() => _pool.status = PoolStatus.cancelled);
+        }
+
+      case WsFrameType.readReceipt:
+        final readerTag = frame.data['reader_zendtag'] as String?;
+        final lastReadId = frame.data['last_read_message_id'] as String?;
+        if (readerTag != null && lastReadId != null) {
+          setState(() => _readReceipts[readerTag] = lastReadId);
+        }
+
+      default:
+        break;
     }
   }
 
-  /// Adds [msg] to [_messages] only if no message with the same ID exists.
-  /// Replaces a temp message by matching on both sender and content.
-  void _upsertMessage(PoolMessage msg) {
-    final realIdx = _messages.indexWhere((m) => m.id == msg.id);
-    if (realIdx >= 0) return; // already present — skip
+  // ── Local message management ─────────────────────────────────────────────────
 
-    // Find a temp placeholder from the same sender with the same content
-    final tempIdx = _messages.indexWhere((m) =>
-        m.id.startsWith('temp_') &&
-        m.senderUserId == msg.senderUserId &&
-        m.content == msg.content);
-
-    if (tempIdx >= 0) {
-      _messages[tempIdx] = msg;
+  void _upsertMessageLocal(PoolMessageLocal msg) {
+    final idx = _messages.indexWhere((m) => m.id == msg.id || (m.serverId != null && m.serverId == msg.serverId));
+    if (idx >= 0) {
+      _messages[idx] = msg;
     } else {
       _messages.add(msg);
     }
   }
+
+  /// Sends a `read` frame for the last delivered message in the list.
+  /// Only fires if the room is visible and the last message has a server ID.
+  void _sendReadReceipt() {
+    if (!mounted) return;
+    // Find the last message with a server ID (delivered from server).
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final sid = _messages[i].serverId;
+      if (sid != null && sid != _myLastReadMessageId) {
+        _myLastReadMessageId = sid;
+        _wsService.sendRead(sid);
+        break;
+      }
+    }
+  }
+
+  // ── Infinite scroll ──────────────────────────────────────────────────────────
+
+  void _onScroll() {
+    if (_loadingOlder || _fullyLoaded) return;
+    if (_scrollController.hasClients && _scrollController.position.pixels <= 200) {
+      _loadOlderMessages();
+    }
+  }
+
+  Future<void> _loadOlderMessages() async {
+    if (_loadingOlder || _fullyLoaded || _messages.isEmpty) return;
+    // Capture context-dependent values before any await.
+    final model = ZendScope.of(context);
+    final poolId = _pool.id;
+    setState(() => _loadingOlder = true);
+    try {
+      final oldest = _messages.first;
+      final oldestCreatedAt = oldest.createdAt.toIso8601String();
+
+      // Check local cache first
+      final localOlder = await _repository.getOlderMessages(poolId, oldestCreatedAt);
+      if (localOlder.isNotEmpty) {
+        setState(() {
+          _messages.insertAll(0, localOlder);
+          _loadingOlder = false;
+        });
+        return;
+      }
+
+      // Fetch from server
+      final oldestServerId = oldest.serverId;
+      if (oldestServerId == null) {
+        setState(() { _loadingOlder = false; _fullyLoaded = true; });
+        return;
+      }
+
+      final fetched = await model.walletService.apiClient.listMessages(
+        poolId: poolId,
+        beforeId: oldestServerId,
+        limit: 50,
+      );
+      if (!mounted) return;
+
+      final localFetched = fetched.map(PoolMessageLocal.fromPoolMessage).toList();
+      for (final msg in localFetched) {
+        await _repository.upsertMessage(msg);
+      }
+      if (localFetched.isNotEmpty) {
+        await _repository.upsertCursor(poolId, oldestFetchedServerId: localFetched.first.serverId);
+      }
+
+      setState(() {
+        _messages.insertAll(0, localFetched);
+        _loadingOlder = false;
+        if (localFetched.length < 50) _fullyLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingOlder = false);
+    }
+  }
+
+  // ── Data loading (legacy fallback) ───────────────────────────────────────────
+  // Initial load is handled by _init() via local DB. This method is intentionally
+  // empty — kept so _onAppResume can call it without a null check.
+  // ignore: unused_element
+  Future<void> _loadMessages() async {}
 
   // ── SSE ─────────────────────────────────────────────────────────────────────
 
@@ -130,14 +390,7 @@ class _MissionRoomState extends State<MissionRoom> {
     if (poolId != _pool.id) return;
 
     switch (event.type) {
-      case SseEventType.poolMessage:
-        final msg = PoolMessage.fromJson(data);
-        // Skip if we sent this message — the send flow handles insertion.
-        if (_pendingIds.remove(msg.id)) return;
-        setState(() {
-          _upsertMessage(msg);
-        });
-        _jumpToBottom();
+      // poolMessage is now handled via WebSocket — skip here
 
       case SseEventType.poolContribution:
         final gatheredStr = data['gathered_amount_usdc'] as String?;
@@ -190,7 +443,7 @@ class _MissionRoomState extends State<MissionRoom> {
     final isMe = reactorZendtag == model.currentZendtag;
 
     setState(() {
-      final idx = _messages.indexWhere((m) => m.id == messageId);
+      final idx = _messages.indexWhere((m) => m.id == messageId || m.serverId == messageId);
       if (idx < 0) return;
 
       final msg = _messages[idx];
@@ -234,56 +487,38 @@ class _MissionRoomState extends State<MissionRoom> {
 
     _textController.clear();
 
-    // Optimistic: add a temporary message immediately so the UI feels instant
-    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final model = ZendScope.of(context);
-    final optimistic = PoolMessage(
-      id: tempId,
+    final clientId = const Uuid().v4();
+    final now = DateTime.now();
+
+    final optimistic = PoolMessageLocal(
+      id: clientId,
       poolId: _pool.id,
+      clientId: clientId,
       senderZendtag: model.currentZendtag,
       senderUserId: model.currentUserId,
-      messageType: PoolMessageType.text,
+      messageType: 'text',
       content: content,
-      createdAt: DateTime.now(),
+      localStatus: LocalStatus.sending,
+      createdAt: now,
     );
 
+    // Write to local DB and show immediately
+    await _repository.upsertMessage(optimistic);
     setState(() {
       _messages.add(optimistic);
       _sending = true;
     });
     _jumpToBottom();
 
-    try {
-      final msg = await model.walletService.apiClient
-          .postMessage(poolId: _pool.id, content: content);
-      if (!mounted) return;
-
-      // Register the real ID BEFORE setState so any concurrent SSE echo
-      // that arrives between now and the setState is suppressed.
-      _pendingIds.add(msg.id);
-
-      setState(() {
-        // Remove the optimistic temp regardless
-        _messages.removeWhere((m) => m.id == tempId);
-        // Add the real message only if SSE hasn't already added it
-        if (!_messages.any((m) => m.id == msg.id)) {
-          _messages.add(msg);
-        }
-        _sending = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      // Remove the optimistic message on failure
-      setState(() {
-        _messages.removeWhere((m) => m.id == tempId);
-        _sending = false;
-      });
-    }
+    // Enqueue for WebSocket delivery
+    _outboxQueue.enqueue(clientId, content);
+    setState(() => _sending = false);
   }
 
   // ── Reactions ────────────────────────────────────────────────────────────────
 
-  void _showReactionPicker(PoolMessage message) {
+  void _showReactionPicker(PoolMessageLocal message) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -296,7 +531,7 @@ class _MissionRoomState extends State<MissionRoom> {
     );
   }
 
-  Future<void> _toggleReaction(PoolMessage message, String emoji) async {
+  Future<void> _toggleReaction(PoolMessageLocal message, String emoji) async {
     final model = ZendScope.of(context);
     final existing = message.reactions.firstWhere(
       (r) => r.emoji == emoji,
@@ -306,13 +541,14 @@ class _MissionRoomState extends State<MissionRoom> {
     _updateReaction(message.id, emoji, model.currentZendtag,
         increment: !existing.reactedByMe);
 
+    final messageId = message.serverId ?? message.id;
     try {
       if (existing.reactedByMe) {
         await model.walletService.apiClient.removeReaction(
-          poolId: _pool.id, messageId: message.id, emoji: emoji);
+          poolId: _pool.id, messageId: messageId, emoji: emoji);
       } else {
         await model.walletService.apiClient.addReaction(
-          poolId: _pool.id, messageId: message.id, emoji: emoji);
+          poolId: _pool.id, messageId: messageId, emoji: emoji);
       }
     } catch (_) {
       if (mounted) {
@@ -322,9 +558,28 @@ class _MissionRoomState extends State<MissionRoom> {
     }
   }
 
-  // ── Recording (stub) ─────────────────────────────────────────────────────────
+  // ── Recording ────────────────────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
+    // Request microphone permission.
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required for voice notes')),
+        );
+      }
+      return;
+    }
+
+    final dir = await getTemporaryDirectory();
+    _recordingPath = '${dir.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000, sampleRate: 44100),
+      path: _recordingPath!,
+    );
+
     setState(() { _isRecording = true; _recordingSeconds = 0; });
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
@@ -336,13 +591,140 @@ class _MissionRoomState extends State<MissionRoom> {
   Future<void> _stopRecording() async {
     _recordingTimer?.cancel();
     _recordingTimer = null;
+
+    final path = await _recorder.stop();
     if (!mounted) return;
     setState(() => _isRecording = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Voice notes coming soon 🎙️'),
-          duration: Duration(seconds: 2)),
-    );
+
+    if (path == null) return;
+
+    final file = File(path);
+    if (!await file.exists()) return;
+
+    final durationSeconds = _recordingSeconds.clamp(1, 30);
+    _recordingSeconds = 0;
+
+    // Upload and send.
+    await _sendVoiceNote(file, durationSeconds);
   }
+
+  Future<void> _sendVoiceNote(File file, int durationSeconds) async {
+    // Capture context-dependent values before any await.
+    final model = ZendScope.of(context);
+    final poolId = _pool.id;
+    final bytes = await file.readAsBytes();
+
+    // Create optimistic local message.
+    final clientId = const Uuid().v4();
+    final now = DateTime.now();
+    final optimistic = PoolMessageLocal(
+      id: clientId,
+      poolId: poolId,
+      clientId: clientId,
+      senderZendtag: model.currentZendtag,
+      senderUserId: model.currentUserId,
+      messageType: 'voice_note',
+      voiceNoteDurationSeconds: durationSeconds,
+      localStatus: LocalStatus.sending,
+      createdAt: now,
+    );
+    await _repository.upsertMessage(optimistic);
+    setState(() => _messages.add(optimistic));
+    _jumpToBottom();
+
+    try {
+      final msg = await model.walletService.apiClient.postVoiceNote(
+        poolId: poolId,
+        audioBytes: bytes,
+        mimeType: 'audio/m4a',
+        durationSeconds: durationSeconds,
+      );
+      final local = PoolMessageLocal.fromPoolMessage(msg);
+      await _repository.updateStatus(
+        clientId,
+        LocalStatus.delivered,
+        serverId: local.serverId,
+        serverCreatedAt: local.createdAt,
+      );
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == clientId);
+        if (idx >= 0) {
+          _messages[idx] = local.copyWith(localStatus: LocalStatus.delivered);
+        }
+      });
+    } catch (_) {
+      await _repository.updateStatus(clientId, LocalStatus.failed);
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == clientId);
+        if (idx >= 0) {
+          _messages[idx] = _messages[idx].copyWith(localStatus: LocalStatus.failed);
+        }
+      });
+    } finally {
+      // Clean up temp file.
+      try { await file.delete(); } catch (_) {}
+    }
+  }
+
+  // ── Voice note playback ───────────────────────────────────────────────────────
+
+  Future<void> _togglePlayback(PoolMessageLocal message) async {
+    final msgId = message.id;
+    final url = message.voiceNoteUrl;
+    if (url == null) return;
+
+    // Stop any other playing message.
+    for (final entry in _players.entries) {
+      if (entry.key != msgId) {
+        await entry.value.stop();
+      }
+    }
+
+    if (_players.containsKey(msgId)) {
+      final player = _players[msgId]!;
+      if (player.playing) {
+        await player.pause();
+      } else {
+        await player.play();
+      }
+      return;
+    }
+
+    // New player for this message.
+    final player = AudioPlayer();
+    _players[msgId] = player;
+
+    // Rebuild when playback state changes.
+    player.playerStateStream.listen((_) { if (mounted) setState(() {}); });
+    player.positionStream.listen((_) { if (mounted) setState(() {}); });
+
+    player.playbackEventStream.listen(
+      (_) {},
+      onError: (error, stackTrace) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not play voice note')),
+          );
+        }
+      },
+    );
+
+    try {
+      await player.setUrl(url);
+      await player.play();
+      setState(() {});
+    } catch (_) {
+      _players.remove(msgId);
+      player.dispose();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not play voice note')),
+        );
+      }
+    }
+  }
+
+  AudioPlayer? _playerFor(String messageId) => _players[messageId];
 
   // ── Scroll ───────────────────────────────────────────────────────────────────
 
@@ -385,7 +767,7 @@ class _MissionRoomState extends State<MissionRoom> {
           lastSenderId == msg.senderUserId &&
           lastMessageTime != null &&
           msg.createdAt.difference(lastMessageTime).inMinutes < 2 &&
-          msg.messageType == PoolMessageType.text;
+          msg.messageTypeEnum == PoolMessageType.text;
 
       items.add(_MessageItem(message: msg, isContinuation: isContinuation));
       lastSenderId = msg.senderUserId;
@@ -397,12 +779,52 @@ class _MissionRoomState extends State<MissionRoom> {
 
   @override
   Widget build(BuildContext context) {
-    // Read model once outside the builder — avoids per-item dependency tracking
     final model = ZendScope.of(context);
     final currentUserId = model.currentUserId;
 
     return Column(
       children: [
+        // ── Reconnecting banner ──
+        if (_showReconnecting)
+          Builder(builder: (context) {
+            final zt = ZendTheme.of(context);
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
+              color: zt.bgSecondary,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 12, height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Reconnecting...', style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
+                ],
+              ),
+            );
+          }),
+
+        // ── Could not connect banner ──
+        if (!_showReconnecting && _wsService.consecutiveFailures >= 5)
+          Builder(builder: (context) {
+            final zt = ZendTheme.of(context);
+            return GestureDetector(
+              onTap: () => _wsService.connect(),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
+                color: ZendColors.destructive.withValues(alpha: 0.1),
+                child: Text(
+                  'Could not connect. Tap to retry.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textPrimary),
+                ),
+              ),
+            );
+          }),
+
         // ── Closed-pool archive banner ──
         if (!_isActive)
           Builder(builder: (context) {
@@ -427,60 +849,95 @@ class _MissionRoomState extends State<MissionRoom> {
                     valueColor: AlwaysStoppedAnimation<Color>(ZendTheme.of(context).accentBright),
                   ),
                 )
-              : _loadError != null
+              : _messages.isEmpty
                   ? Center(
-                      child: TextButton(
-                        onPressed: _loadMessages,
-                        child: Text('Retry', style: TextStyle(color: ZendTheme.of(context).accentBright)),
+                      child: Text(
+                        'No messages yet. Say something! 👋',
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
                       ),
                     )
-                  : _messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No messages yet. Say something! 👋',
-                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
-                          ),
-                        )
-                      : Stack(
-                          children: [
-                            Builder(builder: (context) {
-                              final displayList = _buildDisplayList();
-                              return ListView.builder(
-                                controller: _scrollController,
-                                cacheExtent: 500,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: ZendSpacing.lg,
-                                    vertical: ZendSpacing.xs),
-                                itemCount: displayList.length,
-                                itemBuilder: (_, i) {
-                                  final item = displayList[i];
-                                  if (item is _DateSeparatorItem) {
-                                    return _DateSeparator(date: item.date);
-                                  }
-                                  final msgItem = item as _MessageItem;
-                                  final msg = msgItem.message;
-                                  return RepaintBoundary(
-                                    child: MissionRoomMessage(
-                                      key: ValueKey(msg.id),
-                                      message: msg,
-                                      currentUserId: currentUserId,
-                                      isContinuation: msgItem.isContinuation,
-                                      onLongPress: () => _showReactionPicker(msg),
-                                      onReactionTap: (emoji) =>
-                                          _toggleReaction(msg, emoji),
+                  : Stack(
+                      children: [
+                        Builder(builder: (context) {
+                          final displayList = _buildDisplayList();
+                          return ListView.builder(
+                            controller: _scrollController,
+                            cacheExtent: 500,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: ZendSpacing.lg,
+                                vertical: ZendSpacing.xs),
+                            itemCount: displayList.length + (_loadingOlder ? 1 : 0),
+                            itemBuilder: (_, i) {
+                              // Loading older indicator at top
+                              if (_loadingOlder && i == 0) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 20, height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: ZendTheme.of(context).accentBright,
+                                      ),
                                     ),
-                                  );
-                                },
+                                  ),
+                                );
+                              }
+                              final listIdx = _loadingOlder ? i - 1 : i;
+                              final item = displayList[listIdx];
+                              if (item is _DateSeparatorItem) {
+                                return _DateSeparator(date: item.date);
+                              }
+                              final msgItem = item as _MessageItem;
+                              final msg = msgItem.message;
+                              return RepaintBoundary(
+                                child: MissionRoomMessage(
+                                  key: ValueKey(msg.id),
+                                  message: msg,
+                                  currentUserId: currentUserId,
+                                  isContinuation: msgItem.isContinuation,
+                                  onLongPress: () => _showReactionPicker(msg),
+                                  onReactionTap: (emoji) => _toggleReaction(msg, emoji),
+                                  readReceipts: _readReceipts,
+                                  isLastMessage: listIdx == displayList.length - 1,
+                                  player: _playerFor(msg.id),
+                                  onPlayTap: msg.messageTypeEnum == PoolMessageType.voiceNote
+                                      ? () => _togglePlayback(msg)
+                                      : null,
+                                  onRetry: msg.localStatus == LocalStatus.failed
+                                      ? () {
+                                          if (msg.clientId != null && msg.content != null) {
+                                            _repository.updateStatus(msg.clientId!, LocalStatus.sending);
+                                            setState(() {
+                                              final idx = _messages.indexWhere((m) => m.id == msg.id);
+                                              if (idx >= 0) _messages[idx] = msg.copyWith(localStatus: LocalStatus.sending);
+                                            });
+                                            _outboxQueue.enqueue(msg.clientId!, msg.content!);
+                                          } else if (msg.messageTypeEnum == PoolMessageType.voiceNote &&
+                                              msg.clientId != null) {
+                                            // Voice note retry — re-upload from local file if still exists.
+                                            // If file is gone, just mark failed permanently.
+                                            _repository.updateStatus(msg.clientId!, LocalStatus.failed);
+                                          }
+                                        }
+                                      : null,
+                                ),
                               );
-                            }),
+                            },
+                          );
+                        }),
 
-                            // ── Scroll-to-bottom button ──
-                            _ScrollToBottomButton(
-                              scrollController: _scrollController,
-                            ),
-                          ],
+                        // ── Scroll-to-bottom button ──
+                        _ScrollToBottomButton(
+                          scrollController: _scrollController,
                         ),
+                      ],
+                    ),
         ),
+
+        // ── Typing indicator ──
+        if (_typingUsers.isNotEmpty)
+          _TypingIndicator(typingUsers: _typingUsers.toList()),
 
         // ── Input bar ──
         if (_isActive)
@@ -492,6 +949,7 @@ class _MissionRoomState extends State<MissionRoom> {
             onSend: _sendMessage,
             onMicStart: _startRecording,
             onMicStop: _stopRecording,
+            onTyping: (isTyping) => _wsService.sendTyping(isTyping),
           ),
       ],
     );
@@ -509,11 +967,89 @@ class _DateSeparatorItem extends _ListItem {
 
 class _MessageItem extends _ListItem {
   _MessageItem({required this.message, required this.isContinuation});
-  final PoolMessage message;
+  final PoolMessageLocal message;
   final bool isContinuation;
 }
 
-// ── Date separator widget ─────────────────────────────────────────────────────
+// ── Typing indicator ──────────────────────────────────────────────────────────
+
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator({required this.typingUsers});
+  final List<String> typingUsers;
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String get _label {
+    final users = widget.typingUsers;
+    if (users.length == 1) return '@${users[0]} is typing...';
+    if (users.length == 2) return '@${users[0]} and @${users[1]} are typing...';
+    return 'Several people are typing...';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(ZendSpacing.lg, 4, ZendSpacing.lg, 0),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(3, (i) {
+                  final delay = i / 3;
+                  final value = ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
+                  final opacity = value < 0.5 ? value * 2 : (1 - value) * 2;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                    child: Opacity(
+                      opacity: opacity.clamp(0.3, 1.0),
+                      child: Container(
+                        width: 5, height: 5,
+                        decoration: BoxDecoration(
+                          color: zt.textSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _label,
+            style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.date});
@@ -633,6 +1169,7 @@ class _InputBar extends StatefulWidget {
     required this.onSend,
     required this.onMicStart,
     required this.onMicStop,
+    required this.onTyping,
   });
 
   final TextEditingController controller;
@@ -642,6 +1179,7 @@ class _InputBar extends StatefulWidget {
   final VoidCallback onSend;
   final Future<void> Function() onMicStart;
   final Future<void> Function() onMicStop;
+  final void Function(bool) onTyping;
 
   @override
   State<_InputBar> createState() => _InputBarState();
@@ -649,6 +1187,8 @@ class _InputBar extends StatefulWidget {
 
 class _InputBarState extends State<_InputBar> {
   int _charCount = 0;
+  bool _isTyping = false;
+  Timer? _typingDebounce;
 
   @override
   void initState() {
@@ -659,12 +1199,36 @@ class _InputBarState extends State<_InputBar> {
   @override
   void dispose() {
     widget.controller.removeListener(_onTextChanged);
+    _typingDebounce?.cancel();
+    if (_isTyping) widget.onTyping(false);
     super.dispose();
   }
 
   void _onTextChanged() {
     final len = widget.controller.text.length;
     if (len != _charCount) setState(() => _charCount = len);
+
+    if (len == 0) {
+      _typingDebounce?.cancel();
+      if (_isTyping) {
+        _isTyping = false;
+        widget.onTyping(false);
+      }
+      return;
+    }
+
+    if (!_isTyping) {
+      _isTyping = true;
+      widget.onTyping(true);
+    }
+
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(seconds: 3), () {
+      if (_isTyping) {
+        _isTyping = false;
+        widget.onTyping(false);
+      }
+    });
   }
 
   @override
