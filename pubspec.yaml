@@ -53,11 +53,11 @@ dependencies:
   # Audio — success sound on transfer
   audioplayers: ^6.1.0
 
-  # Voice note recording (M4A output, cross-platform)
-  # Using 4.x — the 5.x series has a broken Linux platform plugin that fails
-  # to compile even on Android/iOS builds due to record_platform_interface 1.6.0
-  # incompatibility with record_linux.
-  record: ^4.4.4
+  # Voice note recording — temporarily disabled pending AGP 8 compatible package.
+  # record 4.x: missing namespace in android/build.gradle (AGP 8 incompatible).
+  # record 5.x: broken record_linux platform interface.
+  # Re-enable when a compatible recorder package is available.
+  # record: ^4.4.4
 
   # Voice note playback
   just_audio: ^0.9.40

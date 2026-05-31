@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
@@ -58,8 +55,9 @@ class _MissionRoomState extends State<MissionRoom> {
   String? _myLastReadMessageId;
 
   // ── Voice note recording ──────────────────────────────────────────────────────
-  final Record _recorder = Record();
-  String? _recordingPath;
+  // Recording is stubbed — the `record` package is incompatible with the current
+  // Android Gradle Plugin version. Re-enable when a compatible package ships.
+  // Playback of received voice notes still works via just_audio.
 
   // ── Voice note playback ───────────────────────────────────────────────────────
   /// Currently playing message id → AudioPlayer instance.
@@ -69,6 +67,7 @@ class _MissionRoomState extends State<MissionRoom> {
   final _textController = TextEditingController();
   bool _sending = false;
   bool _isRecording = false;
+  // ignore: prefer_final_fields — will be mutable again when recording is re-enabled
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
 
@@ -197,7 +196,6 @@ class _MissionRoomState extends State<MissionRoom> {
     _scrollController.dispose();
     _textController.dispose();
     _recordingTimer?.cancel();
-    _recorder.dispose();
     for (final p in _players.values) { p.dispose(); }
     for (final t in _typingTimers.values) { t.cancel(); }
     super.dispose();
@@ -559,112 +557,23 @@ class _MissionRoomState extends State<MissionRoom> {
 
   // ── Recording ────────────────────────────────────────────────────────────────
 
+  // ── Recording (stub — re-enable when AGP 8 compatible recorder ships) ─────────
+
   Future<void> _startRecording() async {
-    // In record 4.x, hasPermission() handles the permission request internally.
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission required for voice notes')),
-        );
-      }
-      return;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Voice notes coming soon 🎙️'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
-
-    final dir = await getTemporaryDirectory();
-    _recordingPath = '${dir.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-    await _recorder.start(
-      path: _recordingPath!,
-      encoder: AudioEncoder.aacLc,
-      bitRate: 64000,
-      samplingRate: 44100,
-    );
-
-    setState(() { _isRecording = true; _recordingSeconds = 0; });
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _recordingSeconds++);
-      if (_recordingSeconds >= 30) _stopRecording();
-    });
   }
 
   Future<void> _stopRecording() async {
     _recordingTimer?.cancel();
     _recordingTimer = null;
-
-    final path = await _recorder.stop();
-    if (!mounted) return;
-    setState(() => _isRecording = false);
-
-    if (path == null) return;
-
-    final file = File(path);
-    if (!await file.exists()) return;
-
-    final durationSeconds = _recordingSeconds.clamp(1, 30);
-    _recordingSeconds = 0;
-
-    // Upload and send.
-    await _sendVoiceNote(file, durationSeconds);
-  }
-
-  Future<void> _sendVoiceNote(File file, int durationSeconds) async {
-    // Capture context-dependent values before any await.
-    final model = ZendScope.of(context);
-    final poolId = _pool.id;
-    final bytes = await file.readAsBytes();
-
-    // Create optimistic local message.
-    final clientId = const Uuid().v4();
-    final now = DateTime.now();
-    final optimistic = PoolMessageLocal(
-      id: clientId,
-      poolId: poolId,
-      clientId: clientId,
-      senderZendtag: model.currentZendtag,
-      senderUserId: model.currentUserId,
-      messageType: 'voice_note',
-      voiceNoteDurationSeconds: durationSeconds,
-      localStatus: LocalStatus.sending,
-      createdAt: now,
-    );
-    await _repository.upsertMessage(optimistic);
-    setState(() => _messages.add(optimistic));
-    _jumpToBottom();
-
-    try {
-      final msg = await model.walletService.apiClient.postVoiceNote(
-        poolId: poolId,
-        audioBytes: bytes,
-        mimeType: 'audio/m4a',
-        durationSeconds: durationSeconds,
-      );
-      final local = PoolMessageLocal.fromPoolMessage(msg);
-      await _repository.updateStatus(
-        clientId,
-        LocalStatus.delivered,
-        serverId: local.serverId,
-        serverCreatedAt: local.createdAt,
-      );
-      setState(() {
-        final idx = _messages.indexWhere((m) => m.id == clientId);
-        if (idx >= 0) {
-          _messages[idx] = local.copyWith(localStatus: LocalStatus.delivered);
-        }
-      });
-    } catch (_) {
-      await _repository.updateStatus(clientId, LocalStatus.failed);
-      setState(() {
-        final idx = _messages.indexWhere((m) => m.id == clientId);
-        if (idx >= 0) {
-          _messages[idx] = _messages[idx].copyWith(localStatus: LocalStatus.failed);
-        }
-      });
-    } finally {
-      // Clean up temp file.
-      try { await file.delete(); } catch (_) {}
-    }
+    if (mounted) setState(() => _isRecording = false);
   }
 
   // ── Voice note playback ───────────────────────────────────────────────────────
