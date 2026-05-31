@@ -54,7 +54,7 @@ dependencies:
   audioplayers: ^6.1.0
 
   # Voice note recording (M4A output, cross-platform)
-  record: ^5.1.2
+  record: 5.1.1
 
   # Voice note playback
   just_audio: ^0.9.40
@@ -214,3 +214,9 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/logo/Zend.png"
+
+# Pin record_linux to a version compatible with record 5.1.1 / record_platform_interface 1.5.x.
+# record_linux 0.7.x broke the interface contract (missing startStream, changed hasPermission
+# signature) and is not needed for Android/iOS builds.
+dependency_overrides:
+  record_linux: 0.6.0
