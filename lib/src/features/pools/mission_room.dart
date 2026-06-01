@@ -511,6 +511,18 @@ class _MissionRoomState extends State<MissionRoom> {
       }
 
       _messages[idx] = msg.withReactions(reactions);
+
+      // Persist updated reactions to local DB so they survive room reopen.
+      final updatedMsg = _messages[idx];
+      final dbMessageId = updatedMsg.serverId ?? updatedMsg.id;
+      _repository.upsertReactions(
+        dbMessageId,
+        updatedMsg.reactions.map((r) => {
+          'emoji': r.emoji,
+          'count': r.count,
+          'reacted_by_me': r.reactedByMe,
+        }).toList(),
+      );
     });
   }
 

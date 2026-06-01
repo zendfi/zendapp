@@ -82,13 +82,13 @@ class PoolMessageRepository {
     };
   }
 
-  /// Returns the most recent [limit] messages for [poolId], ordered ASC.
+  /// Returns the most recent [limit] messages for [poolId], ordered ASC,
+  /// with their reactions populated from the local DB.
   Future<List<PoolMessageLocal>> getRecentMessages(
     String poolId, {
     int limit = 50,
   }) async {
     final db = await _database;
-    // Fetch DESC then reverse so the result is chronological (ASC).
     final rows = await db.query(
       'pool_messages',
       where: 'pool_id = ?',
@@ -96,10 +96,12 @@ class PoolMessageRepository {
       orderBy: 'created_at DESC',
       limit: limit,
     );
-    return rows.reversed.map(_fromMap).toList();
+    final messages = rows.reversed.map(_fromMap).toList();
+    return _attachReactions(db, messages);
   }
 
-  /// Returns up to [limit] messages older than [beforeCreatedAt], ordered ASC.
+  /// Returns up to [limit] messages older than [beforeCreatedAt], ordered ASC,
+  /// with their reactions populated from the local DB.
   Future<List<PoolMessageLocal>> getOlderMessages(
     String poolId,
     String beforeCreatedAt, {
@@ -113,7 +115,37 @@ class PoolMessageRepository {
       orderBy: 'created_at ASC',
       limit: limit,
     );
-    return rows.map(_fromMap).toList();
+    final messages = rows.map(_fromMap).toList();
+    return _attachReactions(db, messages);
+  }
+
+  /// Loads reactions for [messages] from the local DB and attaches them.
+  Future<List<PoolMessageLocal>> _attachReactions(
+    Database db,
+    List<PoolMessageLocal> messages,
+  ) async {
+    if (messages.isEmpty) return messages;
+    final ids = messages.map((m) => m.id).toList();
+    // SQLite doesn't support ANY($1) — use IN with placeholders.
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    final reactionRows = await db.rawQuery(
+      'SELECT message_id, emoji, count, reacted_by_me FROM pool_message_reactions WHERE message_id IN ($placeholders)',
+      ids,
+    );
+    // Group by message_id.
+    final reactionsByMessage = <String, List<PoolReactionCount>>{};
+    for (final row in reactionRows) {
+      final msgId = row['message_id'] as String;
+      reactionsByMessage.putIfAbsent(msgId, () => []).add(PoolReactionCount(
+        emoji: row['emoji'] as String,
+        count: row['count'] as int,
+        reactedByMe: (row['reacted_by_me'] as int) == 1,
+      ));
+    }
+    return messages.map((m) {
+      final reactions = reactionsByMessage[m.id];
+      return reactions != null ? m.withReactions(reactions) : m;
+    }).toList();
   }
 
   /// Inserts or replaces a message row (conflict on primary key `id`).
