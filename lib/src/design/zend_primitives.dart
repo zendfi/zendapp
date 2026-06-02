@@ -43,6 +43,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return SizedBox(
+      width: double.infinity,
       height: 52,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,

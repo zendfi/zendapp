@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    model.balanceHidden ? '••••••' : '\$${model.balance.toStringAsFixed(2)}',
+                                    model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       fontFamily: 'InstrumentSerif',
                                       color: ZendColors.textOnDeep,
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  model.balanceHidden ? '••••••' : '\$${model.balance.toStringAsFixed(2)}',
+                                  model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontFamily: 'InstrumentSerif',
                                     color: ZendColors.textOnDeep,
