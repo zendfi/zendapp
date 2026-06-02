@@ -7,9 +7,11 @@ import '../design/zend_tokens.dart';
 import '../features/pools/pool.dart';
 import '../features/request/payment_request.dart';
 import '../models/api_models.dart';
+import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
+import '../services/email_intent_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/recent_contacts_store.dart';
@@ -100,7 +102,8 @@ class ZendAppModel extends ChangeNotifier {
     required this.savingsService,
     required this.pocketService,
     required this.localDb,
-  });
+    EmailIntentService? emailIntentService,
+  }) : _emailIntentService = emailIntentService;
 
   final AuthService authService;
   final WalletService walletService;
@@ -116,6 +119,12 @@ class ZendAppModel extends ChangeNotifier {
 
   /// On-device SQLite database for pool message persistence.
   final AppDatabase localDb;
+
+  /// Optional email intent service — injected when email intents feature is active.
+  final EmailIntentService? _emailIntentService;
+
+  /// Public accessor for the email intent service.
+  EmailIntentService? get emailIntentService => _emailIntentService;
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;
@@ -283,9 +292,14 @@ class ZendAppModel extends ChangeNotifier {
   bool hasPinSetup = false;
 
   double balance = 0.0;
+  double spendableBalance = 0.0;
   double monthlyYield = 0.0;
   bool balanceLoading = false;
   String? lastBalanceError;
+
+  // ── Email intents ──
+  List<EmailIntent> _pendingEmailIntents = [];
+  List<EmailIntent> get pendingEmailIntents => List.unmodifiable(_pendingEmailIntents);
 
   // ── Transfer history ──
   List<ZendTransaction> recentTransactions = [];
@@ -469,8 +483,9 @@ class ZendAppModel extends ChangeNotifier {
     lastBalanceError = null;
     if (firstLoad) notifyListeners();
     try {
-      final usdcBalance = await walletService.getBalance();
-      balance = double.tryParse(usdcBalance) ?? 0.0;
+      final response = await walletService.apiClient.getBalance();
+      balance = double.tryParse(response.usdcBalance) ?? 0.0;
+      spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
       lastBalanceError = null;
     } catch (e) {
       lastBalanceError = e.toString();
@@ -480,20 +495,40 @@ class ZendAppModel extends ChangeNotifier {
     }
   }
 
+  /// Fetches pending email intents from the server and updates [pendingEmailIntents].
+  /// No-op if [_emailIntentService] is not injected.
+  Future<void> fetchEmailIntents() async {
+    final intents = await _emailIntentService?.listIntents();
+    if (intents != null) {
+      _pendingEmailIntents = intents;
+      notifyListeners();
+    }
+  }
+
+  /// Cancels a pending email intent by [id].
+  /// Removes it from [_pendingEmailIntents] on success and notifies listeners.
+  /// No-op if [_emailIntentService] is not injected.
+  Future<void> cancelEmailIntent(String id) async {
+    await _emailIntentService?.cancelIntent(id);
+    _pendingEmailIntents = _pendingEmailIntents.where((i) => i.id != id).toList();
+    notifyListeners();
+  }
+
   Future<void> fetchHistory() async {
-    // Only show loading state on first load — background refreshes are silent.
     final firstLoad = recentTransactions.isEmpty && !historyLoading;
     historyLoading = true;
     lastHistoryError = null;
     if (firstLoad) notifyListeners();
     try {
-      // Fetch zend-to-zend transfers, bank sends, and payins in parallel
+      // Fetch zend-to-zend transfers, bank sends, payins, and email intents in parallel
       final results = await Future.wait([
         transferService.getHistory(),
         walletService.apiClient.getBankSendOrders().catchError((_) => <dynamic>[]),
         walletService.apiClient.getPayinOrders().catchError((_) => <dynamic>[]),
         walletService.apiClient.getCryptoDepositHistory().catchError((_) => <dynamic>[]),
       ]);
+      // Fetch email intents in parallel but separately (returns void)
+      unawaited(fetchEmailIntents());
 
       final entries = results[0] as List<TransferHistoryEntry>;
       final bankOrders = results[1].cast<Map<String, dynamic>>();
@@ -780,6 +815,7 @@ class ZendAppModel extends ChangeNotifier {
     hasWallet = false;
     hasPinSetup = false;
     balance = 0.0;
+    spendableBalance = 0.0;
     monthlyYield = 0.0;
     balanceLoading = false;
     lastBalanceError = null;
@@ -805,6 +841,7 @@ class ZendAppModel extends ChangeNotifier {
     savingsBalance = 0.0;
     savingsLoading = false;
     pendingPaymentRequest = null;
+    _pendingEmailIntents = [];
     notifyListeners();
   }
 

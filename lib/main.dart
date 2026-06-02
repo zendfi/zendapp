@@ -21,6 +21,7 @@ import 'src/services/transfer_service.dart';
 import 'src/services/fx_service.dart';
 import 'src/services/savings_service.dart';
 import 'src/services/pocket_service.dart';
+import 'src/services/email_intent_service.dart';
 
 const kApiBaseUrl = 'https://api-v2.zendfi.tech';
 
@@ -92,6 +93,11 @@ void main() async {
 
   final pocketService = PocketService(apiClient: apiClient);
 
+  final emailIntentService = EmailIntentService(
+    apiClient: apiClient,
+    walletService: walletService,
+  );
+
   // Initialise the local SQLite database (warm up the connection).
   final localDb = AppDatabase.instance;
 
@@ -107,6 +113,7 @@ void main() async {
     appLockService: appLockService,
     savingsService: savingsService,
     pocketService: pocketService,
+    emailIntentService: emailIntentService,
     localDb: localDb,
   );
 

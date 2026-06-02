@@ -7,6 +7,7 @@ import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 import '../models/crypto_send_models.dart';
+import '../models/email_intent.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
@@ -1167,6 +1168,97 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 15)),
       );
       return RequestLinkDetails.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Email intents ────────────────────────────────────────────────────────────
+
+  /// Creates a new email intent (pending USDC send to an email address).
+  ///
+  /// [claimLink] is pre-constructed by the mobile app with `ek_priv` embedded
+  /// and is used in the notification email only — never stored in the DB.
+  Future<CreateIntentResult> createEmailIntent({
+    required String recipientEmail,
+    required double amountUsdc,
+    required String encryptedDelegation,
+    required String ekPub,
+    required String claimLink,
+    String? note,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '/api/zend/email-intents',
+        data: <String, dynamic>{
+          'recipient_email': recipientEmail,
+          'amount_usdc': amountUsdc,
+          'encrypted_delegation': encryptedDelegation,
+          'ek_pub': ekPub,
+          'claim_link': claimLink,
+          'note': note,
+        }..removeWhere((_, v) => v == null),
+      );
+      return CreateIntentResult.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Returns all email intents created by the authenticated user.
+  Future<List<EmailIntent>> listEmailIntents() async {
+    try {
+      final resp = await _dio.get('/api/zend/email-intents');
+      final list = resp.data as List<dynamic>;
+      return list
+          .map((e) => EmailIntent.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Cancels a pending email intent.
+  ///
+  /// Throws [ApiException] with code `FORBIDDEN` if the intent doesn't belong
+  /// to the caller, or `INTENT_NOT_CANCELLABLE` if it isn't pending.
+  Future<void> cancelEmailIntent(String intentId) async {
+    try {
+      await _dio.delete('/api/zend/email-intents/$intentId');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Returns the public preview of an email intent claim (no auth required).
+  Future<IntentPreview> getIntentPreview(String intentId) async {
+    try {
+      final resp = await _dio.get('/api/zend/claim/$intentId/preview');
+      return IntentPreview.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Executes a claim — submits the decrypted delegation and recipient wallet.
+  /// This is a public endpoint; no session token is required.
+  Future<Map<String, dynamic>> executeClaim({
+    required String intentId,
+    required String ekPriv,
+    required String walletAddress,
+    required String signedDelegation,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '/api/zend/claim/$intentId',
+        data: {
+          'ek_priv': ekPriv,
+          'wallet_address': walletAddress,
+          'signed_delegation': signedDelegation,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return resp.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw e.error ?? e;
     }

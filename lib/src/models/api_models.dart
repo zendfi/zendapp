@@ -238,18 +238,24 @@ class BalanceResponse {
   final String walletAddress;
   final String solBalance;
   final String usdcBalance;
+  /// Spendable balance = on-chain USDC minus the sum of pending email intent amounts.
+  /// Falls back to [usdcBalance] if the backend doesn't include the field (older API).
+  final String spendableBalance;
 
   BalanceResponse({
     required this.walletAddress,
     required this.solBalance,
     required this.usdcBalance,
-  });
+    String? spendableBalance,
+  }) : spendableBalance = spendableBalance ?? usdcBalance;
 
   factory BalanceResponse.fromJson(Map<String, dynamic> json) {
+    final usdc = json['usdc_balance'] as String;
     return BalanceResponse(
       walletAddress: json['wallet_address'] as String,
       solBalance: json['sol_balance'] as String,
-      usdcBalance: json['usdc_balance'] as String,
+      usdcBalance: usdc,
+      spendableBalance: json['spendable_balance'] as String? ?? usdc,
     );
   }
 
@@ -258,6 +264,7 @@ class BalanceResponse {
       'wallet_address': walletAddress,
       'sol_balance': solBalance,
       'usdc_balance': usdcBalance,
+      'spendable_balance': spendableBalance,
     };
   }
 }

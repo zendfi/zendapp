@@ -230,7 +230,20 @@ class WalletService {
 
   Future<String> getBalance() async {
     final response = await _apiClient.getBalance();
-    return response.usdcBalance;
+    return response.spendableBalance;
+  }
+
+  /// Returns both the raw on-chain balance and the spendable balance.
+  /// Spendable = on-chain minus pending email intent amounts.
+  Future<({String usdc, String spendable})> getFullBalance() async {
+    final response = await _apiClient.getBalance();
+    return (usdc: response.usdcBalance, spendable: response.spendableBalance);
+  }
+
+  /// Public wrapper around [_decryptLocalKeypair] for use by [EmailIntentService].
+  /// Callers are responsible for zeroing the returned bytes after use.
+  Future<Uint8List> decryptLocalKeypair(String pin) async {
+    return _decryptLocalKeypair(pin);
   }
 
   Future<String> buildAndSignTransaction({
