@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:solana/base58.dart';
-import 'package:solana/solana.dart';
 
 import '../models/email_intent.dart';
 import 'api_client.dart';
@@ -38,89 +37,63 @@ class EmailIntentService {
     required String pin,
     String? note,
   }) async {
-    // Decrypt the sender's wallet keypair — throws PinDecryptionException on wrong PIN
+    // Step 1: Fetch the fee payer pubkey from the backend
+    final delegationParams = await _apiClient.getDelegationParams();
+    final feePayerPubkeyB58 = delegationParams['fee_payer'] as String;
+
+    // Step 2: Decrypt the sender's wallet keypair
     final senderKeypairBytes = await _walletService.decryptLocalKeypair(pin);
 
-    late Uint8List ekPrivBytes;
+    // Step 3: Generate a fresh ephemeral Ed25519 keypair (ek_pub / ek_priv)
+    final algorithm = Ed25519();
+    final ekKeypair = await algorithm.newKeyPair();
+    final ekPub = await ekKeypair.extractPublicKey();
+    final ekPrivBytes = Uint8List.fromList(
+      (await ekKeypair.extract()).bytes,
+    );
+
     try {
-      // Generate a fresh ephemeral Ed25519 keypair
-      final algorithm = Ed25519();
-      final ekKeypair = await algorithm.newKeyPair();
-      final ekPub = await ekKeypair.extractPublicKey();
-      ekPrivBytes = Uint8List.fromList(
-        (await ekKeypair.extract()).bytes,
+      // Step 4: Build and submit the on-chain SPL Approve transaction
+      // This grants the fee payer delegate authority over amountUsdc of
+      // the sender's USDC ATA. Daniel's tokens stay in his wallet.
+      final approveTxSig = await _walletService.buildAndSubmitSplApprove(
+        senderKeypairBytes: senderKeypairBytes,
+        feePayerPubkeyB58: feePayerPubkeyB58,
+        amountUsdc: amountUsdc,
+        pin: pin,
       );
 
-      // Serialize intent payload as canonical JSON
-      final expiryTs = DateTime.now().toUtc().add(const Duration(days: 30));
-      final payloadStr =
-          '{"recipient_email":"$recipientEmail","amount_usdc":$amountUsdc,'
-          '"expiry":"${expiryTs.toIso8601String()}"}';
-      final payloadBytes = Uint8List.fromList(payloadStr.codeUnits);
-
-      // Sign intent payload with the sender's wallet key (Ed25519)
-      final senderKeypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: senderKeypairBytes.toList(),
+      // Step 5: The encrypted_delegation stores proof the approve was submitted.
+      // We encrypt the approve tx signature + intent metadata with ek_pub so
+      // only the recipient (who has ek_priv) can verify it.
+      final intentPayload = utf8.encode(
+        '{"approve_tx":"$approveTxSig","recipient_email":"$recipientEmail","amount_usdc":$amountUsdc}',
       );
-      final sig = await senderKeypair.sign(payloadBytes);
-
-      // Encrypt (sig_bytes + payload) with ek_pub using X25519 + AES-256-GCM
-      final sigBytes = Uint8List.fromList(sig.bytes);
-      final plaintext = Uint8List(sigBytes.length + payloadBytes.length)
-        ..setRange(0, sigBytes.length, sigBytes)
-        ..setRange(sigBytes.length, sigBytes.length + payloadBytes.length, payloadBytes);
-
-      final encryptedDelegationB64 = await _encryptWithEkPub(
-        plaintext: plaintext,
+      final encryptedDelegation = await _encryptWithEkPub(
+        plaintext: Uint8List.fromList(intentPayload),
         ekPubBytes: Uint8List.fromList(ekPub.bytes),
       );
 
-      // Encode ek_pub as base58 for the backend
+      // Step 6: Encode ek_pub and ek_priv as base58
       final ekPubB58 = base58encode(ekPub.bytes);
-
-      // Encode ek_priv as base58 for the claim link
       final ekPrivB58 = base58encode(ekPrivBytes);
 
-      // Construct claim link with ek_priv embedded (never sent to server)
-      // The intent ID is not known yet; the backend returns it. We pass the
-      // claim link template — the backend will use the actual intent ID.
-      // Since we don't have the ID yet, we pass a placeholder that the
-      // backend ignores (it uses the claim link for the email only and does
-      // NOT store it; the final link must be reconstructed by the recipient).
-      //
-      // Practical approach: construct with a placeholder, then after getting
-      // the intent ID from the backend response, the real link would be:
-      // https://web.usezend.app/claim?k={ekPrivB58}&id={intentId}
-      //
-      // The backend stores ek_pub + encrypted_delegation. The claim_link in
-      // the email is what the recipient will click. Since we only know the
-      // intent ID after creation, we pass a temporary link here and would
-      // ideally do a two-step: create intent → get ID → send claim email.
-      // For MVP, the backend sends the email with the ID it just generated,
-      // so we pass the ek_priv and let the backend substitute the ID.
-      // We signal this by passing "PENDING_ID" — the backend uses its own
-      // generated intent_id to build the final link.
-      final claimLink =
-          'https://web.usezend.app/claim?k=$ekPrivB58&id=PENDING_ID';
-
+      // Step 7: Call create_intent — backend substitutes PENDING_ID with real intent_id
       final result = await _apiClient.createEmailIntent(
         recipientEmail: recipientEmail,
         amountUsdc: amountUsdc,
-        encryptedDelegation: encryptedDelegationB64,
+        encryptedDelegation: encryptedDelegation,
         ekPub: ekPubB58,
-        claimLink: claimLink,
+        ekPrivForLink: ekPrivB58,
         note: note,
       );
 
       return result;
     } finally {
-      // Zero ek_priv bytes regardless of success or failure
-      if (ekPrivBytes.isNotEmpty) {
-        for (var i = 0; i < ekPrivBytes.length; i++) {
-          ekPrivBytes[i] = 0;
-        }
+      // Zero sensitive bytes regardless of success or failure
+      for (var i = 0; i < ekPrivBytes.length; i++) {
+        ekPrivBytes[i] = 0;
       }
-      // Zero sender keypair bytes
       for (var i = 0; i < senderKeypairBytes.length; i++) {
         senderKeypairBytes[i] = 0;
       }

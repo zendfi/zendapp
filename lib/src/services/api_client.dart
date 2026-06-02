@@ -1179,12 +1179,57 @@ class ApiClient {
   ///
   /// [claimLink] is pre-constructed by the mobile app with `ek_priv` embedded
   /// and is used in the notification email only — never stored in the DB.
+  Future<Map<String, dynamic>> getDelegationParams() async {
+    try {
+      final resp = await _dio.get('/api/zend/email-intents/delegation-params');
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Fetches a fresh blockhash for building the SPL Approve transaction.
+  Future<Map<String, dynamic>> prepareApproveTransaction({
+    required double amountUsdc,
+    required String feePayerPubkey,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '/api/zend/email-intents/prepare-approve',
+        data: {
+          'amount_usdc': amountUsdc,
+          'fee_payer': feePayerPubkey,
+        },
+      );
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Submits the partially-signed SPL Approve transaction.
+  /// The backend fee payer co-signs and broadcasts.
+  Future<Map<String, dynamic>> submitApproveTransaction({
+    required String txB64,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '/api/zend/email-intents/submit-approve',
+        data: {'partially_signed_tx': txB64},
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<CreateIntentResult> createEmailIntent({
     required String recipientEmail,
     required double amountUsdc,
     required String encryptedDelegation,
     required String ekPub,
-    required String claimLink,
+    required String ekPrivForLink,
     String? note,
   }) async {
     try {
@@ -1195,7 +1240,7 @@ class ApiClient {
           'amount_usdc': amountUsdc,
           'encrypted_delegation': encryptedDelegation,
           'ek_pub': ekPub,
-          'claim_link': claimLink,
+          'ek_priv_for_link': ekPrivForLink,
           'note': note,
         }..removeWhere((_, v) => v == null),
       );

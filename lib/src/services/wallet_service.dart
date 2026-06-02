@@ -246,6 +246,78 @@ class WalletService {
     return _decryptLocalKeypair(pin);
   }
 
+  /// Builds, signs, and submits an SPL Token `Approve` instruction on-chain.
+  ///
+  /// This grants [feePayerPubkeyB58] delegate authority over [amountUsdc] of
+  /// USDC in the sender's token account. The tokens stay in the sender's wallet.
+  /// Returns the transaction signature.
+  Future<String> buildAndSubmitSplApprove({
+    required Uint8List senderKeypairBytes,
+    required String feePayerPubkeyB58,
+    required double amountUsdc,
+    required String pin,
+  }) async {
+    final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
+      privateKey: senderKeypairBytes.toList(),
+    );
+
+    final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
+    final feePayerPubkey = Ed25519HDPublicKey.fromBase58(feePayerPubkeyB58);
+    final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
+
+    final senderAta = await findAssociatedTokenAddress(
+      owner: senderPubkey,
+      mint: usdcMint,
+    );
+
+    // Amount in USDC base units (6 decimals)
+    final amountTokens = (amountUsdc * 1_000_000).round();
+
+    // SPL Token Approve instruction: discriminator = 4, followed by 8-byte LE amount
+    // accounts: [source (writable), delegate, owner (signer)]
+    final amountBytes = Uint8List(8);
+    var v = amountTokens;
+    for (var i = 0; i < 8; i++) { amountBytes[i] = v & 0xFF; v >>= 8; }
+
+    final approveIx = Instruction(
+      programId: Ed25519HDPublicKey.fromBase58(
+          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      accounts: [
+        AccountMeta(pubKey: senderAta, isWriteable: true, isSigner: false),
+        AccountMeta(pubKey: feePayerPubkey, isWriteable: false, isSigner: false),
+        AccountMeta(pubKey: senderPubkey, isWriteable: false, isSigner: true),
+      ],
+      data: ByteArray(Uint8List.fromList([4, 0, 0, 0, ...amountBytes])),
+    );
+
+    // Fetch a fresh blockhash from the backend
+    final prepData = await _apiClient.prepareApproveTransaction(
+      amountUsdc: amountUsdc,
+      feePayerPubkey: feePayerPubkeyB58,
+    );
+    final blockhash = prepData['blockhash'] as String;
+    final feePayer = Ed25519HDPublicKey.fromBase58(prepData['fee_payer'] as String);
+
+    final message = Message(instructions: [approveIx]);
+    final compiled = message.compile(recentBlockhash: blockhash, feePayer: feePayer);
+
+    final sig = await keypair.sign(compiled.toByteArray());
+
+    final signedTx = SignedTx(
+      compiledMessage: compiled,
+      signatures: [
+        Signature(List.filled(64, 0), publicKey: feePayer),
+        Signature(sig.bytes, publicKey: senderPubkey),
+      ],
+    );
+
+    final txB64 = base64Encode(signedTx.toByteArray().toList());
+
+    // Submit the partially-signed approve tx; backend fee-payer co-signs and submits
+    final result = await _apiClient.submitApproveTransaction(txB64: txB64);
+    return result['transaction_signature'] as String;
+  }
+
   Future<String> buildAndSignTransaction({
     required String pin,
     required double amountUsdc,
