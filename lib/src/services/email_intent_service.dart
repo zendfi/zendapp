@@ -44,18 +44,24 @@ class EmailIntentService {
     // Step 2: Decrypt the sender's wallet keypair
     final senderKeypairBytes = await _walletService.decryptLocalKeypair(pin);
 
-    // Step 3: Generate a fresh ephemeral Ed25519 keypair (ek_pub / ek_priv)
-    final algorithm = Ed25519();
-    final ekKeypair = await algorithm.newKeyPair();
+    // Step 3: Generate a fresh ephemeral Ed25519 keypair (ek_pub / ek_priv).
+    // The backend validates ek_priv as a 64-byte Ed25519 keypair (Solana format)
+    // and verifies that ek_priv derives to ek_pub stored in the intent record.
+    // We use the solana Ed25519HDKeyPair for this so the bytes are in the correct
+    // format the backend expects (seed || public_key, 64 bytes total).
+    final ekAlgorithm = Ed25519();
+    final ekKeypair = await ekAlgorithm.newKeyPair();
     final ekPub = await ekKeypair.extractPublicKey();
-    final ekPrivBytes = Uint8List.fromList(
-      (await ekKeypair.extract()).bytes,
-    );
+    final ekPrivSeed = Uint8List.fromList((await ekKeypair.extract()).bytes);
+    // Solana stores keypairs as seed(32) || pubkey(32) = 64 bytes
+    final ekPrivBytes = Uint8List(64)
+      ..setRange(0, 32, ekPrivSeed)
+      ..setRange(32, 64, ekPub.bytes);
 
     try {
-      // Step 4: Build and submit the on-chain SPL Approve transaction
+      // Step 4: Build and submit the on-chain SPL Approve transaction.
       // This grants the fee payer delegate authority over amountUsdc of
-      // the sender's USDC ATA. Daniel's tokens stay in his wallet.
+      // the sender's USDC ATA. Sender's tokens stay in their wallet.
       final approveTxSig = await _walletService.buildAndSubmitSplApprove(
         senderKeypairBytes: senderKeypairBytes,
         feePayerPubkeyB58: feePayerPubkeyB58,
@@ -63,18 +69,21 @@ class EmailIntentService {
         pin: pin,
       );
 
-      // Step 5: The encrypted_delegation stores proof the approve was submitted.
-      // We encrypt the approve tx signature + intent metadata with ek_pub so
-      // only the recipient (who has ek_priv) can verify it.
+      // Step 5: Build the encrypted_delegation blob.
+      // This is a proof payload stored server-side linking the approve tx
+      // to the intent. We encrypt it with AES-256-GCM using the ek_priv
+      // seed as the key (no ECDH needed — ek_priv is already secret).
       final intentPayload = utf8.encode(
         '{"approve_tx":"$approveTxSig","recipient_email":"$recipientEmail","amount_usdc":$amountUsdc}',
       );
-      final encryptedDelegation = await _encryptWithEkPub(
+      final encryptedDelegation = await _encryptPayload(
         plaintext: Uint8List.fromList(intentPayload),
-        ekPubBytes: Uint8List.fromList(ekPub.bytes),
+        keyBytes: ekPrivSeed, // 32-byte seed used directly as AES-256 key
       );
 
-      // Step 6: Encode ek_pub and ek_priv as base58
+      // Step 6: Encode ek_pub and ek_priv as base58 for transmission.
+      // ek_pub: just the 32-byte public key bytes
+      // ek_priv: full 64-byte Solana keypair format the backend validates
       final ekPubB58 = base58encode(ekPub.bytes);
       final ekPrivB58 = base58encode(ekPrivBytes);
 
@@ -94,6 +103,9 @@ class EmailIntentService {
       for (var i = 0; i < ekPrivBytes.length; i++) {
         ekPrivBytes[i] = 0;
       }
+      for (var i = 0; i < ekPrivSeed.length; i++) {
+        ekPrivSeed[i] = 0;
+      }
       for (var i = 0; i < senderKeypairBytes.length; i++) {
         senderKeypairBytes[i] = 0;
       }
@@ -112,61 +124,31 @@ class EmailIntentService {
 
   // ── Encryption helpers ────────────────────────────────────────────────────
 
-  /// Encrypts [plaintext] using X25519 ECDH key agreement with [ekPubBytes]
-  /// (the recipient's ephemeral public key) and AES-256-GCM.
+  /// Encrypts [plaintext] using AES-256-GCM with [keyBytes] as the key.
   ///
-  /// Returns base64-encoded `[ephemeral_pub_bytes(32)] + [nonce(12)] + [ciphertext+tag]`.
-  Future<String> _encryptWithEkPub({
+  /// [keyBytes] must be exactly 32 bytes (the Ed25519 seed, which is already
+  /// a uniformly random 32-byte value suitable for use as an AES key).
+  ///
+  /// Returns base64-encoded `[nonce(12)] + [ciphertext+tag]`.
+  Future<String> _encryptPayload({
     required Uint8List plaintext,
-    required Uint8List ekPubBytes,
+    required Uint8List keyBytes,
   }) async {
-    // Generate a one-time X25519 sender ephemeral keypair
-    final x25519 = X25519();
-    final senderEphemeral = await x25519.newKeyPair();
-    final senderEphemeralPub = await senderEphemeral.extractPublicKey();
-
-    // ECDH: shared secret between sender ephemeral and recipient ek_pub
-    final recipientPub = SimplePublicKey(ekPubBytes, type: KeyPairType.x25519);
-    final sharedSecret = await x25519.sharedSecretKey(
-      keyPair: senderEphemeral,
-      remotePublicKey: recipientPub,
-    );
-
-    // Derive AES-256 key from shared secret using HKDF-SHA256
-    final hkdf = Hkdf(
-      hmac: Hmac.sha256(),
-      outputLength: 32,
-    );
-    final aesKey = await hkdf.deriveKey(
-      secretKey: sharedSecret,
-      info: 'zend-email-intent-encryption'.codeUnits,
-      nonce: [],
-    );
-
-    // Encrypt with AES-256-GCM
     final aesGcm = AesGcm.with256bits();
+    final secretKey = SecretKey(keyBytes.toList());
     final nonce = aesGcm.newNonce();
     final secretBox = await aesGcm.encrypt(
       plaintext,
-      secretKey: aesKey,
+      secretKey: secretKey,
       nonce: nonce,
     );
 
-    // Pack: [sender_ephemeral_pub(32)] + [nonce(12)] + [ciphertext+tag]
-    final senderPubBytes = Uint8List.fromList(senderEphemeralPub.bytes);
     final nonceBytes = Uint8List.fromList(nonce);
-    final ciphertextBytes =
-        Uint8List.fromList(secretBox.concatenation(nonce: false));
+    final ciphertextBytes = Uint8List.fromList(secretBox.concatenation(nonce: false));
 
-    final packed = Uint8List(
-        senderPubBytes.length + nonceBytes.length + ciphertextBytes.length)
-      ..setRange(0, senderPubBytes.length, senderPubBytes)
-      ..setRange(senderPubBytes.length,
-          senderPubBytes.length + nonceBytes.length, nonceBytes)
-      ..setRange(
-          senderPubBytes.length + nonceBytes.length,
-          senderPubBytes.length + nonceBytes.length + ciphertextBytes.length,
-          ciphertextBytes);
+    final packed = Uint8List(nonceBytes.length + ciphertextBytes.length)
+      ..setRange(0, nonceBytes.length, nonceBytes)
+      ..setRange(nonceBytes.length, nonceBytes.length + ciphertextBytes.length, ciphertextBytes);
 
     return base64.encode(packed);
   }

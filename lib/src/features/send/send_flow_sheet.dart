@@ -534,6 +534,9 @@ class _RecipientStageState extends State<_RecipientStage> {
   String? _resolveError;
   String? _resolvedDisplayName;
   String? _resolvedAvatarUrl;
+  /// When an email resolves to a registered user, this holds their actual
+  /// zendtag so the send routes correctly (not the raw email input).
+  String? _resolvedZendtag;
 
   // ── Email intent detection ────────────────────────────────────────────────
   /// Set to true after zendtag resolution fails AND the input contains '@'.
@@ -578,16 +581,15 @@ class _RecipientStageState extends State<_RecipientStage> {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return;
 
-    // Determine whether this looks like an email (contains '@')
-    final looksLikeEmail = trimmed.contains('@');
+    final looksLikeEmail = trimmed.contains('@') && trimmed.contains('.');
 
-    // Strip leading '@' for zendtag resolution — but only if the value
-    // does NOT look like an email (email addresses have '@' in the middle).
-    final tag = looksLikeEmail
-        ? trimmed.toLowerCase().replaceAll(RegExp(r'^@'), '')
+    // For emails: strip only a leading '@' if present (e.g. user accidentally
+    // typed @foo@bar.com). For zendtags: strip all '@' prefix characters.
+    final input = looksLikeEmail
+        ? trimmed.toLowerCase().replaceFirst(RegExp(r'^@'), '')
         : trimmed.toLowerCase().replaceAll('@', '');
 
-    if (tag.isEmpty) return;
+    if (input.isEmpty) return;
 
     setState(() {
       _resolving = true;
@@ -596,15 +598,46 @@ class _RecipientStageState extends State<_RecipientStage> {
       _showEmailOption = false;
     });
 
+    final model = ZendScope.of(context);
+
+    // ── Email path: try email lookup first ──────────────────────────────────
+    if (looksLikeEmail) {
+      try {
+        final resolved = await model.zendtagService.resolveByEmail(input);
+        if (!mounted) return;
+        // Found a registered Zend! account — route as a normal zendtag send.
+        setState(() {
+          _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
+              ? resolved.displayName
+              : '@${resolved.zendtag}';
+          _resolvedAvatarUrl = resolved.avatarUrl;
+          _resolvedZendtag = resolved.zendtag; // store the actual tag
+          _resolving = false;
+          _showEmailOption = false;
+        });
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        // No registered account — offer email intent, no error label
+        setState(() {
+          _resolveError = null;
+          _resolving = false;
+          _showEmailOption = true; // morphs the Pay button
+        });
+        return;
+      }
+    }
+
+    // ── Zendtag path ────────────────────────────────────────────────────────
     try {
-      final model = ZendScope.of(context);
-      final resolved = await model.zendtagService.resolve(tag);
+      final resolved = await model.zendtagService.resolve(input);
       if (!mounted) return;
       setState(() {
         _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
             ? resolved.displayName
             : '@${resolved.zendtag}';
         _resolvedAvatarUrl = resolved.avatarUrl;
+        _resolvedZendtag = null;
         _resolving = false;
         _showEmailOption = false;
       });
@@ -613,8 +646,7 @@ class _RecipientStageState extends State<_RecipientStage> {
       setState(() {
         _resolveError = 'User not found';
         _resolving = false;
-        // Show "Send via email" only when input contains '@' and resolution failed
-        _showEmailOption = looksLikeEmail;
+        _showEmailOption = false;
       });
     }
   }
@@ -625,6 +657,7 @@ class _RecipientStageState extends State<_RecipientStage> {
     _toValue = contact.tag;
     _resolvedDisplayName = contact.name;
     _resolvedAvatarUrl = contact.avatarUrl;
+    _resolvedZendtag = null;
     _resolveError = null;
     _showEmailOption = false;
     _toFocus.unfocus();
@@ -634,7 +667,9 @@ class _RecipientStageState extends State<_RecipientStage> {
 
   bool get _canPay {
     final model = ZendScope.of(context);
-    final tag = _toValue.trim().replaceAll('@', '');
+    // For email input that resolved to a registered user, _resolvedZendtag is set.
+    // For plain zendtag input, derive the tag from _toValue.
+    final tag = _resolvedZendtag ?? _toValue.trim().replaceAll('@', '');
     return tag.isNotEmpty &&
         _resolveError == null &&
         !_resolving &&
@@ -648,8 +683,14 @@ class _RecipientStageState extends State<_RecipientStage> {
   }
 
   void _onPay() {
+    if (_showEmailOption) {
+      // Email not on Zend! — trigger email intent flow
+      widget.onEmailIntentSelected(_toValue.trim());
+      return;
+    }
     if (!_canPay) return;
-    final tag = _toValue.trim().replaceAll('@', '');
+    // Use resolved zendtag (from email lookup) if available, otherwise derive from input
+    final tag = _resolvedZendtag ?? _toValue.trim().replaceAll('@', '');
     final displayName = _resolvedDisplayName ?? '@$tag';
     widget.onConfirm(tag, displayName);
   }
@@ -698,6 +739,8 @@ class _RecipientStageState extends State<_RecipientStage> {
                         setState(() {
                           _toValue = v;
                           _resolvedDisplayName = null;
+                          _resolvedAvatarUrl = null;
+                          _resolvedZendtag = null;
                           _resolveError = null;
                           _showEmailOption = false;
                         });
@@ -785,47 +828,6 @@ class _RecipientStageState extends State<_RecipientStage> {
                         ),
                       ),
                     ),
-                    // ── "Send via email" option ───────────────────────────
-                    if (_showEmailOption)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 48, top: 8),
-                        child: GestureDetector(
-                          onTap: () {
-                            widget.onEmailIntentSelected(_toValue.trim());
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: zt.accent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: zt.accent.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.email_outlined,
-                                  size: 14,
-                                  color: zt.accent,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Send via email',
-                                  style: TextStyle(
-                                    fontFamily: 'DMSans',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: zt.accent,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
 
                   const SizedBox(height: 4),
@@ -907,9 +909,31 @@ class _RecipientStageState extends State<_RecipientStage> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
-              child: PrimaryButton(
-                label: 'Pay ${widget.amountFormatted}',
-                onPressed: _canPay ? _onPay : null,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.15),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: _showEmailOption
+                    ? PrimaryButton(
+                        key: const ValueKey('email_intent'),
+                        label: 'Send via email →',
+                        onPressed: widget.amount > 0 && !_resolving
+                            ? _onPay
+                            : null,
+                      )
+                    : PrimaryButton(
+                        key: const ValueKey('normal_pay'),
+                        label: 'Pay ${widget.amountFormatted}',
+                        onPressed: _canPay ? _onPay : null,
+                      ),
               ),
             ),
           ),

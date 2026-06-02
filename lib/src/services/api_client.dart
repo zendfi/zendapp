@@ -224,6 +224,24 @@ class ApiClient {
     }
   }
 
+  /// Looks up a Zend! user by their registered email address.
+  /// Returns the same shape as [resolveZendtag] so the caller can treat it
+  /// identically. Throws [ApiException] with code EMAIL_NOT_FOUND if no
+  /// account is registered for that address.
+  Future<ZendtagResolveResponse> resolveByEmail(String email) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/zendtag/resolve-by-email',
+        queryParameters: {'email': email.toLowerCase().trim()},
+      );
+      return ZendtagResolveResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<BackupResponse> storeBackup(
     String encryptedKeypairB64,
     String nonceB64,
