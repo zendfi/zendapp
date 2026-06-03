@@ -544,8 +544,16 @@ class ZendAppModel extends ChangeNotifier {
         final amt = entry.amountUsdc;
         // Avatar URL comes directly from the history entry (backend JOIN)
         final avatarUrl = isSent ? entry.recipientAvatarUrl : entry.senderAvatarUrl;
+
+        // For email-intent claims on the sender side, prefer the masked email hint
+        // (e.g. "te***@gmail.com") over the recipient's zendtag — it's more
+        // meaningful because the sender never knew the recipient's zendtag.
+        final displayName = (isSent && entry.emailRecipientHint != null)
+            ? entry.emailRecipientHint!
+            : '@$counterparty';
+
         return ZendTransaction(
-          name: '@$counterparty',
+          name: displayName,
           note: entry.note ?? '',
           amount: '$sign\$$amt',
           time: _formatTimestamp(entry.createdAt),

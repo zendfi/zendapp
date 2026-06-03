@@ -314,6 +314,10 @@ class TransferHistoryEntry {
   final String? recipientAvatarUrl;
   final String? senderDisplayName;
   final String? recipientDisplayName;
+  /// For email-intent claim transfers: the masked original recipient email
+  /// (e.g. "te***@gmail.com"). When non-null, use this for display instead of
+  /// [recipientZendtag] on the sender's activity feed.
+  final String? emailRecipientHint;
 
   TransferHistoryEntry({
     required this.id,
@@ -328,6 +332,7 @@ class TransferHistoryEntry {
     this.recipientAvatarUrl,
     this.senderDisplayName,
     this.recipientDisplayName,
+    this.emailRecipientHint,
   });
 
   factory TransferHistoryEntry.fromJson(Map<String, dynamic> json) {
@@ -344,6 +349,7 @@ class TransferHistoryEntry {
       recipientAvatarUrl: json['recipient_avatar_url'] as String?,
       senderDisplayName: json['sender_display_name'] as String?,
       recipientDisplayName: json['recipient_display_name'] as String?,
+      emailRecipientHint: json['email_recipient_hint'] as String?,
     );
   }
 
@@ -361,6 +367,7 @@ class TransferHistoryEntry {
       'recipient_avatar_url': recipientAvatarUrl,
       'sender_display_name': senderDisplayName,
       'recipient_display_name': recipientDisplayName,
+      if (emailRecipientHint != null) 'email_recipient_hint': emailRecipientHint,
     };
   }
 }
