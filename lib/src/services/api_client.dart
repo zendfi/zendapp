@@ -1303,13 +1303,12 @@ class ApiClient {
     }
   }
 
-  /// Executes a claim — submits the decrypted delegation and recipient wallet.
+  /// Executes a claim — submits ek_priv and recipient wallet address.
   /// This is a public endpoint; no session token is required.
   Future<Map<String, dynamic>> executeClaim({
     required String intentId,
     required String ekPriv,
     required String walletAddress,
-    required String signedDelegation,
   }) async {
     try {
       final resp = await _dio.post(
@@ -1317,7 +1316,6 @@ class ApiClient {
         data: {
           'ek_priv': ekPriv,
           'wallet_address': walletAddress,
-          'signed_delegation': signedDelegation,
         },
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
