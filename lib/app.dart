@@ -247,6 +247,9 @@ class _SplashWithSessionRestoreState
     if (!mounted) return;
 
     if (hasLocalKeypair && hasPinSetup) {
+      // PIN is available — arm the lock service before showing unlock screen
+      widget.model.appLockService.pinIsAvailable = true;
+
       // Check if 4→6 digit PIN migration is needed
       final needsMigration = await widget.model.walletService.needsMigration();
       if (!mounted) return;
@@ -256,8 +259,12 @@ class _SplashWithSessionRestoreState
         pushReplacementZendSlide(context, const DeviceUnlockScreen());
       }
     } else if (hasLocalKeypair) {
+      // Keypair generated but PIN not yet set — do NOT arm lock
+      widget.model.appLockService.pinIsAvailable = false;
       pushReplacementZendSlide(context, const PinSetupScreen());
     } else {
+      // No keypair at all — do NOT arm lock
+      widget.model.appLockService.pinIsAvailable = false;
       pushReplacementZendSlide(context, const PinRestoreScreen());
     }
   }

@@ -185,6 +185,9 @@ class _LockScreenState extends State<_LockScreen>
 
       if (!mounted) return;
 
+      // Ensure PIN flag stays armed after inactivity unlock
+      model.appLockService.pinIsAvailable = true;
+
       // Populate session cache so sends don't need to re-decrypt
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);

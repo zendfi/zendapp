@@ -167,7 +167,7 @@ class _PinDots extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         final filled = index < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),

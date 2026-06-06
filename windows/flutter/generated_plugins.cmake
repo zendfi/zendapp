@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  argon2_ffi
   audioplayers_windows
   file_selector_windows
   firebase_core

@@ -57,8 +57,9 @@ dependencies:
   cryptography: 2.7.0
 
   # Argon2id key derivation — FFI wrapper around C reference implementation
-  # Used by AuthPass password manager in production
+  # argon2_ffi_base: abstract API + argon2_ffi: Flutter plugin that ships the native .so
   argon2_ffi_base: ^1.1.1
+  argon2_ffi: ^1.0.0
 
   # Google Sign-In for Drive API access (Android recovery backup)
   google_sign_in: ^6.2.1

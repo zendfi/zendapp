@@ -109,6 +109,10 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       final model = ZendScope.of(context);
       await model.walletService.setupPinAndBackup(pin);
 
+      // PIN is now set — arm the lock service so backgrounding will lock correctly
+      model.appLockService.pinIsAvailable = true;
+      model.appLockService.startTimer();
+
       if (!mounted) return;
 
       // Use flutter_secure_storage (already a project dependency) to persist

@@ -140,6 +140,9 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
 
       if (!mounted) return;
 
+      // Arm the lock service — PIN has been verified so locking is now safe
+      model.appLockService.pinIsAvailable = true;
+
       // Populate session cache so sends don't need to re-decrypt
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
