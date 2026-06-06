@@ -207,7 +207,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
         partiallySignedTx: signedTx,
       );
 
-      model.balance = (model.balance - _parsedAmount).clamp(0, double.infinity);
+      // Do not optimistically deduct balance — fetchBalance() is the source of truth
       unawaited(model.fetchBalance());
 
       if (!mounted) return;

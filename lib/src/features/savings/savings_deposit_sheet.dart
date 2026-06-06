@@ -203,8 +203,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         pocketId: widget.pocketId,
       );
 
-      // Optimistic balance deduction + background refresh
-      model.balance = (model.balance - _parsedAmount).clamp(0, double.infinity);
+      // Background refresh — do not optimistically deduct balance; fetchBalance is the source of truth
       unawaited(model.fetchBalance());
       unawaited(model.fetchSavingsSnapshot());
 

@@ -759,6 +759,28 @@ class ZendAppModel extends ChangeNotifier {
     String? walletAddr,
     String? avatarUrl,
   }) {
+    // If a different user is authenticating (account switch), zero out all
+    // stale per-user state so the previous user's balance/history never
+    // bleeds into the new session. On the same-user re-auth (app resume)
+    // this is a no-op since the userId matches.
+    if (isAuthenticated && currentUserId != null && currentUserId != userId) {
+      balance = 0.0;
+      spendableBalance = 0.0;
+      monthlyYield = 0.0;
+      recentTransactions = [];
+      recentContacts = [];
+      walletAddress = null;
+      hasWallet = false;
+      hasPinSetup = false;
+      pools.clear();
+      savingsBalance = 0.0;
+      _pendingEmailIntents = [];
+      pendingPaymentRequest = null;
+      lastBalanceError = null;
+      lastHistoryError = null;
+      lastPoolsError = null;
+    }
+
     isAuthenticated = true;
     currentUserId = userId;
     currentZendtag = zendtag;
@@ -791,7 +813,11 @@ class ZendAppModel extends ChangeNotifier {
     required double amount,
     String? note,
   }) async {
-    balance = (balance - amount).clamp(0, double.infinity);
+    // Do NOT optimistically deduct from balance here — the server is the
+    // source of truth. We call fetchBalance() right after submission, and
+    // an incorrect local deduction would either double-subtract (if the
+    // server read comes back pre-confirmation) or show the wrong number
+    // on multi-wallet devices. Let the server refresh do all balance updates.
     recentTransactions.insert(
       0,
       ZendTransaction(
