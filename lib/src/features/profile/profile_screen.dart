@@ -13,6 +13,7 @@ import 'account_information_screen.dart';
 import 'bridge_kyc_screen.dart';
 import 'change_pin_screen.dart';
 import 'connected_apps_screen.dart';
+import 'security_settings_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
 import 'customise_page_screen.dart';
@@ -167,6 +168,11 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _SettingsGroup(
                       tiles: [
+                        _ProfileTile(
+                          icon: Icons.security_outlined,
+                          label: 'Security settings',
+                          onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
+                        ),
                         _ProfileTile(
                           icon: Icons.pin_outlined,
                           label: 'Change PIN',

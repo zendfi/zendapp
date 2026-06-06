@@ -15,6 +15,7 @@ import '../services/email_intent_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/recent_contacts_store.dart';
+import '../services/signing_policy_service.dart';
 import '../services/sound_service.dart';
 import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
@@ -22,6 +23,8 @@ import '../services/pocket_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/zendtag_service.dart';
+import '../services/cloud_backup_service.dart';
+import '../services/recovery_service.dart';
 import '../data/local/app_database.dart';
 import '../models/payment_request_notification.dart';
 import '../models/pocket_models.dart';
@@ -125,6 +128,20 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Public accessor for the email intent service.
   EmailIntentService? get emailIntentService => _emailIntentService;
+
+  /// Signing policy service — controls session vs PIN-per-payment behaviour.
+  final SigningPolicyService signingPolicyService = SigningPolicyService();
+
+  /// Recovery service — manages National ID recovery packet creation/decryption.
+  /// Injected lazily after wallet service is ready.
+  RecoveryService? _recoveryService;
+  RecoveryService get recoveryService {
+    _recoveryService ??= RecoveryService(
+      wallet: walletService,
+      cloud: CloudBackupService(),
+    );
+    return _recoveryService!;
+  }
 
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;

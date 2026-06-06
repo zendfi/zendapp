@@ -210,11 +210,15 @@ class RetrieveBackupResponse {
   final String encryptedKeypair;
   final String nonce;
   final String publicKey;
+  final int encryptionVersion;
+  final Map<String, dynamic>? kdfParams;
 
   RetrieveBackupResponse({
     required this.encryptedKeypair,
     required this.nonce,
     required this.publicKey,
+    this.encryptionVersion = 2,
+    this.kdfParams,
   });
 
   factory RetrieveBackupResponse.fromJson(Map<String, dynamic> json) {
@@ -222,6 +226,11 @@ class RetrieveBackupResponse {
       encryptedKeypair: json['encrypted_keypair'] as String,
       nonce: json['nonce'] as String,
       publicKey: json['public_key'] as String,
+      encryptionVersion: json['encryption_version'] as int? ?? 2,
+      kdfParams: json['key_metadata'] is Map<String, dynamic>
+          ? (json['key_metadata'] as Map<String, dynamic>)['kdf']
+              as Map<String, dynamic>?
+          : null,
     );
   }
 
@@ -230,6 +239,8 @@ class RetrieveBackupResponse {
       'encrypted_keypair': encryptedKeypair,
       'nonce': nonce,
       'public_key': publicKey,
+      'encryption_version': encryptionVersion,
+      if (kdfParams != null) 'key_metadata': {'kdf': kdfParams},
     };
   }
 }

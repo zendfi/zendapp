@@ -66,6 +66,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Zend! uses Face ID to unlock your wallet securely without typing your PIN</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Zend! uses your camera to scan QR codes for payments</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

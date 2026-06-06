@@ -31,63 +31,64 @@ class EmailIntentService {
   ///
   /// Returns a [CreateIntentResult] on success.
   /// Throws [PinDecryptionException] if the PIN is wrong.
+  ///
+  /// Exactly one of [pin] or [keypairBytes] must be provided:
+  /// - [pin]: standard PIN path — decrypts the keypair on-device.
+  /// - [keypairBytes]: session-signing path — uses a pre-decrypted keypair
+  ///   from [WalletSessionCache]. Bytes are zeroed inside this method.
   Future<CreateIntentResult> createIntent({
     required String recipientEmail,
     required double amountUsdc,
-    required String pin,
+    String? pin,
+    Uint8List? keypairBytes,
     String? note,
   }) async {
+    assert(
+      (pin != null) ^ (keypairBytes != null),
+      'Exactly one of pin or keypairBytes must be provided',
+    );
+
     // Step 1: Fetch the fee payer pubkey from the backend
     final delegationParams = await _apiClient.getDelegationParams();
     final feePayerPubkeyB58 = delegationParams['fee_payer'] as String;
 
-    // Step 2: Decrypt the sender's wallet keypair
-    final senderKeypairBytes = await _walletService.decryptLocalKeypair(pin);
+    // Step 2: Get the sender's wallet keypair (either decrypt or copy from cache)
+    final senderKeypairBytes = keypairBytes != null
+        ? Uint8List.fromList(keypairBytes) // defensive copy — zeroed in finally
+        : await _walletService.decryptLocalKeypair(pin!);
 
     // Step 3: Generate a fresh ephemeral Ed25519 keypair (ek_pub / ek_priv).
-    // The backend validates ek_priv as a 64-byte Ed25519 keypair (Solana format)
-    // and verifies that ek_priv derives to ek_pub stored in the intent record.
-    // We use the solana Ed25519HDKeyPair for this so the bytes are in the correct
-    // format the backend expects (seed || public_key, 64 bytes total).
     final ekAlgorithm = Ed25519();
     final ekKeypair = await ekAlgorithm.newKeyPair();
     final ekPub = await ekKeypair.extractPublicKey();
     final ekPrivSeed = Uint8List.fromList((await ekKeypair.extract()).bytes);
-    // Solana stores keypairs as seed(32) || pubkey(32) = 64 bytes
     final ekPrivBytes = Uint8List(64)
       ..setRange(0, 32, ekPrivSeed)
       ..setRange(32, 64, ekPub.bytes);
 
     try {
       // Step 4: Build and submit the on-chain SPL Approve transaction.
-      // This grants the fee payer delegate authority over amountUsdc of
-      // the sender's USDC ATA. Sender's tokens stay in their wallet.
       final approveTxSig = await _walletService.buildAndSubmitSplApprove(
         senderKeypairBytes: senderKeypairBytes,
         feePayerPubkeyB58: feePayerPubkeyB58,
         amountUsdc: amountUsdc,
-        pin: pin,
+        pin: pin ?? '',
       );
 
       // Step 5: Build the encrypted_delegation blob.
-      // This is a proof payload stored server-side linking the approve tx
-      // to the intent. We encrypt it with AES-256-GCM using the ek_priv
-      // seed as the key (no ECDH needed — ek_priv is already secret).
       final intentPayload = utf8.encode(
         '{"approve_tx":"$approveTxSig","recipient_email":"$recipientEmail","amount_usdc":$amountUsdc}',
       );
       final encryptedDelegation = await _encryptPayload(
         plaintext: Uint8List.fromList(intentPayload),
-        keyBytes: ekPrivSeed, // 32-byte seed used directly as AES-256 key
+        keyBytes: ekPrivSeed,
       );
 
-      // Step 6: Encode ek_pub and ek_priv as base58 for transmission.
-      // ek_pub: just the 32-byte public key bytes
-      // ek_priv: full 64-byte Solana keypair format the backend validates
+      // Step 6: Encode ek_pub and ek_priv as base58.
       final ekPubB58 = base58encode(ekPub.bytes);
       final ekPrivB58 = base58encode(ekPrivBytes);
 
-      // Step 7: Call create_intent — backend substitutes PENDING_ID with real intent_id
+      // Step 7: Call create_intent
       final result = await _apiClient.createEmailIntent(
         recipientEmail: recipientEmail,
         amountUsdc: amountUsdc,
@@ -100,15 +101,9 @@ class EmailIntentService {
       return result;
     } finally {
       // Zero sensitive bytes regardless of success or failure
-      for (var i = 0; i < ekPrivBytes.length; i++) {
-        ekPrivBytes[i] = 0;
-      }
-      for (var i = 0; i < ekPrivSeed.length; i++) {
-        ekPrivSeed[i] = 0;
-      }
-      for (var i = 0; i < senderKeypairBytes.length; i++) {
-        senderKeypairBytes[i] = 0;
-      }
+      for (var i = 0; i < ekPrivBytes.length; i++) { ekPrivBytes[i] = 0; }
+      for (var i = 0; i < ekPrivSeed.length; i++) { ekPrivSeed[i] = 0; }
+      for (var i = 0; i < senderKeypairBytes.length; i++) { senderKeypairBytes[i] = 0; }
     }
   }
 

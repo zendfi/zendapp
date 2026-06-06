@@ -1324,4 +1324,55 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── Recovery endpoints ──────────────────────────────────────────────────────
+
+  /// Sends a 6-digit OTP to the user's email for PIN recovery.
+  /// Returns `{ otp_sent: true, expires_at: "..." }`.
+  Future<Map<String, dynamic>> recoveryInit() async {
+    try {
+      final resp = await _dio.post('/api/zend/recovery/init');
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Verifies the OTP and returns a single-use `recovery_token` JWT (15 min).
+  /// Returns `{ recovery_token: "...", expires_at: "..." }`.
+  Future<Map<String, dynamic>> recoveryVerify(String otp) async {
+    try {
+      final resp = await _dio.post(
+        '/api/zend/recovery/verify',
+        data: {'otp': otp},
+      );
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Resets the wallet backup using a `recovery_token` (not the user JWT).
+  /// Accepts the new 112-byte encrypted keypair (base64) and 12-byte nonce (base64).
+  /// Returns `{ success: true }`.
+  Future<void> recoveryResetPin({
+    required String recoveryToken,
+    required String encryptedKeypair,
+    required String nonce,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/zend/recovery/reset-pin',
+        data: {
+          'recovery_token': recoveryToken,
+          'encrypted_keypair': encryptedKeypair,
+          'nonce': nonce,
+        },
+        // Explicitly clear Authorization header — this endpoint uses recovery_token in body
+        options: Options(headers: {'Authorization': null}),
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 }

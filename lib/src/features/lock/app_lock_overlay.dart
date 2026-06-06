@@ -7,6 +7,9 @@ import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/app_lock_service.dart';
+import '../../services/biometric_service.dart';
+import '../../services/wallet_session_cache.dart';
+import '../onboarding/forgot_pin_screen.dart';
 
 /// Full-screen PIN overlay shown when the app is locked due to inactivity.
 ///
@@ -56,6 +59,11 @@ class _LockScreenState extends State<_LockScreen>
   bool _loading = false;
   DateTime? _lockedUntil;
 
+  final _biometricService = BiometricService();
+  bool _biometricAvailable = false;
+  int _biometricFailures = 0;
+  static const int _maxBiometricFailures = 3;
+
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
   late final AnimationController _fadeController;
@@ -92,6 +100,44 @@ class _LockScreenState extends State<_LockScreen>
       curve: Curves.easeOut,
     );
     _fadeController.forward();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await _biometricService.isAvailable();
+    final enabled = available ? await _biometricService.isEnabled() : false;
+    if (!mounted) return;
+    setState(() => _biometricAvailable = enabled);
+    if (enabled) {
+      // Small delay to let the overlay finish animating in
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) _tryBiometricUnlock();
+    }
+  }
+
+  Future<void> _tryBiometricUnlock() async {
+    if (!_biometricAvailable || _biometricFailures >= _maxBiometricFailures) return;
+    if (_loading) return;
+
+    final pin = await _biometricService.authenticateAndGetPin();
+    if (pin == null) {
+      // Biometric failed or cancelled
+      if (mounted) {
+        _biometricFailures++;
+        if (_biometricFailures >= _maxBiometricFailures) {
+          setState(() {
+            _biometricAvailable = false;
+            _errorMessage = 'Too many biometric failures. Use your PIN.';
+          });
+        }
+      }
+      return;
+    }
+
+    // PIN retrieved — use it to unlock exactly like manual PIN entry
+    await _submitPin(pin);
+    // Reset failure counter on successful biometric unlock
+    _biometricFailures = 0;
   }
 
   @override
@@ -120,11 +166,11 @@ class _LockScreenState extends State<_LockScreen>
         return;
       }
 
-      if (_digits.length >= 4) return;
+      if (_digits.length >= 6) return;
       _digits += value;
     });
 
-    if (_digits.length == 4) {
+    if (_digits.length == 6) {
       _submitPin(_digits);
     }
   }
@@ -138,6 +184,13 @@ class _LockScreenState extends State<_LockScreen>
       await model.walletService.verifyLocalPin(pin);
 
       if (!mounted) return;
+
+      // Populate session cache so sends don't need to re-decrypt
+      try {
+        final keypair = await model.walletService.decryptLocalKeypair(pin);
+        WalletSessionCache.instance.store(keypair);
+        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+      } catch (_) {}
 
       // Fade out before unlocking so the transition is smooth
       await _fadeController.reverse();
@@ -258,6 +311,29 @@ class _LockScreenState extends State<_LockScreen>
                       onTap: _onKey,
                       keyHeight: compact ? 62 : 72,
                     ),
+                  ),
+                ),
+                if (_biometricAvailable && _biometricFailures < _maxBiometricFailures && !_loading && !_isLockedOut) ...[
+                  TextButton.icon(
+                    onPressed: _tryBiometricUnlock,
+                    icon: const Icon(Icons.fingerprint, size: 20),
+                    label: const Text('Use biometrics'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0x99E8F4EC),
+                      textStyle: const TextStyle(fontFamily: 'DMSans', fontSize: 13),
+                    ),
+                  ),
+                ],
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPinScreen(),
+                      fullscreenDialog: true,
+                    ),
+                  ),
+                  child: const Text(
+                    'Forgot PIN?',
+                    style: TextStyle(color: Color(0x66E8F4EC)),
                   ),
                 ),
                 SizedBox(height: compact ? 24 : 36),

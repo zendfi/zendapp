@@ -68,16 +68,16 @@ class _PinSetupScreenState extends State<PinSetupScreen>
         return;
       }
 
-      if (_digits.length >= 4) return;
+      if (_digits.length >= 6) return;
       _digits += value;
     });
 
-    if (_digits.length == 4) {
-      _onFourDigitsEntered();
+    if (_digits.length == 6) {
+      _onSixDigitsEntered();
     }
   }
 
-  void _onFourDigitsEntered() {
+  void _onSixDigitsEntered() {
     if (_phase == _PinPhase.create) {
       setState(() {
         _firstPin = _digits;
@@ -293,7 +293,7 @@ class _PinDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         final filled = index < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),

@@ -12,6 +12,7 @@ import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
+import 'src/features/onboarding/pin_migration_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/services/pending_deep_link_service.dart';
 import 'src/features/send/qr_payment_sheet.dart';
@@ -246,7 +247,14 @@ class _SplashWithSessionRestoreState
     if (!mounted) return;
 
     if (hasLocalKeypair && hasPinSetup) {
-      pushReplacementZendSlide(context, const DeviceUnlockScreen());
+      // Check if 4→6 digit PIN migration is needed
+      final needsMigration = await widget.model.walletService.needsMigration();
+      if (!mounted) return;
+      if (needsMigration) {
+        pushReplacementZendSlide(context, const PinMigrationScreen());
+      } else {
+        pushReplacementZendSlide(context, const DeviceUnlockScreen());
+      }
     } else if (hasLocalKeypair) {
       pushReplacementZendSlide(context, const PinSetupScreen());
     } else {

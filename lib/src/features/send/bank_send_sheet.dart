@@ -8,7 +8,9 @@ import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
+import '../../services/wallet_session_cache.dart';
 
 part 'bank_send_stages.dart';
 
@@ -302,14 +304,113 @@ class _BankSendSheetState extends State<BankSendSheet>
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += value;
     });
-    if (_pinDigits.length == 4) _submitWithPin(_pinDigits);
+    if (_pinDigits.length == 6) _submitWithPin(_pinDigits);
+  }
+
+  Future<void> _proceedFromConfirmation() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final amount = _confirmedAmountUsdc ?? widget.amount;
+    final needsPin = await policy.requiresPinForAmount(amount);
+
+    if (!needsPin && cache.hasKeypair) {
+      // Session signing — skip PIN
+      _goTo(_BankSendStage.processing);
+      await _executeWithKeypair(cache.keypair!);
+    } else {
+      _goTo(_BankSendStage.pin);
+    }
   }
 
   Future<void> _submitWithPin(String pin) async {
     _goTo(_BankSendStage.processing);
+    try {
+      final model = ZendScope.of(context);
+
+      // Verify PIN if session cache is available
+      final cache = WalletSessionCache.instance;
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          _pinAttempts++;
+          if (_pinAttempts >= 5) {
+            model.appLockService.lock();
+            setState(() {
+              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _stage = _BankSendStage.error;
+            });
+          } else {
+            _shakeController.forward(from: 0);
+            setState(() {
+              _pinDigits = '';
+              _pinError = 'Incorrect PIN';
+              _stage = _BankSendStage.pin;
+            });
+          }
+          return;
+        }
+        await _executeWithKeypair(cache.keypair!);
+      } else {
+        await _executeWithPinString(pin);
+      }
+    } on PinDecryptionException {
+      if (!mounted) return;
+      _pinAttempts++;
+      _shakeController.forward(from: 0);
+      if (_pinAttempts >= 5) {
+        setState(() {
+          _errorMessage = 'Too many incorrect PIN attempts.';
+          _stage = _BankSendStage.error;
+        });
+      } else {
+        setState(() {
+          _pinDigits = '';
+          _pinError = 'Incorrect PIN';
+          _stage = _BankSendStage.pin;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e is ApiException
+            ? e.userMessage
+            : 'Something went wrong. Please try again.';
+        _stage = _BankSendStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeWithKeypair(dynamic keypairBytes) async {
+    try {
+      final model = ZendScope.of(context);
+      final signedTx = await model.walletService.buildAndSignTransactionToAddressFromCache(
+        keypairBytes: keypairBytes,
+        amountUsdc: _confirmedAmountUsdc ?? widget.amount,
+        destinationAddress: _depositAddress!,
+        blockhash: _blockhash!,
+        feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
+      );
+      await _submitSignedTx(signedTx);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _BankSendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _BankSendStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeWithPinString(String pin) async {
     try {
       final model = ZendScope.of(context);
       final signedTx = await model.walletService.buildAndSignTransactionToAddress(
@@ -319,7 +420,27 @@ class _BankSendSheetState extends State<BankSendSheet>
         blockhash: _blockhash!,
         feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
       );
+      await _submitSignedTx(signedTx);
+    } on PinDecryptionException {
+      rethrow;
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _BankSendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _BankSendStage.error;
+      });
+    }
+  }
 
+  Future<void> _submitSignedTx(String signedTx) async {
+    try {
+      final model = ZendScope.of(context);
       if (!_rail.isIntl) {
         await model.walletService.apiClient.confirmBankSend(
           orderId: _orderId!,
@@ -337,22 +458,6 @@ class _BankSendSheetState extends State<BankSendSheet>
       setState(() => _stage = _BankSendStage.success);
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
-    } on PinDecryptionException {
-      if (!mounted) return;
-      _pinAttempts++;
-      _shakeController.forward(from: 0);
-      if (_pinAttempts >= 5) {
-        setState(() {
-          _errorMessage = 'Too many incorrect PIN attempts.';
-          _stage = _BankSendStage.error;
-        });
-      } else {
-        setState(() {
-          _pinDigits = '';
-          _pinError = 'Incorrect PIN';
-          _stage = _BankSendStage.pin;
-        });
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -482,7 +587,7 @@ class _BankSendSheetState extends State<BankSendSheet>
               : (_selectedSavedAccount?['account_last4'] != null
                   ? '••••${_selectedSavedAccount!['account_last4']}'
                   : ''),
-          onConfirm: () => _goTo(_BankSendStage.pin),
+          onConfirm: _proceedFromConfirmation,
           onBack: () => _goTo(
               _rail.isIntl ? _BankSendStage.intlAccounts : _BankSendStage.ngnAccounts),
         );

@@ -75,11 +75,11 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
         return;
       }
 
-      if (_digits.length >= 4) return;
+      if (_digits.length >= 6) return;
       _digits += value;
     });
 
-    if (_digits.length == 4) {
+    if (_digits.length == 6) {
       _submitPin(_digits);
     }
   }

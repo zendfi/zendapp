@@ -7,7 +7,9 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/crypto_send_models.dart';
+import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
+import '../../services/wallet_session_cache.dart';
 
 Future<void> showCryptoSendSheet(BuildContext context,
     {required double amount}) {
@@ -195,29 +197,58 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += value;
     });
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _executePin();
     }
   }
 
+  Future<void> _proceedFromQuote() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(widget.amount);
+
+    if (!needsPin && cache.hasKeypair) {
+      // Session confirmed — skip PIN and execute directly
+      setState(() => _stage = CryptoSendStage.processing);
+      await _runCryptoSend();
+    } else {
+      setState(() => _stage = CryptoSendStage.pin);
+    }
+  }
+
   Future<void> _executePin() async {
+    final pin = _pinDigits;
     setState(() => _stage = CryptoSendStage.processing);
     try {
       final model = ZendScope.of(context);
-      await model.walletService.apiClient.executeCryptoSend(
-        quoteId: _quote!.quoteId,
-      );
-      if (!mounted) return;
-      setState(() {
-        _stage = CryptoSendStage.success;
-      });
-      HapticFeedback.mediumImpact();
-      unawaited(SoundService.playZentSuccess());
-      unawaited(model.fetchBalance());
-      unawaited(model.fetchHistory());
+      // Verify PIN against session cache (confirms user identity)
+      final cache = WalletSessionCache.instance;
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          _pinAttempts++;
+          if (_pinAttempts >= 5) {
+            model.appLockService.lock();
+            setState(() {
+              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _stage = CryptoSendStage.error;
+            });
+          } else {
+            _shakeController.forward(from: 0);
+            setState(() {
+              _pinDigits = '';
+              _pinError = 'Incorrect PIN';
+              _stage = CryptoSendStage.pin;
+            });
+          }
+          return;
+        }
+      }
+      await _runCryptoSend();
     } catch (e) {
       if (!mounted) return;
       _pinAttempts++;
@@ -234,6 +265,27 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
           _stage = CryptoSendStage.pin;
         });
       }
+    }
+  }
+
+  Future<void> _runCryptoSend() async {
+    try {
+      final model = ZendScope.of(context);
+      await model.walletService.apiClient.executeCryptoSend(
+        quoteId: _quote!.quoteId,
+      );
+      if (!mounted) return;
+      setState(() => _stage = CryptoSendStage.success);
+      HapticFeedback.mediumImpact();
+      unawaited(SoundService.playZentSuccess());
+      unawaited(model.fetchBalance());
+      unawaited(model.fetchHistory());
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Transfer failed. Please try again.';
+        _stage = CryptoSendStage.error;
+      });
     }
   }
 
@@ -568,7 +620,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             const Spacer(),
             PrimaryButton(
               label: 'Confirm',
-              onPressed: () => setState(() => _stage = CryptoSendStage.pin),
+              onPressed: _proceedFromQuote,
             ),
           ],
         ),
@@ -872,7 +924,7 @@ class _CryptoPinDots extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         final filled = index < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),

@@ -98,7 +98,7 @@ class SendPinStage extends StatelessWidget {
   }
 }
 
-/// Four-dot PIN indicator widget.
+/// Six-dot PIN indicator widget.
 class SendPinDots extends StatelessWidget {
   const SendPinDots({super.key, required this.filledCount});
 
@@ -109,7 +109,7 @@ class SendPinDots extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         final filled = index < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),

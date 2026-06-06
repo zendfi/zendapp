@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'api_client.dart';
 import 'wallet_service.dart';
 import '../models/api_models.dart';
@@ -14,12 +16,26 @@ class TransferService {
   })  : _apiClient = apiClient,
         _walletService = walletService;
 
+  /// Sends a USDC transfer to [recipientZendtag].
+  ///
+  /// Exactly one of [pin] or [keypairBytes] must be provided:
+  /// - [pin]: standard PIN path — decrypts the keypair on-device each time.
+  /// - [keypairBytes]: session-signing path — uses a pre-decrypted keypair
+  ///   from [WalletSessionCache]. The bytes are zeroed inside [WalletService].
+  ///
+  /// Pass [amountUsdc] so the correct signing variant is dispatched.
   Future<TransferResponse> sendTransfer({
     required String recipientZendtag,
     required double amountUsdc,
-    required String pin,
+    String? pin,
+    Uint8List? keypairBytes,
     String? note,
   }) async {
+    assert(
+      (pin != null) ^ (keypairBytes != null),
+      'Exactly one of pin or keypairBytes must be provided',
+    );
+
     // Step 1: Prepare — resolves recipient, creates ATA if needed, returns
     // a fresh blockhash. This is the slow step for first-time recipients.
     final prepared = await _apiClient.prepareTransfer(
@@ -27,16 +43,28 @@ class TransferService {
       amountUsdc: amountUsdc,
     );
 
-    // Step 2: Build and sign the transaction locally using the server-provided
-    // blockhash. The signature is always valid because the blockhash is fresh.
-    final partiallySignedTxB64 =
-        await _walletService.buildAndSignTransaction(
-      pin: pin,
-      amountUsdc: amountUsdc,
-      recipientAddress: prepared.recipientWalletAddress,
-      blockhash: prepared.blockhash,
-      feePayerAddress: prepared.feePayer,
-    );
+    // Step 2: Build and sign the transaction locally.
+    final String partiallySignedTxB64;
+    if (keypairBytes != null) {
+      // Session-signing path
+      partiallySignedTxB64 =
+          await _walletService.buildAndSignTransactionFromCache(
+        keypairBytes: keypairBytes,
+        amountUsdc: amountUsdc,
+        recipientAddress: prepared.recipientWalletAddress,
+        blockhash: prepared.blockhash,
+        feePayerAddress: prepared.feePayer,
+      );
+    } else {
+      // PIN path
+      partiallySignedTxB64 = await _walletService.buildAndSignTransaction(
+        pin: pin!,
+        amountUsdc: amountUsdc,
+        recipientAddress: prepared.recipientWalletAddress,
+        blockhash: prepared.blockhash,
+        feePayerAddress: prepared.feePayer,
+      );
+    }
 
     // Step 3: Submit the pre-signed transaction.
     return _apiClient.submitTransfer(

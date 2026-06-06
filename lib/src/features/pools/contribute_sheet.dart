@@ -7,6 +7,8 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../services/signing_policy_service.dart';
+import '../../services/wallet_session_cache.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
 
@@ -91,7 +93,20 @@ class _ContributeSheetState extends State<ContributeSheet> {
       setState(() => _amountError = 'Insufficient balance');
       return;
     }
-    setState(() => _stage = _ContributeStage.pin);
+    _proceedFromAmount();
+  }
+
+  Future<void> _proceedFromAmount() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(_parsedAmount);
+
+    if (!needsPin && cache.hasKeypair) {
+      setState(() => _stage = _ContributeStage.processing);
+      await _executeContribution(pin: null, keypairBytes: cache.keypair);
+    } else {
+      setState(() => _stage = _ContributeStage.pin);
+    }
   }
 
   void _onPinKey(String key) {
@@ -104,17 +119,60 @@ class _ContributeSheetState extends State<ContributeSheet> {
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += key;
     });
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitContribution();
     }
   }
 
   Future<void> _submitContribution() async {
+    final pin = _pinDigits;
     setState(() => _stage = _ContributeStage.processing);
 
+    try {
+      final model = ZendScope.of(context);
+      final cache = WalletSessionCache.instance;
+
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          setState(() {
+            _pinDigits = '';
+            _pinError = 'Incorrect PIN';
+            _stage = _ContributeStage.pin;
+          });
+          return;
+        }
+        await _executeContribution(pin: null, keypairBytes: cache.keypair);
+      } else {
+        await _executeContribution(pin: pin, keypairBytes: null);
+      }
+    } on PinDecryptionException {
+      if (!mounted) return;
+      setState(() {
+        _pinDigits = '';
+        _pinError = 'Incorrect PIN';
+        _stage = _ContributeStage.pin;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _ContributeStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _ContributeStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeContribution({String? pin, dynamic keypairBytes}) async {
     try {
       final model = ZendScope.of(context);
       final apiClient = model.walletService.apiClient;
@@ -124,13 +182,24 @@ class _ContributeSheetState extends State<ContributeSheet> {
         amountUsdc: _parsedAmount,
       );
 
-      final signedTx = await model.walletService.buildAndSignTransaction(
-        pin: _pinDigits,
-        amountUsdc: _parsedAmount,
-        recipientAddress: prepare.recipientWalletAddress,
-        blockhash: prepare.blockhash,
-        feePayerAddress: prepare.feePayer,
-      );
+      final String signedTx;
+      if (keypairBytes != null) {
+        signedTx = await model.walletService.buildAndSignTransactionFromCache(
+          keypairBytes: keypairBytes,
+          amountUsdc: _parsedAmount,
+          recipientAddress: prepare.recipientWalletAddress,
+          blockhash: prepare.blockhash,
+          feePayerAddress: prepare.feePayer,
+        );
+      } else {
+        signedTx = await model.walletService.buildAndSignTransaction(
+          pin: pin!,
+          amountUsdc: _parsedAmount,
+          recipientAddress: prepare.recipientWalletAddress,
+          blockhash: prepare.blockhash,
+          feePayerAddress: prepare.feePayer,
+        );
+      }
 
       await apiClient.submitContribution(
         poolId: widget.pool.id,
@@ -139,19 +208,13 @@ class _ContributeSheetState extends State<ContributeSheet> {
       );
 
       model.balance = (model.balance - _parsedAmount).clamp(0, double.infinity);
-      // Trigger a balance refresh so the UI reflects the deduction
       unawaited(model.fetchBalance());
 
       if (!mounted) return;
       setState(() => _stage = _ContributeStage.success);
       HapticFeedback.mediumImpact();
     } on PinDecryptionException {
-      if (!mounted) return;
-      setState(() {
-        _pinDigits = '';
-        _pinError = 'Incorrect PIN';
-        _stage = _ContributeStage.pin;
-      });
+      rethrow;
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -387,7 +450,7 @@ class _PinStage extends StatelessWidget {
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
+            children: List.generate(6, (i) {
               final filled = i < pinDigits.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),

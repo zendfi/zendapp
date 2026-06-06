@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'wallet_session_cache.dart';
+
 /// Manages automatic app locking after a period of inactivity.
 ///
 /// Design:
@@ -47,6 +49,7 @@ class AppLockService extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     _locked = true;
+    WalletSessionCache.instance.clear();
     notifyListeners();
   }
 

@@ -44,11 +44,33 @@ dependencies:
   # Secure storage (iOS Keychain / Android Keystore)
   flutter_secure_storage: 9.2.4
 
+  # Biometric authentication (Face ID / fingerprint) for wallet unlock
+  local_auth: ^2.3.0
+
+  # BIP-39 mnemonic derivation from wallet seed
+  bip39: ^1.0.6
+
   # Solana keypair generation, transaction building, base58
   solana: 0.31.0+1
 
   # AES-256-GCM encryption + PBKDF2 key derivation
   cryptography: 2.7.0
+
+  # Argon2id key derivation — FFI wrapper around C reference implementation
+  # Used by AuthPass password manager in production
+  argon2_ffi_base: ^1.1.1
+
+  # Google Sign-In for Drive API access (Android recovery backup)
+  google_sign_in: ^6.2.1
+
+  # Google APIs — Drive v3 scope for recovery packet storage
+  googleapis: ^13.0.0
+
+  # HTTP client used by googleapis (declared explicitly to satisfy linter)
+  http: ^1.2.0
+
+  # Hex / byte encoding for recovery packet fields
+  convert: ^3.1.1
 
   # Audio — success sound on transfer
   audioplayers: ^6.1.0

@@ -10,7 +10,9 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/email_intent.dart';
 import '../../models/recent_contact.dart';
+import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
+import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 
 // Note: bank send and crypto send are now accessed via the Withdraw sheet,
@@ -162,8 +164,22 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     setState(() {
       _recipientZendtag = tag;
       _recipientDisplayName = displayName;
-      _stage = SendStage.pin;
     });
+    _proceedFromRecipient();
+  }
+
+  Future<void> _proceedFromRecipient() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(widget.amount);
+
+    if (!needsPin && cache.hasKeypair) {
+      // Session signing — skip PIN, go straight to processing
+      _goTo(SendStage.processing);
+      await _executeTransfer(pin: null, keypairBytes: cache.keypair);
+    } else {
+      _goTo(SendStage.pin);
+    }
   }
 
   void _onPinKey(String value) {
@@ -179,11 +195,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         return;
       }
 
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += value;
     });
 
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitPin();
     }
   }
@@ -194,35 +210,37 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     try {
       final model = ZendScope.of(context);
-      await model.transferService.sendTransfer(
-        recipientZendtag: _recipientZendtag!,
-        amountUsdc: widget.amount,
-        pin: pin,
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
 
-      if (!mounted) return;
-
-      await model.recordTransfer(
-        recipientZendtag: _recipientZendtag!,
-        recipientDisplayName: _recipientDisplayName ?? '?',
-        amount: widget.amount,
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
-
-      unawaited(model.fetchBalance());
-      unawaited(model.fetchHistory());
-
-      setState(() {
-        _stage = SendStage.success;
-      });
-
-      HapticFeedback.mediumImpact();
-      unawaited(SoundService.playZentSuccess());
+      // Verify the entered PIN is correct before signing
+      final cache = WalletSessionCache.instance;
+      if (cache.hasKeypair) {
+        // We're in the PIN stage because policy required it — verify PIN
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          _pinAttempts++;
+          if (_pinAttempts >= 5) {
+            model.appLockService.lock();
+            setState(() {
+              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _stage = SendStage.error;
+            });
+          } else {
+            _shakeController.forward(from: 0);
+            setState(() {
+              _pinDigits = '';
+              _pinError = 'Incorrect PIN';
+              _stage = SendStage.pin;
+            });
+          }
+          return;
+        }
+        // PIN verified — use session keypair for signing
+        await _executeTransfer(pin: null, keypairBytes: cache.keypair);
+      } else {
+        // No cache — use PIN directly
+        await _executeTransfer(pin: pin, keypairBytes: null);
+      }
     } on PinDecryptionException {
       if (!mounted) return;
       _pinAttempts++;
@@ -254,11 +272,76 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     }
   }
 
+  Future<void> _executeTransfer({String? pin, dynamic keypairBytes}) async {
+    try {
+      final model = ZendScope.of(context);
+
+      await model.transferService.sendTransfer(
+        recipientZendtag: _recipientZendtag!,
+        amountUsdc: widget.amount,
+        pin: pin,
+        keypairBytes: keypairBytes,
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      await model.recordTransfer(
+        recipientZendtag: _recipientZendtag!,
+        recipientDisplayName: _recipientDisplayName ?? '?',
+        amount: widget.amount,
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
+      );
+
+      unawaited(model.fetchBalance());
+      unawaited(model.fetchHistory());
+
+      setState(() {
+        _stage = SendStage.success;
+      });
+
+      HapticFeedback.mediumImpact();
+      unawaited(SoundService.playZentSuccess());
+    } on PinDecryptionException {
+      rethrow;
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = SendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = SendStage.error;
+      });
+    }
+  }
+
   void _onEmailIntentSelected(String email) {
     setState(() {
       _emailRecipient = email;
-      _stage = SendStage.emailIntent;
     });
+    _proceedFromEmailIntentRecipient(email);
+  }
+
+  Future<void> _proceedFromEmailIntentRecipient(String email) async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(widget.amount);
+
+    if (!needsPin && cache.hasKeypair) {
+      // Session signing — skip PIN
+      _goTo(SendStage.emailIntentPin);
+      await _executeEmailIntent(email: email, pin: null, keypairBytes: cache.keypair);
+    } else {
+      _goTo(SendStage.emailIntent);
+    }
   }
 
   Future<void> _submitEmailIntentPin(String pin) async {
@@ -269,34 +352,34 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     try {
       final model = ZendScope.of(context);
-      final service = model.emailIntentService;
-      if (service == null) {
-        setState(() {
-          _errorMessage = 'Email intent service not available.';
-          _stage = SendStage.error;
-        });
-        return;
+
+      // Verify PIN against session cache if available
+      final cache = WalletSessionCache.instance;
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          _pinAttempts++;
+          if (_pinAttempts >= 5) {
+            model.appLockService.lock();
+            setState(() {
+              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _stage = SendStage.error;
+            });
+          } else {
+            _shakeController.forward(from: 0);
+            setState(() {
+              _pinDigits = '';
+              _pinError = 'Incorrect PIN';
+              _stage = SendStage.emailIntent;
+            });
+          }
+          return;
+        }
+        await _executeEmailIntent(email: email, pin: null, keypairBytes: cache.keypair);
+      } else {
+        await _executeEmailIntent(email: email, pin: pin, keypairBytes: null);
       }
-
-      final result = await service.createIntent(
-        recipientEmail: email,
-        amountUsdc: widget.amount,
-        pin: pin,
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _emailIntentResult = result;
-        _stage = SendStage.emailIntentSuccess;
-      });
-
-      unawaited(model.fetchBalance());
-      HapticFeedback.mediumImpact();
-      unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
       if (!mounted) return;
       _pinAttempts++;
@@ -313,6 +396,59 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           _stage = SendStage.emailIntent;
         });
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = SendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = SendStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeEmailIntent({
+    required String email,
+    String? pin,
+    dynamic keypairBytes,
+  }) async {
+    try {
+      final model = ZendScope.of(context);
+      final service = model.emailIntentService;
+      if (service == null) {
+        setState(() {
+          _errorMessage = 'Email intent service not available.';
+          _stage = SendStage.error;
+        });
+        return;
+      }
+
+      final result = await service.createIntent(
+        recipientEmail: email,
+        amountUsdc: widget.amount,
+        pin: pin,
+        keypairBytes: keypairBytes,
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _emailIntentResult = result;
+        _stage = SendStage.emailIntentSuccess;
+      });
+
+      unawaited(model.fetchBalance());
+      HapticFeedback.mediumImpact();
+      unawaited(SoundService.playZentSuccess());
+    } on PinDecryptionException {
+      rethrow;
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -455,10 +591,10 @@ class _SendFlowSheetState extends State<SendFlowSheet>
                 }
                 return;
               }
-              if (_pinDigits.length >= 4) return;
+              if (_pinDigits.length >= 6) return;
               _pinDigits += value;
             });
-            if (_pinDigits.length == 4) {
+            if (_pinDigits.length == 6) {
               final pin = _pinDigits;
               _submitEmailIntentPin(pin);
             }

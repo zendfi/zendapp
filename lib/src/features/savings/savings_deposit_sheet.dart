@@ -7,6 +7,8 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../services/signing_policy_service.dart';
+import '../../services/wallet_session_cache.dart';
 
 enum _DepositStage { amount, pin, processing, success, error }
 
@@ -90,7 +92,20 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       setState(() => _amountError = 'Insufficient balance');
       return;
     }
-    setState(() => _stage = _DepositStage.pin);
+    _proceedFromAmount();
+  }
+
+  Future<void> _proceedFromAmount() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(_parsedAmount);
+
+    if (!needsPin && cache.hasKeypair) {
+      setState(() => _stage = _DepositStage.processing);
+      await _executeDeposit(pin: null, keypairBytes: cache.keypair);
+    } else {
+      setState(() => _stage = _DepositStage.pin);
+    }
   }
 
   void _onPinKey(String key) {
@@ -103,34 +118,84 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += key;
     });
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitDeposit();
     }
   }
 
   Future<void> _submitDeposit() async {
+    final pin = _pinDigits;
     setState(() => _stage = _DepositStage.processing);
 
+    try {
+      final model = ZendScope.of(context);
+      final cache = WalletSessionCache.instance;
+
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          setState(() {
+            _pinDigits = '';
+            _pinError = 'Incorrect PIN';
+            _stage = _DepositStage.pin;
+          });
+          return;
+        }
+        await _executeDeposit(pin: null, keypairBytes: cache.keypair);
+      } else {
+        await _executeDeposit(pin: pin, keypairBytes: null);
+      }
+    } on PinDecryptionException {
+      if (!mounted) return;
+      setState(() {
+        _pinDigits = '';
+        _pinError = 'Incorrect PIN';
+        _stage = _DepositStage.pin;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _DepositStage.error;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _DepositStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeDeposit({String? pin, dynamic keypairBytes}) async {
     try {
       final model = ZendScope.of(context);
       final savingsService = model.savingsService;
       final walletService = model.walletService;
 
       // Step 1: prepare — backend calls Kamino, returns unsigned tx bytes
-      // Pass pocket_id if targeting a specific pocket
       final prepare = await savingsService.prepareDeposit(
         _parsedAmount,
         pocketId: widget.pocketId,
       );
 
-      // Step 2: sign on-device with PIN
-      final signedTx = await walletService.signExistingTransaction(
-        pin: _pinDigits,
-        txBytesB64: prepare.txBytesB64,
-      );
+      // Step 2: sign on-device
+      final String signedTx;
+      if (keypairBytes != null) {
+        signedTx = await walletService.signExistingTransactionFromCache(
+          keypairBytes: keypairBytes,
+          txBytesB64: prepare.txBytesB64,
+        );
+      } else {
+        signedTx = await walletService.signExistingTransaction(
+          pin: pin!,
+          txBytesB64: prepare.txBytesB64,
+        );
+      }
 
       // Step 3: submit — backend co-signs as fee payer and broadcasts
       await savingsService.submitDeposit(
@@ -139,8 +204,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       );
 
       // Optimistic balance deduction + background refresh
-      model.balance =
-          (model.balance - _parsedAmount).clamp(0, double.infinity);
+      model.balance = (model.balance - _parsedAmount).clamp(0, double.infinity);
       unawaited(model.fetchBalance());
       unawaited(model.fetchSavingsSnapshot());
 
@@ -148,12 +212,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       setState(() => _stage = _DepositStage.success);
       HapticFeedback.mediumImpact();
     } on PinDecryptionException {
-      if (!mounted) return;
-      setState(() {
-        _pinDigits = '';
-        _pinError = 'Incorrect PIN';
-        _stage = _DepositStage.pin;
-      });
+      rethrow;
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -372,7 +431,7 @@ class _PinStage extends StatelessWidget {
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
+            children: List.generate(6, (i) {
               final filled = i < pinDigits.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),

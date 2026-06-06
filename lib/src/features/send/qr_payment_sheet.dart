@@ -8,7 +8,9 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/qr_payment_intent.dart';
+import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
+import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 
 // ── Stage enum ────────────────────────────────────────────────────────────────
@@ -265,12 +267,32 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
         return;
       }
 
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += value;
     });
 
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitPin();
+    }
+  }
+
+  // ── Proceed from confirm (session-signing check) ───────────────────────────
+
+  Future<void> _proceedFromConfirm() async {
+    final amount = _resolvedAmount ?? _parsedAmount;
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(amount);
+
+    if (!needsPin && cache.hasKeypair) {
+      setState(() => _stage = QrPayStage.processing);
+      await _executeTransfer(pin: null, keypairBytes: cache.keypair);
+    } else {
+      setState(() {
+        _pinDigits = '';
+        _pinError = null;
+        _stage = QrPayStage.pin;
+      });
     }
   }
 
@@ -282,12 +304,77 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
     try {
       final model = ZendScope.of(context);
+      final cache = WalletSessionCache.instance;
+
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          _pinAttempts++;
+          if (_pinAttempts >= 5) {
+            model.appLockService.lock();
+            setState(() {
+              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _stage = QrPayStage.error;
+            });
+          } else {
+            _shakeController.forward(from: 0);
+            setState(() {
+              _pinDigits = '';
+              _pinError = 'Incorrect PIN';
+              _stage = QrPayStage.pin;
+            });
+          }
+          return;
+        }
+        await _executeTransfer(pin: null, keypairBytes: cache.keypair);
+      } else {
+        await _executeTransfer(pin: pin, keypairBytes: null);
+      }
+    } on PinDecryptionException {
+      if (!mounted) return;
+      _pinAttempts++;
+      if (_pinAttempts >= 5) {
+        setState(() {
+          _errorMessage = 'Too many incorrect PIN attempts.';
+          _stage = QrPayStage.error;
+          _isFetchError = false;
+        });
+      } else {
+        _shakeController.forward(from: 0);
+        setState(() {
+          _pinDigits = '';
+          _pinError = 'Incorrect PIN';
+          _stage = QrPayStage.pin;
+        });
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = QrPayStage.error;
+        _isFetchError = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = QrPayStage.error;
+        _isFetchError = false;
+      });
+    }
+  }
+
+  Future<void> _executeTransfer({String? pin, dynamic keypairBytes}) async {
+    try {
+      final model = ZendScope.of(context);
       final amount = _resolvedAmount ?? _parsedAmount;
 
       await model.transferService.sendTransfer(
         recipientZendtag: intent.zendtag,
         amountUsdc: amount,
         pin: pin,
+        keypairBytes: keypairBytes,
         note: _resolvedNote,
       );
 
@@ -307,22 +394,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
-      if (!mounted) return;
-      _pinAttempts++;
-      if (_pinAttempts >= 5) {
-        setState(() {
-          _errorMessage = 'Too many incorrect PIN attempts.';
-          _stage = QrPayStage.error;
-          _isFetchError = false;
-        });
-      } else {
-        _shakeController.forward(from: 0);
-        setState(() {
-          _pinDigits = '';
-          _pinError = 'Incorrect PIN';
-          _stage = QrPayStage.pin;
-        });
-      }
+      rethrow;
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -415,11 +487,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
             if (intent.amountUsdc == null && intent.requestLinkId == null) {
               if (_parsedAmount > 0) _fetchFxPreview(_parsedAmount);
             }
-            setState(() {
-              _pinDigits = '';
-              _pinError = null;
-              _stage = QrPayStage.pin;
-            });
+            _proceedFromConfirm();
           },
         );
 

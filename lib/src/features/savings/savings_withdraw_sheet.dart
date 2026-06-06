@@ -8,6 +8,8 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/savings_models.dart';
+import '../../services/signing_policy_service.dart';
+import '../../services/wallet_session_cache.dart';
 
 enum _WithdrawStage { confirm, amount, pin, processing, success, error }
 
@@ -113,53 +115,109 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += key;
     });
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitWithdraw();
     }
   }
 
+  Future<void> _proceedFromConfirm() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(_parsedAmount);
+
+    if (!needsPin && cache.hasKeypair) {
+      setState(() => _stage = _WithdrawStage.processing);
+      await _executeWithdraw(pin: null, keypairBytes: cache.keypair);
+    } else {
+      setState(() => _stage = _WithdrawStage.pin);
+    }
+  }
+
   Future<void> _submitWithdraw() async {
+    final pin = _pinDigits;
     setState(() => _stage = _WithdrawStage.processing);
 
     try {
       final model = ZendScope.of(context);
+      final cache = WalletSessionCache.instance;
+
+      if (cache.hasKeypair) {
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          if (!mounted) return;
+          setState(() {
+            _pinDigits = '';
+            _pinError = 'Incorrect PIN';
+            _stage = _WithdrawStage.pin;
+          });
+          return;
+        }
+        await _executeWithdraw(pin: null, keypairBytes: cache.keypair);
+      } else {
+        await _executeWithdraw(pin: pin, keypairBytes: null);
+      }
+    } on PinDecryptionException {
+      if (!mounted) return;
+      setState(() {
+        _pinDigits = '';
+        _pinError = 'Incorrect PIN';
+        _stage = _WithdrawStage.pin;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _WithdrawStage.error;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _WithdrawStage.error;
+      });
+    }
+  }
+
+  Future<void> _executeWithdraw({String? pin, dynamic keypairBytes}) async {
+    try {
+      final model = ZendScope.of(context);
       final walletService = model.walletService;
 
+      Future<String> signTx(String txBytesB64) {
+        if (keypairBytes != null) {
+          return walletService.signExistingTransactionFromCache(
+            keypairBytes: keypairBytes,
+            txBytesB64: txBytesB64,
+          );
+        }
+        return walletService.signExistingTransaction(
+          pin: pin!,
+          txBytesB64: txBytesB64,
+        );
+      }
+
       if (_isLegacy) {
-        // Legacy full withdrawal path
         final savingsService = model.savingsService;
         final prepare = await savingsService.prepareWithdraw();
-        final signedTx = await walletService.signExistingTransaction(
-          pin: _pinDigits,
-          txBytesB64: prepare.txBytesB64,
-        );
+        final signedTx = await signTx(prepare.txBytesB64);
         await savingsService.submitWithdraw(signedTx);
       } else if (_isFree) {
         final pocketService = model.pocketService;
         final prepare = await pocketService.prepareFreeWithdraw(_parsedAmount);
-        final signedTx = await walletService.signExistingTransaction(
-          pin: _pinDigits,
-          txBytesB64: prepare.txBytesB64,
-        );
+        final signedTx = await signTx(prepare.txBytesB64);
         await pocketService.submitFreeWithdraw(signedTx);
       } else if (_isGoal) {
         final pocketService = model.pocketService;
         final prepare = await pocketService.prepareGoalWithdraw(widget.pocketId!);
-        final signedTx = await walletService.signExistingTransaction(
-          pin: _pinDigits,
-          txBytesB64: prepare.txBytesB64,
-        );
+        final signedTx = await signTx(prepare.txBytesB64);
         await pocketService.submitGoalWithdraw(widget.pocketId!, signedTx);
       } else if (_isLock) {
         final pocketService = model.pocketService;
         final prepare = await pocketService.prepareLockWithdraw();
-        final signedTx = await walletService.signExistingTransaction(
-          pin: _pinDigits,
-          txBytesB64: prepare.txBytesB64,
-        );
+        final signedTx = await signTx(prepare.txBytesB64);
         await pocketService.submitLockWithdraw(signedTx);
       }
 
@@ -171,12 +229,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
       setState(() => _stage = _WithdrawStage.success);
       HapticFeedback.mediumImpact();
     } on PinDecryptionException {
-      if (!mounted) return;
-      setState(() {
-        _pinDigits = '';
-        _pinError = 'Incorrect PIN';
-        _stage = _WithdrawStage.pin;
-      });
+      rethrow;
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -240,7 +293,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
           ? _ConfirmStage(
               position: widget.position!,
               receiveAmount: _receiveAmount,
-              onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+              onConfirm: _proceedFromConfirm,
             )
           : _isFree
               ? _FreeConfirmStage(
@@ -251,12 +304,12 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
                   ? _GoalConfirmStage(
                       availableAmount: _availableAmount,
                       mode: 'flexible',
-                      onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+                      onConfirm: _proceedFromConfirm,
                     )
                   : _LockConfirmStage(
                       availableAmount: _availableAmount,
                       lockUnlockDate: widget.lockUnlockDate,
-                      onConfirm: () => setState(() => _stage = _WithdrawStage.pin),
+                      onConfirm: _proceedFromConfirm,
                     ),
       _WithdrawStage.amount => _FreeAmountStage(
           amountInput: _amountInput,
@@ -276,7 +329,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
               });
               return;
             }
-            setState(() => _stage = _WithdrawStage.pin);
+            _proceedFromConfirm();
           },
           onBack: () => setState(() => _stage = _WithdrawStage.confirm),
         ),
@@ -778,7 +831,7 @@ class _PinStage extends StatelessWidget {
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
+            children: List.generate(6, (i) {
               final filled = i < pinDigits.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),

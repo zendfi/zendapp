@@ -904,7 +904,7 @@ class _LightPinDots extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (i) {
+      children: List.generate(6, (i) {
         final filled = i < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
