@@ -93,7 +93,11 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
     } on RecoverySetupRequiresUnlockException {
       setState(() => _error = 'App must be unlocked to set up recovery. Please restart and try again.');
     } on CloudBackupException catch (e) {
-      setState(() => _error = 'Cloud storage error: ${e.message}. Please try again.');
+      final isSignInFailed = e.message.toLowerCase().contains('sign_in_failed') ||
+          e.message.toLowerCase().contains('api_not_available');
+      setState(() => _error = isSignInFailed
+          ? 'Could not sign in to Google Drive.\n\nTo enable recovery backup, your app\'s SHA-1 fingerprint must be registered in Google Cloud Console. Contact support to enable this feature.'
+          : 'Cloud storage error: ${e.message}. Please try again.');
     } catch (e) {
       setState(() => _error = 'Something went wrong. Please try again.');
     } finally {

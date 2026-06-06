@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/key_derivators/argon2.dart';
 import 'package:pointycastle/key_derivators/api.dart';
@@ -14,6 +14,40 @@ import 'api_client.dart';
 import 'wallet_kdf.dart';
 import 'wallet_session_cache.dart';
 import '../models/api_exceptions.dart';
+
+// ── Argon2id background isolate helpers ───────────────────────────────────────
+// These must be top-level (not inside a class) so `compute()` can serialize
+// them across isolate boundaries.
+
+/// Parameters passed to the background isolate for Argon2id derivation.
+class _Argon2Params {
+  const _Argon2Params({required this.secret, required this.salt});
+  final String secret;
+  final Uint8List salt;
+}
+
+/// Top-level entry point for the Argon2id background isolate.
+/// Called by [WalletService._deriveKeyArgon2id] via `compute()`.
+Uint8List _argon2idIsolateEntry(_Argon2Params params) {
+  final secretBytes = Uint8List.fromList(utf8.encode(params.secret));
+  try {
+    final argon2Params = Argon2Parameters(
+      Argon2Parameters.ARGON2_id,
+      params.salt,
+      desiredKeyLength: WalletKdf.hashLen,
+      memory: WalletKdf.mCost,
+      iterations: WalletKdf.tCost,
+      lanes: WalletKdf.pCost,
+      version: Argon2Parameters.ARGON2_VERSION_13,
+    );
+    final argon2 = Argon2BytesGenerator()..init(argon2Params);
+    final result = Uint8List(WalletKdf.hashLen);
+    argon2.deriveKey(secretBytes, 0, result, 0);
+    return result;
+  } finally {
+    for (var i = 0; i < secretBytes.length; i++) { secretBytes[i] = 0; }
+  }
+}
 
 class WalletService {
   final ApiClient _apiClient;
@@ -150,18 +184,19 @@ class WalletService {
     final nonceBytes = base64Decode(backup.nonce);
 
     // Detect backup format:
-    // - Unified 112-byte format: salt(32) || ciphertext(80) — new format
-    // - Legacy 80-byte format: ciphertext only — salt was stored only on-device
+    // - 80-byte payload: salt(32) || ciphertext(48)  — current format (32-byte seed)
+    // - 112-byte payload: salt(32) || ciphertext(80) — old intended format (64-byte keypair)
+    // - Legacy ciphertext-only: use locally stored salt (pre-unified builds)
     final Uint8List salt;
     final Uint8List ciphertext;
     final bool isLegacyBackup;
 
-    if (backupBytes.length == 112) {
-      // Unified format: parse salt from first 32 bytes
+    if (backupBytes.length == 80 || backupBytes.length == 112) {
+      // Unified format: first 32 bytes are the salt, rest is ciphertext
       (salt, ciphertext) = _parseBackupPayload(backupBytes);
       isLegacyBackup = false;
-    } else if (backupBytes.length == 80) {
-      // Legacy format: whole payload is ciphertext; use the locally stored salt
+    } else if (backupBytes.length == 48) {
+      // Very old legacy: ciphertext only (no salt in payload), salt stored locally
       final localSaltB64 = await _secureStorage.read(key: _pinSaltKey);
       if (localSaltB64 == null) throw PinDecryptionException();
       salt = base64Decode(localSaltB64);
@@ -195,7 +230,8 @@ class WalletService {
     );
     await _secureStorage.write(key: _kdfVersionKey, value: '3');
 
-    // If this was a legacy 80-byte backup, silently re-upload in the unified 112-byte format
+    // If this was a very old ciphertext-only backup (no salt embedded), silently
+    // re-encrypt and re-upload in the current 80-byte unified format.
     if (isLegacyBackup) {
       unawaited(_reuploadUnifiedBackup(pin, privateKeyBytes));
     }
@@ -205,8 +241,9 @@ class WalletService {
     }
   }
 
-  /// Silently re-derives, re-encrypts, and re-uploads a unified 112-byte backup.
-  /// Called after a successful legacy backup restore. Best-effort — errors are ignored.
+  /// Silently re-derives, re-encrypts, and re-uploads a unified 80-byte backup
+  /// (salt32 + ciphertext48). Called after a successful legacy ciphertext-only
+  /// restore. Best-effort — errors are ignored.
   Future<void> _reuploadUnifiedBackup(String pin, Uint8List privateKeyBytes) async {
     try {
       final newSalt = _generateRandomBytes(32);
@@ -653,7 +690,7 @@ class WalletService {
     return base64Decode(b64);
   }
 
-  /// Reads the currently stored ciphertext (80 bytes) from secure storage.
+  /// Reads the currently stored ciphertext (48 bytes: 32-byte seed + 16-byte GCM tag) from secure storage.
   Future<Uint8List> readCiphertext() async {
     final b64 = await _secureStorage.read(key: _encryptedPrivateKeyKey);
     if (b64 == null) throw StateError('No ciphertext found in secure storage.');
@@ -797,27 +834,15 @@ class WalletService {
   /// The [secret] bytes are zeroed in memory after derivation.
   /// Returns a raw 32-byte key suitable for direct use with AES-256-GCM.
   ///
-  /// Uses pointycastle's pure-Dart Argon2BytesGenerator — no native CMake
-  /// build required, works on all platforms including Android CI.
+  /// **Runs on a background isolate via `compute()`** to avoid blocking the
+  /// UI thread — pointycastle's pure-Dart Argon2id at m=65536 takes ~2-4s on
+  /// a mid-range Android device, which would otherwise cause ANR dialogs.
   Future<Uint8List> _deriveKeyArgon2id(String secret, Uint8List salt) async {
-    final secretBytes = Uint8List.fromList(utf8.encode(secret));
-    try {
-      final params = Argon2Parameters(
-        Argon2Parameters.ARGON2_id,
-        salt,
-        desiredKeyLength: WalletKdf.hashLen,
-        memory: WalletKdf.mCost,
-        iterations: WalletKdf.tCost,
-        lanes: WalletKdf.pCost,
-        version: Argon2Parameters.ARGON2_VERSION_13,
-      );
-      final argon2 = Argon2BytesGenerator()..init(params);
-      final result = Uint8List(WalletKdf.hashLen);
-      argon2.deriveKey(secretBytes, 0, result, 0);
-      return result;
-    } finally {
-      for (var i = 0; i < secretBytes.length; i++) { secretBytes[i] = 0; }
-    }
+    final result = await compute(
+      _argon2idIsolateEntry,
+      _Argon2Params(secret: secret, salt: salt),
+    );
+    return result;
   }
 
   /// Public Argon2id key derivation for use by [RecoveryService].
