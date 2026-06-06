@@ -542,12 +542,13 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
               });
               _fetchRequestLink();
             } else {
-              // Re-enter PIN stage for transfer errors
+              // Re-run the session-signing check, same as initial proceed
               setState(() {
                 _pinDigits = '';
                 _pinError = null;
-                _stage = QrPayStage.pin;
+                _errorMessage = null;
               });
+              _proceedFromConfirm();
             }
           },
           onCancel: _dismiss,

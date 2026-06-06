@@ -299,11 +299,14 @@ class _ContributeSheetState extends State<ContributeSheet> {
         ),
       _ContributeStage.error => _ErrorStage(
           message: _errorMessage ?? 'Something went wrong.',
-          onRetry: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _stage = _ContributeStage.pin;
-          }),
+          onRetry: () {
+            setState(() {
+              _pinDigits = '';
+              _pinError = null;
+              _errorMessage = null;
+            });
+            _proceedFromAmount();
+          },
           onCancel: () => Navigator.of(context).pop(),
         ),
     };

@@ -464,6 +464,17 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     }
   }
 
+  /// Retry after a send error — re-uses the session cache if available,
+  /// exactly like the initial proceed-from-recipient flow.
+  Future<void> _retryFromError() async {
+    setState(() {
+      _pinDigits = '';
+      _pinError = null;
+      _errorMessage = null;
+    });
+    await _proceedFromRecipient();
+  }
+
   void _dismiss() {
     Navigator.of(context).pop();
   }
@@ -562,13 +573,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         return SendErrorStage(
           key: const ValueKey('error'),
           errorMessage: _errorMessage ?? 'Something went wrong.',
-          onRetry: () {
-            setState(() {
-              _pinDigits = '';
-              _pinError = null;
-              _stage = SendStage.pin;
-            });
-          },
+          onRetry: _retryFromError,
           onCancel: _dismiss,
         );
       case SendStage.emailIntent:

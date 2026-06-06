@@ -292,11 +292,14 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         ),
       _DepositStage.error => _ErrorStage(
           message: _errorMessage ?? 'Something went wrong.',
-          onRetry: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _stage = _DepositStage.pin;
-          }),
+          onRetry: () {
+            setState(() {
+              _pinDigits = '';
+              _pinError = null;
+              _errorMessage = null;
+            });
+            _proceedFromAmount();
+          },
           onCancel: () => Navigator.of(context).pop(),
         ),
     };

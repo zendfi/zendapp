@@ -791,11 +791,14 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 width: double.infinity,
                 child: PrimaryButton(
                   label: 'Try again',
-                  onPressed: () => setState(() {
-                    _pinDigits = '';
-                    _pinError = null;
-                    _stage = CryptoSendStage.pin;
-                  }),
+                  onPressed: () {
+                    setState(() {
+                      _pinDigits = '';
+                      _pinError = null;
+                      _errorMessage = null;
+                    });
+                    _proceedFromQuote();
+                  },
                 ),
               ),
               const SizedBox(height: 12),
