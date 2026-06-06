@@ -21,9 +21,12 @@ import '../models/api_exceptions.dart';
 
 /// Parameters passed to the background isolate for Argon2id derivation.
 class _Argon2Params {
-  const _Argon2Params({required this.secret, required this.salt});
+  const _Argon2Params({required this.secret, required this.salt, this.tCostOverride});
   final String secret;
   final Uint8List salt;
+  /// When set, overrides [WalletKdf.tCost] for this derivation.
+  /// Used only for the v3→v4 migration to decrypt old t=3 backups.
+  final int? tCostOverride;
 }
 
 /// Top-level entry point for the Argon2id background isolate.
@@ -36,7 +39,7 @@ Uint8List _argon2idIsolateEntry(_Argon2Params params) {
       params.salt,
       desiredKeyLength: WalletKdf.hashLen,
       memory: WalletKdf.mCost,
-      iterations: WalletKdf.tCost,
+      iterations: params.tCostOverride ?? WalletKdf.tCost,
       lanes: WalletKdf.pCost,
       version: Argon2Parameters.ARGON2_VERSION_13,
     );
@@ -173,7 +176,7 @@ class WalletService {
         // The backup can be retried later
       }
     }
-    await _secureStorage.write(key: _kdfVersionKey, value: '3');
+    await _secureStorage.write(key: _kdfVersionKey, value: '4');
     await _secureStorage.write(key: _pinLengthKey, value: '6');
   }
 
@@ -228,7 +231,7 @@ class WalletService {
       key: _encryptionNonceKey,
       value: base64Encode(nonceBytes),
     );
-    await _secureStorage.write(key: _kdfVersionKey, value: '3');
+    await _secureStorage.write(key: _kdfVersionKey, value: '4');
 
     // If this was a very old ciphertext-only backup (no salt embedded), silently
     // re-encrypt and re-upload in the current 80-byte unified format.
@@ -264,7 +267,7 @@ class WalletService {
         key: _encryptionNonceKey,
         value: base64Encode(newNonce),
       );
-      await _secureStorage.write(key: _kdfVersionKey, value: '3');
+      await _secureStorage.write(key: _kdfVersionKey, value: '4');
 
       final walletAddress = await _secureStorage.read(key: _publicKeyKey);
       if (walletAddress == null) return;
@@ -311,7 +314,7 @@ class WalletService {
         walletAddress,
       );
     }
-    await _secureStorage.write(key: _kdfVersionKey, value: '3');
+    await _secureStorage.write(key: _kdfVersionKey, value: '4');
     await _secureStorage.write(key: _pinLengthKey, value: '6');
 
     for (var i = 0; i < privateKeyBytes.length; i++) {
@@ -721,11 +724,16 @@ class WalletService {
     final salt = base64Decode(saltB64);
     final nonce = base64Decode(nonceB64);
 
-    // kdfVersion == '3' → Argon2id (new)
+    // kdfVersion == '4' → Argon2id m=65536, t=1 (current)
+    // kdfVersion == '3' → Argon2id m=65536, t=3 (previous — transparently migrate to v4)
     // kdfVersion == null or '2' → PBKDF2 legacy
-    if (kdfVersion == '3') {
-      // Argon2id path (current)
-      final rawKey = await _deriveKeyArgon2id(pin, Uint8List.fromList(salt));
+    if (kdfVersion == '4' || kdfVersion == '3') {
+      // Argon2id path — parameters stored in WalletKdf constants (currently t=1).
+      // v3 backups were encrypted with t=3; since we changed tCost to 1, decrypting
+      // a v3 backup with the current params will fail. We must use the stored version
+      // to select the right tCost.
+      final tCost = kdfVersion == '3' ? 3 : WalletKdf.tCost;
+      final rawKey = await _deriveKeyArgon2idWithParams(pin, Uint8List.fromList(salt), tCost: tCost);
       final secretKey = SecretKey(rawKey);
       try {
         final plaintext = await _decryptAesGcm(
@@ -733,6 +741,10 @@ class WalletService {
           Uint8List.fromList(nonce),
           secretKey,
         );
+        // If decrypted with v3 params (t=3), silently re-encrypt with v4 (t=1) in background
+        if (kdfVersion == '3') {
+          unawaited(_migrateToArgon2id(plaintext, pin));
+        }
         return plaintext;
       } catch (_) {
         throw PinDecryptionException();
@@ -801,7 +813,7 @@ class WalletService {
           key: _pinSaltKey, value: base64Encode(newSalt));
       await _secureStorage.write(
           key: _encryptionNonceKey, value: base64Encode(newNonce));
-      await _secureStorage.write(key: _kdfVersionKey, value: '3');
+      await _secureStorage.write(key: _kdfVersionKey, value: '4');
 
       final walletAddress = await _secureStorage.read(key: _publicKeyKey);
       if (walletAddress == null) return;
@@ -841,6 +853,21 @@ class WalletService {
     final result = await compute(
       _argon2idIsolateEntry,
       _Argon2Params(secret: secret, salt: salt),
+    );
+    return result;
+  }
+
+  /// Derives a key using Argon2id with an explicit [tCost] override.
+  /// Used for the v3→v4 migration path where v3 backups must be decrypted
+  /// with the old t=3 parameter before re-encrypting with the new t=1.
+  Future<Uint8List> _deriveKeyArgon2idWithParams(
+    String secret,
+    Uint8List salt, {
+    required int tCost,
+  }) async {
+    final result = await compute(
+      _argon2idIsolateEntry,
+      _Argon2Params(secret: secret, salt: salt, tCostOverride: tCost),
     );
     return result;
   }
@@ -900,7 +927,7 @@ class WalletService {
         key: _encryptionNonceKey,
         value: base64Encode(newNonce),
       );
-      await _secureStorage.write(key: _kdfVersionKey, value: '3');
+      await _secureStorage.write(key: _kdfVersionKey, value: '4');
       await _secureStorage.write(key: _pinLengthKey, value: '6');
 
       // Populate the session cache so subsequent sends work without re-unlock

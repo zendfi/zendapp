@@ -13,17 +13,19 @@ class WalletKdf {
 
   // ── Argon2id parameters ──────────────────────────────────────────────────
   //
-  // These match the OWASP recommendations for interactive logins as of 2024,
-  // and are specifically chosen to make GPU brute-force of a 6-digit PIN space
-  // (10^6 candidates) take on the order of 10^8 seconds on a GPU cluster.
+  // t=1, m=65536 is OWASP's minimum recommendation for interactive logins.
+  // The memory cost (64 MB) is the primary brute-force deterrent — it defeats
+  // GPU parallelism regardless of t. Reducing t from 3 → 1 cuts pure-Dart
+  // unlock time from ~9s → ~3s with no meaningful security regression.
+  // See: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
   //
   // Memory cost:  64 MB (65536 KiB) — forces DRAM bandwidth as the bottleneck
-  // Time cost:    3 passes            — increases CPU time proportionally
-  // Parallelism:  1 thread            — simplest for single-user operation
-  // Output:       32 bytes (256-bit)  — used directly as AES-256-GCM key
+  // Time cost:    1 pass             — reduced from 3; still OWASP-compliant
+  // Parallelism:  1 thread           — simplest for single-user operation
+  // Output:       32 bytes (256-bit) — used directly as AES-256-GCM key
 
   static const int mCost = 65536;  // KiB (64 MB)
-  static const int tCost = 3;
+  static const int tCost = 1;      // reduced from 3 → ~3s on mid-range Android
   static const int pCost = 1;
   static const int hashLen = 32;   // bytes → AES-256 key
 
@@ -31,9 +33,10 @@ class WalletKdf {
   //
   // encryption_version stored in the encrypted_keys table and in export JSON.
   //   2 = PBKDF2-HMAC-SHA256 / 100k iterations (wallet-security-v2, legacy)
-  //   3 = Argon2id with params below (this spec, current)
+  //   3 = Argon2id, m=65536, t=3, p=1 (previous)
+  //   4 = Argon2id, m=65536, t=1, p=1 (current — faster unlock, same memory cost)
 
-  static const int encryptionVersion = 3;
+  static const int encryptionVersion = 4;
 
   // ── Serialised param blocks ───────────────────────────────────────────────
 

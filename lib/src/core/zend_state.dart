@@ -22,6 +22,7 @@ import '../services/transfer_service.dart';
 import '../services/pocket_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
+import '../services/wallet_session_cache.dart';
 import '../services/zendtag_service.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/recovery_service.dart';
