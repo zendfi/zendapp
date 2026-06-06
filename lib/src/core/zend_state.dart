@@ -764,6 +764,9 @@ class ZendAppModel extends ChangeNotifier {
     // bleeds into the new session. On the same-user re-auth (app resume)
     // this is a no-op since the userId matches.
     if (isAuthenticated && currentUserId != null && currentUserId != userId) {
+      // CRITICAL: clear the session keypair cache so the previous user's
+      // decrypted keypair cannot be used to sign transactions for the new user.
+      WalletSessionCache.instance.clear();
       balance = 0.0;
       spendableBalance = 0.0;
       monthlyYield = 0.0;
@@ -857,6 +860,9 @@ class ZendAppModel extends ChangeNotifier {
   void resetState() {
     stopPolling(); // Stop live updates on logout
     appLockService.reset(); // Stop inactivity timer and clear lock state
+    // CRITICAL: zero and clear the in-memory keypair so it cannot be reused
+    // by a subsequent user logging in on the same device.
+    WalletSessionCache.instance.clear();
     isAuthenticated = false;
     currentUserId = null;
     currentZendtag = null;
