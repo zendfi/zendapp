@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:argon2_ffi_base/argon2_ffi_base.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:pointycastle/key_derivators/argon2.dart';
+import 'package:pointycastle/key_derivators/api.dart';
 import 'package:solana/solana.dart';
 import 'package:solana/encoder.dart';
 
@@ -795,20 +796,24 @@ class WalletService {
   /// Uses [WalletKdf] parameters: m=65536, t=3, p=1.
   /// The [secret] bytes are zeroed in memory after derivation.
   /// Returns a raw 32-byte key suitable for direct use with AES-256-GCM.
+  ///
+  /// Uses pointycastle's pure-Dart Argon2BytesGenerator — no native CMake
+  /// build required, works on all platforms including Android CI.
   Future<Uint8List> _deriveKeyArgon2id(String secret, Uint8List salt) async {
     final secretBytes = Uint8List.fromList(utf8.encode(secret));
     try {
-      final argon2 = Argon2FfiFlutter();
-      final result = await argon2.argon2Async(Argon2Arguments(
-        secretBytes,  // key
-        salt,         // salt
-        WalletKdf.mCost,      // memory (KiB)
-        WalletKdf.tCost,      // iterations
-        WalletKdf.hashLen,    // output length (32 bytes)
-        WalletKdf.pCost,      // parallelism
-        2,            // type: 2 = Argon2id
-        19,           // version: 0x13 = v19 (current)
-      ));
+      final params = Argon2Parameters(
+        Argon2Parameters.ARGON2_id,
+        salt,
+        desiredKeyLength: WalletKdf.hashLen,
+        memory: WalletKdf.mCost,
+        iterations: WalletKdf.tCost,
+        lanes: WalletKdf.pCost,
+        version: Argon2Parameters.ARGON2_VERSION_13,
+      );
+      final argon2 = Argon2BytesGenerator()..init(params);
+      final result = Uint8List(WalletKdf.hashLen);
+      argon2.deriveKey(secretBytes, 0, result, 0);
       return result;
     } finally {
       for (var i = 0; i < secretBytes.length; i++) { secretBytes[i] = 0; }
