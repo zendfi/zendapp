@@ -7,6 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
+import '../../services/wallet_session_cache.dart';
 import '../shell/zend_shell.dart';
 import 'pin_setup_screen.dart';
 
@@ -90,6 +91,17 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
     try {
       final model = ZendScope.of(context);
       await model.walletService.restoreFromBackup(pin);
+
+      if (!mounted) return;
+
+      // Arm the lock service and populate session cache so sends don't require PIN immediately
+      model.appLockService.pinIsAvailable = true;
+      model.appLockService.startTimer();
+      try {
+        final keypair = await model.walletService.decryptLocalKeypair(pin);
+        WalletSessionCache.instance.store(keypair);
+        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+      } catch (_) {}
 
       if (!mounted) return;
       pushAndRemoveUntilZendSlide(context, const ZendShell());

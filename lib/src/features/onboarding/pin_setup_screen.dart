@@ -6,6 +6,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
+import '../../services/wallet_session_cache.dart';
 import '../shell/zend_shell.dart';
 import 'crypto_chains_step.dart';
 
@@ -112,6 +113,15 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       // PIN is now set — arm the lock service so backgrounding will lock correctly
       model.appLockService.pinIsAvailable = true;
       model.appLockService.startTimer();
+
+      // Populate the session cache so the first send doesn't need to re-decrypt
+      try {
+        final keypair = await model.walletService.decryptLocalKeypair(pin);
+        WalletSessionCache.instance.store(keypair);
+        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+      } catch (_) {
+        // Non-fatal — session cache empty, PIN will be requested on first send
+      }
 
       if (!mounted) return;
 
