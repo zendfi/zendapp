@@ -209,11 +209,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
                         shape: BoxShape.circle,
                       ),
                       padding: const EdgeInsets.all(10),
-                      child: Image.asset(
-                        'assets/logo/Zend.png',
-                        color: const Color(0xFFE8F4EC),
-                        colorBlendMode: BlendMode.srcIn,
-                      ),
+                      child: Image.asset('assets/logo/Zend.png'),
                     ),
                   ],
                 ),

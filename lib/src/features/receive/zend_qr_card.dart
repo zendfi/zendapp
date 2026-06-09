@@ -253,11 +253,7 @@ class _CardFace extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     padding: const EdgeInsets.all(9),
-                    child: Image.asset(
-                      'assets/logo/Zend.png',
-                      color: _textOnDeep,
-                      colorBlendMode: BlendMode.srcIn,
-                    ),
+                    child: Image.asset('assets/logo/Zend.png'),
                   ),
                 ],
               ),
