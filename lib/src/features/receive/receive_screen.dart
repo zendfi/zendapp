@@ -1,109 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:gal/gal.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/qr_payment_intent.dart';
 import 'nfc_write_screen.dart';
-import 'show_qr_screen.dart';
 import 'zend_qr_card.dart';
 
-class ReceiveScreen extends StatefulWidget {
+class ReceiveScreen extends StatelessWidget {
   const ReceiveScreen({super.key, required this.username});
 
   final String username;
 
-  @override
-  State<ReceiveScreen> createState() => _ReceiveScreenState();
-}
-
-class _ReceiveScreenState extends State<ReceiveScreen> {
-  final _amountController = TextEditingController();
-  final _noteController = TextEditingController();
-  String _fixedAmountUrl = '';
-  bool _downloadingQr = false;
-
-  String get _paymentLink => 'https://zdfi.me/@${widget.username}';
-
-  @override
-  void initState() {
-    super.initState();
-    _buildFixedAmountUrl();
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  void _buildFixedAmountUrl() {
-    final amountText = _amountController.text.trim();
-    final amount = double.tryParse(amountText);
-    if (amount != null && amount > 0) {
-      final note = _noteController.text.trim();
-      setState(() {
-        _fixedAmountUrl = QrPaymentIntent.buildFixedAmountUrl(
-          widget.username,
-          amount,
-          note.isNotEmpty ? note : null,
-        );
-      });
-    } else {
-      setState(() {
-        _fixedAmountUrl = '';
-      });
-    }
-  }
-
-  Future<void> _downloadQr(String url, String filename) async {
-    if (_downloadingQr) return;
-    setState(() => _downloadingQr = true);
-    try {
-      final painter = QrPainter(
-        data: url,
-        version: QrVersions.auto,
-        errorCorrectionLevel: QrErrorCorrectLevel.H,
-        eyeStyle: const QrEyeStyle(
-          eyeShape: QrEyeShape.circle,
-          color: Color(0xFF52B787),
-        ),
-        dataModuleStyle: const QrDataModuleStyle(
-          dataModuleShape: QrDataModuleShape.circle,
-          color: Color(0xFFE8F4EC),
-        ),
-      );
-      final imageData = await painter.toImageData(512);
-      if (imageData == null) throw Exception('Failed to generate QR image');
-      await Gal.putImageBytes(imageData.buffer.asUint8List());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('QR saved to gallery'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().contains('permission')
-                ? 'Storage permission required to save QR'
-                : 'Failed to save QR — please try again'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _downloadingQr = false);
-    }
-  }
+  String get _paymentLink => 'https://zdfi.me/@$username';
 
   Future<void> _shareLink() async {
     await Share.share(
@@ -149,7 +57,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ZendQrCard(
-                        username: widget.username,
+                        username: username,
                         paymentUrl: _paymentLink,
                       ),
                       const SizedBox(height: 12),
@@ -165,7 +73,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => NfcWriteScreen(
-                              paymentUrl: 'https://zdfi.me/@${widget.username}',
+                              paymentUrl: _paymentLink,
                             ),
                           ),
                         ),
@@ -176,190 +84,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                         label: 'Create payment request',
                         onPressed: () => Navigator.of(context).pop(true),
                       ),
-                      const SizedBox(height: 16),
-
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: zt.bgSecondary,
-                          borderRadius: BorderRadius.circular(ZendRadii.xl),
-                          border: Border.all(color: zt.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Fixed amount QR',
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 13,
-                                color: zt.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _amountController,
-                              keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true),
-                              style: TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 15,
-                                color: zt.textPrimary,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: r'$0.00',
-                                hintStyle: TextStyle(
-                                  fontFamily: 'DMMono',
-                                  fontSize: 15,
-                                  color: zt.textSecondary,
-                                ),
-                                filled: true,
-                                fillColor: zt.bgPrimary,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.border),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.border),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onChanged: (_) => _buildFixedAmountUrl(),
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _noteController,
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 15,
-                                color: zt.textPrimary,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: "What's it for? (optional)",
-                                hintStyle: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 15,
-                                  color: zt.textSecondary,
-                                ),
-                                filled: true,
-                                fillColor: zt.bgPrimary,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.border),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide(color: zt.border),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(ZendRadii.md),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onChanged: (_) => _buildFixedAmountUrl(),
-                            ),
-                            if (_fixedAmountUrl.isNotEmpty) ...[
-                              const SizedBox(height: 16),
-                              Center(
-                                child: SizedBox(
-                                width: 180,
-                                height: 180,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    QrImageView(
-                                      data: _fixedAmountUrl,
-                                      version: QrVersions.auto,
-                                      size: 180,
-                                      errorCorrectionLevel:
-                                          QrErrorCorrectLevel.H,
-                                      backgroundColor:
-                                          const Color(0xFF1C2B1E),
-                                      eyeStyle: const QrEyeStyle(
-                                        eyeShape: QrEyeShape.circle,
-                                        color: Color(0xFF52B787),
-                                      ),
-                                      dataModuleStyle:
-                                          const QrDataModuleStyle(
-                                        dataModuleShape:
-                                            QrDataModuleShape.circle,
-                                        color: Color(0xFFE8F4EC),
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF1C2B1E),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      padding: const EdgeInsets.all(8),
-                                      child: Image.asset('assets/logo/Zend.png'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlineActionButton(
-                                      label: 'Share',
-                                      onPressed: () =>
-                                          Share.share(_fixedAmountUrl),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlineActionButton(
-                                      label: 'Download',
-                                      onPressed: () => _downloadQr(
-                                          _fixedAmountUrl, 'zend_fixed_qr'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlineActionButton(
-                                  label: 'Show QR',
-                                  onPressed: () {
-                                    final amount = double.tryParse(
-                                        _amountController.text.trim());
-                                    if (amount == null || amount <= 0) return;
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => ShowQrScreen(
-                                          username: widget.username,
-                                          amountUsdc: amount,
-                                          note: _noteController.text
-                                                  .trim()
-                                                  .isEmpty
-                                              ? null
-                                              : _noteController.text.trim(),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 22),
+
                       Center(
                         child: Text(
                           'Customise your page',
