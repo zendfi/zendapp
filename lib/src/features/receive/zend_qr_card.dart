@@ -220,25 +220,46 @@ class _CardFace extends StatelessWidget {
             const SizedBox(height: 28),
 
             // ── QR code ─────────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: QrImageView(
-                data: paymentUrl,
-                version: QrVersions.auto,
-                size: _qrSize,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Colors.black,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Colors.black,
-                ),
+            // Dark-background branded QR with center logo overlay.
+            // errorCorrectionLevel H allows ~30% occlusion — the logo
+            // covers ~22%, leaving sufficient redundancy for scanners.
+            SizedBox(
+              width: _qrSize + 28,
+              height: _qrSize + 28,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  QrImageView(
+                    data: paymentUrl,
+                    version: QrVersions.auto,
+                    size: _qrSize + 28,
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    backgroundColor: _bg,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: Color(0xFF52B787), // ZendColors.accent
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: Color(0xFFE8F4EC), // light on dark
+                    ),
+                  ),
+                  // Center logo badge
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: _bg,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(9),
+                    child: Image.asset(
+                      'assets/logo/Zend.png',
+                      color: _textOnDeep,
+                      colorBlendMode: BlendMode.srcIn,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),

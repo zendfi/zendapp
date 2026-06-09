@@ -182,33 +182,40 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
             child: Center(
               child: RepaintBoundary(
                 key: _repaintKey,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(ZendRadii.xl),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    QrImageView(
+                      data: _link,
+                      version: QrVersions.auto,
+                      size: 248,
+                      errorCorrectionLevel: QrErrorCorrectLevel.H,
+                      backgroundColor: const Color(0xFF1C2B1E),
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.circle,
+                        color: Color(0xFF52B787),
                       ),
-                    ],
-                  ),
-                  child: QrImageView(
-                    data: _link,
-                    version: QrVersions.auto,
-                    size: 220,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Colors.black,
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.circle,
+                        color: Color(0xFFE8F4EC),
+                      ),
                     ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Colors.black,
+                    // Center logo badge
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1C2B1E),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: Image.asset(
+                        'assets/logo/Zend.png',
+                        color: const Color(0xFFE8F4EC),
+                        colorBlendMode: BlendMode.srcIn,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),

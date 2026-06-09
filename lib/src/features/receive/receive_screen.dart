@@ -66,13 +66,14 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       final painter = QrPainter(
         data: url,
         version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.H,
         eyeStyle: const QrEyeStyle(
-          eyeShape: QrEyeShape.square,
-          color: Color(0xFF000000),
+          eyeShape: QrEyeShape.circle,
+          color: Color(0xFF52B787),
         ),
         dataModuleStyle: const QrDataModuleStyle(
-          dataModuleShape: QrDataModuleShape.square,
-          color: Color(0xFF000000),
+          dataModuleShape: QrDataModuleShape.circle,
+          color: Color(0xFFE8F4EC),
         ),
       );
       final imageData = await painter.toImageData(512);
@@ -270,29 +271,48 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                             if (_fixedAmountUrl.isNotEmpty) ...[
                               const SizedBox(height: 16),
                               Center(
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(ZendRadii.lg),
-                                  ),
-                                  child: QrImageView(
-                                    data: _fixedAmountUrl,
-                                    version: QrVersions.auto,
-                                    size: 160,
-                                    backgroundColor: Colors.white,
-                                    eyeStyle: const QrEyeStyle(
-                                      eyeShape: QrEyeShape.square,
-                                      color: Colors.black,
+                                child: SizedBox(
+                                width: 180,
+                                height: 180,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    QrImageView(
+                                      data: _fixedAmountUrl,
+                                      version: QrVersions.auto,
+                                      size: 180,
+                                      errorCorrectionLevel:
+                                          QrErrorCorrectLevel.H,
+                                      backgroundColor:
+                                          const Color(0xFF1C2B1E),
+                                      eyeStyle: const QrEyeStyle(
+                                        eyeShape: QrEyeShape.circle,
+                                        color: Color(0xFF52B787),
+                                      ),
+                                      dataModuleStyle:
+                                          const QrDataModuleStyle(
+                                        dataModuleShape:
+                                            QrDataModuleShape.circle,
+                                        color: Color(0xFFE8F4EC),
+                                      ),
                                     ),
-                                    dataModuleStyle: const QrDataModuleStyle(
-                                      dataModuleShape:
-                                          QrDataModuleShape.square,
-                                      color: Colors.black,
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF1C2B1E),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: Image.asset(
+                                        'assets/logo/Zend.png',
+                                        color: const Color(0xFFE8F4EC),
+                                        colorBlendMode: BlendMode.srcIn,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
+                              ),
                               ),
                               const SizedBox(height: 12),
                               Row(

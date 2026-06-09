@@ -284,45 +284,66 @@ class _ShowingView extends StatelessWidget {
         ],
         const SizedBox(height: 28),
 
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 260,
-              height: 260,
-              child: CircularProgressIndicator(
-                value: progress,
-                strokeWidth: 2.5,
-                backgroundColor: const Color(0x1AE8F4EC),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0x4052B788), // muted accent green
+            // ── QR code (timed) ──────────────────────────────────────────
+            // Dark branded QR with logo overlay. The circular ring sits
+            // outside the QR frame; the QR itself fills the inner area.
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 260,
+                  height: 260,
+                  child: CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 2.5,
+                    backgroundColor: const Color(0x1AE8F4EC),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0x4052B788),
+                    ),
+                  ),
                 ),
-              ),
+                // Branded QR with logo inside
+                SizedBox(
+                  width: 228,
+                  height: 228,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      QrImageView(
+                        data: qrUrl,
+                        version: QrVersions.auto,
+                        size: 228,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                        backgroundColor: ZendColors.bgDeep,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.circle,
+                          color: Color(0xFF52B787),
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.circle,
+                          color: Color(0xFFE8F4EC),
+                        ),
+                      ),
+                      // Center logo badge
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: const BoxDecoration(
+                          color: ZendColors.bgDeep,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(9),
+                        child: Image.asset(
+                          'assets/logo/Zend.png',
+                          color: const Color(0xFFE8F4EC),
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Container(
-              width: 228,
-              height: 228,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: QrImageView(
-                data: qrUrl,
-                version: QrVersions.auto,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Colors.black,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ],
-        ),
 
         const SizedBox(height: 24),
 

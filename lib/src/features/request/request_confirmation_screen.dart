@@ -65,13 +65,14 @@ class _RequestConfirmationContentState
       final painter = QrPainter(
         data: widget.paymentRequest.link,
         version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.H,
         eyeStyle: const QrEyeStyle(
-          eyeShape: QrEyeShape.square,
-          color: Color(0xFF000000),
+          eyeShape: QrEyeShape.circle,
+          color: Color(0xFF52B787),
         ),
         dataModuleStyle: const QrDataModuleStyle(
-          dataModuleShape: QrDataModuleShape.square,
-          color: Color(0xFF000000),
+          dataModuleShape: QrDataModuleShape.circle,
+          color: Color(0xFFE8F4EC),
         ),
       );
       final imageData = await painter.toImageData(512);
@@ -183,26 +184,41 @@ class _RequestConfirmationContentState
             ),
             const SizedBox(height: 40),
 
-            // QR code for the request link
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(ZendRadii.lg),
-              ),
-              child: QrImageView(
-                data: widget.paymentRequest.link,
-                version: QrVersions.auto,
-                size: 160,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Colors.black,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Colors.black,
-                ),
+            // QR code for the request link — branded dark treatment
+            Center(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  QrImageView(
+                    data: widget.paymentRequest.link,
+                    version: QrVersions.auto,
+                    size: 180,
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    backgroundColor: const Color(0xFF1C2B1E),
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: Color(0xFF52B787),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: Color(0xFFE8F4EC),
+                    ),
+                  ),
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1C2B1E),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/logo/Zend.png',
+                      color: const Color(0xFFE8F4EC),
+                      colorBlendMode: BlendMode.srcIn,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
