@@ -6,26 +6,104 @@ import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../design/zend_tokens.dart';
 
-/// The branded Zend! QR card — a printable, shareable payment card.
+// ─── QR Style model ───────────────────────────────────────────────────────────
+
+/// A named color palette for the branded QR card.
 ///
-/// Layout (on a deep forest green background):
+/// [dotColor]  — color of the QR data modules and finder eyes.
+/// [cardBg]    — background color of the card face.
+/// [textColor] — color for the @username and url text on the card.
+/// [isDark]    — whether to use a dark card bg (affects logo rendering).
+class QrStyle {
+  final String id;
+  final String label;
+  final Color dotColor;
+  final Color cardBg;
+  final Color textColor;
+  final Color textMuted;
+  final bool isDark;
+
+  const QrStyle({
+    required this.id,
+    required this.label,
+    required this.dotColor,
+    required this.cardBg,
+    required this.textColor,
+    required this.textMuted,
+    required this.isDark,
+  });
+}
+
+/// The five built-in QR palettes.
+const List<QrStyle> kQrPresets = [
+  // Forest — current brand default
+  QrStyle(
+    id: 'forest',
+    label: 'Forest',
+    dotColor: Color(0xFF52B787),
+    cardBg: Color(0xFF1C2B1E),
+    textColor: Color(0xFFE8F4EC),
+    textMuted: Color(0x99E8F4EC),
+    isDark: true,
+  ),
+  // Midnight — pure white on black
+  QrStyle(
+    id: 'midnight',
+    label: 'Midnight',
+    dotColor: Color(0xFFFFFFFF),
+    cardBg: Color(0xFF0A0A0A),
+    textColor: Color(0xFFFFFFFF),
+    textMuted: Color(0x99FFFFFF),
+    isDark: true,
+  ),
+  // Ember — warm amber on deep brown-black
+  QrStyle(
+    id: 'ember',
+    label: 'Ember',
+    dotColor: Color(0xFFE8A045),
+    cardBg: Color(0xFF1A1208),
+    textColor: Color(0xFFF5E8D0),
+    textMuted: Color(0x99F5E8D0),
+    isDark: true,
+  ),
+  // Sky — ocean blue on white
+  QrStyle(
+    id: 'sky',
+    label: 'Sky',
+    dotColor: Color(0xFF3B82F6),
+    cardBg: Color(0xFFFFFFFF),
+    textColor: Color(0xFF1E293B),
+    textMuted: Color(0xFF64748B),
+    isDark: false,
+  ),
+  // Mono — classic black on white
+  QrStyle(
+    id: 'mono',
+    label: 'Mono',
+    dotColor: Color(0xFF111111),
+    cardBg: Color(0xFFFFFFFF),
+    textColor: Color(0xFF111111),
+    textMuted: Color(0xFF6B7280),
+    isDark: false,
+  ),
+];
+
+const String _kPrefKey = 'qr_style_id';
+
+// ─── ZendQrCard ───────────────────────────────────────────────────────────────
+
+/// The branded Zend! QR card with live color-preset customisation.
 ///
+/// Layout:
 ///   ┌─────────────────────────┐
-///   │   [Zend! wordmark]      │
-///   │                         │
-///   │      [QR CODE]          │
-///   │                         │
-///   │    zdfi.me/@username    │
-///   │    @username            │
-///   │                         │
-///   │  Scan to pay instantly  │
+///   │   [card face — varies]  │
 ///   └─────────────────────────┘
-///
-/// The card is wrapped in a [RepaintBoundary] so it can be captured as a
-/// high-resolution PNG via [RenderRepaintBoundary.toImage].
+///   [ ● ● ● ● ●  ]  ← swatch row
+///   [Share]  [Download]
 class ZendQrCard extends StatefulWidget {
   const ZendQrCard({
     super.key,
@@ -33,10 +111,7 @@ class ZendQrCard extends StatefulWidget {
     required this.paymentUrl,
   });
 
-  /// The user's zendtag (without @).
   final String username;
-
-  /// The full zdfi.me URL encoded in the QR (e.g. `https://zdfi.me/@alice`).
   final String paymentUrl;
 
   @override
@@ -46,8 +121,41 @@ class ZendQrCard extends StatefulWidget {
 class ZendQrCardState extends State<ZendQrCard> {
   final GlobalKey _repaintKey = GlobalKey();
   bool _saving = false;
+  QrStyle _style = kQrPresets.first;
 
-  /// Captures the card widget at 3× pixel ratio and saves to gallery.
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedStyle();
+  }
+
+  Future<void> _loadSavedStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString(_kPrefKey);
+    if (id == null) return;
+    final match = kQrPresets.where((s) => s.id == id).firstOrNull;
+    if (match != null && mounted) setState(() => _style = match);
+  }
+
+  Future<void> _selectStyle(QrStyle style) async {
+    setState(() => _style = style);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kPrefKey, style.id);
+  }
+
+  // ── Capture + export ──────────────────────────────────────────────────────
+
+  Future<Uint8List> _captureCard() async {
+    await Future<void>.delayed(Duration.zero);
+    final boundary = _repaintKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
+    if (boundary == null) throw Exception('Could not find card render object');
+    final image = await boundary.toImage(pixelRatio: 3.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) throw Exception('Failed to encode card as PNG');
+    return byteData.buffer.asUint8List();
+  }
+
   Future<void> downloadCard() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -80,7 +188,6 @@ class ZendQrCardState extends State<ZendQrCard> {
     }
   }
 
-  /// Shares the card image via the native share sheet.
   Future<void> shareCard() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -107,33 +214,27 @@ class ZendQrCardState extends State<ZendQrCard> {
     }
   }
 
-  Future<Uint8List> _captureCard() async {
-    // Wait for any pending frames to settle before capturing.
-    await Future<void>.delayed(Duration.zero);
-
-    final boundary = _repaintKey.currentContext?.findRenderObject()
-        as RenderRepaintBoundary?;
-    if (boundary == null) throw Exception('Could not find card render object');
-
-    // 3× pixel ratio → ~1200px wide on a 400dp card. Crisp at print size.
-    final image = await boundary.toImage(pixelRatio: 3.0);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData == null) throw Exception('Failed to encode card as PNG');
-    return byteData.buffer.asUint8List();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── The card itself ──────────────────────────────────────────────
+        // ── Card face ────────────────────────────────────────────────────
         RepaintBoundary(
           key: _repaintKey,
           child: _CardFace(
             username: widget.username,
             paymentUrl: widget.paymentUrl,
+            style: _style,
           ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Style swatch row ─────────────────────────────────────────────
+        _SwatchRow(
+          presets: kQrPresets,
+          selected: _style,
+          onSelect: _selectStyle,
         ),
         const SizedBox(height: 14),
 
@@ -164,43 +265,94 @@ class ZendQrCardState extends State<ZendQrCard> {
   }
 }
 
-// ── Card face ──────────────────────────────────────────────────────────────
+// ─── Swatch row ────────────────────────────────────────────────────────────
 
-/// The visual card — rendered off-screen at high resolution for export.
-/// Uses only static layout (no MediaQuery, no theme lookups) so it renders
-/// identically whether on-screen or captured via RepaintBoundary.
+class _SwatchRow extends StatelessWidget {
+  const _SwatchRow({
+    required this.presets,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<QrStyle> presets;
+  final QrStyle selected;
+  final ValueChanged<QrStyle> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: presets.map((style) {
+        final isSelected = style.id == selected.id;
+        return GestureDetector(
+          onTap: () => onSelect(style),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 5),
+            width: isSelected ? 34 : 28,
+            height: isSelected ? 34 : 28,
+            decoration: BoxDecoration(
+              color: style.dotColor,
+              shape: BoxShape.circle,
+              border: isSelected
+                  ? Border.all(
+                      color: style.dotColor.withValues(alpha: 0.3),
+                      width: 3,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: style.dotColor.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: isSelected
+                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                : null,
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ─── Card face ─────────────────────────────────────────────────────────────
+
+/// Static layout — rendered identically on-screen and via RepaintBoundary export.
 class _CardFace extends StatelessWidget {
   const _CardFace({
     required this.username,
     required this.paymentUrl,
+    required this.style,
   });
 
   final String username;
   final String paymentUrl;
+  final QrStyle style;
 
-  // Card dimensions — fixed so the exported PNG is always the same aspect ratio.
   static const double _cardWidth = 360.0;
   static const double _cardPadding = 28.0;
-  static const double _qrSize = 200.0;
+  static const double _qrSize = 228.0;
   static const double _borderRadius = 20.0;
-
-  // Deep forest green — matches ZendColors.bgDeep exactly.
-  static const Color _bg = Color(0xFF1C2B1E);
-  // Subtle border — slightly lighter than the background.
-  static const Color _border = Color(0xFF2D4030);
-  // Text on deep — matches ZendColors.textOnDeep.
-  static const Color _textOnDeep = Color(0xFFE8F4EC);
-  static const Color _textMuted = Color(0x99E8F4EC);
 
   @override
   Widget build(BuildContext context) {
+    final borderColor = style.isDark
+        ? style.dotColor.withValues(alpha: 0.2)
+        : style.dotColor.withValues(alpha: 0.15);
+
     return Center(
       child: Container(
         width: _cardWidth,
         decoration: BoxDecoration(
-          color: _bg,
+          color: style.cardBg,
           borderRadius: BorderRadius.circular(_borderRadius),
-          border: Border.all(color: _border, width: 1.5),
+          border: Border.all(color: borderColor, width: 1.5),
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: _cardPadding,
@@ -213,43 +365,39 @@ class _CardFace extends StatelessWidget {
             Image.asset(
               'assets/logo/Zend.png',
               height: 32,
-              // Tint the logo white so it reads on the dark background.
-              color: _textOnDeep,
-              colorBlendMode: BlendMode.srcIn,
             ),
             const SizedBox(height: 28),
 
-            // ── QR code ─────────────────────────────────────────────────
-            // Dark-background branded QR with center logo overlay.
-            // errorCorrectionLevel H allows ~30% occlusion — the logo
-            // covers ~22%, leaving sufficient redundancy for scanners.
+            // ── Branded QR with logo overlay ─────────────────────────────
             SizedBox(
-              width: _qrSize + 28,
-              height: _qrSize + 28,
+              width: _qrSize,
+              height: _qrSize,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   QrImageView(
                     data: paymentUrl,
                     version: QrVersions.auto,
-                    size: _qrSize + 28,
+                    size: _qrSize,
                     errorCorrectionLevel: QrErrorCorrectLevel.H,
-                    backgroundColor: _bg,
-                    eyeStyle: const QrEyeStyle(
+                    backgroundColor: style.cardBg,
+                    eyeStyle: QrEyeStyle(
                       eyeShape: QrEyeShape.circle,
-                      color: Color(0xFF52B787), // ZendColors.accent
+                      color: style.dotColor,
                     ),
-                    dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleStyle: QrDataModuleStyle(
                       dataModuleShape: QrDataModuleShape.circle,
-                      color: Color(0xFFE8F4EC), // light on dark
+                      color: style.isDark
+                          ? const Color(0xFFE8F4EC)
+                          : style.dotColor,
                     ),
                   ),
                   // Center logo badge
                   Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: _bg,
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: style.cardBg,
                       shape: BoxShape.circle,
                     ),
                     padding: const EdgeInsets.all(9),
@@ -263,10 +411,10 @@ class _CardFace extends StatelessWidget {
             // ── URL ──────────────────────────────────────────────────────
             Text(
               'zdfi.me/@$username',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DMMono',
                 fontSize: 13,
-                color: _textMuted,
+                color: style.textMuted,
                 letterSpacing: 0.2,
               ),
             ),
@@ -275,11 +423,11 @@ class _CardFace extends StatelessWidget {
             // ── @username ────────────────────────────────────────────────
             Text(
               '@$username',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'InstrumentSerif',
                 fontSize: 26,
                 fontStyle: FontStyle.italic,
-                color: _textOnDeep,
+                color: style.textColor,
                 height: 1.1,
               ),
             ),
@@ -288,17 +436,19 @@ class _CardFace extends StatelessWidget {
             // ── Divider ──────────────────────────────────────────────────
             Container(
               height: 1,
-              color: const Color(0x26E8F4EC),
+              color: style.isDark
+                  ? const Color(0x26E8F4EC)
+                  : style.dotColor.withValues(alpha: 0.15),
             ),
             const SizedBox(height: 16),
 
             // ── Tagline ──────────────────────────────────────────────────
-            const Text(
+            Text(
               'Scan to pay instantly',
               style: TextStyle(
                 fontFamily: 'DMSans',
                 fontSize: 13,
-                color: _textMuted,
+                color: style.textMuted,
                 letterSpacing: 0.3,
               ),
             ),
@@ -309,7 +459,7 @@ class _CardFace extends StatelessWidget {
   }
 }
 
-// ── Action button ──────────────────────────────────────────────────────────
+// ─── Action button ─────────────────────────────────────────────────────────
 
 class _CardButton extends StatelessWidget {
   const _CardButton({

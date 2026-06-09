@@ -44,6 +44,9 @@ dependencies:
   # Secure storage (iOS Keychain / Android Keystore)
   flutter_secure_storage: 9.2.4
 
+  # Lightweight key-value persistence (QR style preference, etc.)
+  shared_preferences: ^2.3.2
+
   # Biometric authentication (Face ID / fingerprint) for wallet unlock
   local_auth: ^2.3.0
 
