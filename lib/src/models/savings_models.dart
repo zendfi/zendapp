@@ -4,6 +4,7 @@ class SavingsMetrics {
   final double apy30d;
   final double tvlUsd;
   final int totalHolders;
+  final double monthlyYieldUsd;
 
   const SavingsMetrics({
     required this.apy,
@@ -11,6 +12,7 @@ class SavingsMetrics {
     required this.apy30d,
     required this.tvlUsd,
     required this.totalHolders,
+    this.monthlyYieldUsd = 0.0,
   });
 
   factory SavingsMetrics.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class SavingsMetrics {
       apy30d: (json['apy_30d'] as num).toDouble(),
       tvlUsd: (json['tvl_usd'] as num).toDouble(),
       totalHolders: json['total_holders'] as int,
+      monthlyYieldUsd: (json['monthly_yield_usd'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

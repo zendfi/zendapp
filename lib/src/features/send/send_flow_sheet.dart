@@ -472,7 +472,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       _pinError = null;
       _errorMessage = null;
     });
-    await _proceedFromRecipient();
+    if (_emailRecipient != null) {
+      await _proceedFromEmailIntentRecipient(_emailRecipient!);
+    } else {
+      await _proceedFromRecipient();
+    }
   }
 
   void _dismiss() {

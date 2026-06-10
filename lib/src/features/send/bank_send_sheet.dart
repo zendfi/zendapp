@@ -584,9 +584,13 @@ class _BankSendSheetState extends State<BankSendSheet>
               (_selectedSavedAccount?['bank_name'] as String? ?? ''),
           accountNumberMasked: _accountController.text.isNotEmpty
               ? _maskAccount(_accountController.text.trim())
-              : (_selectedSavedAccount?['account_last4'] != null
-                  ? '••••${_selectedSavedAccount!['account_last4']}'
-                  : ''),
+              : (_selectedSavedAccount != null
+                  ? (_selectedSavedAccount!['account_last4'] != null
+                      ? '••••${_selectedSavedAccount!['account_last4']}'
+                      : ((_selectedSavedAccount!['account_number_masked'] as String?)?.isNotEmpty == true
+                          ? _selectedSavedAccount!['account_number_masked'] as String
+                          : '—'))
+                  : '—'),
           onConfirm: _proceedFromConfirmation,
           onBack: () => _goTo(
               _rail.isIntl ? _BankSendStage.intlAccounts : _BankSendStage.ngnAccounts),

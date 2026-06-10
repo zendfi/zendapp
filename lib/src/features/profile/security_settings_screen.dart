@@ -194,14 +194,31 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         _SectionLabel('Biometrics', zt),
                         const SizedBox(height: 8),
                         _SettingsGroup(zt: zt, tiles: [
-                          _ToggleTile(
-                            icon: Icons.fingerprint,
-                            label: 'Biometric unlock',
-                            subtitle: 'Use Face ID or fingerprint to unlock',
-                            value: _biometricEnabled,
-                            zt: zt,
-                            onChanged: _toggleBiometric,
-                          ),
+                          if (_biometricEnabled)
+                            _ToggleTile(
+                              icon: Icons.fingerprint,
+                              label: 'Biometric unlock',
+                              subtitle: 'Tap to disable biometric unlock',
+                              value: true,
+                              zt: zt,
+                              onChanged: _toggleBiometric,
+                            )
+                          else
+                            _Tile(
+                              icon: Icons.fingerprint,
+                              label: 'Biometric unlock',
+                              zt: zt,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Lock the app, enter your PIN, then tap "Use biometrics" to enable.',
+                                    ),
+                                    duration: Duration(seconds: 4),
+                                  ),
+                                );
+                              },
+                            ),
                         ]),
                         const SizedBox(height: 20),
                       ],

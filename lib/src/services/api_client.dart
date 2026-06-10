@@ -32,6 +32,9 @@ class ApiClient {
     _dio.interceptors.add(_buildInterceptor());
   }
 
+  /// The base URL of this client — used by MissionRoom to derive the WebSocket URL.
+  String get baseUrl => _dio.options.baseUrl;
+
   QueuedInterceptorsWrapper _buildInterceptor() {
     return QueuedInterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -762,6 +765,7 @@ class ApiClient {
   Future<List<PoolMessage>> listMessages({
     required String poolId,
     String? beforeId,
+    String? afterId,
     int? limit,
   }) async {
     try {
@@ -769,6 +773,7 @@ class ApiClient {
         '/api/zend/pools/$poolId/messages',
         queryParameters: <String, dynamic>{
           'before_id': beforeId,
+          'after_id': afterId,
           'limit': limit,
         }..removeWhere((_, v) => v == null),
       );

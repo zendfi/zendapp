@@ -138,10 +138,9 @@ class OutboxQueue {
           );
           _queue.removeFirst();
         } else {
-          // Timeout — mark failed and stop draining.
+          // Timeout — mark failed and continue draining remaining messages.
           await repository.updateStatus(msg.clientId, LocalStatus.failed);
           _queue.removeFirst();
-          break;
         }
       }
     } finally {

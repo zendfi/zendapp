@@ -55,7 +55,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
 
   double get _userBalance {
     try {
-      return ZendScope.of(context).balance;
+      return ZendScope.of(context).spendableBalance;
     } catch (_) {
       return 0.0;
     }

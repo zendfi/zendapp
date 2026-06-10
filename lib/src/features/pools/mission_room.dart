@@ -75,14 +75,14 @@ class _MissionRoomState extends State<MissionRoom> {
 
   StreamSubscription<SseEvent>? _sseSub;
 
-  static const String _kApiBaseUrl = 'https://api-v2.zendfi.tech';
-  static const String _kTokenKey = 'zend_session_token';
+  late final _LifecycleObserver _lifecycleObserver;
 
   @override
   void initState() {
     super.initState();
     _pool = widget.pool;
-    WidgetsBinding.instance.addObserver(_LifecycleObserver(onResume: _onAppResume));
+    _lifecycleObserver = _LifecycleObserver(onResume: _onAppResume);
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
@@ -108,11 +108,14 @@ class _MissionRoomState extends State<MissionRoom> {
 
     // Set up WebSocket service
     const storage = FlutterSecureStorage();
-    final wsBaseUrl = _kApiBaseUrl.replaceFirst('https://', 'wss://').replaceFirst('http://', 'ws://');
+    final apiBaseUrl = model.walletService.apiClient.baseUrl;
+    final wsBaseUrl = apiBaseUrl
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://');
     _wsService = PoolWebSocketService(
       poolId: _pool.id,
       baseWsUrl: wsBaseUrl,
-      getToken: () => storage.read(key: _kTokenKey),
+      getToken: () => storage.read(key: 'zend_session_token'),
       onReconnected: _onWsReconnected,
     );
 
@@ -163,7 +166,6 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   Future<void> _onWsReconnected() async {
-    // Sync messages missed during disconnection
     if (_messages.isEmpty) return;
     final lastServerId = _messages.lastWhere(
       (m) => m.serverId != null,
@@ -175,7 +177,8 @@ class _MissionRoomState extends State<MissionRoom> {
       final model = ZendScope.of(context);
       final missed = await model.walletService.apiClient.listMessages(
         poolId: _pool.id,
-        // The API doesn't have after_id yet, so we just reload recent
+        afterId: lastServerId,
+        limit: 100,
       );
       if (!mounted) return;
       for (final msg in missed) {
@@ -183,12 +186,13 @@ class _MissionRoomState extends State<MissionRoom> {
         await _repository.upsertMessage(local);
         _upsertMessageLocal(local);
       }
+      if (missed.isNotEmpty && mounted) setState(() {});
     } catch (_) {}
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(_LifecycleObserver(onResume: _onAppResume));
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _sseSub?.cancel();
     _wsSub?.cancel();
     _wsService.connectionState.removeListener(_onConnectionStateChanged);
@@ -1352,6 +1356,9 @@ class _LifecycleObserver extends WidgetsBindingObserver {
 
   // Two observers are equal if they have the same onResume callback reference,
   // which allows removeObserver to find and remove the correct instance.
+  //
+  // NOTE: This override is kept for reference only. The stored _lifecycleObserver
+  // field is used for removal, so identity comparison works correctly.
   @override
   bool operator ==(Object other) =>
       other is _LifecycleObserver && other.onResume == onResume;

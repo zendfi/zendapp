@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart'; // Share.share()
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -236,7 +237,7 @@ class _RequestConfirmationContentState
               height: 48,
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: _copyLink,
+                onPressed: () => Share.share(widget.paymentRequest.link),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: zt.textPrimary,
                   side: BorderSide(color: zt.border),

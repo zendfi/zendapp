@@ -80,7 +80,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             .toList();
       case 'Pending':
         final pendingTxs = txs
-            .where((t) => t.time == 'Just now')
+            .where((t) => t.isPending)
             .map<_ActivityItem>((t) => _TxItem(t));
         items = [
           ...pendingTxs,
@@ -130,13 +130,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.search, color: zt.textSecondary),
+                    onPressed: null,
+                    icon: Icon(Icons.search,
+                        color: zt.textSecondary.withValues(alpha: 0.4)),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: null,
                     icon: Icon(Icons.notifications_none,
-                        color: zt.textSecondary),
+                        color: zt.textSecondary.withValues(alpha: 0.4)),
                   ),
                 ],
               ),

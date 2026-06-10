@@ -39,9 +39,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch balance after the first frame to ensure context is available
+    // Only fetch on first cold load. On resume, app.dart's lifecycle observer handles refresh.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ZendScope.of(context).fetchBalance();
+      final model = ZendScope.of(context);
+      if (model.balance == 0.0 && !model.balanceLoading) {
+        model.fetchBalance();
+      }
     });
   }
 

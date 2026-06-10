@@ -72,6 +72,7 @@ class ZendTransaction {
     this.bankOrder,
     this.avatarUrl,
     this.countryCode,
+    this.isPending = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -82,13 +83,10 @@ class ZendTransaction {
   final String avatarLabel;
   final Color? amountColor;
   final DateTime createdAt;
-  /// Full history entry — present for zend-to-zend transfers.
+  final bool isPending;
   final TransferHistoryEntry? entry;
-  /// Raw bank send order map — present for bank send transactions.
   final Map<String, dynamic>? bankOrder;
-  /// CDN URL of the counterparty's profile photo (zend-to-zend only).
   final String? avatarUrl;
-  /// ISO country code for bank send transactions (e.g. 'ng', 'us', 'gb', 'eu').
   final String? countryCode;
 }
 
@@ -832,6 +830,7 @@ class ZendAppModel extends ChangeNotifier {
         avatarLabel: recipientDisplayName.isNotEmpty
             ? recipientDisplayName[0].toUpperCase()
             : '?',
+        isPending: true,
       ),
     );
 
@@ -924,6 +923,7 @@ class ZendAppModel extends ChangeNotifier {
       final pockets = results[0] as List<SavingsPocket>;
       final metrics = results[1] as SavingsMetrics;
       savingsApy = metrics.apy;
+      monthlyYield = metrics.monthlyYieldUsd;
       // Sum all pocket balances + yields
       savingsBalance = pockets.fold(
         0.0,
