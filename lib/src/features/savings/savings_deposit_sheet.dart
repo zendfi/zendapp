@@ -49,7 +49,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
 
   double get _userBalance {
     try {
-      return ZendScope.of(context).balance;
+      return ZendScope.of(context).spendableBalance;
     } catch (_) {
       return 0.0;
     }
@@ -201,6 +201,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       await savingsService.submitDeposit(
         signedTx,
         pocketId: widget.pocketId,
+        amountUsdc: _parsedAmount,
       );
 
       // Background refresh — do not optimistically deduct balance; fetchBalance is the source of truth

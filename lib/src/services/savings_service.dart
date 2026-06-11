@@ -22,10 +22,12 @@ class SavingsService {
   Future<SavingsSubmitResult> submitDeposit(
     String partiallySignedTxB64, {
     String? pocketId,
+    double? amountUsdc,
   }) =>
       _apiClient.submitSavingsDeposit(
         partiallySignedTxB64,
         pocketId: pocketId,
+        amountUsdc: amountUsdc,
       );
 
   Future<SavingsPrepareResponse> prepareWithdraw() =>

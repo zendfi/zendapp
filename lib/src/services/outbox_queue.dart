@@ -87,7 +87,7 @@ class OutboxQueue {
   /// 1. Sends it over WebSocket.
   /// 2. Waits up to 15 seconds for an `ack` frame matching the `client_id`.
   /// 3. On ack: marks `delivered` in LocalDB and advances.
-  /// 4. On timeout: marks `failed` in LocalDB and stops draining.
+  /// 4. On timeout: marks `failed` in LocalDB and continues to next message.
   Future<void> drain() async {
     if (_draining || _disposed) return;
     _draining = true;

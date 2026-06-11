@@ -12,7 +12,7 @@ enum SseEventType {
   heartbeat,
   refreshRequired,
   // ── Pool v2 events ──
-  poolMessage,
+  // poolMessage is intentionally absent — pool chat is exclusively WebSocket now.
   poolContribution,
   poolReaction,
   poolReactionRemoved,
@@ -36,7 +36,6 @@ class SseEvent {
       'balance_update' => SseEventType.balanceUpdate,
       'heartbeat' => SseEventType.heartbeat,
       'refresh_required' => SseEventType.refreshRequired,
-      'pool_message' => SseEventType.poolMessage,
       'pool_contribution' => SseEventType.poolContribution,
       'pool_reaction' => SseEventType.poolReaction,
       'pool_reaction_removed' => SseEventType.poolReactionRemoved,
@@ -180,9 +179,10 @@ class SseService {
             final data = line.substring(5).trim();
             final event = SseEvent.fromRaw(currentEventType, data);
             _controller?.add(event);
-            currentEventType = 'message'; // Reset for next event
+            // Do NOT reset currentEventType here — per SSE spec the event type
+            // persists until the end of the event block (empty line).
           } else if (line.isEmpty) {
-            // Empty line = end of event block, reset
+            // Empty line = end of SSE event block — reset type for next event
             currentEventType = 'message';
           }
           // Ignore 'id:' and 'retry:' lines for now

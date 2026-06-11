@@ -245,9 +245,9 @@ class ZendAppModel extends ChangeNotifier {
             unawaited(fetchPools());
           }
         }
-      // poolMessage, poolReaction, poolReactionRemoved are handled
-      // directly by the MissionRoom widget — no-op at the model level
-      case SseEventType.poolMessage:
+      // poolReaction and poolReactionRemoved are handled directly
+      // by the MissionRoom widget — no-op at the model level.
+      // Note: poolMessage was removed — pool chat is WebSocket-only now.
       case SseEventType.poolReaction:
       case SseEventType.poolReactionRemoved:
         break;
@@ -923,7 +923,9 @@ class ZendAppModel extends ChangeNotifier {
       final pockets = results[0] as List<SavingsPocket>;
       final metrics = results[1] as SavingsMetrics;
       savingsApy = metrics.apy;
-      monthlyYield = metrics.monthlyYieldUsd;
+      // Monthly yield as a percentage ≈ annual APY / 12.
+      // This is displayed on the home screen as "X.X% earned this month".
+      monthlyYield = (metrics.apy / 12.0).clamp(0.0, 100.0);
       // Sum all pocket balances + yields
       savingsBalance = pockets.fold(
         0.0,

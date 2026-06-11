@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/api_exceptions.dart';
 import '../../models/crypto_send_models.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
@@ -211,9 +212,9 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
     final needsPin = await policy.requiresPinForAmount(widget.amount);
 
     if (!needsPin && cache.hasKeypair) {
-      // Session confirmed — skip PIN and execute directly
+      // Session signing — skip PIN and execute directly with cached keypair
       setState(() => _stage = CryptoSendStage.processing);
-      await _runCryptoSend();
+      await _runCryptoSend(pin: null, keypairBytes: cache.keypair);
     } else {
       setState(() => _stage = CryptoSendStage.pin);
     }
@@ -224,7 +225,6 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
     setState(() => _stage = CryptoSendStage.processing);
     try {
       final model = ZendScope.of(context);
-      // Verify PIN against session cache (confirms user identity)
       final cache = WalletSessionCache.instance;
       if (cache.hasKeypair) {
         final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
@@ -247,9 +247,13 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
           }
           return;
         }
+        // PIN verified — sign with session cache
+        await _runCryptoSend(pin: null, keypairBytes: cache.keypair);
+      } else {
+        // No session cache — sign directly with PIN
+        await _runCryptoSend(pin: pin, keypairBytes: null);
       }
-      await _runCryptoSend();
-    } catch (e) {
+    } on PinDecryptionException {
       if (!mounted) return;
       _pinAttempts++;
       if (_pinAttempts >= 5) {
@@ -261,25 +265,65 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
         _shakeController.forward(from: 0);
         setState(() {
           _pinDigits = '';
-          _pinError = 'Something went wrong. Try again.';
+          _pinError = 'Incorrect PIN';
           _stage = CryptoSendStage.pin;
         });
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = CryptoSendStage.error;
+      });
     }
   }
 
-  Future<void> _runCryptoSend() async {
+  Future<void> _runCryptoSend({String? pin, dynamic keypairBytes}) async {
     try {
       final model = ZendScope.of(context);
+      final quote = _quote!;
+
+      // Build and sign the USDC transfer from the user's wallet to the
+      // Dextopus deposit address. This matches the pattern used by bank-send
+      // and zend-to-zend transfers: user signs, server co-signs as fee-payer.
+      final String signedTx;
+      if (keypairBytes != null) {
+        signedTx = await model.walletService.buildAndSignTransactionToAddressFromCache(
+          keypairBytes: keypairBytes,
+          amountUsdc: widget.amount,
+          destinationAddress: quote.dextopusDepositAddress,
+          blockhash: quote.blockhash,
+          feePayerAddress: quote.feePayer,
+        );
+      } else {
+        signedTx = await model.walletService.buildAndSignTransactionToAddress(
+          pin: pin!,
+          amountUsdc: widget.amount,
+          destinationAddress: quote.dextopusDepositAddress,
+          blockhash: quote.blockhash,
+          feePayerAddress: quote.feePayer,
+        );
+      }
+
       await model.walletService.apiClient.executeCryptoSend(
-        quoteId: _quote!.quoteId,
+        quoteId: quote.quoteId,
+        partiallySignedTx: signedTx,
       );
+
       if (!mounted) return;
       setState(() => _stage = CryptoSendStage.success);
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
       unawaited(model.fetchBalance());
       unawaited(model.fetchHistory());
+    } on PinDecryptionException {
+      rethrow;
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = CryptoSendStage.error;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {

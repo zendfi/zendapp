@@ -786,21 +786,11 @@ class ApiClient {
     }
   }
 
-  Future<PoolMessage> postMessage({
-    required String poolId,
-    required String content,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/api/zend/pools/$poolId/messages',
-        data: {'content': content},
-      );
-      return PoolMessage.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw e.error ?? e;
-    }
-  }
+  // postMessage (REST) was removed — pool text messages are sent exclusively
+  // over WebSocket via PoolWebSocketService. The REST endpoint returns 404.
 
+  /// Posts a voice note to a pool. Returns a flat [PoolMessage] JSON object
+  /// (NOT wrapped in a `{ "messages": [...] }` envelope — unlike [listMessages]).
   Future<PoolMessage> postVoiceNote({
     required String poolId,
     required List<int> audioBytes,
@@ -899,12 +889,14 @@ class ApiClient {
   Future<SavingsSubmitResult> submitSavingsDeposit(
       String partiallySignedTxB64, {
       String? pocketId,
+      double? amountUsdc,
   }) async {
     try {
       final data = <String, dynamic>{
         'partially_signed_tx': partiallySignedTxB64,
       };
       if (pocketId != null) data['pocket_id'] = pocketId;
+      if (amountUsdc != null) data['amount_usdc'] = amountUsdc;
       final response = await _dio.post(
         '/api/zend/savings/deposit/submit',
         data: data,
@@ -1163,10 +1155,12 @@ class ApiClient {
 
   Future<CryptoSendResult> executeCryptoSend({
     required String quoteId,
+    required String partiallySignedTx,
   }) async {
     try {
       final resp = await _dio.post('/api/zend/crypto/send/execute', data: {
         'quote_id': quoteId,
+        'partially_signed_tx': partiallySignedTx,
       });
       return CryptoSendResult.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
