@@ -28,6 +28,7 @@ import '../services/cloud_backup_service.dart';
 import '../services/recovery_service.dart';
 import '../data/local/app_database.dart';
 import '../models/payment_request_notification.dart';
+import '../models/payment_request_item.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 
@@ -355,6 +356,10 @@ class ZendAppModel extends ChangeNotifier {
   /// Pending payment request notification from SSE — shown as in-app banner.
   PaymentRequestNotification? pendingPaymentRequest;
 
+  // ── Payment requests (activity feed) ──
+  List<PaymentRequestItem> outboundPaymentRequests = [];
+  List<PaymentRequestItem> inboundPaymentRequests = [];
+
   // ── Savings ──
   double savingsApy = 0.0;
   double savingsBalance = 0.0;
@@ -521,6 +526,38 @@ class ZendAppModel extends ChangeNotifier {
     }
   }
 
+  /// Fetches outbound payment requests (sent by this user) for the activity feed.
+  Future<void> fetchOutboundPaymentRequests() async {
+    try {
+      final data = await walletService.apiClient.getPaymentRequests();
+      final list = (data['requests'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>()
+          .where((r) => r['amount_usdc'] != null)
+          .map(PaymentRequestItem.fromOutboundJson)
+          .toList();
+      outboundPaymentRequests = list;
+      notifyListeners();
+    } catch (_) {
+      // Non-fatal — activity feed still shows transactions
+    }
+  }
+
+  /// Fetches inbound payment requests (sent to this user) for the activity feed.
+  Future<void> fetchInboundPaymentRequests() async {
+    try {
+      final data = await walletService.apiClient.getReceivedPaymentRequests();
+      final list = (data['requests'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>()
+          .where((r) => r['amount_usdc'] != null)
+          .map(PaymentRequestItem.fromInboundJson)
+          .toList();
+      inboundPaymentRequests = list;
+      notifyListeners();
+    } catch (_) {
+      // Non-fatal
+    }
+  }
+
   /// Cancels a pending email intent by [id].
   /// Removes it from [_pendingEmailIntents] on success and notifies listeners.
   /// No-op if [_emailIntentService] is not injected.
@@ -545,6 +582,9 @@ class ZendAppModel extends ChangeNotifier {
       ]);
       // Fetch email intents in parallel but separately (returns void)
       unawaited(fetchEmailIntents());
+      // Fetch payment requests for activity feed in parallel
+      unawaited(fetchOutboundPaymentRequests());
+      unawaited(fetchInboundPaymentRequests());
 
       final entries = results[0] as List<TransferHistoryEntry>;
       final bankOrders = results[1].cast<Map<String, dynamic>>();
@@ -777,6 +817,8 @@ class ZendAppModel extends ChangeNotifier {
       pools.clear();
       savingsBalance = 0.0;
       _pendingEmailIntents = [];
+      outboundPaymentRequests = [];
+      inboundPaymentRequests = [];
       pendingPaymentRequest = null;
       lastBalanceError = null;
       lastHistoryError = null;
@@ -898,6 +940,8 @@ class ZendAppModel extends ChangeNotifier {
     savingsBalance = 0.0;
     savingsLoading = false;
     pendingPaymentRequest = null;
+    outboundPaymentRequests = [];
+    inboundPaymentRequests = [];
     _pendingEmailIntents = [];
     notifyListeners();
   }

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/email_intent.dart';
+import '../../models/payment_request_item.dart';
+import '../../models/qr_payment_intent.dart';
+import '../send/qr_payment_sheet.dart';
 import 'transaction_receipt_sheet.dart';
 
-// ── Unified list item ─────────────────────────────────────────────────────────
+// ── Unified activity item ─────────────────────────────────────────────────────
 
-/// Discriminated union so regular transactions and email intents can share
-/// one sorted list without duplicating the tile widget.
 sealed class _ActivityItem {
   DateTime get createdAt;
 }
@@ -29,6 +33,13 @@ class _IntentItem extends _ActivityItem {
   DateTime get createdAt => intent.createdAt;
 }
 
+class _RequestItem extends _ActivityItem {
+  final PaymentRequestItem request;
+  _RequestItem(this.request);
+  @override
+  DateTime get createdAt => request.createdAt;
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class ActivityScreen extends StatefulWidget {
@@ -41,7 +52,7 @@ class ActivityScreen extends StatefulWidget {
 class _ActivityScreenState extends State<ActivityScreen> {
   String _activeFilter = 'All';
 
-  static const _filters = ['All', 'Received', 'Sent', 'Pending'];
+  static const _filters = ['All', 'Received', 'Sent', 'Pending', 'Requests'];
 
   @override
   void initState() {
@@ -51,7 +62,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     });
   }
 
-  /// Returns true if this email intent has all required fields.
   bool _intentIsRenderable(EmailIntent intent) {
     return intent.recipientHint.isNotEmpty &&
         intent.amountUsdc > 0 &&
@@ -61,6 +71,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
   List<_ActivityItem> _buildItems(
     List<ZendTransaction> txs,
     List<EmailIntent> intents,
+    List<PaymentRequestItem> outbound,
+    List<PaymentRequestItem> inbound,
   ) {
     final renderableIntents =
         intents.where((i) => i.isPending && _intentIsRenderable(i)).toList();
@@ -86,14 +98,30 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ...pendingTxs,
           ...renderableIntents.map<_ActivityItem>((i) => _IntentItem(i)),
         ];
+      case 'Requests':
+        // Show all inbound (pending only) + all outbound requests
+        items = [
+          ...inbound
+              .where((r) => r.isPending)
+              .map<_ActivityItem>((r) => _RequestItem(r)),
+          ...outbound
+              .where((r) => r.amountUsdc > 0)
+              .map<_ActivityItem>((r) => _RequestItem(r)),
+        ];
       default: // 'All'
         items = [
           ...txs.map<_ActivityItem>((t) => _TxItem(t)),
           ...renderableIntents.map<_ActivityItem>((i) => _IntentItem(i)),
+          // In "All": inbound pending requests + all outbound requests
+          ...inbound
+              .where((r) => r.isPending)
+              .map<_ActivityItem>((r) => _RequestItem(r)),
+          ...outbound
+              .where((r) => r.amountUsdc > 0)
+              .map<_ActivityItem>((r) => _RequestItem(r)),
         ];
     }
 
-    // Sort newest first — intents are interleaved with transactions by createdAt
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
@@ -105,6 +133,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final items = _buildItems(
       model.recentTransactions,
       model.pendingEmailIntents,
+      model.outboundPaymentRequests,
+      model.inboundPaymentRequests,
     );
 
     return Scaffold(
@@ -151,7 +181,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 8),
                 itemCount: _filters.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   final label = _filters[i];
                   final active = _activeFilter == label;
@@ -159,14 +189,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     onTap: () => setState(() => _activeFilter = label),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: active
-                            ? zt.accent
-                            : zt.bgSecondary,
-                        borderRadius:
-                            BorderRadius.circular(ZendRadii.pill),
+                        color: active ? zt.accent : zt.bgSecondary,
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -200,9 +226,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 height: 200,
                                 child: Center(
                                   child: Text(
-                                    _activeFilter == 'All'
-                                        ? 'No transactions yet'
-                                        : 'No ${_activeFilter.toLowerCase()} transactions',
+                                    _emptyLabel,
                                     style: TextStyle(
                                       fontFamily: 'DMSans',
                                       fontSize: 14,
@@ -217,7 +241,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                             itemCount: items.length,
-                            separatorBuilder: (context, index) =>
+                            separatorBuilder: (_, _) =>
                                 Divider(color: zt.border, height: 1),
                             itemBuilder: (context, i) {
                               final item = items[i];
@@ -257,6 +281,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     onTap: () => _showIntentDetail(
                                         context, intent, model),
                                   ),
+                                _RequestItem(:final request) =>
+                                  _buildRequestTile(
+                                      context, request, isFirst, isLast),
                               };
                             },
                           ),
@@ -281,7 +308,76 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  /// e.g. "Expires in 14 days" or "Expires today"
+  String get _emptyLabel {
+    switch (_activeFilter) {
+      case 'Requests':
+        return 'No payment requests';
+      case 'All':
+        return 'No transactions yet';
+      default:
+        return 'No ${_activeFilter.toLowerCase()} transactions';
+    }
+  }
+
+  Widget _buildRequestTile(
+    BuildContext context,
+    PaymentRequestItem request,
+    bool isFirst,
+    bool isLast,
+  ) {
+    final statusColor = switch (request.status) {
+      'paid' => ZendColors.positive,
+      'expired' || 'cancelled' => ZendTheme.of(context).textSecondary,
+      _ => request.isInbound
+          ? ZendColors.destructive // inbound pending = you owe
+          : ZendTheme.of(context).accent, // outbound pending = they owe you
+    };
+
+    final statusLabel = switch (request.status) {
+      'paid' => 'Paid',
+      'expired' => 'Expired',
+      'cancelled' => 'Cancelled',
+      _ => request.isInbound ? 'Pay now' : 'Pending',
+    };
+
+    final note = request.description?.isNotEmpty == true
+        ? request.description!
+        : request.isInbound
+            ? 'Payment request'
+            : 'Sent request';
+
+    return _ActivityTile(
+      avatarLabel: request.avatarInitial,
+      name: request.counterpartyLabel,
+      note: note,
+      amount: request.isInbound
+          ? '-${request.formattedAmount}'
+          : '+${request.formattedAmount}',
+      time: statusLabel,
+      amountColor: statusColor,
+      isFirst: isFirst,
+      isLast: isLast,
+      statusDot: request.isPending
+          ? _StatusDot(color: statusColor)
+          : null,
+      onTap: () {
+        if (request.isInbound && request.isPending) {
+          // Open QR pay sheet so the user can pay immediately
+          final intent = QrPaymentIntent(
+            zendtag: request.requesterZendtag ?? '',
+            amountUsdc: request.amountUsdc,
+            note: request.description,
+            requestLinkId: request.requestLinkId,
+          );
+          showQrPaymentSheet(context, intent: intent);
+        } else {
+          // Show outbound request detail (share/copy/status)
+          _showOutboundRequestDetail(context, request);
+        }
+      },
+    );
+  }
+
   static String _expiryLabel(EmailIntent intent) {
     final days = intent.daysRemaining;
     if (days == 0) return 'Expires today';
@@ -289,7 +385,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return 'Expires in $days days';
   }
 
-  /// Shows the pending intent detail bottom sheet.
   void _showIntentDetail(
     BuildContext context,
     EmailIntent intent,
@@ -310,9 +405,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
+                  content: const Text(
                     'Could not cancel — please try again',
-                    style: const TextStyle(fontFamily: 'DMSans'),
+                    style: TextStyle(fontFamily: 'DMSans'),
                   ),
                   backgroundColor: ZendColors.destructive,
                 ),
@@ -322,6 +417,227 @@ class _ActivityScreenState extends State<ActivityScreen> {
         },
       ),
     );
+  }
+
+  void _showOutboundRequestDetail(
+      BuildContext context, PaymentRequestItem request) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OutboundRequestSheet(request: request),
+    );
+  }
+}
+
+// ── Outbound request detail sheet ─────────────────────────────────────────────
+
+class _OutboundRequestSheet extends StatelessWidget {
+  const _OutboundRequestSheet({required this.request});
+
+  final PaymentRequestItem request;
+
+  void _copyLink(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: request.linkUrl));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Link copied!',
+            style: TextStyle(fontFamily: 'DMSans')),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+
+    final statusColor = switch (request.status) {
+      'paid' => ZendColors.positive,
+      'expired' || 'cancelled' => zt.textSecondary,
+      _ => zt.accent,
+    };
+    final statusLabel = switch (request.status) {
+      'paid' => 'Paid',
+      'expired' => 'Expired',
+      'cancelled' => 'Cancelled',
+      _ => 'Pending',
+    };
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      decoration: BoxDecoration(
+        color: zt.bgSecondary,
+        borderRadius: BorderRadius.circular(ZendRadii.xxl),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
+              ),
+            ),
+
+            // Status badge
+            Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontFamily: 'DMMono',
+                    fontSize: 11,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Amount
+            Center(
+              child: Text(
+                '+${request.formattedAmount}',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 42,
+                  fontStyle: FontStyle.italic,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            if (request.description?.isNotEmpty == true) ...[
+              Center(
+                child: Text(
+                  request.description!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 14,
+                    color: zt.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            const SizedBox(height: 8),
+
+            // Recipient row
+            _DetailRow(label: 'To', value: request.counterpartyLabel, zt: zt),
+            const SizedBox(height: 12),
+            _DetailRow(
+              label: 'Created',
+              value: _formatDate(request.createdAt),
+              zt: zt,
+            ),
+
+            const SizedBox(height: 20),
+
+            // Link row
+            GestureDetector(
+              onTap: () => _copyLink(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: zt.bgPrimary,
+                  borderRadius: BorderRadius.circular(ZendRadii.lg),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        request.linkUrl,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 11,
+                          color: zt.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.copy_outlined, size: 14, color: zt.accent),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Share button
+            SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () => Share.share(request.linkUrl),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: zt.textPrimary,
+                  side: BorderSide(color: zt.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
+                ),
+                child: const Text(
+                  'Share link',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Done',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
 }
 
@@ -434,7 +750,6 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Drag handle ──
             Center(
               child: Container(
                 width: 36,
@@ -447,10 +762,10 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
               ),
             ),
 
-            // ── Status badge ──
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: zt.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -469,7 +784,6 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
 
             const SizedBox(height: 16),
 
-            // ── Amount ──
             Center(
               child: Text(
                 '-${intent.amountFormatted}',
@@ -484,7 +798,6 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
 
             const SizedBox(height: 24),
 
-            // ── Details rows ──
             _DetailRow(label: 'To', value: intent.recipientHint, zt: zt),
             const SizedBox(height: 12),
             _DetailRow(
@@ -495,7 +808,6 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
 
             const SizedBox(height: 28),
 
-            // ── Cancel button ──
             SizedBox(
               height: 52,
               child: FilledButton(
@@ -549,23 +861,33 @@ class _DetailRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 14,
-            color: zt.textSecondary,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 13,
-            color: zt.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 14,
+                color: zt.textSecondary)),
+        Text(value,
+            style: TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 13,
+                color: zt.textPrimary)),
       ],
+    );
+  }
+}
+
+// ── Status dot badge ──────────────────────────────────────────────────────────
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
@@ -582,6 +904,7 @@ class _ActivityTile extends StatelessWidget {
     this.avatarUrl,
     this.countryCode,
     this.amountColor,
+    this.statusDot,
     this.onTap,
     this.isFirst = false,
     this.isLast = false,
@@ -595,6 +918,7 @@ class _ActivityTile extends StatelessWidget {
   final String amount;
   final String time;
   final Color? amountColor;
+  final Widget? statusDot;
   final VoidCallback? onTap;
   final bool isFirst;
   final bool isLast;
@@ -617,6 +941,7 @@ class _ActivityTile extends StatelessWidget {
       bottom: isLast ? const Radius.circular(24) : Radius.zero,
     );
     final country = _country;
+
     return Material(
       color: zt.bgSecondary,
       borderRadius: radius,
@@ -624,10 +949,10 @@ class _ActivityTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: radius,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              // Country flag for bank sends, avatar for zend-to-zend
               country != null
                   ? ZendCountryFlag(country: country, size: 48)
                   : ZendAvatar(
@@ -678,13 +1003,22 @@ class _ActivityTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: zt.textSecondary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (statusDot != null) ...[
+                        statusDot!,
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        time,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 11,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

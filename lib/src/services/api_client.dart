@@ -443,6 +443,20 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getReceivedPaymentRequests({String? status}) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/payment-requests/received',
+        queryParameters: <String, dynamic>{
+          'status': status,
+        }..removeWhere((_, v) => v == null),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<void> cancelPaymentRequest(String id) async {
     try {
       await _dio.delete('/api/zend/payment-requests/$id');

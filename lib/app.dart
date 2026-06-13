@@ -167,6 +167,31 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         unawaited(model.fetchHistory());
         model.appLockService.startTimer();
       }
+
+      // Consume any pending payment request notification that arrived while
+      // the app was in the background. The notification tap sets the static
+      // field synchronously; we read it here on every resume so it's never
+      // missed regardless of whether initState already ran.
+      final pending = PushNotificationService.consumePendingPaymentRequest();
+      if (pending != null) {
+        // Small delay to let the resuming animation settle before presenting
+        // the sheet on top.
+        Future<void>.delayed(const Duration(milliseconds: 200), () {
+          if (!mounted) return;
+          if (!model.isAuthenticated || model.appLockService.isLocked) {
+            // App is locked — convert to a pending deep link so the
+            // lock-state listener can present it after unlock.
+            final intent = QrPaymentIntent(
+              zendtag: pending.requesterZendtag,
+              amountUsdc: pending.amountUsdc,
+              note: pending.description,
+            );
+            PendingDeepLinkService.store(intent);
+            return;
+          }
+          _handlePaymentRequestNotification(pending);
+        });
+      }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
       model.stopRealTimeUpdates();

@@ -24,6 +24,9 @@ class ZendShell extends StatefulWidget {
 class _ZendShellState extends State<ZendShell> {
   int _tabIndex = 0;
   Timer? _bannerTimer;
+  // Tracks the last notification ID so re-arrival of a new request
+  // forces the banner widget to rebuild and replay the slide-in animation.
+  String? _lastBannerRequestId;
 
   @override
   void initState() {
@@ -91,10 +94,18 @@ class _ZendShellState extends State<ZendShell> {
 
     // Start auto-dismiss timer when a new notification arrives
     if (pending != null) {
-      _bannerTimer?.cancel();
-      _bannerTimer = Timer(const Duration(seconds: 6), () {
-        if (mounted) model.clearPendingPaymentRequest();
-      });
+      // Only reset the timer when it's a genuinely new request — avoids
+      // restarting the countdown on every rebuild triggered by other state changes.
+      if (pending.requestId != _lastBannerRequestId) {
+        _lastBannerRequestId = pending.requestId;
+        _bannerTimer?.cancel();
+        // 12 s gives users enough time to notice and act.
+        _bannerTimer = Timer(const Duration(seconds: 12), () {
+          if (mounted) model.clearPendingPaymentRequest();
+        });
+      }
+    } else {
+      _lastBannerRequestId = null;
     }
 
     final pages = <Widget>[
@@ -123,6 +134,8 @@ class _ZendShellState extends State<ZendShell> {
               left: 0,
               right: 0,
               child: _PaymentRequestBanner(
+                // Key on requestId so a new request always replays the animation
+                key: ValueKey(pending.requestId),
                 notification: pending,
                 onPay: () => _payFromBanner(context, model, pending),
                 onDismiss: () => _dismissBanner(model),
@@ -152,37 +165,45 @@ class ZendBottomBar extends StatelessWidget {
     final bgColor = onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D);
     final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
 
-    return Container(
-      height: 64,
-      decoration: BoxDecoration(
-        color: bgColor,
-        border: Border(top: BorderSide(color: borderColor)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _BottomNavIcon(
-              icon: Icons.account_balance_wallet_outlined,
-              active: currentIndex == 0,
-              onTap: () => onChanged(0),
-              onDeepBg: onSendTab,
+    // Use SafeArea-driven height so the bar sits above the system nav gesture
+    // area on all devices — both gesture-nav and 3-button-nav, with or without
+    // the system nav bar visible.
+    return ColoredBox(
+      color: bgColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(height: 1, color: borderColor),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _BottomNavIcon(
+                    icon: Icons.account_balance_wallet_outlined,
+                    active: currentIndex == 0,
+                    onTap: () => onChanged(0),
+                    onDeepBg: onSendTab,
+                  ),
+                  _BottomNavIcon(
+                    icon: Icons.attach_money,
+                    active: currentIndex == 1,
+                    onTap: () => onChanged(1),
+                    onDeepBg: onSendTab,
+                  ),
+                  _BottomNavIcon(
+                    icon: Icons.access_time,
+                    active: currentIndex == 2,
+                    onTap: () => onChanged(2),
+                    onDeepBg: onSendTab,
+                  ),
+                ],
+              ),
             ),
-            _BottomNavIcon(
-              icon: Icons.attach_money,
-              active: currentIndex == 1,
-              onTap: () => onChanged(1),
-              onDeepBg: onSendTab,
-            ),
-            _BottomNavIcon(
-              icon: Icons.access_time,
-              active: currentIndex == 2,
-              onTap: () => onChanged(2),
-              onDeepBg: onSendTab,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -234,6 +255,7 @@ class _BottomNavIcon extends StatelessWidget {
 
 class _PaymentRequestBanner extends StatefulWidget {
   const _PaymentRequestBanner({
+    super.key,
     required this.notification,
     required this.onPay,
     required this.onDismiss,
