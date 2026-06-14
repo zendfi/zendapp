@@ -574,6 +574,7 @@ class _MissionRoomState extends State<MissionRoom> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (_) => _EmojiPickerSheet(
         onEmojiTap: (emoji) {
           Navigator.of(context).pop();

@@ -44,6 +44,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => SavingsDepositSheet(
         pocketId: _pocket.id,
@@ -58,6 +59,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => SavingsWithdrawSheet(
         pocketId: _pocket.id,

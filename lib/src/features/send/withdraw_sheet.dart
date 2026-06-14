@@ -86,8 +86,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return AnimatedContainer(
       duration: _sheetResize,

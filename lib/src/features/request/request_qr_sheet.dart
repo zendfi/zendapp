@@ -23,6 +23,7 @@ Future<void> showRequestQrSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => RequestQrSheet(request: request),
   );
@@ -122,8 +123,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
       height: screenHeight * 0.88,

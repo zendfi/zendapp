@@ -20,6 +20,7 @@ Future<void> showContributeSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => ContributeSheet(pool: pool),
   );
@@ -242,7 +243,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = mq.size.height;
 
     return PopScope(
       canPop: _stage != _ContributeStage.processing,

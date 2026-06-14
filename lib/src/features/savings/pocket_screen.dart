@@ -83,6 +83,7 @@ class _PocketScreenState extends State<PocketScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => SavingsDepositSheet(
         pocketId: pocketId,
@@ -97,6 +98,7 @@ class _PocketScreenState extends State<PocketScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => SavingsWithdrawSheet(
         pocketId: pocket.id,
@@ -114,6 +116,7 @@ class _PocketScreenState extends State<PocketScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const GoalCreationSheet(),
     );
@@ -127,6 +130,7 @@ class _PocketScreenState extends State<PocketScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => LockCreationSheet(freePocketBalance: freePocket.balanceUsd),
     );

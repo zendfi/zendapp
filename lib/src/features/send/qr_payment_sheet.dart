@@ -27,6 +27,7 @@ Future<void> showQrPaymentSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
@@ -45,6 +46,7 @@ Future<void> showQrPaymentSheetFromNavigator(
     context: navigator.context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
@@ -421,7 +423,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = mq.size.height;
 
     return PopScope(
       canPop: _stage != QrPayStage.processing,

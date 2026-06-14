@@ -485,11 +485,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    // On edge-to-edge devices (Android 15+ / Flutter 3.22+), size.height
-    // includes the system navbar. Subtract viewPadding.bottom so the sheet
-    // never extends behind it.
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: _stage != SendStage.processing,

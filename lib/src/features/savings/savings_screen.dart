@@ -60,6 +60,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const SavingsDepositSheet(),
     );
@@ -73,6 +74,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => SavingsWithdrawSheet(position: position),
     );

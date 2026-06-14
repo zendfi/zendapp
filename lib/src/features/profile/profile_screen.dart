@@ -389,6 +389,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     final choice = await showModalBottomSheet<String>(
       context: context,
       useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final zt = ZendTheme.of(ctx);

@@ -256,8 +256,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: _stage != _WithdrawStage.processing,

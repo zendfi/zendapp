@@ -667,11 +667,32 @@ class WalletService {
   static const _pinLengthKey = 'zend_pin_length';
 
   /// Returns true if the device has a 4-digit PIN that needs upgrading to 6 digits.
-  /// Also returns true if the pin_length key is absent (legacy devices).
+  ///
+  /// A migration is only needed when:
+  ///   1. The PIN length key is explicitly '4', OR
+  ///   2. The PIN length key is absent AND the KDF version is legacy (not '4').
+  ///
+  /// New accounts always have kdf_version='4' written by [setupPinAndBackup].
+  /// Any device with the current KDF version is either already migrated or was
+  /// created after the migration system launched — either way, no upgrade needed.
   Future<bool> needsMigration() async {
-    final stored = await _secureStorage.read(key: _pinLengthKey);
-    // Only skip migration if explicitly stored as '6'
-    return stored != '6';
+    final pinLength = await _secureStorage.read(key: _pinLengthKey);
+    final kdfVersion = await _secureStorage.read(key: _kdfVersionKey);
+
+    // If pin_length is explicitly '6', never needs migration.
+    if (pinLength == '6') return false;
+
+    // If the KDF is already current (v4 = Argon2id t=1), the account was either
+    // created with the new system or already migrated — no PIN upgrade needed.
+    // We write the pin_length key here as a side-effect so future checks are fast.
+    if (kdfVersion == '4') {
+      // Backfill the pin_length key so we skip this check next time.
+      unawaited(_secureStorage.write(key: _pinLengthKey, value: '6'));
+      return false;
+    }
+
+    // pin_length absent + KDF not v4 → legacy account that needs 4→6 digit upgrade.
+    return true;
   }
 
   /// Marks the PIN migration as complete by storing pin_length=6.

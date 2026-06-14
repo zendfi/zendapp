@@ -18,6 +18,7 @@ Future<void> showCryptoSendSheet(BuildContext context,
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
@@ -335,8 +336,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final screenHeight = mq.size.height - mq.viewPadding.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: _stage != CryptoSendStage.processing,
