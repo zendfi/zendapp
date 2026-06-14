@@ -453,6 +453,9 @@ class _OutboundRequestSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    // Respect the system bottom inset so the sheet never hides behind
+    // the gesture bar or system navigation bar.
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     final statusColor = switch (request.status) {
       'paid' => ZendColors.positive,
@@ -467,7 +470,7 @@ class _OutboundRequestSheet extends StatelessWidget {
     };
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
       decoration: BoxDecoration(
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),
@@ -737,9 +740,10 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final intent = widget.intent;
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
       decoration: BoxDecoration(
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),

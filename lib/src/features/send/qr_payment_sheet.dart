@@ -389,6 +389,8 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
       unawaited(model.fetchBalance());
       unawaited(model.fetchHistory());
+      // Re-fetch payment requests so inbound items update from 'pending' → 'paid'
+      unawaited(model.fetchInboundPaymentRequests());
 
       setState(() => _stage = QrPayStage.success);
       HapticFeedback.mediumImpact();

@@ -177,7 +177,7 @@ class ZendBottomBar extends StatelessWidget {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(top: 10, bottom: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -233,8 +233,8 @@ class _BottomNavIcon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: active ? activeColor : inactiveColor, size: 24),
-            const SizedBox(height: 4),
+            Icon(icon, color: active ? activeColor : inactiveColor, size: 26),
+            const SizedBox(height: 5),
             AnimatedOpacity(
               opacity: active ? 1 : 0,
               duration: const Duration(milliseconds: 160),
@@ -254,12 +254,13 @@ class _BottomNavIcon extends StatelessWidget {
 // ── In-app payment request banner ────────────────────────────────────────────
 
 class _PaymentRequestBanner extends StatefulWidget {
+  // ignore: use_super_parameters
   const _PaymentRequestBanner({
-    super.key,
+    Key? key,
     required this.notification,
     required this.onPay,
     required this.onDismiss,
-  });
+  }) : super(key: key);
 
   final PaymentRequestNotification notification;
   final VoidCallback onPay;
