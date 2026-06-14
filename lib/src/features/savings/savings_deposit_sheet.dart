@@ -238,7 +238,8 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mq = MediaQuery.of(context);
+    final screenHeight = mq.size.height - mq.viewPadding.bottom;
 
     return PopScope(
       canPop: _stage != _DepositStage.processing,

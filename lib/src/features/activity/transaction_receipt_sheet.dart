@@ -75,7 +75,8 @@ class _ReceiptSheet extends StatelessWidget {
     final amountStr = '\$${amountDouble.toStringAsFixed(2)}';
     final directionLabel = isSent ? 'Sent to' : 'Received from';
 
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mq = MediaQuery.of(context);
+    final screenHeight = mq.size.height - mq.viewPadding.bottom;
 
     return Container(
       // Full screen height
@@ -363,7 +364,8 @@ class _BankSendReceiptSheet extends StatelessWidget {
     };
 
     final railLabel = _railLabel(rail, paymentRail);
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mq = MediaQuery.of(context);
+    final screenHeight = mq.size.height - mq.viewPadding.bottom;
 
     return Container(
       // Full screen height

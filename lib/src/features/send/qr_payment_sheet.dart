@@ -420,7 +420,8 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mq = MediaQuery.of(context);
+    final screenHeight = mq.size.height - mq.viewPadding.bottom;
 
     return PopScope(
       canPop: _stage != QrPayStage.processing,
