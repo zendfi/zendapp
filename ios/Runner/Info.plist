@@ -76,5 +76,9 @@
 	<string>Zend! uses your microphone to record voice notes in pool chats</string>
 	<key>NFCReaderUsageDescription</key>
 	<string>Zend! writes your payment link to NFC tags so customers can tap to pay</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Zend uses Bluetooth to discover nearby Zend users so you can send and receive money instantly via Drop.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Zend uses Bluetooth to broadcast your identity to nearby Zend users so they can send you money via Drop.</string>
 </dict>
 </plist>

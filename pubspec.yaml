@@ -109,6 +109,9 @@ dependencies:
   # NFC tag reading and writing
   nfc_manager: ^3.3.0
 
+  # BLE scanning and advertising for Zend Drop proximity transfers
+  flutter_blue_plus: 1.35.3
+
   # Network image caching (profile photos)
   cached_network_image: ^3.4.1
 

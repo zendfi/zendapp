@@ -4,6 +4,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
+import 'create_pool_drawer.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'pool_info_card.dart';
@@ -66,6 +67,39 @@ class PoolListDrawer extends StatelessWidget {
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
+            ),
+          ),
+          const SizedBox(height: ZendSpacing.md),
+          GestureDetector(
+            onTap: () => showCreatePoolDrawer(context, targetAmount: 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: ZendSpacing.md,
+                vertical: ZendSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: zt.accentPop.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(ZendRadii.md),
+                border: Border.all(
+                  color: zt.accentBright.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, size: 18, color: zt.accentBright),
+                  const SizedBox(width: ZendSpacing.xs),
+                  Text(
+                    'Create Pool',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: zt.accentBright,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: ZendSpacing.lg),

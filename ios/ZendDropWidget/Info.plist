@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist for ZendDropWidget Extension
+
+  NOTE: This plist must be associated with the "ZendDropWidget" Widget Extension
+  target in Xcode. Add the target manually:
+    1. File → New → Target → Widget Extension, name it "ZendDropWidget"
+    2. Set Bundle Identifier: $(PRODUCT_BUNDLE_IDENTIFIER).ZendDropWidget
+    3. Point source files at ios/ZendDropWidget/
+    4. Set "NSExtensionPrincipalClass" below to match your module name if it
+       differs from "ZendDropWidget".
+
+  Requirements: 7.1
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>Zend Drop</string>
+
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+
+    <key>CFBundleName</key>
+    <string>ZendDropWidget</string>
+
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>$(FLUTTER_BUILD_NAME)</string>
+
+    <key>CFBundleVersion</key>
+    <string>$(FLUTTER_BUILD_NUMBER)</string>
+
+    <!-- Widget extension principal class — must match the @main struct name -->
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
+
+        <key>NSExtensionPrincipalClass</key>
+        <string>$(PRODUCT_MODULE_NAME).ZendDropWidget</string>
+    </dict>
+
+    <!--
+      Bluetooth usage descriptions are inherited from the host app (Runner/Info.plist).
+      If the Widget Extension ever accesses CoreBluetooth directly (rather than via
+      App Groups / shared containers), add them here too.
+    -->
+</dict>
+</plist>

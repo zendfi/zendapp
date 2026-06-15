@@ -7,6 +7,7 @@ import '../features/pools/pool.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 import '../models/crypto_send_models.dart';
+import '../models/drop_models.dart';
 import '../models/email_intent.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
@@ -1384,6 +1385,65 @@ class ApiClient {
         // Explicitly clear Authorization header — this endpoint uses recovery_token in body
         options: Options(headers: {'Authorization': null}),
       );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Drop ────────────────────────────────────────────────────────────────────
+
+  Future<BeaconGenerateResponse> generateBeacon() async {
+    try {
+      final response = await _dio.post('/api/zend/drop/beacon/generate');
+      return BeaconGenerateResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<BeaconPreviewResponse> previewBeacon(String nonce) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/drop/beacon/preview',
+        queryParameters: {'nonce': nonce},
+      );
+      return BeaconPreviewResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PrepareTransferResponse> prepareDropTransfer({
+    required double amountUsdc,
+    required String receiverZendtag,
+  }) async {
+    return prepareTransfer(
+      recipientZendtag: receiverZendtag,
+      amountUsdc: amountUsdc,
+    );
+  }
+
+  Future<DropExecuteResponse> executeDropTransfer({
+    required GattPayload beacon,
+    required double amountUsdc,
+    required String partiallySignedTxB64,
+    String? note,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/drop/execute',
+        data: <String, dynamic>{
+          'beacon_payload': beacon.toJson(),
+          'amount_usdc': amountUsdc,
+          'partially_signed_tx': partiallySignedTxB64,
+          'note': note,
+        }..removeWhere((_, v) => v == null),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return DropExecuteResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
     }

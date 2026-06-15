@@ -19,6 +19,8 @@ enum SseEventType {
   poolStatusChanged,
   // ── Payment request delivery ──
   paymentRequest,
+  // ── Drop ──
+  dropConfirmed,
   unknown,
 }
 
@@ -41,6 +43,7 @@ class SseEvent {
       'pool_reaction_removed' => SseEventType.poolReactionRemoved,
       'pool_status_changed' => SseEventType.poolStatusChanged,
       'payment_request' => SseEventType.paymentRequest,
+      'drop_confirmed' => SseEventType.dropConfirmed,
       _ => SseEventType.unknown,
     };
 

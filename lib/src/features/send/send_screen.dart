@@ -7,7 +7,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../navigation/zend_routes.dart';
-import '../pools/create_pool_drawer.dart';
+import '../drop/drop_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
 import 'qr_scanner_screen.dart';
@@ -361,11 +361,16 @@ class _SendScreenState extends State<SendScreen>
                               Row(
                                 children: [
                                   Expanded(
-                                    child: _GlassPill(
-                                      label: 'Pool',
-                                      onTap: _usdAmount > 0
-                                          ? () => showCreatePoolDrawer(context, targetAmount: _usdAmount)
-                                          : () {},
+                                    child: Opacity(
+                                      opacity: (_usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance)
+                                          ? 1.0
+                                          : 0.4,
+                                      child: _GlassPill(
+                                        label: 'Drop',
+                                        onTap: (_usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance)
+                                            ? () => showDropSheet(context, amount: _usdAmount)
+                                            : () {},
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
