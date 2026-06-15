@@ -214,6 +214,13 @@ class DropAdvertiserService : Service() {
             .setIncludeTxPowerLevel(false)
             .build()
 
+        // Scan response carries the GATT service UUID so the sender's
+        // service-UUID-based scan filter can match us reliably.
+        val scanResponse = AdvertiseData.Builder()
+            .addServiceUuid(android.os.ParcelUuid(GATT_SERVICE_UUID))
+            .setIncludeDeviceName(false)
+            .build()
+
         advertiseCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                 isAdvertising = true
@@ -226,7 +233,7 @@ class DropAdvertiserService : Service() {
             }
         }
 
-        bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
+        bluetoothLeAdvertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
     }
 
     private fun stopBleAdvertising() {

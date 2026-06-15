@@ -127,6 +127,9 @@ class BleScannerService {
     FlutterBluePlus.startScan(
       androidScanMode: AndroidScanMode.lowLatency,
       continuousUpdates: true,
+      // Filter on the Zend Drop GATT service UUID so we only get our beacons.
+      // This is more reliable than manufacturer data filtering across platforms.
+      withServices: [Guid(_kGattServiceUuid)],
     );
 
     _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
@@ -153,12 +156,14 @@ class BleScannerService {
 
   void _onScanResults(List<ScanResult> results) {
     for (final result in results) {
-      // Only process advertisements that contain a valid Zend AppID + nonce.
-      final nonce = _extractNonce(result.advertisementData);
-      if (nonce == null) continue;
-
       final deviceId = result.device.remoteId.str;
       final rssi = result.rssi;
+
+      // Any device advertising our GATT service UUID is a Zend Drop beacon.
+      // We don't reconstruct the nonce from advertisement bytes — we use a
+      // placeholder deviceId-based key and resolve the real nonce via GATT.
+      final isZendBeacon = _isZendDropBeacon(result.advertisementData);
+      if (!isZendBeacon) continue;
 
       final tracker =
           _trackers.putIfAbsent(deviceId, () => _RssiTracker(deviceId));
@@ -166,9 +171,24 @@ class BleScannerService {
 
       if (thresholdMet) {
         tracker.markGattInFlight();
-        _onThresholdMet(result.device, deviceId, nonce, rssi);
+        // Use deviceId as placeholder nonce key until GATT resolves real nonce
+        _onThresholdMet(result.device, deviceId, deviceId, rssi);
       }
     }
+  }
+
+  /// Returns true if the advertisement is from a Zend Drop beacon.
+  /// Matches on GATT service UUID (most reliable cross-platform) OR
+  /// on the Zend manufacturer AppID bytes as fallback.
+  bool _isZendDropBeacon(AdvertisementData adv) {
+    // Primary: service UUID in advertisement
+    for (final uuid in adv.serviceUuids) {
+      if (uuid.toString().toLowerCase() == _kGattServiceUuid.toLowerCase()) {
+        return true;
+      }
+    }
+    // Fallback: manufacturer data AppID check
+    return _extractNonce(adv) != null;
   }
 
   /// Called once per device when the RSSI gate is satisfied.
@@ -179,42 +199,33 @@ class BleScannerService {
   void _onThresholdMet(
     BluetoothDevice device,
     String deviceId,
-    String nonce,
+    String noncePlaceholder,
     int rssi,
   ) {
     // Placeholder entry gives the UI something to display immediately.
     _upsert(DiscoveredReceiver(
       deviceId: deviceId,
-      nonce: nonce,
+      nonce: noncePlaceholder,
       rssi: rssi,
     ));
 
-    // Run preview fetch and GATT in parallel; errors are handled independently.
-    Future.wait([
-      _fetchPreview(deviceId, nonce),
-      _readGatt(device, deviceId, nonce),
-    ]).catchError((_) {
-      // Individual methods handle their own errors; this suppresses the
-      // unhandled-rejection warning from Future.wait.
-      return <void>[];
-    });
+    // GATT connection is the source of truth — preview fires after we have
+    // the real nonce from the GATT payload.
+    _readGatt(device, deviceId).catchError((_) {});
   }
-
-  // ── Preview API call ───────────────────────────────────────────────────────
 
   /// Fires `GET /drop/beacon/preview` and updates the discovered entry with the
   /// unconfirmed identity hint (Requirement 2.4, 11.6).
   ///
-  /// A 404 from the server means the nonce is unknown or expired — no hint is
-  /// shown, but GATT continues independently.
-  Future<void> _fetchPreview(String deviceId, String nonce) async {
+  /// Called after GATT resolves the real nonce from the payload.
+  Future<void> _fetchPreviewWithNonce(String deviceId, String nonce) async {
     try {
       final preview = await _apiClient.previewBeacon(nonce);
       final existing = _discovered[deviceId];
-      if (existing == null) return; // Device was removed while awaiting.
+      if (existing == null) return;
       _upsert(existing.copyWith(preview: preview));
     } catch (_) {
-      // 404 or network error — silently ignore; GATT is still in flight.
+      // 404 or network error — silently ignore
     }
   }
 
@@ -226,7 +237,6 @@ class BleScannerService {
   Future<void> _readGatt(
     BluetoothDevice device,
     String deviceId,
-    String nonce,
   ) async {
     try {
       await device.connect(timeout: _kGattTimeout);
@@ -270,16 +280,9 @@ class BleScannerService {
 
       final existing = _discovered[deviceId];
 
-      // Security check: if the preview already resolved, validate that the
-      // Zendtag from the GATT payload matches (Requirement 11.8).
-      if (existing?.preview != null &&
-          existing!.preview!.zendtag != payload.zendtag) {
-        // Zendtag mismatch — abort the flow, remove from discovered list.
-        _discovered.remove(deviceId);
-        _trackers[deviceId]?.reset();
-        _emit();
-        return;
-      }
+      // Fire the preview fetch NOW that we have the real nonce from GATT.
+      // This happens in parallel with promoting the entry to confirmed.
+      unawaited(_fetchPreviewWithNonce(deviceId, payload.nonce));
 
       // Promote to confirmed state.
       _upsert(DiscoveredReceiver(

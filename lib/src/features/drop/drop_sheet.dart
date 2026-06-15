@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/drop_models.dart';
+import '../../services/ble_advertiser_service.dart';
 import '../../services/ble_scanner_service.dart';
 import '../../services/drop_service.dart';
 import '../../services/signing_policy_service.dart';
@@ -65,6 +66,7 @@ class _DropSheetState extends State<DropSheet>
   DropStage _stage = DropStage.scanning;
 
   late final BleScannerService _bleScannerService;
+  late final BleAdvertiserService _bleAdvertiserService;
   late final DropService _dropService;
 
   StreamSubscription<List<DiscoveredReceiver>>? _scanSub;
@@ -87,7 +89,9 @@ class _DropSheetState extends State<DropSheet>
     _bleScannerService = BleScannerService(
       apiClient: model.walletService.apiClient,
     );
+    _bleAdvertiserService = BleAdvertiserService();
     _startScanning();
+    _startAdvertising(); // Also advertise so THIS device is discoverable
   }
 
   @override
@@ -95,6 +99,8 @@ class _DropSheetState extends State<DropSheet>
     _scanSub?.cancel();
     _bleScannerService.stopScan();
     _bleScannerService.dispose();
+    _bleAdvertiserService.stopAdvertising();
+    _bleAdvertiserService.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -104,6 +110,27 @@ class _DropSheetState extends State<DropSheet>
   void _startScanning() {
     _bleScannerService.startScan();
     _scanSub = _bleScannerService.discoveredReceivers.listen(_onReceivers);
+  }
+
+  /// Generate a beacon and start advertising so this device is discoverable
+  /// by other nearby Zend users who have Drop open.
+  Future<void> _startAdvertising() async {
+    try {
+      final beacon = await _dropService.generateBeacon();
+      if (!mounted) return;
+      final payload = GattPayload(
+        zendtag: beacon.zendtag,
+        nonce: beacon.nonce,
+        timestamp: beacon.timestamp,
+        expiresAt: beacon.expiresAt,
+        signature: beacon.signature,
+      );
+      await _bleAdvertiserService.startAdvertising(payload);
+      // Refresh beacon before it expires
+      _bleAdvertiserService.setRefreshCallback(() => _startAdvertising());
+    } catch (_) {
+      // Non-fatal — device will just act as sender-only if beacon generation fails
+    }
   }
 
   void _onReceivers(List<DiscoveredReceiver> receivers) {
@@ -160,6 +187,8 @@ class _DropSheetState extends State<DropSheet>
 
   Future<void> _executeTransfer() async {
     _goTo(DropStage.processing);
+    // Stop advertising when we commit to sending — we're now the sender
+    unawaited(_bleAdvertiserService.stopAdvertising());
     try {
       final model = ZendScope.of(context);
       final policy = SigningPolicyService();
@@ -272,6 +301,7 @@ class _DropSheetState extends State<DropSheet>
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           _bleScannerService.stopScan();
+          _bleAdvertiserService.stopAdvertising();
           _noteController.clear();
         }
       },
