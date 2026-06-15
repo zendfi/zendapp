@@ -147,7 +147,7 @@ class DropAdvertiserService : Service() {
         }
         val signature = payload["signature"] as? String ?: return
 
-        val adPacket = buildAdvertisementPacket(nonce, timestamp, signature)
+        val adPacket = buildAdvertisementPacket(nonce)
         val jsonBytes = JSONObject(payload as Map<*, *>).toString().toByteArray(Charsets.UTF_8)
 
         startGattServer(jsonBytes)
@@ -165,11 +165,21 @@ class DropAdvertiserService : Service() {
     // -------------------------------------------------------------------------
 
     /**
-     * Builds the 28-byte manufacturer-specific advertisement payload:
-     *   [AppID(4)] [Nonce bytes 0-7(8)] [Timestamp big-endian uint32(4)] [SigHash bytes 0-11(12)]
+     * Builds a slim 12-byte manufacturer-specific payload for the primary advertisement:
+     *   [AppID(4)] [Nonce bytes 0-7(8)]
+     *
+     * The primary advert must stay under the BLE 4.x 31-byte PDU limit:
+     *   - Flags field:              3 bytes
+     *   - Service UUID (16-bit):    4 bytes  (we use the lower 16-bits of our UUID as a hint)
+     *   - Manufacturer data header: 4 bytes  (length + type + company ID)
+     *   - Manufacturer payload:    12 bytes
+     *   Total: 23 bytes — safely under the 31-byte limit
+     *
+     * The full 28-byte payload (including timestamp + sig hash) is NOT needed
+     * in the advertisement — the scanner gets the full beacon from GATT.
      */
-    private fun buildAdvertisementPacket(nonce: String, timestamp: Long, signature: String): ByteArray {
-        val buf = ByteBuffer.allocate(28).order(ByteOrder.BIG_ENDIAN)
+    private fun buildAdvertisementPacket(nonce: String): ByteArray {
+        val buf = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN)
 
         // Bytes 0–3: AppID "ZEND"
         buf.put(ZEND_APP_ID)
@@ -178,13 +188,6 @@ class DropAdvertiserService : Service() {
         val nonceHex = nonce.replace("-", "")
         val nonceBytes = hexToBytes(nonceHex.take(16)) // 16 hex chars = 8 bytes
         buf.put(nonceBytes)
-
-        // Bytes 12–15: Unix timestamp as big-endian uint32
-        buf.putInt(timestamp.toInt())
-
-        // Bytes 16–27: first 12 bytes of sig hash (24 hex chars = 12 bytes)
-        val sigBytes = hexToBytes(signature.take(24))
-        buf.put(sigBytes)
 
         return buf.array()
     }
@@ -208,17 +211,14 @@ class DropAdvertiserService : Service() {
             .setTimeout(0)        // advertise indefinitely
             .build()
 
+        // Primary advert: service UUID (required for scan filter) + slim manufacturer data (12 bytes).
+        // Service UUID in the PRIMARY advert is critical — Android hardware scan filters
+        // only match service UUIDs in the primary packet, not in the scan response.
         val data = AdvertiseData.Builder()
+            .addServiceUuid(android.os.ParcelUuid(GATT_SERVICE_UUID))
             .addManufacturerData(MANUFACTURER_ID, adPacket)
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
-            .build()
-
-        // Scan response carries the GATT service UUID so the sender's
-        // service-UUID-based scan filter can match us reliably.
-        val scanResponse = AdvertiseData.Builder()
-            .addServiceUuid(android.os.ParcelUuid(GATT_SERVICE_UUID))
-            .setIncludeDeviceName(false)
             .build()
 
         advertiseCallback = object : AdvertiseCallback() {
@@ -228,12 +228,18 @@ class DropAdvertiserService : Service() {
 
             override fun onStartFailure(errorCode: Int) {
                 isAdvertising = false
-                // Surface failure via notification update
-                updateNotification("Drop paused — could not start BLE advertising (error $errorCode).")
+                val reason = when (errorCode) {
+                    ADVERTISE_FAILED_DATA_TOO_LARGE -> "data too large"
+                    ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "too many advertisers"
+                    ADVERTISE_FAILED_ALREADY_STARTED -> "already started"
+                    ADVERTISE_FAILED_INTERNAL_ERROR -> "internal error"
+                    else -> "error $errorCode"
+                }
+                updateNotification("Drop paused — BLE advertising failed ($reason). Tap to retry.")
             }
         }
 
-        bluetoothLeAdvertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
+        bluetoothLeAdvertiser?.startAdvertising(settings, data, advertiseCallback)
     }
 
     private fun stopBleAdvertising() {

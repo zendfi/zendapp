@@ -127,9 +127,9 @@ class BleScannerService {
     FlutterBluePlus.startScan(
       androidScanMode: AndroidScanMode.lowLatency,
       continuousUpdates: true,
-      // Filter on the Zend Drop GATT service UUID so we only get our beacons.
-      // This is more reliable than manufacturer data filtering across platforms.
-      withServices: [Guid(_kGattServiceUuid)],
+      // No withServices filter — Android hardware BLE scan filters can be
+      // unreliable with full 128-bit UUIDs across chipsets. We filter in
+      // software via _isZendDropBeacon() instead.
     );
 
     _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
@@ -211,7 +211,10 @@ class BleScannerService {
 
     // GATT connection is the source of truth — preview fires after we have
     // the real nonce from the GATT payload.
-    _readGatt(device, deviceId).catchError((_) {});
+    // Note: _readGatt handles its own errors and retries via _handleGattFailure.
+    _readGatt(device, deviceId).catchError((e) {
+      // Suppress top-level — errors handled inside _readGatt
+    });
   }
 
   /// Fires `GET /drop/beacon/preview` and updates the discovered entry with the
@@ -239,8 +242,25 @@ class BleScannerService {
     String deviceId,
   ) async {
     try {
-      await device.connect(timeout: _kGattTimeout);
-      final services = await device.discoverServices();
+      // Disconnect first if already connected to avoid state machine issues
+      if (device.isConnected) {
+        await device.disconnect();
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      await device.connect(
+        timeout: _kGattTimeout,
+        autoConnect: false, // autoConnect=true causes indefinite hangs on Android
+      );
+
+      List<BluetoothService> services;
+      try {
+        services = await device.discoverServices()
+            .timeout(_kGattTimeout, onTimeout: () => throw TimeoutException('discoverServices'));
+      } on TimeoutException {
+        _handleGattFailure(device, deviceId);
+        return;
+      }
 
       BluetoothCharacteristic? targetChar;
       outer:

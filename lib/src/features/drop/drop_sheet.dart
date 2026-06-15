@@ -173,6 +173,8 @@ class _DropSheetState extends State<DropSheet>
 
   void _onReceiverConfirmed(DiscoveredReceiver receiver) {
     setState(() => _confirmedReceiver = receiver);
+    // Stop advertising — we're now acting as sender for this Drop
+    unawaited(_bleAdvertiserService.stopAdvertising());
 
     if (widget.amount <= 50) {
       _goTo(DropStage.countdown);
@@ -245,6 +247,8 @@ class _DropSheetState extends State<DropSheet>
     });
     _bleScannerService.stopScan();
     _bleScannerService.startScan();
+    // Resume advertising for the next attempt
+    unawaited(_startAdvertising());
     _goTo(DropStage.scanning);
   }
 
