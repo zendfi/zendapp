@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../features/drop/drop_debug_log.dart';
 import '../models/drop_models.dart';
 import 'api_client.dart';
 
@@ -123,21 +124,34 @@ class BleScannerService {
     _scanning = true;
     _discovered.clear();
     _trackers.clear();
+    DropDebugLog.i.add('SCAN', 'Starting BLE scan (low-latency, software filter)');
 
-    FlutterBluePlus.startScan(
-      androidScanMode: AndroidScanMode.lowLatency,
-      continuousUpdates: true,
-      // No withServices filter — Android hardware BLE scan filters can be
-      // unreliable with full 128-bit UUIDs across chipsets. We filter in
-      // software via _isZendDropBeacon() instead.
-    );
-
-    _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
+    try {
+      FlutterBluePlus.startScan(
+        androidScanMode: AndroidScanMode.lowLatency,
+        continuousUpdates: true,
+      );
+      _scanSub = FlutterBluePlus.scanResults.listen(
+        _onScanResults,
+        onError: (e) {
+          DropDebugLog.i.add('SCAN', 'Scan stream error: $e', level: DropLogLevel.error);
+          _scanning = false;
+          _scanSub?.cancel();
+          _scanSub = null;
+        },
+        cancelOnError: false,
+      );
+      DropDebugLog.i.add('SCAN', 'Scan started OK', level: DropLogLevel.ok);
+    } catch (e) {
+      DropDebugLog.i.add('SCAN', 'startScan threw: $e', level: DropLogLevel.error);
+      _scanning = false;
+    }
   }
 
   /// Stops the BLE scan and clears all tracked state.
   void stopScan() {
     if (!_scanning) return;
+    DropDebugLog.i.add('SCAN', 'Stopping BLE scan');
     _scanning = false;
     _scanSub?.cancel();
     _scanSub = null;
@@ -159,19 +173,22 @@ class BleScannerService {
       final deviceId = result.device.remoteId.str;
       final rssi = result.rssi;
 
-      // Any device advertising our GATT service UUID is a Zend Drop beacon.
-      // We don't reconstruct the nonce from advertisement bytes — we use a
-      // placeholder deviceId-based key and resolve the real nonce via GATT.
       final isZendBeacon = _isZendDropBeacon(result.advertisementData);
       if (!isZendBeacon) continue;
+
+      // Log every Zend beacon sighting with RSSI
+      DropDebugLog.i.add(
+        'SCAN',
+        'Zend beacon seen: ${deviceId.substring(deviceId.length > 5 ? deviceId.length - 5 : 0)} RSSI=$rssi',
+      );
 
       final tracker =
           _trackers.putIfAbsent(deviceId, () => _RssiTracker(deviceId));
       final thresholdMet = tracker.record(rssi);
 
       if (thresholdMet) {
+        DropDebugLog.i.add('SCAN', 'RSSI threshold met for $deviceId — initiating GATT', level: DropLogLevel.ok);
         tracker.markGattInFlight();
-        // Use deviceId as placeholder nonce key until GATT resolves real nonce
         _onThresholdMet(result.device, deviceId, deviceId, rssi);
       }
     }
@@ -222,13 +239,15 @@ class BleScannerService {
   ///
   /// Called after GATT resolves the real nonce from the payload.
   Future<void> _fetchPreviewWithNonce(String deviceId, String nonce) async {
+    DropDebugLog.i.add('PREVIEW', 'Fetching preview for nonce=${nonce.substring(0, 8)}…');
     try {
       final preview = await _apiClient.previewBeacon(nonce);
       final existing = _discovered[deviceId];
       if (existing == null) return;
+      DropDebugLog.i.add('PREVIEW', 'Got preview: @${preview.zendtag}', level: DropLogLevel.ok);
       _upsert(existing.copyWith(preview: preview));
-    } catch (_) {
-      // 404 or network error — silently ignore
+    } catch (e) {
+      DropDebugLog.i.add('PREVIEW', 'Preview failed: $e', level: DropLogLevel.warn);
     }
   }
 
@@ -241,23 +260,29 @@ class BleScannerService {
     BluetoothDevice device,
     String deviceId,
   ) async {
+    final shortId = deviceId.length > 5 ? deviceId.substring(deviceId.length - 5) : deviceId;
+    DropDebugLog.i.add('GATT', 'Connecting to $shortId…');
     try {
-      // Disconnect first if already connected to avoid state machine issues
       if (device.isConnected) {
+        DropDebugLog.i.add('GATT', '$shortId already connected, disconnecting first');
         await device.disconnect();
         await Future.delayed(const Duration(milliseconds: 100));
       }
 
       await device.connect(
         timeout: _kGattTimeout,
-        autoConnect: false, // autoConnect=true causes indefinite hangs on Android
+        autoConnect: false,
       );
+      DropDebugLog.i.add('GATT', 'Connected to $shortId', level: DropLogLevel.ok);
 
       List<BluetoothService> services;
       try {
+        DropDebugLog.i.add('GATT', 'Discovering services on $shortId…');
         services = await device.discoverServices()
             .timeout(_kGattTimeout, onTimeout: () => throw TimeoutException('discoverServices'));
+        DropDebugLog.i.add('GATT', 'Found ${services.length} service(s) on $shortId');
       } on TimeoutException {
+        DropDebugLog.i.add('GATT', 'discoverServices timed out on $shortId', level: DropLogLevel.error);
         _handleGattFailure(device, deviceId);
         return;
       }
@@ -278,13 +303,33 @@ class BleScannerService {
       }
 
       if (targetChar == null) {
+        DropDebugLog.i.add('GATT', 'Target characteristic NOT found on $shortId — wrong device?', level: DropLogLevel.error);
         _handleGattFailure(device, deviceId);
         return;
       }
 
-      final List<int> value =
-          await targetChar.read().timeout(_kGattTimeout);
-      await device.disconnect();
+      DropDebugLog.i.add('GATT', 'Reading characteristic from $shortId…');
+      final List<int> value;
+      try {
+        value = await targetChar.read().timeout(
+          _kGattTimeout,
+          onTimeout: () => throw TimeoutException('characteristic read'),
+        );
+        DropDebugLog.i.add('GATT', 'Read ${value.length} bytes from $shortId', level: DropLogLevel.ok);
+      } on TimeoutException {
+        DropDebugLog.i.add('GATT', 'Characteristic read timed out on $shortId', level: DropLogLevel.error);
+        _handleGattFailure(device, deviceId);
+        return;
+      } catch (e) {
+        DropDebugLog.i.add('GATT', 'Characteristic read error on $shortId: $e', level: DropLogLevel.error);
+        _handleGattFailure(device, deviceId);
+        return;
+      }
+
+      try {
+        await device.disconnect();
+        DropDebugLog.i.add('GATT', 'Disconnected from $shortId');
+      } catch (_) {}
 
       // Parse the JSON payload from the characteristic value.
       final json = String.fromCharCodes(value);
@@ -293,7 +338,9 @@ class BleScannerService {
         payload = GattPayload.fromJson(
           jsonDecode(json) as Map<String, dynamic>,
         );
-      } catch (_) {
+        DropDebugLog.i.add('GATT', 'Parsed beacon: @${payload.zendtag} nonce=${payload.nonce.substring(0, 8)}…', level: DropLogLevel.ok);
+      } catch (e) {
+        DropDebugLog.i.add('GATT', 'JSON parse failed: $e  raw=${json.length > 60 ? json.substring(0, 60) : json}', level: DropLogLevel.error);
         _handleGattFailure(device, deviceId);
         return;
       }
@@ -313,7 +360,8 @@ class BleScannerService {
         preview: existing?.preview,
         isConfirmed: true,
       ));
-    } catch (_) {
+    } catch (e) {
+      DropDebugLog.i.add('GATT', 'Unhandled GATT error: $e', level: DropLogLevel.error);
       _handleGattFailure(device, deviceId);
     }
   }
@@ -323,6 +371,8 @@ class BleScannerService {
   /// Handles any GATT failure: disconnects if possible, resets the tracker,
   /// removes the placeholder entry, and re-emits (Requirement 2.8).
   void _handleGattFailure(BluetoothDevice device, String deviceId) {
+    final shortId = deviceId.length > 5 ? deviceId.substring(deviceId.length - 5) : deviceId;
+    DropDebugLog.i.add('GATT', 'Failure for $shortId — resetting tracker', level: DropLogLevel.warn);
     try {
       device.disconnect();
     } catch (_) {}

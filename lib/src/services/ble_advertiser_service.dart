@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import '../features/drop/drop_debug_log.dart';
 import '../models/drop_models.dart';
 
 /// Method channel for communication with the Android DropAdvertiserService.
@@ -27,6 +28,7 @@ class BleAdvertiserService {
   Future<void> startAdvertising(GattPayload payload) async {
     _currentPayload = payload;
     _isAdvertising = true;
+    DropDebugLog.i.add('ADV', 'Starting advertising for @${payload.zendtag} nonce=${payload.nonce.substring(0, 8)}…');
 
     if (Platform.isAndroid) {
       await _startAndroid(payload);
@@ -38,6 +40,8 @@ class BleAdvertiserService {
   }
 
   Future<void> stopAdvertising() async {
+    if (!_isAdvertising) return;
+    DropDebugLog.i.add('ADV', 'Stopping advertising');
     _isAdvertising = false;
     _refreshTimer?.cancel();
     _refreshTimer = null;
@@ -61,8 +65,9 @@ class BleAdvertiserService {
         'expires_at': payload.expiresAt,
         'signature': payload.signature,
       });
+      DropDebugLog.i.add('ADV', 'Android: MethodChannel startAdvertising OK', level: DropLogLevel.ok);
     } on PlatformException catch (e) {
-      // Log and rethrow so callers can handle permission errors etc.
+      DropDebugLog.i.add('ADV', 'Android: MethodChannel failed: ${e.message}', level: DropLogLevel.error);
       throw Exception('Failed to start Android BLE advertising: ${e.message}');
     }
   }
@@ -70,6 +75,7 @@ class BleAdvertiserService {
   Future<void> _stopAndroid() async {
     try {
       await _kDropChannel.invokeMethod('stopAdvertising');
+      DropDebugLog.i.add('ADV', 'Android: stopAdvertising OK');
     } on PlatformException catch (_) {
       // Best-effort stop
     }
@@ -90,7 +96,9 @@ class BleAdvertiserService {
         'expires_at': payload.expiresAt,
         'signature': payload.signature,
       });
+      DropDebugLog.i.add('ADV', 'iOS: MethodChannel startAdvertising OK', level: DropLogLevel.ok);
     } on PlatformException catch (e) {
+      DropDebugLog.i.add('ADV', 'iOS: MethodChannel failed: ${e.message}', level: DropLogLevel.error);
       throw Exception('Failed to start iOS BLE advertising: ${e.message}');
     }
   }
@@ -107,24 +115,18 @@ class BleAdvertiserService {
 
   void _scheduleRefresh(GattPayload payload) {
     _refreshTimer?.cancel();
-
-    // Refresh 5s before expiry
-    final expiresAt = DateTime.fromMillisecondsSinceEpoch(
-      payload.expiresAt * 1000,
-    );
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(payload.expiresAt * 1000);
     final refreshAt = expiresAt.subtract(const Duration(seconds: 5));
     final delay = refreshAt.difference(DateTime.now());
 
     if (delay.isNegative) {
-      // Already expired or about to expire — caller should generate a fresh beacon
+      DropDebugLog.i.add('ADV', 'Beacon already expired at scheduling, no refresh scheduled', level: DropLogLevel.warn);
       return;
     }
 
-    _refreshTimer = Timer(delay, () async {
-      // Caller is responsible for generating a fresh beacon and calling
-      // startAdvertising again. This timer just signals that refresh is needed.
-      // In practice, the Drop sheet (or Android Foreground Service) handles this.
-      // Here we expose a callback pattern if needed.
+    DropDebugLog.i.add('ADV', 'Beacon refresh scheduled in ${delay.inSeconds}s');
+    _refreshTimer = Timer(delay, () {
+      DropDebugLog.i.add('ADV', 'Beacon about to expire — triggering refresh callback');
       _onRefreshNeeded?.call();
     });
   }

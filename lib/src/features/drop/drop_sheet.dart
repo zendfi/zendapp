@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
@@ -16,6 +17,7 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'drop_confirm_stage.dart';
 import 'drop_countdown_stage.dart';
+import 'drop_debug_log.dart';
 import 'drop_preview_stage.dart';
 import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
@@ -74,6 +76,9 @@ class _DropSheetState extends State<DropSheet>
   DiscoveredReceiver? _confirmedReceiver;
   String? _errorMessage;
 
+  // ── Debug panel visibility ────────────────────────────────────────────────
+  bool _showDebugPanel = false;
+
   // ── Note field state ──────────────────────────────────────────────────────
   final _noteController = TextEditingController();
   bool _noteExpanded = false;
@@ -90,8 +95,9 @@ class _DropSheetState extends State<DropSheet>
       apiClient: model.walletService.apiClient,
     );
     _bleAdvertiserService = BleAdvertiserService();
-    _startScanning();
-    _startAdvertising(); // Also advertise so THIS device is discoverable
+    DropDebugLog.i.clear(); // Fresh log for each Drop session
+    DropDebugLog.i.add('SHEET', 'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}');
+    _checkBluetoothAndStart();
   }
 
   @override
@@ -112,11 +118,33 @@ class _DropSheetState extends State<DropSheet>
     _scanSub = _bleScannerService.discoveredReceivers.listen(_onReceivers);
   }
 
+  /// Check Bluetooth state before starting, prompt user if it's off.
+  Future<void> _checkBluetoothAndStart() async {
+    DropDebugLog.i.add('BT', 'Checking Bluetooth adapter state…');
+    final adapterState = await FlutterBluePlus.adapterState.first;
+    DropDebugLog.i.add('BT', 'Adapter state: $adapterState');
+    if (!mounted) return;
+
+    if (adapterState != BluetoothAdapterState.on) {
+      DropDebugLog.i.add('BT', 'Bluetooth is OFF — cannot proceed', level: DropLogLevel.error);
+      setState(() {
+        _errorMessage = 'Bluetooth is off. Please enable Bluetooth to use Drop.';
+        _stage = DropStage.error;
+      });
+      return;
+    }
+
+    _startScanning();
+    unawaited(_startAdvertising());
+  }
+
   /// Generate a beacon and start advertising so this device is discoverable
   /// by other nearby Zend users who have Drop open.
   Future<void> _startAdvertising() async {
+    DropDebugLog.i.add('ADV', 'Generating beacon…');
     try {
       final beacon = await _dropService.generateBeacon();
+      DropDebugLog.i.add('ADV', 'Beacon generated: @${beacon.zendtag} expires in ${beacon.expiresAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000)}s', level: DropLogLevel.ok);
       if (!mounted) return;
       final payload = GattPayload(
         zendtag: beacon.zendtag,
@@ -126,10 +154,12 @@ class _DropSheetState extends State<DropSheet>
         signature: beacon.signature,
       );
       await _bleAdvertiserService.startAdvertising(payload);
-      // Refresh beacon before it expires
-      _bleAdvertiserService.setRefreshCallback(() => _startAdvertising());
-    } catch (_) {
-      // Non-fatal — device will just act as sender-only if beacon generation fails
+      _bleAdvertiserService.setRefreshCallback(() {
+        DropDebugLog.i.add('ADV', 'Refresh callback fired — regenerating beacon');
+        _startAdvertising();
+      });
+    } catch (e) {
+      DropDebugLog.i.add('ADV', 'Beacon generation failed: $e', level: DropLogLevel.error);
     }
   }
 
@@ -172,8 +202,9 @@ class _DropSheetState extends State<DropSheet>
   }
 
   void _onReceiverConfirmed(DiscoveredReceiver receiver) {
+    final tag = receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
+    DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
     setState(() => _confirmedReceiver = receiver);
-    // Stop advertising — we're now acting as sender for this Drop
     unawaited(_bleAdvertiserService.stopAdvertising());
 
     if (widget.amount <= 50) {
@@ -188,8 +219,8 @@ class _DropSheetState extends State<DropSheet>
   // ── Transfer execution ────────────────────────────────────────────────────
 
   Future<void> _executeTransfer() async {
+    DropDebugLog.i.add('XFER', 'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}');
     _goTo(DropStage.processing);
-    // Stop advertising when we commit to sending — we're now the sender
     unawaited(_bleAdvertiserService.stopAdvertising());
     try {
       final model = ZendScope.of(context);
@@ -225,13 +256,15 @@ class _DropSheetState extends State<DropSheet>
 
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
-
+      DropDebugLog.i.add('XFER', 'Transfer success!', level: DropLogLevel.ok);
       _goTo(DropStage.success);
     } on ApiException catch (e) {
+      DropDebugLog.i.add('XFER', 'API error: ${e.userMessage}', level: DropLogLevel.error);
       if (!mounted) return;
       setState(() => _errorMessage = e.userMessage);
       _goTo(DropStage.error);
-    } catch (_) {
+    } catch (e) {
+      DropDebugLog.i.add('XFER', 'Unexpected error: $e', level: DropLogLevel.error);
       if (!mounted) return;
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
       _goTo(DropStage.error);
@@ -322,7 +355,34 @@ class _DropSheetState extends State<DropSheet>
         child: Column(
           children: [
             const SizedBox(height: 14),
-            const ZendSheetHandle(),
+            // Header row: drag handle + debug toggle
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Expanded(child: SizedBox()),
+                const ZendSheetHandle(),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _showDebugPanel = !_showDebugPanel),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16, top: 4),
+                        child: Text(
+                          '🐛',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _showDebugPanel
+                                ? const Color(0xFF52B788)
+                                : const Color(0x33F0F0F0),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             // Note field — shown above stage content on scanning/preview stages
             if (_stage == DropStage.scanning ||
@@ -334,22 +394,27 @@ class _DropSheetState extends State<DropSheet>
                 onToggle: () => setState(() => _noteExpanded = !_noteExpanded),
               ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: _stageTransition,
-                reverseDuration: const Duration(milliseconds: 140),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final slide = Tween<Offset>(
-                    begin: const Offset(0, 0.04),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: slide, child: child),
-                  );
-                },
-                child: RepaintBoundary(child: _buildStageContent()),
+              child: Stack(
+                children: [
+                  AnimatedSwitcher(
+                    duration: _stageTransition,
+                    reverseDuration: const Duration(milliseconds: 140),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final slide = Tween<Offset>(
+                        begin: const Offset(0, 0.04),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(position: slide, child: child),
+                      );
+                    },
+                    child: RepaintBoundary(child: _buildStageContent()),
+                  ),
+                  if (_showDebugPanel) const DropDebugPanel(),
+                ],
               ),
             ),
           ],
@@ -472,7 +537,16 @@ class _DropSheetState extends State<DropSheet>
         return SendErrorStage(
           key: const ValueKey('error'),
           errorMessage: _errorMessage ?? 'Something went wrong.',
-          onRetry: _retryFromError,
+          onRetry: _errorMessage?.contains('Bluetooth') == true
+              ? () async {
+                  // Re-check Bluetooth state — user may have just turned it on
+                  setState(() {
+                    _errorMessage = null;
+                    _stage = DropStage.scanning;
+                  });
+                  await _checkBluetoothAndStart();
+                }
+              : _retryFromError,
           onCancel: _dismiss,
         );
     }
