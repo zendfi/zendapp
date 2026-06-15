@@ -119,30 +119,24 @@ class _DropSheetState extends State<DropSheet>
   }
 
   /// Check Bluetooth state before starting, prompt user if it's off.
-  /// Check Bluetooth state before starting, prompt user if it's off.
-  /// Waits up to 3 seconds for the adapter to stabilise — some Android firmware
-  /// (Tecno/HiOS, Vivo FunTouchOS) emits 'unknown' or 'off' briefly before
-  /// settling on 'on', so .first alone is unreliable.
   Future<void> _checkBluetoothAndStart() async {
     DropDebugLog.i.add('BT', 'Checking Bluetooth adapter state…');
 
     BluetoothAdapterState adapterState = BluetoothAdapterState.unknown;
     try {
-      // Wait up to 3 s for the adapter to reach a stable 'on' or 'off' state.
       adapterState = await FlutterBluePlus.adapterState
           .where((s) => s == BluetoothAdapterState.on ||
                         s == BluetoothAdapterState.off)
           .first
           .timeout(
             const Duration(seconds: 3),
-            onTimeout: () {
-              // Fallback: read the last known state synchronously
-              return FlutterBluePlus.adapterStateNow;
-            },
+            onTimeout: () => FlutterBluePlus.adapterStateNow,
           );
     } catch (e) {
-      DropDebugLog.i.add('BT', 'adapterState stream error: $e — assuming on', level: DropLogLevel.warn);
-      adapterState = BluetoothAdapterState.on; // optimistic fallback
+      DropDebugLog.i.add('BT', 'adapterState error: $e — attempting to continue', level: DropLogLevel.warn);
+      // SecurityException means BLUETOOTH permission missing at manifest level
+      // (Android ≤ 11). The new manifest fixes this — optimistically continue.
+      adapterState = BluetoothAdapterState.on;
     }
 
     DropDebugLog.i.add('BT', 'Stable adapter state: $adapterState');
@@ -157,6 +151,30 @@ class _DropSheetState extends State<DropSheet>
       return;
     }
 
+    // Request BLE permissions via flutter_blue_plus before scanning.
+    // This handles Android 12+ (BLUETOOTH_SCAN/CONNECT/ADVERTISE) and
+    // Android ≤ 11 (ACCESS_FINE_LOCATION) in one call.
+    DropDebugLog.i.add('BT', 'Requesting BLE permissions…');
+    try {
+      await FlutterBluePlus.startScan(timeout: const Duration(milliseconds: 1));
+      await FlutterBluePlus.stopScan();
+    } catch (e) {
+      // If permissions are denied, startScan throws — surface it clearly
+      final msg = e.toString();
+      if (msg.contains('permission') || msg.contains('Permission') || msg.contains('PERMISSION')) {
+        DropDebugLog.i.add('BT', 'BLE permissions denied: $msg', level: DropLogLevel.error);
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'Bluetooth permission is required for Drop. Please allow it in Settings.';
+          _stage = DropStage.error;
+        });
+        return;
+      }
+      // Other errors (e.g. already scanning) are fine — continue
+      DropDebugLog.i.add('BT', 'Permission probe error (non-fatal): $e', level: DropLogLevel.warn);
+    }
+
+    DropDebugLog.i.add('BT', 'BLE permissions OK — starting scan and advertising');
     _startScanning();
     unawaited(_startAdvertising());
   }

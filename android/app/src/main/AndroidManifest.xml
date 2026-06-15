@@ -11,13 +11,31 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
     <!-- BLE permissions for Zend Drop proximity transfers -->
+    <!--
+        Android 11 and below (API ≤ 30) require the legacy BLUETOOTH and BLUETOOTH_ADMIN
+        permissions to use BLE scanning and advertising. The new Android 12+ permissions
+        (BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT) are ignored on older OS.
+        Both sets must be declared so the app works on all Android versions.
+    -->
+
+    <!-- Legacy BLE permissions — required on Android ≤ 11 (API ≤ 30) -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Modern BLE permissions — required on Android 12+ (API ≥ 31) -->
     <!-- BLUETOOTH_SCAN: neverForLocation required for Play Store compliance when BLE is not used for location -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Location: required for BLE scanning on Android ≤ 11 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <!-- BLE hardware declaration — required=false so the app installs on devices without BLE -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <!-- Foreground service permission (required on Android 9+) -->
