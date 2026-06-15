@@ -119,10 +119,33 @@ class _DropSheetState extends State<DropSheet>
   }
 
   /// Check Bluetooth state before starting, prompt user if it's off.
+  /// Check Bluetooth state before starting, prompt user if it's off.
+  /// Waits up to 3 seconds for the adapter to stabilise — some Android firmware
+  /// (Tecno/HiOS, Vivo FunTouchOS) emits 'unknown' or 'off' briefly before
+  /// settling on 'on', so .first alone is unreliable.
   Future<void> _checkBluetoothAndStart() async {
     DropDebugLog.i.add('BT', 'Checking Bluetooth adapter state…');
-    final adapterState = await FlutterBluePlus.adapterState.first;
-    DropDebugLog.i.add('BT', 'Adapter state: $adapterState');
+
+    BluetoothAdapterState adapterState = BluetoothAdapterState.unknown;
+    try {
+      // Wait up to 3 s for the adapter to reach a stable 'on' or 'off' state.
+      adapterState = await FlutterBluePlus.adapterState
+          .where((s) => s == BluetoothAdapterState.on ||
+                        s == BluetoothAdapterState.off)
+          .first
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              // Fallback: read the last known state synchronously
+              return FlutterBluePlus.adapterStateNow;
+            },
+          );
+    } catch (e) {
+      DropDebugLog.i.add('BT', 'adapterState stream error: $e — assuming on', level: DropLogLevel.warn);
+      adapterState = BluetoothAdapterState.on; // optimistic fallback
+    }
+
+    DropDebugLog.i.add('BT', 'Stable adapter state: $adapterState');
     if (!mounted) return;
 
     if (adapterState != BluetoothAdapterState.on) {
@@ -144,8 +167,18 @@ class _DropSheetState extends State<DropSheet>
     DropDebugLog.i.add('ADV', 'Generating beacon…');
     try {
       final beacon = await _dropService.generateBeacon();
-      DropDebugLog.i.add('ADV', 'Beacon generated: @${beacon.zendtag} expires in ${beacon.expiresAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000)}s', level: DropLogLevel.ok);
+      final ttl = beacon.expiresAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+      DropDebugLog.i.add('ADV', 'Beacon generated: @${beacon.zendtag} TTL=${ttl}s', level: DropLogLevel.ok);
       if (!mounted) return;
+
+      // If beacon already has less than 10s left (slow network), skip advertising
+      // this one and immediately request a fresh one
+      if (ttl < 10) {
+        DropDebugLog.i.add('ADV', 'Beacon TTL too short ($ttl s) — requesting fresh one', level: DropLogLevel.warn);
+        unawaited(_startAdvertising());
+        return;
+      }
+
       final payload = GattPayload(
         zendtag: beacon.zendtag,
         nonce: beacon.nonce,
@@ -156,10 +189,16 @@ class _DropSheetState extends State<DropSheet>
       await _bleAdvertiserService.startAdvertising(payload);
       _bleAdvertiserService.setRefreshCallback(() {
         DropDebugLog.i.add('ADV', 'Refresh callback fired — regenerating beacon');
-        _startAdvertising();
+        unawaited(_startAdvertising());
       });
     } catch (e) {
       DropDebugLog.i.add('ADV', 'Beacon generation failed: $e', level: DropLogLevel.error);
+      // Retry after 3 seconds rather than giving up entirely
+      if (mounted) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) unawaited(_startAdvertising());
+        });
+      }
     }
   }
 
