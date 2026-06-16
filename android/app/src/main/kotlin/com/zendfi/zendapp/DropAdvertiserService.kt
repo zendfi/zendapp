@@ -151,7 +151,7 @@ class DropAdvertiserService : Service() {
         val jsonBytes = JSONObject(payload as Map<*, *>).toString().toByteArray(Charsets.UTF_8)
 
         startGattServer(jsonBytes)
-        startBleAdvertising(adPacket)
+        startBleAdvertising()
     }
 
     /** Stops BLE advertising and tears down the GATT server. */
@@ -196,7 +196,7 @@ class DropAdvertiserService : Service() {
     // BLE advertising
     // -------------------------------------------------------------------------
 
-    private fun startBleAdvertising(adPacket: ByteArray) {
+    private fun startBleAdvertising() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val bluetoothAdapter = bluetoothManager?.adapter
 
@@ -211,12 +211,13 @@ class DropAdvertiserService : Service() {
             .setTimeout(0)        // advertise indefinitely
             .build()
 
-        // Primary advert: service UUID (required for scan filter) + slim manufacturer data (12 bytes).
-        // Service UUID in the PRIMARY advert is critical — Android hardware scan filters
-        // only match service UUIDs in the primary packet, not in the scan response.
+        // Primary advert: ONLY the Zend Drop service UUID.
+        // A 128-bit service UUID takes 18 bytes (header + UUID), leaving only
+        // 13 bytes in the 31-byte PDU — not enough for manufacturer data too.
+        // The scanner identifies Zend beacons by service UUID alone; the full
+        // payload is read via GATT after connection.
         val data = AdvertiseData.Builder()
             .addServiceUuid(android.os.ParcelUuid(GATT_SERVICE_UUID))
-            .addManufacturerData(MANUFACTURER_ID, adPacket)
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
             .build()
