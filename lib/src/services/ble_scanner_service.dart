@@ -179,7 +179,12 @@ class BleScannerService {
       final shortId = deviceId.length > 8 ? deviceId.substring(deviceId.length - 8) : deviceId;
       final svcCount = result.advertisementData.serviceUuids.length;
       final mfgKeys = result.advertisementData.manufacturerData.keys.toList();
-      final svcDataKeys = result.advertisementData.serviceData.keys.map((k) => k.toString().substring(0, 8)).toList();
+      final svcDataKeys = result.advertisementData.serviceData.keys
+          .map((k) {
+            final s = k.toString();
+            return s.length > 8 ? s.substring(0, 8) : s;
+          })
+          .toList();
       DropDebugLog.i.add(
         'SCAN',
         '${isZendBeacon ? "✓ZEND" : "skip"} $shortId RSSI=$rssi svcs=$svcCount mfg=$mfgKeys svcData=$svcDataKeys',
@@ -235,12 +240,16 @@ class BleScannerService {
       rssi: rssi,
     ));
 
-    // GATT connection is the source of truth — preview fires after we have
-    // the real nonce from the GATT payload.
-    // Note: _readGatt handles its own errors and retries via _handleGattFailure.
-    _readGatt(device, deviceId).catchError((e) {
-      // Suppress top-level — errors handled inside _readGatt
-    });
+    // Wrap GATT in runZonedGuarded to catch platform-thread errors (DeadObjectException,
+    // NullPointerException from native BLE stack) that escape normal Dart try/catch
+    // and would otherwise kill the entire Flutter isolate.
+    runZonedGuarded(
+      () => _readGatt(device, deviceId),
+      (e, st) {
+        DropDebugLog.i.add('GATT', 'Zone-caught crash: $e', level: DropLogLevel.error);
+        _handleGattFailure(device, deviceId);
+      },
+    );
   }
 
   /// Fires `GET /drop/beacon/preview` and updates the discovered entry with the
