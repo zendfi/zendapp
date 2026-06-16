@@ -9,7 +9,6 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/drop_models.dart';
-import '../../services/ble_advertiser_service.dart';
 import '../../services/ble_scanner_service.dart';
 import '../../services/drop_service.dart';
 import '../../services/signing_policy_service.dart';
@@ -68,7 +67,6 @@ class _DropSheetState extends State<DropSheet>
   DropStage _stage = DropStage.scanning;
 
   late final BleScannerService _bleScannerService;
-  late final BleAdvertiserService _bleAdvertiserService;
   late final DropService _dropService;
 
   StreamSubscription<List<DiscoveredReceiver>>? _scanSub;
@@ -94,7 +92,6 @@ class _DropSheetState extends State<DropSheet>
     _bleScannerService = BleScannerService(
       apiClient: model.walletService.apiClient,
     );
-    _bleAdvertiserService = BleAdvertiserService();
     DropDebugLog.i.clear(); // Fresh log for each Drop session
     DropDebugLog.i.add('SHEET', 'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}');
     _checkBluetoothAndStart();
@@ -105,8 +102,6 @@ class _DropSheetState extends State<DropSheet>
     _scanSub?.cancel();
     _bleScannerService.stopScan();
     _bleScannerService.dispose();
-    _bleAdvertiserService.stopAdvertising();
-    _bleAdvertiserService.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -151,54 +146,18 @@ class _DropSheetState extends State<DropSheet>
       return;
     }
 
-    // flutter_blue_plus handles BLE permission requests internally when
-    // startScan is called. No separate permission probe needed — it causes
-    // rapid start/stop/start cycles that crash on some Android 12+ devices.
-    DropDebugLog.i.add('BT', 'BLE ready — starting scan and advertising');
+    DropDebugLog.i.add('BT', 'BLE ready — starting scan (sender mode). Receiver advertises via background service.');
     _startScanning();
-    unawaited(_startAdvertising());
+    // Sender does NOT advertise — they scan only.
+    // The receiver's beacon is broadcast by the Android ForegroundService
+    // (DropAdvertiserService) which runs independently of the Drop sheet.
   }
 
   /// Generate a beacon and start advertising so this device is discoverable
   /// by other nearby Zend users who have Drop open.
-  Future<void> _startAdvertising() async {
-    DropDebugLog.i.add('ADV', 'Generating beacon…');
-    try {
-      final beacon = await _dropService.generateBeacon();
-      final ttl = beacon.expiresAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000);
-      DropDebugLog.i.add('ADV', 'Beacon generated: @${beacon.zendtag} TTL=${ttl}s', level: DropLogLevel.ok);
-      if (!mounted) return;
-
-      // If beacon already has less than 10s left (slow network), skip advertising
-      // this one and immediately request a fresh one
-      if (ttl < 10) {
-        DropDebugLog.i.add('ADV', 'Beacon TTL too short ($ttl s) — requesting fresh one', level: DropLogLevel.warn);
-        unawaited(_startAdvertising());
-        return;
-      }
-
-      final payload = GattPayload(
-        zendtag: beacon.zendtag,
-        nonce: beacon.nonce,
-        timestamp: beacon.timestamp,
-        expiresAt: beacon.expiresAt,
-        signature: beacon.signature,
-      );
-      await _bleAdvertiserService.startAdvertising(payload);
-      _bleAdvertiserService.setRefreshCallback(() {
-        DropDebugLog.i.add('ADV', 'Refresh callback fired — regenerating beacon');
-        unawaited(_startAdvertising());
-      });
-    } catch (e) {
-      DropDebugLog.i.add('ADV', 'Beacon generation failed: $e', level: DropLogLevel.error);
-      // Retry after 3 seconds rather than giving up entirely
-      if (mounted) {
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) unawaited(_startAdvertising());
-        });
-      }
-    }
-  }
+  /// NOTE: This is no longer called from the Drop sheet. Advertising is now
+  /// managed entirely by DropDiscoverabilityService (profile toggle).
+  /// Kept as a no-op comment placeholder to avoid merge conflicts.
 
   void _onReceivers(List<DiscoveredReceiver> receivers) {
     if (!mounted) return;
@@ -242,7 +201,12 @@ class _DropSheetState extends State<DropSheet>
     final tag = receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
     DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
     setState(() => _confirmedReceiver = receiver);
-    unawaited(_bleAdvertiserService.stopAdvertising());
+
+    // Pause discoverable advertising while acting as sender.
+    // The discoverability service will be resumed after the transfer
+    // completes (success or failure) in _executeTransfer.
+    final model = ZendScope.of(context);
+    unawaited(model.dropDiscoverabilityService.pause());
 
     if (widget.amount <= 50) {
       _goTo(DropStage.countdown);
@@ -258,7 +222,8 @@ class _DropSheetState extends State<DropSheet>
   Future<void> _executeTransfer() async {
     DropDebugLog.i.add('XFER', 'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}');
     _goTo(DropStage.processing);
-    unawaited(_bleAdvertiserService.stopAdvertising());
+    // BleAdvertiserService is no longer used from the sheet.
+    // Discoverability is paused via dropDiscoverabilityService in _onReceiverConfirmed.
     try {
       final model = ZendScope.of(context);
       final policy = SigningPolicyService();
@@ -290,6 +255,8 @@ class _DropSheetState extends State<DropSheet>
       if (!mounted) return;
       unawaited(model.fetchBalance());
       unawaited(model.fetchHistory());
+      // Resume discoverability after successful send
+      unawaited(model.dropDiscoverabilityService.resume());
 
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
@@ -298,11 +265,14 @@ class _DropSheetState extends State<DropSheet>
     } on ApiException catch (e) {
       DropDebugLog.i.add('XFER', 'API error: ${e.userMessage}', level: DropLogLevel.error);
       if (!mounted) return;
+      // Resume discoverability on failure so receiver can still be found
+      unawaited(ZendScope.of(context).dropDiscoverabilityService.resume());
       setState(() => _errorMessage = e.userMessage);
       _goTo(DropStage.error);
     } catch (e) {
       DropDebugLog.i.add('XFER', 'Unexpected error: $e', level: DropLogLevel.error);
       if (!mounted) return;
+      unawaited(ZendScope.of(context).dropDiscoverabilityService.resume());
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
       _goTo(DropStage.error);
     }
@@ -317,8 +287,6 @@ class _DropSheetState extends State<DropSheet>
     });
     _bleScannerService.stopScan();
     _bleScannerService.startScan();
-    // Resume advertising for the next attempt
-    unawaited(_startAdvertising());
     _goTo(DropStage.scanning);
   }
 
@@ -375,7 +343,6 @@ class _DropSheetState extends State<DropSheet>
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           _bleScannerService.stopScan();
-          _bleAdvertiserService.stopAdvertising();
           _noteController.clear();
         }
       },

@@ -11,6 +11,7 @@ import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
+import '../services/drop_discoverability_service.dart';
 import '../services/email_intent_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
@@ -119,6 +120,13 @@ class ZendAppModel extends ChangeNotifier {
   final AppLockService appLockService;
   final SavingsService savingsService;
   final PocketService pocketService;
+
+  /// Drop discoverability service — manages BLE beacon advertising as a receiver.
+  late final DropDiscoverabilityService dropDiscoverabilityService =
+      DropDiscoverabilityService(
+    apiClient: walletService.apiClient,
+    walletService: walletService,
+  );
 
   /// On-device SQLite database for pool message persistence.
   final AppDatabase localDb;
@@ -849,6 +857,8 @@ class ZendAppModel extends ChangeNotifier {
     unawaited(fetchPools());
     // Load savings snapshot
     unawaited(fetchSavingsSnapshot());
+    // Restore Drop discoverability preference (non-blocking)
+    unawaited(dropDiscoverabilityService.init());
   }
 
   Future<void> recordTransfer({

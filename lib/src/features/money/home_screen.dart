@@ -107,6 +107,53 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Row(children: [
+                        // Drop discoverable indicator — subtle dot + tap to go to settings
+                        ListenableBuilder(
+                          listenable: model.dropDiscoverabilityService,
+                          builder: (context, _) {
+                            final isOn = model.dropDiscoverabilityService.isDiscoverable;
+                            if (!isOn) return const SizedBox.shrink();
+                            return GestureDetector(
+                              onTap: () => pushZendSlide(context, const ProfileScreen()),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: ZendColors.accentBright
+                                      .withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: ZendColors.accentBright
+                                        .withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: ZendColors.accentBright,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      'Discoverable',
+                                      style: TextStyle(
+                                        fontFamily: 'DMMono',
+                                        fontSize: 10,
+                                        color: ZendColors.accentBright,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                         GestureDetector(
                           onTap: () => pushZendSlide(context, const ProfileScreen()),
                           child: ZendAvatar(

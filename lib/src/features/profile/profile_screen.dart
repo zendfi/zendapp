@@ -151,6 +151,10 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 20),
+                    _SectionLabel('Drop'),
+                    const SizedBox(height: 8),
+                    _DropDiscoverabilityTile(),
+                    const SizedBox(height: 20),
                     _SectionLabel('Appearance'),
                     const SizedBox(height: 8),
                     _SettingsGroup(
@@ -588,8 +592,7 @@ class _SheetOption extends StatelessWidget {
   }
 }
 
-Future<void> _confirmLogout(BuildContext context) async {
-  final shouldLogout = await showDialog<bool>(
+Future<void> _confirmLogout(BuildContext context) async {  final shouldLogout = await showDialog<bool>(
     context: context,
     builder: (context) {
       return AlertDialog(
@@ -614,6 +617,9 @@ Future<void> _confirmLogout(BuildContext context) async {
 
   final model = ZendScope.of(context);
 
+  // Stop Drop discoverability before clearing session
+  await model.dropDiscoverabilityService.pause();
+
   try {
     await model.authService.logout();
     model.resetState();
@@ -627,3 +633,141 @@ Future<void> _confirmLogout(BuildContext context) async {
 }
 
 
+
+// ── Drop Discoverability Tile ─────────────────────────────────────────────────
+
+/// A self-contained settings tile that manages the "Be Discoverable" toggle
+/// for Drop. Uses ListenableBuilder to rebuild only when the service state changes,
+/// avoiding unnecessary full-screen rebuilds.
+class _DropDiscoverabilityTile extends StatelessWidget {
+  const _DropDiscoverabilityTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final model = ZendScope.of(context);
+    final service = model.dropDiscoverabilityService;
+
+    return ListenableBuilder(
+      listenable: service,
+      builder: (context, _) {
+        final zt = ZendTheme.of(context);
+        final isOn = service.isDiscoverable;
+        final isLoading = service.isLoading;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isOn
+                  ? ZendColors.accentBright.withValues(alpha: 0.35)
+                  : zt.border,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    // Animated indicator dot
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isOn
+                            ? ZendColors.accentBright
+                            : zt.textSecondary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(
+                      Icons.bluetooth_searching,
+                      size: 20,
+                      color: isOn ? ZendColors.accentBright : zt.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Be Discoverable',
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: zt.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (isLoading)
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ZendColors.accentBright,
+                        ),
+                      )
+                    else
+                      Switch.adaptive(
+                        value: isOn,
+                        onChanged: (_) => service.toggle(),
+                        activeThumbColor: ZendColors.accentBright,
+                        activeTrackColor:
+                            ZendColors.accentBright.withValues(alpha: 0.4),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 18),
+                  child: Text(
+                    isOn
+                        ? 'Your device is broadcasting a secure Bluetooth signal. '
+                            'Nearby Zend users can send you money via Drop without '
+                            'you needing to do anything else.'
+                        : 'Turn on to receive money from nearby Zend users via Drop. '
+                            'The sender just opens Drop and you\'ll appear automatically. '
+                            'Your wallet address is never shared.',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                if (isOn && service.currentPayload != null) ...[
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 18),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.radio_button_checked,
+                          size: 10,
+                          color: ZendColors.accentBright,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Broadcasting as @${service.currentPayload!.zendtag}',
+                          style: TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 11,
+                            color: ZendColors.accentBright,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
