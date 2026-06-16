@@ -179,9 +179,10 @@ class BleScannerService {
       final shortId = deviceId.length > 8 ? deviceId.substring(deviceId.length - 8) : deviceId;
       final svcCount = result.advertisementData.serviceUuids.length;
       final mfgKeys = result.advertisementData.manufacturerData.keys.toList();
+      final svcDataKeys = result.advertisementData.serviceData.keys.map((k) => k.toString().substring(0, 8)).toList();
       DropDebugLog.i.add(
         'SCAN',
-        '${isZendBeacon ? "✓ZEND" : "skip"} $shortId RSSI=$rssi svcs=$svcCount mfg=$mfgKeys',
+        '${isZendBeacon ? "✓ZEND" : "skip"} $shortId RSSI=$rssi svcs=$svcCount mfg=$mfgKeys svcData=$svcDataKeys',
       );
 
       if (!isZendBeacon) continue;
@@ -199,16 +200,20 @@ class BleScannerService {
   }
 
   /// Returns true if the advertisement is from a Zend Drop beacon.
-  /// Matches on GATT service UUID (most reliable cross-platform) OR
-  /// on the Zend manufacturer AppID bytes as fallback.
   bool _isZendDropBeacon(AdvertisementData adv) {
-    // Primary: service UUID in advertisement
+    // Check 1: serviceUuids list (standard path)
     for (final uuid in adv.serviceUuids) {
       if (uuid.toString().toLowerCase() == _kGattServiceUuid.toLowerCase()) {
         return true;
       }
     }
-    // Fallback: manufacturer data AppID check
+    // Check 2: serviceData keys (some Android versions put UUIDs here instead)
+    for (final key in adv.serviceData.keys) {
+      if (key.toString().toLowerCase() == _kGattServiceUuid.toLowerCase()) {
+        return true;
+      }
+    }
+    // Check 3: manufacturer data AppID fallback
     return _extractNonce(adv) != null;
   }
 

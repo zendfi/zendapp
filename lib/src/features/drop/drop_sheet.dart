@@ -151,30 +151,10 @@ class _DropSheetState extends State<DropSheet>
       return;
     }
 
-    // Request BLE permissions via flutter_blue_plus before scanning.
-    // This handles Android 12+ (BLUETOOTH_SCAN/CONNECT/ADVERTISE) and
-    // Android ≤ 11 (ACCESS_FINE_LOCATION) in one call.
-    DropDebugLog.i.add('BT', 'Requesting BLE permissions…');
-    try {
-      await FlutterBluePlus.startScan(timeout: const Duration(milliseconds: 1));
-      await FlutterBluePlus.stopScan();
-    } catch (e) {
-      // If permissions are denied, startScan throws — surface it clearly
-      final msg = e.toString();
-      if (msg.contains('permission') || msg.contains('Permission') || msg.contains('PERMISSION')) {
-        DropDebugLog.i.add('BT', 'BLE permissions denied: $msg', level: DropLogLevel.error);
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'Bluetooth permission is required for Drop. Please allow it in Settings.';
-          _stage = DropStage.error;
-        });
-        return;
-      }
-      // Other errors (e.g. already scanning) are fine — continue
-      DropDebugLog.i.add('BT', 'Permission probe error (non-fatal): $e', level: DropLogLevel.warn);
-    }
-
-    DropDebugLog.i.add('BT', 'BLE permissions OK — starting scan and advertising');
+    // flutter_blue_plus handles BLE permission requests internally when
+    // startScan is called. No separate permission probe needed — it causes
+    // rapid start/stop/start cycles that crash on some Android 12+ devices.
+    DropDebugLog.i.add('BT', 'BLE ready — starting scan and advertising');
     _startScanning();
     unawaited(_startAdvertising());
   }
