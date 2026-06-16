@@ -210,16 +210,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontFamily: 'InstrumentSerif',
-                                      color: ZendColors.textOnDeep,
-                                      fontSize: balanceSize,
-                                      height: 1.0,
-                                      fontStyle: FontStyle.italic,
-                                      fontWeight: FontWeight.w500,
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween<double>(
+                                      begin: model.spendableBalance,
+                                      end: model.spendableBalance,
                                     ),
+                                    duration: const Duration(milliseconds: 1200),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, value, _) {
+                                      return Text(
+                                        model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontFamily: 'InstrumentSerif',
+                                          color: ZendColors.textOnDeep,
+                                          fontSize: balanceSize,
+                                          height: 1.0,
+                                          fontStyle: FontStyle.italic,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: 10),
                                   GestureDetector(

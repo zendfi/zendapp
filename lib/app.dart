@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
 import 'src/features/deeplink/deep_link_handler.dart';
+import 'src/features/drop/drop_receiver_overlay.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
 import 'src/features/onboarding/splash_screen.dart';
@@ -96,19 +97,39 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   /// Receiver: fires haptics + shows a notification overlay so they feel the money land.
   void _onDropConfirmed(Map<String, dynamic> data) {
     final role = data['role'] as String?;
-    if (role != 'receiver') return; // Sender haptics are in drop_sheet.dart
+    if (role != 'receiver') return;
 
-    // Two long pulses (receiver pattern: ████░░████)
-    _triggerReceiverHaptics();
+    final amountStr = data['amount_usdc'] as String? ?? '0';
+    final amount = double.tryParse(amountStr) ?? 0.0;
+    final senderTag = data['counterparty_zendtag'] as String? ?? '';
+    final note = data['note'] as String?;
+
+    // Subtle haptic cascade first (before overlay renders)
+    unawaited(_triggerReceiverHaptics());
+
+    // Show overlay if we have a valid context
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null || !mounted) return;
+
+    showDropReceivedOverlay(
+      context: ctx,
+      amount: amount,
+      senderZendtag: senderTag,
+      note: note,
+      onTap: () {
+        // Navigate to activity screen
+        // The shell's tab controller can be accessed via a global or model callback.
+        // For now route to the root and let the user navigate — avoids coupling.
+      },
+    );
   }
 
   Future<void> _triggerReceiverHaptics() async {
-    // 2 long pulses — 300ms each, 200ms apart
-    await HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(milliseconds: 300));
-    await HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(milliseconds: 300));
-    await HapticFeedback.heavyImpact();
+    // 3 light taps, 80ms apart — Apple-style: barely there
+    for (int i = 0; i < 3; i++) {
+      await Future.delayed(Duration(milliseconds: i * 80));
+      HapticFeedback.lightImpact();
+    }
   }
 
   /// Fires whenever the app-lock state changes (locked ↔ unlocked).
