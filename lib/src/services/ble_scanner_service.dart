@@ -17,7 +17,8 @@ const int _kRssiIgnore = -70;
 const int _kConsecutiveRequired = 5;
 
 /// Window in milliseconds within which all 5 readings must occur.
-const int _kWindowMs = 500;
+/// 2000ms accommodates balanced scan duty cycles and batched result delivery.
+const int _kWindowMs = 2000;
 
 /// GATT connection timeout.
 const Duration _kGattTimeout = Duration(seconds: 10);
@@ -128,7 +129,7 @@ class BleScannerService {
 
     try {
       FlutterBluePlus.startScan(
-        androidScanMode: AndroidScanMode.balanced,  // lowLatency conflicts with concurrent advertising on some chipsets (Vivo FunTouchOS)
+        androidScanMode: AndroidScanMode.lowLatency,  // Sender-only: no concurrent advertising, so lowLatency is safe
         continuousUpdates: true,
       );
       _scanSub = FlutterBluePlus.scanResults.listen(

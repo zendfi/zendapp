@@ -89,7 +89,6 @@ class MainActivity : FlutterActivity() {
     private fun startDropAdvertiserService(payload: Map<String, Any>) {
         val intent = Intent(this, DropAdvertiserService::class.java).apply {
             action = DropAdvertiserService.ACTION_START
-            // Pass individual fields so the service can unpack them without JSON parsing
             payload.forEach { (k, v) ->
                 when (v) {
                     is String -> putExtra(k, v)
@@ -101,14 +100,20 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
-        ContextCompat.startForegroundService(this, intent)
+        // startForegroundService must be called from the main thread on Android 15+.
+        // MethodChannel callbacks run on the platform thread — dispatch to UI thread.
+        runOnUiThread {
+            ContextCompat.startForegroundService(this, intent)
+        }
     }
 
     private fun stopDropAdvertiserService() {
         val intent = Intent(this, DropAdvertiserService::class.java).apply {
             action = DropAdvertiserService.ACTION_STOP
         }
-        stopService(intent)
+        runOnUiThread {
+            stopService(intent)
+        }
     }
 
     // ── Deep-link helpers ────────────────────────────────────────────────────
