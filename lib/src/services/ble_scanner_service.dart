@@ -128,7 +128,7 @@ class BleScannerService {
 
     try {
       FlutterBluePlus.startScan(
-        androidScanMode: AndroidScanMode.lowLatency,
+        androidScanMode: AndroidScanMode.balanced,  // lowLatency conflicts with concurrent advertising on some chipsets (Vivo FunTouchOS)
         continuousUpdates: true,
       );
       _scanSub = FlutterBluePlus.scanResults.listen(
