@@ -2,7 +2,6 @@ package com.zendfi.zendapp
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -100,10 +99,17 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
-        // startForegroundService must be called from the main thread on Android 15+.
-        // MethodChannel callbacks run on the platform thread — dispatch to UI thread.
+        // Android 15 tightened BAL restrictions on startForegroundService() when called
+        // from a background context (e.g. via MethodChannel platform thread).
+        // startService() is unrestricted; the service calls startForeground() itself in
+        // onStartCommand, which is the correct pattern on Android 14+.
         runOnUiThread {
-            ContextCompat.startForegroundService(this, intent)
+            try {
+                startService(intent)
+            } catch (e: Exception) {
+                // Last-resort fallback for edge cases (e.g. service disabled by system)
+                android.util.Log.e("DropAdvertiser", "startService failed: ${e.message}")
+            }
         }
     }
 

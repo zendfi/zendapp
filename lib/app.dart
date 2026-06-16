@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
@@ -34,6 +35,7 @@ final _navigatorKey = GlobalKey<NavigatorState>();
 class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   late ThemeMode _themeMode;
   StreamSubscription<DeepLinkPayload>? _deepLinkSub;
+  StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
 
   @override
   void initState() {
@@ -50,6 +52,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     _deepLinkSub = DeepLinkHandler.stream.listen(_handleDeepLink);
+
+    // Fire receiver haptics + balance notification when a Drop lands
+    _dropConfirmedSub = widget.model.dropConfirmedEvents.listen(_onDropConfirmed);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final initial = DeepLinkHandler.initialLink;
@@ -78,10 +83,32 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _deepLinkSub?.cancel();
+    _dropConfirmedSub?.cancel();
     widget.model.removeListener(_onModelChanged);
     widget.model.appLockService.removeListener(_onLockStateChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Fires whenever a Drop transfer is confirmed — handles both sender and receiver.
+  ///
+  /// Sender: already handled by the Drop sheet's _executeTransfer success path.
+  /// Receiver: fires haptics + shows a notification overlay so they feel the money land.
+  void _onDropConfirmed(Map<String, dynamic> data) {
+    final role = data['role'] as String?;
+    if (role != 'receiver') return; // Sender haptics are in drop_sheet.dart
+
+    // Two long pulses (receiver pattern: ████░░████)
+    _triggerReceiverHaptics();
+  }
+
+  Future<void> _triggerReceiverHaptics() async {
+    // 2 long pulses — 300ms each, 200ms apart
+    await HapticFeedback.heavyImpact();
+    await Future.delayed(const Duration(milliseconds: 300));
+    await HapticFeedback.heavyImpact();
+    await Future.delayed(const Duration(milliseconds: 300));
+    await HapticFeedback.heavyImpact();
   }
 
   /// Fires whenever the app-lock state changes (locked ↔ unlocked).

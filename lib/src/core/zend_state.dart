@@ -154,6 +154,12 @@ class ZendAppModel extends ChangeNotifier {
   // ── SSE subscription ──
   StreamSubscription<SseEvent>? _sseSubscription;
 
+  // ── Drop confirmed stream ──
+  /// Broadcasts Drop confirmation events to any listening UI (Drop sheet, home screen).
+  /// Each event map contains: role, amount_usdc, counterparty_zendtag, note?, tx_hash.
+  final _dropConfirmedController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get dropConfirmedEvents => _dropConfirmedController.stream;
+
   // ── Fallback polling (used when SSE is unavailable) ──
   Timer? _pollingTimer;
   static const Duration _pollingInterval = Duration(seconds: 30);
@@ -265,6 +271,12 @@ class ZendAppModel extends ChangeNotifier {
         final notification = PaymentRequestNotification.fromJson(event.data);
         pendingPaymentRequest = notification;
         notifyListeners();
+      case SseEventType.dropConfirmed:
+        // A Drop transfer was confirmed — refresh balance + history immediately.
+        // Also broadcast to any listening Drop UI for haptics/animations.
+        unawaited(fetchBalance());
+        unawaited(fetchHistory());
+        _dropConfirmedController.add(event.data);
       default:
         break;
     }
@@ -302,6 +314,7 @@ class ZendAppModel extends ChangeNotifier {
   @override
   void dispose() {
     _stopAll();
+    _dropConfirmedController.close();
     sseService.dispose();
     super.dispose();
   }

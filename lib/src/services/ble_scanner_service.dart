@@ -20,8 +20,9 @@ const int _kConsecutiveRequired = 5;
 /// 2000ms accommodates balanced scan duty cycles and batched result delivery.
 const int _kWindowMs = 2000;
 
-/// GATT connection timeout.
-const Duration _kGattTimeout = Duration(seconds: 10);
+/// GATT connection timeout — 5 seconds is enough for a close-range connection.
+/// Shorter timeout = faster failure recovery; retry fires immediately after reset.
+const Duration _kGattTimeout = Duration(seconds: 5);
 
 /// Zend AppID bytes: "ZEND" = 0x5A 0x45 0x4E 0x44
 const List<int> _kZendAppId = [0x5A, 0x45, 0x4E, 0x44];
@@ -387,16 +388,19 @@ class BleScannerService {
   /// removes the placeholder entry, and re-emits (Requirement 2.8).
   void _handleGattFailure(BluetoothDevice device, String deviceId) {
     final shortId = deviceId.length > 5 ? deviceId.substring(deviceId.length - 5) : deviceId;
-    DropDebugLog.i.add('GATT', 'Failure for $shortId — resetting tracker', level: DropLogLevel.warn);
-    try {
-      device.disconnect();
-    } catch (_) {}
+    DropDebugLog.i.add('GATT', 'Failure for $shortId — resetting tracker (500ms backoff)', level: DropLogLevel.warn);
+    try { device.disconnect(); } catch (_) {}
     _discovered.remove(deviceId);
-    _trackers[deviceId]?.reset();
-    _emit();
+    // Brief backoff before resetting the tracker so the BLE stack can recover
+    // before we attempt another GATT connection to the same device.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _trackers[deviceId]?.reset();
+      _emit();
+    });
   }
 
   void _upsert(DiscoveredReceiver receiver) {
+    if (_receiversController.isClosed) return;
     _discovered[receiver.deviceId] = receiver;
     _emit();
   }
@@ -404,6 +408,7 @@ class BleScannerService {
   /// Emits the current discovered list sorted by RSSI descending
   /// (Requirement 2.9 — strongest signal first).
   void _emit() {
+    if (_receiversController.isClosed) return;
     final sorted = _discovered.values.toList()
       ..sort((a, b) => b.rssi.compareTo(a.rssi));
     _receiversController.add(sorted);
