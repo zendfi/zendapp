@@ -175,20 +175,16 @@ class BleScannerService {
 
       final isZendBeacon = _isZendDropBeacon(result.advertisementData);
 
-      // Log ALL nearby devices (not just Zend ones) so we can see what's actually visible
-      final shortId = deviceId.length > 8 ? deviceId.substring(deviceId.length - 8) : deviceId;
-      final svcCount = result.advertisementData.serviceUuids.length;
-      final mfgKeys = result.advertisementData.manufacturerData.keys.toList();
-      final svcDataKeys = result.advertisementData.serviceData.keys
-          .map((k) {
-            final s = k.toString();
-            return s.length > 8 ? s.substring(0, 8) : s;
-          })
-          .toList();
-      DropDebugLog.i.add(
-        'SCAN',
-        '${isZendBeacon ? "✓ZEND" : "skip"} $shortId RSSI=$rssi svcs=$svcCount mfg=$mfgKeys svcData=$svcDataKeys',
-      );
+      // Only log every Zend beacon (not every skip) to avoid flooding the debug panel
+      // and causing ANR on lower-end devices from rapid setState rebuilds.
+      if (isZendBeacon) {
+        final shortId = deviceId.length > 8 ? deviceId.substring(deviceId.length - 8) : deviceId;
+        final svcCount = result.advertisementData.serviceUuids.length;
+        DropDebugLog.i.add(
+          'SCAN',
+          '✓ZEND $shortId RSSI=$rssi svcs=$svcCount',
+        );
+      }
 
       if (!isZendBeacon) continue;
 
@@ -197,7 +193,7 @@ class BleScannerService {
       final thresholdMet = tracker.record(rssi);
 
       if (thresholdMet) {
-        DropDebugLog.i.add('SCAN', 'RSSI threshold met for $shortId — initiating GATT', level: DropLogLevel.ok);
+        DropDebugLog.i.add('SCAN', 'RSSI threshold met for ${deviceId.length > 8 ? deviceId.substring(deviceId.length - 8) : deviceId} — initiating GATT', level: DropLogLevel.ok);
         tracker.markGattInFlight();
         _onThresholdMet(result.device, deviceId, deviceId, rssi);
       }

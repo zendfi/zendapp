@@ -105,29 +105,37 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
   final _scrollController = ScrollController();
   StreamSubscription<List<DropLogEntry>>? _sub;
   List<DropLogEntry> _entries = List.unmodifiable(DropDebugLog.i.entries);
-  bool _pinned = true; // auto-scroll to bottom
+  bool _pinned = true;
+  Timer? _rebuildTimer;
 
   @override
   void initState() {
     super.initState();
     _sub = DropDebugLog.i.stream.listen((entries) {
-      setState(() => _entries = entries);
-      if (_pinned) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      }
+      // Throttle rebuilds to max 4/sec — rapid scan events otherwise cause ANR
+      // on lower-end devices.
+      _rebuildTimer?.cancel();
+      _rebuildTimer = Timer(const Duration(milliseconds: 250), () {
+        if (!mounted) return;
+        setState(() => _entries = entries);
+        if (_pinned) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 120),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      });
     });
   }
 
   @override
   void dispose() {
+    _rebuildTimer?.cancel();
     _sub?.cancel();
     _scrollController.dispose();
     super.dispose();
