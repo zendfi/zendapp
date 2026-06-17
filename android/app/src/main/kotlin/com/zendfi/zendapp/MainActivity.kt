@@ -8,23 +8,46 @@ import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : FlutterActivity() {
 
     private val DEEP_LINK_CHANNEL = "com.zendfi.zendapp/deep_links"
     private val DROP_ADVERTISER_CHANNEL = "com.zendfi.app/drop_advertiser"
+    private val DROP_DIAG_CHANNEL = "com.zendfi.app/drop_diagnostics"
 
     private var pendingLink: String? = null
     private var deepLinkMethodChannel: MethodChannel? = null
 
     // Pending advertiser start — deferred if activity is not fully resumed.
-    // Cleared in onResume after being dispatched.
     private var pendingStartPayload: Map<String, Any>? = null
 
     // Track resumed state so we know when it's safe to start the FGS.
     private var isActivityResumed = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Persistent crash log file — survives app crashes so we can read it on next launch
+    private val logFile: File by lazy {
+        File(filesDir, "drop_crash.log")
+    }
+
+    private fun appendLog(tag: String, msg: String) {
+        try {
+            val ts = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
+            val line = "[$ts][$tag] $msg\n"
+            android.util.Log.d("ZendDrop/$tag", msg)
+            logFile.appendText(line)
+            // Keep log under 32KB — trim oldest half if too large
+            if (logFile.length() > 32_768) {
+                val lines = logFile.readLines()
+                logFile.writeText(lines.drop(lines.size / 2).joinToString("\n") + "\n")
+            }
+        } catch (_: Exception) {}
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -44,6 +67,24 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // ── Drop diagnostics channel — read crash log from Flutter ───────────
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DROP_DIAG_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "readCrashLog" -> {
+                    val content = try { logFile.readText() } catch (_: Exception) { "" }
+                    result.success(content)
+                }
+                "clearCrashLog" -> {
+                    try { logFile.writeText("") } catch (_: Exception) {}
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         // ── Drop advertiser channel ──────────────────────────────────────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -57,10 +98,12 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "startAdvertising requires a beacon payload map", null)
                         return@setMethodCallHandler
                     }
+                    appendLog("ADV", "startAdvertising called from Flutter, isResumed=$isActivityResumed API=${Build.VERSION.SDK_INT}")
                     startDropAdvertiserService(payload)
                     result.success(null)
                 }
                 "stopAdvertising" -> {
+                    appendLog("ADV", "stopAdvertising called from Flutter")
                     stopDropAdvertiserService()
                     result.success(null)
                 }
@@ -71,16 +114,17 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appendLog("LIFECYCLE", "onCreate API=${Build.VERSION.SDK_INT}")
         handleIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
         isActivityResumed = true
-        // Dispatch any deferred FGS start now that the activity is visible and
-        // Android considers us foreground-eligible.
+        appendLog("LIFECYCLE", "onResume — dispatching pending=${pendingStartPayload != null}")
         pendingStartPayload?.let { payload ->
             pendingStartPayload = null
+            appendLog("ADV", "onResume: dispatching deferred startDropAdvertiserService")
             doStartDropAdvertiserService(payload)
         }
     }
@@ -88,6 +132,7 @@ class MainActivity : FlutterActivity() {
     override fun onPause() {
         super.onPause()
         isActivityResumed = false
+        appendLog("LIFECYCLE", "onPause")
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -122,8 +167,7 @@ class MainActivity : FlutterActivity() {
             if (isActivityResumed) {
                 doStartDropAdvertiserService(payload)
             } else {
-                // Activity not yet resumed — defer until onResume
-                android.util.Log.w("DropAdvertiser", "Activity not resumed — deferring FGS start")
+                appendLog("ADV", "Activity not resumed — deferring FGS start until onResume")
                 pendingStartPayload = payload
             }
         }
@@ -134,32 +178,26 @@ class MainActivity : FlutterActivity() {
             action = DropAdvertiserService.ACTION_START
             payload.forEach { (k, v) ->
                 when (v) {
-                    is String -> putExtra(k, v)
-                    is Int    -> putExtra(k, v)
-                    is Long   -> putExtra(k, v)
-                    is Double -> putExtra(k, v)
+                    is String  -> putExtra(k, v)
+                    is Int     -> putExtra(k, v)
+                    is Long    -> putExtra(k, v)
+                    is Double  -> putExtra(k, v)
                     is Boolean -> putExtra(k, v)
-                    else      -> putExtra(k, v.toString())
+                    else       -> putExtra(k, v.toString())
                 }
             }
         }
+        appendLog("ADV", "doStart: calling startService() API=${Build.VERSION.SDK_INT} isResumed=$isActivityResumed")
         try {
-            // Use startService() (not startForegroundService()).
-            // The service itself calls startForeground() in onStartCommand(), which
-            // is the correct pattern. startForegroundService() can throw
-            // ForegroundServiceStartNotAllowedException on Android 12+ if called
-            // from a background-ish state; startService() is unrestricted.
             startService(intent)
+            appendLog("ADV", "doStart: startService() succeeded")
         } catch (e: Exception) {
-            // ForegroundServiceStartNotAllowedException (API 31) or SecurityException —
-            // store as pending and retry on next resume.
-            android.util.Log.e("DropAdvertiser", "startService failed: ${e.message} — will retry on resume")
+            appendLog("ADV", "doStart: startService() FAILED: ${e.javaClass.simpleName}: ${e.message} — deferring to next resume")
             pendingStartPayload = payload
         }
     }
 
     private fun stopDropAdvertiserService() {
-        // Clear any deferred start so a stop doesn't get overridden.
         pendingStartPayload = null
         mainHandler.post {
             try {
@@ -167,8 +205,9 @@ class MainActivity : FlutterActivity() {
                     action = DropAdvertiserService.ACTION_STOP
                 }
                 stopService(intent)
+                appendLog("ADV", "stopService() succeeded")
             } catch (e: Exception) {
-                android.util.Log.e("DropAdvertiser", "stopService failed: ${e.message}")
+                appendLog("ADV", "stopService() failed: ${e.message}")
             }
         }
     }

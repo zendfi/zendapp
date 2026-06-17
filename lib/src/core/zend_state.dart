@@ -166,8 +166,14 @@ class ZendAppModel extends ChangeNotifier {
   bool _sseConnected = false;
 
   /// Start real-time updates via SSE.
-  /// Falls back to polling if SSE fails to connect within 5 seconds.
+  /// Guard: if SSE is already active and connected, don't restart it —
+  /// app-resume cycles would otherwise kill healthy connections.
   void startRealTimeUpdates() {
+    if (_sseConnected && _sseSubscription != null) {
+      // SSE is working fine — just restart fallback polling guard in case
+      // the polling timer expired while we were in background.
+      return;
+    }
     _stopAll();
     _sseConnected = false;
 
@@ -272,10 +278,28 @@ class ZendAppModel extends ChangeNotifier {
         pendingPaymentRequest = notification;
         notifyListeners();
       case SseEventType.dropConfirmed:
-        // A Drop transfer was confirmed — refresh balance + history immediately.
-        // Also broadcast to any listening Drop UI for haptics/animations.
+        // A Drop transfer was confirmed.
+        // 1. Update balance immediately from the SSE payload so the UI reacts
+        //    in real time without waiting for fetchBalance() to complete.
+        final amountStr = event.data['amount_usdc'] as String?;
+        final role = event.data['role'] as String?;
+        final dropAmount = double.tryParse(amountStr ?? '') ?? 0.0;
+        if (dropAmount > 0) {
+          if (role == 'receiver') {
+            // Receiver: add the incoming amount immediately
+            balance = (balance + dropAmount).clamp(0.0, double.maxFinite);
+            spendableBalance = (spendableBalance + dropAmount).clamp(0.0, double.maxFinite);
+          } else if (role == 'sender') {
+            // Sender: deduct immediately
+            balance = (balance - dropAmount).clamp(0.0, double.maxFinite);
+            spendableBalance = (spendableBalance - dropAmount).clamp(0.0, double.maxFinite);
+          }
+          notifyListeners();
+        }
+        // 2. Follow up with authoritative server values (async — non-blocking)
         unawaited(fetchBalance());
         unawaited(fetchHistory());
+        // 3. Broadcast to Drop UI for haptics/animations/overlay
         _dropConfirmedController.add(event.data);
       default:
         break;
@@ -310,6 +334,24 @@ class ZendAppModel extends ChangeNotifier {
   // Keep these for backward compatibility — they now delegate to startRealTimeUpdates
   void startPolling() => startRealTimeUpdates();
   void stopPolling() => stopRealTimeUpdates();
+
+  /// Force-restart SSE regardless of current state.
+  /// Use this when coming back from a long background period where
+  /// the SSE connection is known to be stale (e.g. > 5 minutes paused).
+  void forceRestartRealTimeUpdates() {
+    _stopAll();
+    _sseConnected = false;
+    sseService.stop();
+    sseService.start();
+    _sseSubscription = sseService.events.listen(
+      _onSseEvent,
+      onError: (_) => _startFallbackPolling(),
+      onDone: () {
+        if (isAuthenticated) _startFallbackPolling();
+      },
+    );
+    _startFallbackPolling();
+  }
 
   @override
   void dispose() {

@@ -37,6 +37,8 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   late ThemeMode _themeMode;
   StreamSubscription<DeepLinkPayload>? _deepLinkSub;
   StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
+  // Track when the app went to background so we know if SSE likely died.
+  DateTime? _pausedAt;
 
   @override
   void initState() {
@@ -210,7 +212,17 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       if (model.isAuthenticated) {
-        model.startRealTimeUpdates();
+        // If backgrounded for > 2 minutes, SSE connection is likely dead — force restart.
+        // Otherwise just call startRealTimeUpdates which guards against killing a live connection.
+        final bgDuration = _pausedAt != null
+            ? DateTime.now().difference(_pausedAt!)
+            : const Duration(minutes: 10);
+        if (bgDuration.inMinutes >= 2) {
+          model.forceRestartRealTimeUpdates();
+        } else {
+          model.startRealTimeUpdates();
+        }
+        _pausedAt = null;
         unawaited(model.fetchBalance());
         unawaited(model.fetchHistory());
         model.appLockService.startTimer();
@@ -242,6 +254,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       }
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
+      _pausedAt = DateTime.now();
       model.stopRealTimeUpdates();
       if (model.isAuthenticated) {
         model.appLockService.lock();

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -49,6 +50,22 @@ class DropDebugLog {
 
   void dispose() {
     _controller.close();
+  }
+
+  /// Reads the persistent crash log written by MainActivity on Android.
+  /// Returns null on non-Android or if the channel is unavailable.
+  static Future<String?> readAndClearNativeCrashLog() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      const ch = MethodChannel('com.zendfi.app/drop_diagnostics');
+      final log = await ch.invokeMethod<String>('readCrashLog');
+      if (log != null && log.isNotEmpty) {
+        await ch.invokeMethod('clearCrashLog');
+      }
+      return log;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Returns all entries as a plain-text string, suitable for clipboard copy.
@@ -107,13 +124,12 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
   List<DropLogEntry> _entries = List.unmodifiable(DropDebugLog.i.entries);
   bool _pinned = true;
   Timer? _rebuildTimer;
+  String? _nativeCrashLog;
 
   @override
   void initState() {
     super.initState();
     _sub = DropDebugLog.i.stream.listen((entries) {
-      // Throttle rebuilds to max 4/sec — rapid scan events otherwise cause ANR
-      // on lower-end devices.
       _rebuildTimer?.cancel();
       _rebuildTimer = Timer(const Duration(milliseconds: 250), () {
         if (!mounted) return;
@@ -130,6 +146,18 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
           });
         }
       });
+    });
+    // Load native crash log on open
+    DropDebugLog.readAndClearNativeCrashLog().then((log) {
+      if (log != null && log.isNotEmpty && mounted) {
+        setState(() => _nativeCrashLog = log);
+        // Also inject into in-memory log so it shows inline
+        for (final line in log.split('\n')) {
+          if (line.trim().isNotEmpty) {
+            DropDebugLog.i.add('NATIVE', line.trim(), level: DropLogLevel.warn);
+          }
+        }
+      }
     });
   }
 
@@ -223,9 +251,11 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                     // Copy to clipboard
                     GestureDetector(
                       onTap: () async {
-                        await Clipboard.setData(
-                          ClipboardData(text: DropDebugLog.i.toClipboardText()),
-                        );
+                        final combined = [
+                          if (_nativeCrashLog != null) '=== NATIVE CRASH LOG ===\n$_nativeCrashLog\n=== DART LOG ===',
+                          DropDebugLog.i.toClipboardText(),
+                        ].join('\n');
+                        await Clipboard.setData(ClipboardData(text: combined));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
