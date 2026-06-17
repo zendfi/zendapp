@@ -22,8 +22,6 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.UUID
 
 /**
@@ -53,16 +51,11 @@ class DropAdvertiserService : Service() {
         const val NOTIFICATION_CHANNEL_ID = "drop_advertiser"
         const val NOTIFICATION_ID = 9001
 
-        // Fixed Zend AppID bytes: "ZEND" (0x5A 0x45 0x4E 0x44)
-        private val ZEND_APP_ID = byteArrayOf(0x5A, 0x45, 0x4E, 0x44)
-        // BLE manufacturer ID — use a reserved/test company ID (0xFFFF) for non-registered use
-        private const val MANUFACTURER_ID = 0xFFFF
-
         // GATT UUIDs
         private val GATT_SERVICE_UUID: UUID = UUID.fromString("12345678-1234-1234-1234-123456789abc")
         private val GATT_CHARACTERISTIC_UUID: UUID = UUID.fromString("abcdefab-cdef-abcd-efab-cdefabcdefab")
 
-        // Intent action for startForegroundService
+        // Intent actions
         const val ACTION_START = "com.zendfi.app.DROP_START"
         const val ACTION_STOP = "com.zendfi.app.DROP_STOP"
     }
@@ -73,6 +66,9 @@ class DropAdvertiserService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var advertiseCallback: AdvertiseCallback? = null
     private var isAdvertising = false
+    // Last beacon JSON used to set the GATT characteristic — kept so the
+    // server can be rebuilt after a BLE stack reset without re-fetching.
+    private var _lastGattValue: ByteArray? = null
 
     // -------------------------------------------------------------------------
     // Service lifecycle
@@ -136,18 +132,16 @@ class DropAdvertiserService : Service() {
      * The full payload map is JSON-serialised and stored as the GATT characteristic value.
      */
     fun startAdvertising(payload: Map<String, Any>) {
-        if (isAdvertising) stopBleAdvertising()
+        // Always tear down existing BLE + GATT state before restarting.
+        // If only stopBleAdvertising() was called (old behaviour), a stale
+        // GATT server would remain open, causing the second connection attempt
+        // to fail silently — "drop works once then stops".
+        stopBleAdvertising()
+        stopGattServer()
 
-        val nonce = payload["nonce"] as? String ?: return
-        val timestamp = when (val ts = payload["timestamp"]) {
-            is Int -> ts.toLong()
-            is Long -> ts
-            is Double -> ts.toLong()
-            else -> return
-        }
-        val signature = payload["signature"] as? String ?: return
+        // Validate required fields exist before committing to a restart.
+        if (!payload.containsKey("nonce") || !payload.containsKey("timestamp") || !payload.containsKey("signature")) return
 
-        val adPacket = buildAdvertisementPacket(nonce)
         val jsonBytes = JSONObject(payload as Map<*, *>).toString().toByteArray(Charsets.UTF_8)
 
         startGattServer(jsonBytes)
@@ -158,38 +152,6 @@ class DropAdvertiserService : Service() {
     fun stopAdvertising() {
         stopBleAdvertising()
         stopGattServer()
-    }
-
-    // -------------------------------------------------------------------------
-    // Advertisement packet construction
-    // -------------------------------------------------------------------------
-
-    /**
-     * Builds a slim 12-byte manufacturer-specific payload for the primary advertisement:
-     *   [AppID(4)] [Nonce bytes 0-7(8)]
-     *
-     * The primary advert must stay under the BLE 4.x 31-byte PDU limit:
-     *   - Flags field:              3 bytes
-     *   - Service UUID (16-bit):    4 bytes  (we use the lower 16-bits of our UUID as a hint)
-     *   - Manufacturer data header: 4 bytes  (length + type + company ID)
-     *   - Manufacturer payload:    12 bytes
-     *   Total: 23 bytes — safely under the 31-byte limit
-     *
-     * The full 28-byte payload (including timestamp + sig hash) is NOT needed
-     * in the advertisement — the scanner gets the full beacon from GATT.
-     */
-    private fun buildAdvertisementPacket(nonce: String): ByteArray {
-        val buf = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN)
-
-        // Bytes 0–3: AppID "ZEND"
-        buf.put(ZEND_APP_ID)
-
-        // Bytes 4–11: first 8 bytes of the nonce UUID hex (strip hyphens → raw hex, take 16 chars = 8 bytes)
-        val nonceHex = nonce.replace("-", "")
-        val nonceBytes = hexToBytes(nonceHex.take(16)) // 16 hex chars = 8 bytes
-        buf.put(nonceBytes)
-
-        return buf.array()
     }
 
     // -------------------------------------------------------------------------
@@ -260,6 +222,9 @@ class DropAdvertiserService : Service() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             ?: return
 
+        // Store the value so we can refresh it on reconnect.
+        _lastGattValue = characteristicValue
+
         val gattService = BluetoothGattService(
             GATT_SERVICE_UUID,
             BluetoothGattService.SERVICE_TYPE_PRIMARY
@@ -276,6 +241,19 @@ class DropAdvertiserService : Service() {
         bluetoothGattServer = bluetoothManager.openGattServer(
             this,
             object : BluetoothGattServerCallback() {
+                override fun onConnectionStateChange(
+                    device: android.bluetooth.BluetoothDevice?,
+                    status: Int,
+                    newState: Int
+                ) {
+                    // BluetoothProfile.STATE_DISCONNECTED = 0
+                    if (newState == 0) {
+                        android.util.Log.d("DropAdvertiser", "GATT client disconnected: ${device?.address}")
+                        // No action needed — we stay advertising and keep the GATT server open.
+                        // The next sender can connect immediately without a restart.
+                    }
+                }
+
                 override fun onCharacteristicReadRequest(
                     device: android.bluetooth.BluetoothDevice?,
                     requestId: Int,
@@ -382,13 +360,6 @@ class DropAdvertiserService : Service() {
     }
 
     // -------------------------------------------------------------------------
-    // Utility
+    // Utility — intentionally empty; hexToBytes removed (buildAdvertisementPacket deleted)
     // -------------------------------------------------------------------------
-
-    private fun hexToBytes(hex: String): ByteArray {
-        val len = hex.length
-        return ByteArray(len / 2) { i ->
-            hex.substring(i * 2, i * 2 + 2).toInt(16).toByte()
-        }
-    }
 }

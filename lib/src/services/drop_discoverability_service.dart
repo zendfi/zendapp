@@ -96,6 +96,13 @@ class DropDiscoverabilityService extends ChangeNotifier {
     final shouldBeOn = prefs.getBool(_prefKey) ?? false;
     if (!shouldBeOn) return;
     DropDebugLog.i.add('DISC', 'Resuming advertising after transfer');
+    // Small delay so the sender's BLE scanner teardown completes before we
+    // restart advertising — prevents the receiver immediately re-triggering
+    // a scan hit on the same device that just finished a transfer.
+    await Future.delayed(const Duration(milliseconds: 800));
+    // Reset loading flag in case a previous _startAdvertising failed mid-flight
+    // and left _isLoading=true — without this reset the resume() is a no-op.
+    _isLoading = false;
     await _startAdvertising(fromInit: true);
   }
 

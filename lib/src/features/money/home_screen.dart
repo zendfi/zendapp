@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -36,20 +37,50 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _headerRowHeight = 40;
   static const double _headerRowPadding = 14;
 
+  // Animated balance — tracks the previous and current value for smooth counter animation.
+  double _displayedBalance = 0.0;
+  double _previousBalance = 0.0;
+  StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
+
   @override
   void initState() {
     super.initState();
-    // Only fetch on first cold load. On resume, app.dart's lifecycle observer handles refresh.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final model = ZendScope.of(context);
+      _displayedBalance = model.spendableBalance;
+      _previousBalance = model.spendableBalance;
       if (model.balance == 0.0 && !model.balanceLoading) {
         model.fetchBalance();
       }
+      // Subscribe to Drop confirmed events to animate the balance counter immediately.
+      _dropConfirmedSub = model.dropConfirmedEvents.listen((data) {
+        final role = data['role'] as String?;
+        if (role != 'receiver') return;
+        // New balance will arrive via fetchBalance() triggered in zend_state.dart.
+        // We listen to model changes to pick up the new value.
+        model.addListener(_onModelBalanceChanged);
+      });
+    });
+  }
+
+  void _onModelBalanceChanged() {
+    final model = ZendScope.of(context);
+    if (!mounted) return;
+    // Remove ourselves so we only animate once per drop event.
+    model.removeListener(_onModelBalanceChanged);
+    setState(() {
+      _previousBalance = _displayedBalance;
+      _displayedBalance = model.spendableBalance;
     });
   }
 
   @override
   void dispose() {
+    _dropConfirmedSub?.cancel();
+    // Safe: removeListener is called before super.dispose(), context still valid here.
+    try {
+      ZendScope.of(context).removeListener(_onModelBalanceChanged);
+    } catch (_) {}
     _sheetController.dispose();
     super.dispose();
   }
@@ -57,6 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
+
+    // Keep _displayedBalance in sync with normal balance updates
+    // (e.g. pull-to-refresh, app resume). Only skip if an animated
+    // counter transition is in flight (begin != end).
+    if (_displayedBalance == _previousBalance &&
+        _displayedBalance != model.spendableBalance) {
+      _previousBalance = _displayedBalance;
+      _displayedBalance = model.spendableBalance;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -212,8 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   TweenAnimationBuilder<double>(
                                     tween: Tween<double>(
-                                      begin: model.spendableBalance,
-                                      end: model.spendableBalance,
+                                      begin: _previousBalance,
+                                      end: _displayedBalance,
                                     ),
                                     duration: const Duration(milliseconds: 1200),
                                     curve: Curves.elasticOut,
