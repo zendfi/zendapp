@@ -739,6 +739,42 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                // ── Error banner (e.g. Android 15 FGS blocked) ──
+                if (!isOn && !isLoading && service.lastError != null) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5252).withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFFF5252).withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 14, color: Color(0xFFFF5252)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              service.lastError!,
+                              style: const TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 11,
+                                color: Color(0xFFFF5252),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 if (isOn && service.currentPayload != null) ...[
                   const SizedBox(height: 6),
                   Padding(

@@ -107,6 +107,10 @@ class MainActivity : FlutterActivity() {
                     stopDropAdvertiserService()
                     result.success(null)
                 }
+                "isServiceRunning" -> {
+                    result.success(DropAdvertiserService.isRunning)
+                    appendLog("ADV", "isServiceRunning=${DropAdvertiserService.isRunning}")
+                }
                 else -> result.notImplemented()
             }
         }

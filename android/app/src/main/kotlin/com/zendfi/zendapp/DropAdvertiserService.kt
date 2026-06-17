@@ -58,6 +58,10 @@ class DropAdvertiserService : Service() {
         // Intent actions
         const val ACTION_START = "com.zendfi.app.DROP_START"
         const val ACTION_STOP = "com.zendfi.app.DROP_STOP"
+
+        // Set to true once startForeground() succeeds; false when service stops.
+        // Used by MainActivity.isServiceRunning MethodChannel query.
+        @Volatile var isRunning = false
     }
 
     private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
@@ -66,9 +70,16 @@ class DropAdvertiserService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var advertiseCallback: AdvertiseCallback? = null
     private var isAdvertising = false
-    // Last beacon JSON used to set the GATT characteristic — kept so the
-    // server can be rebuilt after a BLE stack reset without re-fetching.
     private var _lastGattValue: ByteArray? = null
+
+    private fun svcLog(msg: String) {
+        android.util.Log.d("DropAdvertiserSvc", msg)
+        try {
+            val f = java.io.File(filesDir, "drop_crash.log")
+            val ts = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())
+            f.appendText("[$ts][SVC] $msg\n")
+        } catch (_: Exception) {}
+    }
 
     // -------------------------------------------------------------------------
     // Service lifecycle
@@ -76,16 +87,26 @@ class DropAdvertiserService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        svcLog("onCreate API=${Build.VERSION.SDK_INT}")
         createNotificationChannel()
         acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundWithNotification()
+        svcLog("onStartCommand action=${intent?.action} API=${Build.VERSION.SDK_INT}")
+
+        val promoted = tryStartForeground()
+        if (!promoted) {
+            svcLog("startForeground FAILED — stopping self to prevent crash loop")
+            isRunning = false
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        svcLog("startForeground OK")
+        isRunning = true
 
         when (intent?.action) {
             ACTION_START -> {
-                // Reconstruct the payload map from Intent extras
                 val extras = intent.extras
                 if (extras != null) {
                     val payload = mutableMapOf<String, Any>()
@@ -101,16 +122,20 @@ class DropAdvertiserService : Service() {
                 stopAdvertising()
                 stopSelf()
             }
-            // No action (OS restarted the service via START_STICKY) — stay foreground
-            // but don't attempt to advertise without a payload.
+            // No action — OS restarted via START_STICKY (shouldn't happen since we return
+            // START_NOT_STICKY, but guard anyway).
         }
 
-        return START_STICKY
+        // Use START_NOT_STICKY so if the OS kills this service, it doesn't auto-restart
+        // into a crash loop. Flutter will restart it via MethodChannel when needed.
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        svcLog("onDestroy")
+        isRunning = false
         stopBleAdvertising()
         stopGattServer()
         releaseWakeLock()
@@ -322,16 +347,36 @@ class DropAdvertiserService : Service() {
             .build()
     }
 
-    private fun startForegroundWithNotification() {
+    /**
+     * Attempts to promote this service to a foreground service.
+     *
+     * On Android 15 (API 35), [startForeground] with [ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE]
+     * can throw:
+     *   - [android.app.ForegroundServiceStartNotAllowedException] — app is in a state where
+     *     foreground services are not permitted (battery saver, OEM restriction)
+     *   - [SecurityException] — BLUETOOTH_ADVERTISE permission not granted at call time
+     *
+     * Both are caught here. Returns true if the service was successfully promoted,
+     * false if it should abort via stopSelf() to avoid a crash-restart loop.
+     */
+    private fun tryStartForeground(): Boolean {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            true
+        } catch (e: Exception) {
+            svcLog("startForeground THREW ${e.javaClass.name}: ${e.message}")
+            android.util.Log.e("DropAdvertiser",
+                "startForeground FAILED: ${e.javaClass.simpleName}: ${e.message}")
+            false
         }
     }
 

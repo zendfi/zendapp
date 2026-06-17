@@ -45,6 +45,7 @@ class DropDiscoverabilityService extends ChangeNotifier {
   bool _isLoading = false;
   GattPayload? _currentPayload;
   Timer? _refreshTimer;
+  String? _lastError;
 
   /// Whether the device is currently advertising as discoverable.
   bool get isDiscoverable => _isDiscoverable;
@@ -54,6 +55,10 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
   /// The active beacon payload, if currently advertising.
   GattPayload? get currentPayload => _currentPayload;
+
+  /// Set when the last start attempt failed. Null if no error.
+  /// On Android 15 OEM devices, this may be a battery optimization message.
+  String? get lastError => _lastError;
 
   // ── Initialisation ─────────────────────────────────────────────────────────
 
@@ -169,6 +174,7 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
       _isDiscoverable = true;
       _isLoading = false;
+      _lastError = null;
 
       // Persist preference
       if (!fromInit) {
@@ -183,6 +189,14 @@ class DropDiscoverabilityService extends ChangeNotifier {
           level: DropLogLevel.error);
       _isLoading = false;
       _isDiscoverable = false;
+      // Surface a user-visible error for the FGS_BLOCKED case so the profile
+      // tile can show a hint about battery optimization settings.
+      if (e is PlatformException && e.code == 'FGS_BLOCKED') {
+        _lastError = 'Android blocked the background service. '
+            'Go to Settings → Battery → Zend! App → set to "Unrestricted".';
+      } else {
+        _lastError = null;
+      }
       notifyListeners();
     }
   }
@@ -217,7 +231,23 @@ class DropDiscoverabilityService extends ChangeNotifier {
           'expires_at': payload.expiresAt,
           'signature': payload.signature,
         });
-        DropDebugLog.i.add('DISC', 'Android foreground service started',
+        DropDebugLog.i.add('DISC', 'Android: startService() called — waiting for service to confirm',
+            level: DropLogLevel.info);
+        // Give the service 400ms to either start successfully or fail+stop.
+        // If the service stopped itself (startForeground threw), isServiceRunning returns false.
+        await Future.delayed(const Duration(milliseconds: 400));
+        final running = await _isServiceRunning();
+        if (!running) {
+          DropDebugLog.i.add('DISC',
+              'Android: service stopped immediately after start — startForeground likely blocked by OS (API 35 restriction)',
+              level: DropLogLevel.error);
+          throw PlatformException(
+            code: 'FGS_BLOCKED',
+            message: 'Android 15 blocked the foreground service promotion. '
+                'Check battery optimization settings for Zend! App.',
+          );
+        }
+        DropDebugLog.i.add('DISC', 'Android foreground service confirmed running',
             level: DropLogLevel.ok);
       } on PlatformException catch (e) {
         DropDebugLog.i.add('DISC',
@@ -226,9 +256,16 @@ class DropDiscoverabilityService extends ChangeNotifier {
         rethrow;
       }
     }
-    // iOS: advertising is handled natively via the widget App Intent.
-    // The service just marks itself as logically on so the UI shows the
-    // "tap to broadcast" card.
+  }
+
+  Future<bool> _isServiceRunning() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('isServiceRunning');
+      return result ?? false;
+    } catch (_) {
+      // If the method doesn't exist (older build), assume running
+      return true;
+    }
   }
 
   Future<void> _stopNativeService() async {
