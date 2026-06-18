@@ -43,6 +43,7 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
   bool _isDiscoverable = false;
   bool _isLoading = false;
+  bool _appInForeground = true; // assume foreground until told otherwise
   GattPayload? _currentPayload;
   Timer? _refreshTimer;
   String? _lastError;
@@ -74,6 +75,41 @@ class DropDiscoverabilityService extends ChangeNotifier {
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
+
+  /// Call when the app goes to background — pauses the refresh timer so
+  /// we don't fire MethodChannel calls while the activity is paused (which
+  /// would queue up dozens of deferred starts on Android 15).
+  void onAppBackground() {
+    _appInForeground = false;
+    // Cancel the refresh timer — the service keeps running; we'll reschedule
+    // on foreground resume so the beacon is fresh when the app is visible again.
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    DropDebugLog.i.add('DISC', 'App backgrounded — refresh timer paused');
+  }
+
+  /// Call when the app returns to foreground — resumes the refresh cycle.
+  Future<void> onAppForeground() async {
+    _appInForeground = true;
+    DropDebugLog.i.add('DISC', 'App foregrounded — checking beacon state');
+    if (!_isDiscoverable) return;
+
+    // If the current beacon is stale (expired or about to expire), refresh now.
+    final payload = _currentPayload;
+    if (payload == null) {
+      await _startAdvertising(fromInit: true);
+      return;
+    }
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final ttlRemaining = payload.expiresAt - now;
+    if (ttlRemaining < 10) {
+      DropDebugLog.i.add('DISC', 'Beacon stale on foreground ($ttlRemaining s) — refreshing immediately');
+      await _startAdvertising(fromInit: true);
+    } else {
+      // Beacon still valid — just reschedule the refresh timer
+      _scheduleRefresh(payload);
+    }
+  }
 
   /// Toggles discoverability on or off.
   Future<void> toggle() async {
@@ -217,12 +253,26 @@ class DropDiscoverabilityService extends ChangeNotifier {
     DropDebugLog.i.add('DISC', 'Beacon refresh in ${delay.inSeconds}s');
     _refreshTimer = Timer(delay, () {
       DropDebugLog.i.add('DISC', 'Beacon expiry approaching — refreshing');
+      // Only restart the native service if it's currently running.
+      // If the app is backgrounded and the service is alive, we still need
+      // to refresh the beacon so new senders get a valid nonce — but we
+      // must only call _startNativeService when the activity is foreground
+      // (Android 15 restriction). _startAdvertising handles this correctly
+      // via the MethodChannel defer mechanism in MainActivity.
       unawaited(_startAdvertising(fromInit: true));
     });
   }
 
   Future<void> _startNativeService(GattPayload payload) async {
     if (Platform.isAndroid) {
+      // Don't call startService when the activity is backgrounded — on Android 15
+      // this queues a deferred start in MainActivity which fires on every subsequent
+      // onResume, creating confusion. The service either keeps running (if already up)
+      // or will be started when onAppForeground() is called.
+      if (!_appInForeground) {
+        DropDebugLog.i.add('DISC', 'App is backgrounded — skipping native service start (will restart on foreground)');
+        return;
+      }
       try {
         await _channel.invokeMethod('startAdvertising', {
           'zendtag': payload.zendtag,
@@ -233,18 +283,17 @@ class DropDiscoverabilityService extends ChangeNotifier {
         });
         DropDebugLog.i.add('DISC', 'Android: startService() called — waiting for service to confirm',
             level: DropLogLevel.info);
-        // Give the service 400ms to either start successfully or fail+stop.
-        // If the service stopped itself (startForeground threw), isServiceRunning returns false.
+        // Give the service 400ms to either start or fail+stop.
         await Future.delayed(const Duration(milliseconds: 400));
         final running = await _isServiceRunning();
         if (!running) {
           DropDebugLog.i.add('DISC',
-              'Android: service stopped immediately after start — startForeground likely blocked by OS (API 35 restriction)',
+              'Android: service stopped immediately — startForeground blocked by OS (API 35 / battery optimization)',
               level: DropLogLevel.error);
           throw PlatformException(
             code: 'FGS_BLOCKED',
-            message: 'Android 15 blocked the foreground service promotion. '
-                'Check battery optimization settings for Zend! App.',
+            message: 'Android 15 blocked the foreground service. '
+                'Go to Settings → Battery → Zend! App → set to "Unrestricted".',
           );
         }
         DropDebugLog.i.add('DISC', 'Android foreground service confirmed running',

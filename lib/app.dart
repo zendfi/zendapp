@@ -212,8 +212,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       if (model.isAuthenticated) {
-        // If backgrounded for > 2 minutes, SSE connection is likely dead — force restart.
-        // Otherwise just call startRealTimeUpdates which guards against killing a live connection.
+        // Notify discoverability service that app is foregrounded
+        unawaited(model.dropDiscoverabilityService.onAppForeground());
+
         final bgDuration = _pausedAt != null
             ? DateTime.now().difference(_pausedAt!)
             : const Duration(minutes: 10);
@@ -255,6 +256,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
       _pausedAt = DateTime.now();
+      // Pause discoverability refresh timer so it doesn't fire startService
+      // calls while the activity is paused (Android 15 background restriction).
+      model.dropDiscoverabilityService.onAppBackground();
       model.stopRealTimeUpdates();
       if (model.isAuthenticated) {
         model.appLockService.lock();

@@ -136,7 +136,11 @@ class MainActivity : FlutterActivity() {
     override fun onPause() {
         super.onPause()
         isActivityResumed = false
-        appendLog("LIFECYCLE", "onPause")
+        // Clear any pending deferred start — the beacon will be refreshed by
+        // Flutter's onAppForeground() when the activity resumes, so a stale
+        // deferred payload would just cause an unnecessary double-start.
+        pendingStartPayload = null
+        appendLog("LIFECYCLE", "onPause — cleared pendingStartPayload")
     }
 
     override fun onNewIntent(intent: Intent) {

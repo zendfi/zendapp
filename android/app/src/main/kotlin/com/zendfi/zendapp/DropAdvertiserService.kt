@@ -157,20 +157,36 @@ class DropAdvertiserService : Service() {
      * The full payload map is JSON-serialised and stored as the GATT characteristic value.
      */
     fun startAdvertising(payload: Map<String, Any>) {
-        // Always tear down existing BLE + GATT state before restarting.
-        // If only stopBleAdvertising() was called (old behaviour), a stale
-        // GATT server would remain open, causing the second connection attempt
-        // to fail silently — "drop works once then stops".
         stopBleAdvertising()
         stopGattServer()
 
-        // Validate required fields exist before committing to a restart.
-        if (!payload.containsKey("nonce") || !payload.containsKey("timestamp") || !payload.containsKey("signature")) return
+        if (!payload.containsKey("nonce") || !payload.containsKey("timestamp") || !payload.containsKey("signature")) {
+            svcLog("startAdvertising: missing required payload fields — aborting")
+            return
+        }
 
-        val jsonBytes = JSONObject(payload as Map<*, *>).toString().toByteArray(Charsets.UTF_8)
+        // Check Bluetooth is actually available before touching the BLE stack.
+        // openGattServer() and startAdvertising() both throw unchecked exceptions
+        // when Bluetooth is off or in a transitional state — catch them all here
+        // so a bad BT state doesn't crash the service after startForeground succeeded.
+        val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val btAdapter = btManager?.adapter
+        if (btAdapter == null || !btAdapter.isEnabled) {
+            svcLog("startAdvertising: Bluetooth is off or unavailable — stopping service")
+            stopSelf()
+            return
+        }
 
-        startGattServer(jsonBytes)
-        startBleAdvertising()
+        try {
+            val jsonBytes = JSONObject(payload as Map<*, *>).toString().toByteArray(Charsets.UTF_8)
+            startGattServer(jsonBytes)
+            startBleAdvertising()
+            svcLog("startAdvertising: BLE + GATT started OK")
+        } catch (e: Exception) {
+            svcLog("startAdvertising THREW ${e.javaClass.name}: ${e.message} — stopping service")
+            isRunning = false
+            stopSelf()
+        }
     }
 
     /** Stops BLE advertising and tears down the GATT server. */
