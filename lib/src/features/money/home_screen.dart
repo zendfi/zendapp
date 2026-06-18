@@ -52,34 +52,54 @@ class _HomeScreenState extends State<HomeScreen> {
       if (model.balance == 0.0 && !model.balanceLoading) {
         model.fetchBalance();
       }
-      // Subscribe to Drop confirmed events to animate the balance counter immediately.
+      // Listen to ALL model changes for balance sync, not just drop events.
+      // This ensures regular transfers, payins, and any balance update properly
+      // animates the counter — the in-build mutation was silent and unreliable.
+      model.addListener(_onModelChanged);
+
+      // Subscribe to Drop confirmed events for the spring animation path.
       _dropConfirmedSub = model.dropConfirmedEvents.listen((data) {
         final role = data['role'] as String?;
         if (role != 'receiver') return;
-        // New balance will arrive via fetchBalance() triggered in zend_state.dart.
-        // We listen to model changes to pick up the new value.
-        model.addListener(_onModelBalanceChanged);
+        // For drops: force-animate from old → new balance with spring.
+        // The model listener will catch the new value on the next notify.
+        // Mark _previousBalance = current so the tween starts from the right place.
+        if (mounted) {
+          setState(() {
+            _previousBalance = _displayedBalance;
+            // _displayedBalance will be updated by _onModelChanged on next notify
+          });
+        }
       });
     });
   }
 
-  void _onModelBalanceChanged() {
-    final model = ZendScope.of(context);
+  void _onModelChanged() {
     if (!mounted) return;
-    // Remove ourselves so we only animate once per drop event.
-    model.removeListener(_onModelBalanceChanged);
-    setState(() {
-      _previousBalance = _displayedBalance;
-      _displayedBalance = model.spendableBalance;
-    });
+    final model = ZendScope.of(context);
+    final newBalance = model.spendableBalance;
+    // Only trigger a setState if the balance actually changed — avoids rebuilding
+    // on every model notify (e.g. history loading state changes).
+    if (newBalance != _displayedBalance) {
+      setState(() {
+        _previousBalance = _displayedBalance;
+        _displayedBalance = newBalance;
+      });
+    }
+  }
+
+  void _onModelBalanceChanged() {
+    // Kept for compatibility — delegates to _onModelChanged.
+    _onModelChanged();
   }
 
   @override
   void dispose() {
     _dropConfirmedSub?.cancel();
-    // Safe: removeListener is called before super.dispose(), context still valid here.
     try {
-      ZendScope.of(context).removeListener(_onModelBalanceChanged);
+      final model = ZendScope.of(context);
+      model.removeListener(_onModelChanged);
+      model.removeListener(_onModelBalanceChanged);
     } catch (_) {}
     _sheetController.dispose();
     super.dispose();
@@ -88,15 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
-
-    // Keep _displayedBalance in sync with normal balance updates
-    // (e.g. pull-to-refresh, app resume). Only skip if an animated
-    // counter transition is in flight (begin != end).
-    if (_displayedBalance == _previousBalance &&
-        _displayedBalance != model.spendableBalance) {
-      _previousBalance = _displayedBalance;
-      _displayedBalance = model.spendableBalance;
-    }
 
     return LayoutBuilder(
       builder: (context, constraints) {

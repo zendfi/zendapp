@@ -186,9 +186,14 @@ class ZendAppModel extends ChangeNotifier {
     sseService.start();
     _sseSubscription = sseService.events.listen(
       _onSseEvent,
-      onError: (_) => _startFallbackPolling(),
+      onError: (_) {
+        _sseConnected = false;
+        _startFallbackPolling();
+      },
       onDone: () {
-        // SSE stream ended — start fallback polling until SSE reconnects
+        // SSE stream ended — reset connected flag and start fallback polling.
+        // This ensures the guard in startRealTimeUpdates() doesn't block reconnection.
+        _sseConnected = false;
         if (isAuthenticated) _startFallbackPolling();
       },
     );
@@ -368,8 +373,12 @@ class ZendAppModel extends ChangeNotifier {
     sseService.start();
     _sseSubscription = sseService.events.listen(
       _onSseEvent,
-      onError: (_) => _startFallbackPolling(),
+      onError: (_) {
+        _sseConnected = false;
+        _startFallbackPolling();
+      },
       onDone: () {
+        _sseConnected = false;
         if (isAuthenticated) _startFallbackPolling();
       },
     );
