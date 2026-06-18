@@ -48,6 +48,10 @@ List<PoolParticipant> _buildRecentPoolContacts(
 class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
   static const int _nameMaxLength = 50;
 
+  // Initialized in initState because they depend on widget.targetAmount
+  late double _targetAmount;
+  late final TextEditingController _amountController;
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _zendUserController = TextEditingController();
   final TextEditingController _externalContactController =
@@ -57,12 +61,23 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
   DateTime? _deadline;
 
   String? _nameError;
+  String? _amountError;
   String? _participantError;
   String? _deadlineError;
 
   @override
+  void initState() {
+    super.initState();
+    _targetAmount = widget.targetAmount;
+    _amountController = TextEditingController(
+      text: widget.targetAmount > 0 ? widget.targetAmount.toStringAsFixed(2) : '',
+    );
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
+    _amountController.dispose();
     _zendUserController.dispose();
     _externalContactController.dispose();
     super.dispose();
@@ -180,6 +195,17 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
       setState(() => _nameError = null);
     }
 
+    final parsedAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    if (parsedAmount < 0.01) {
+      setState(() => _amountError = 'Enter a valid amount');
+      hasError = true;
+    } else {
+      setState(() {
+        _targetAmount = parsedAmount;
+        _amountError = null;
+      });
+    }
+
     if (_participants.isEmpty) {
       setState(() => _participantError = 'Add at least one participant');
       hasError = true;
@@ -207,7 +233,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
           try {
             final requestData = await model.walletService.apiClient
                 .createPaymentRequest(
-              amountUsdc: widget.targetAmount,
+              amountUsdc: _targetAmount,
               description: 'Pool: $trimmedName — ${p.displayName}',
             );
             paymentRequestId = requestData['id'] as String?;
@@ -231,7 +257,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
       // Create pool via API
       final pool = await model.walletService.apiClient.createPool(
         name: trimmedName,
-        targetAmountUsdc: widget.targetAmount,
+        targetAmountUsdc: _targetAmount,
         deadline: _deadline,
         participants: participantPayload,
       );
@@ -291,17 +317,59 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ),
               const SizedBox(height: ZendSpacing.xl),
 
-              Text(
-                widget.targetAmount == widget.targetAmount.roundToDouble()
-                    ? '\$${widget.targetAmount.toStringAsFixed(0)}'
-                    : '\$${widget.targetAmount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  fontStyle: FontStyle.italic,
-                  color: zt.textPrimary,
-                ),
+              // Amount input — editable
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Goal amount',
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 36,
+                      fontStyle: FontStyle.italic,
+                      color: zt.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      prefixText: '\$',
+                      prefixStyle: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 24,
+                        color: zt.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      hintText: '0.00',
+                      hintStyle: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 36,
+                        fontStyle: FontStyle.italic,
+                        color: zt.textSecondary.withValues(alpha: 0.4),
+                      ),
+                      errorText: _amountError,
+                      border: UnderlineInputBorder(
+                        borderSide: BorderSide(color: zt.border),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: zt.accentBright, width: 2),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      final parsed = double.tryParse(v) ?? 0.0;
+                      if (parsed > 0 && _amountError != null) {
+                        setState(() => _amountError = null);
+                      }
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: ZendSpacing.lg),
 

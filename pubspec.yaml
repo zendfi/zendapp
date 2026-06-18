@@ -100,6 +100,9 @@ dependencies:
   # Native share sheet (WhatsApp, X, Telegram, etc.)
   share_plus: ^10.1.4
 
+  # Device contacts access — used to find which contacts are on Zend
+  flutter_contacts: ^1.1.9+2
+
   # QR/barcode scanning via camera
   mobile_scanner: ^6.0.0
 

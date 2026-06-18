@@ -11,6 +11,7 @@ import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
+import '../services/contacts_service.dart';
 import '../services/drop_discoverability_service.dart';
 import '../services/email_intent_service.dart';
 import '../services/fx_service.dart';
@@ -127,6 +128,10 @@ class ZendAppModel extends ChangeNotifier {
     apiClient: walletService.apiClient,
     walletService: walletService,
   );
+
+  /// Contacts service — reads device contacts and resolves against Zend accounts.
+  late final ContactsService contactsService =
+      ContactsService(apiClient: walletService.apiClient);
 
   /// On-device SQLite database for pool message persistence.
   final AppDatabase localDb;

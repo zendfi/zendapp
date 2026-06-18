@@ -46,6 +46,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Post notifications — required on Android 13+ (API 33+) for system notification bar alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Contacts access — used to find which contacts are registered on Zend -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <application
         android:label="Zend! App"
         android:name="${applicationName}"

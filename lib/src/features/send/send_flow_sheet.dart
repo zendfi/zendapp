@@ -15,9 +15,6 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 
-// Note: bank send and crypto send are now accessed via the Withdraw sheet,
-// not from the send flow. The send flow is strictly zend-to-zend.
-
 enum SendStage {
   recipient,
   pin,
@@ -1041,6 +1038,12 @@ class _RecipientStageState extends State<_RecipientStage> {
                           onTap: () => _selectContact(contact),
                         )),
                   ],
+
+                  // ── Device contacts on Zend ────────────────────────────
+                  if (!keyboardOpen)
+                    _ZendContactsSection(
+                      onSelectContact: _selectContact,
+                    ),
                 ],
               ),
             ),
@@ -1467,4 +1470,114 @@ String _formatNgn(double value) {
     }
   }
   return buffer.toString();
+}
+
+/// Shows device contacts that are registered on Zend.
+/// Loads lazily on first render — requests READ_CONTACTS permission if needed.
+class _ZendContactsSection extends StatefulWidget {
+  const _ZendContactsSection({required this.onSelectContact});
+  final ValueChanged<RecentContact> onSelectContact;
+
+  @override
+  State<_ZendContactsSection> createState() => _ZendContactsSectionState();
+}
+
+class _ZendContactsSectionState extends State<_ZendContactsSection> {
+  bool _expanded = false;
+  bool _triggered = false;
+
+  void _loadIfNeeded(ZendAppModel model) {
+    if (_triggered) return;
+    _triggered = true;
+    model.contactsService.loadContacts();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
+
+    _loadIfNeeded(model);
+
+    return ListenableBuilder(
+      listenable: model.contactsService,
+      builder: (context, _) {
+        final svc = model.contactsService;
+
+        // Don't show if permission denied or no matches
+        if (svc.permissionDenied) return const SizedBox.shrink();
+        if (!svc.loading && !svc.hasContacts) return const SizedBox.shrink();
+
+        final contacts = svc.toRecentContacts();
+        final shown = _expanded ? contacts : contacts.take(3).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Text(
+                  'CONTACTS',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.1,
+                    color: zt.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                if (svc.loading)
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (svc.loading && !svc.hasContacts)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Finding your contacts on Zend…',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 13,
+                    color: zt.textSecondary,
+                  ),
+                ),
+              )
+            else ...[
+              ...shown.map((c) => _ContactTile(
+                    contact: c,
+                    onTap: () => widget.onSelectContact(c),
+                  )),
+              if (contacts.length > 3)
+                GestureDetector(
+                  onTap: () => setState(() => _expanded = !_expanded),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(
+                      _expanded
+                          ? 'Show fewer'
+                          : 'Show ${contacts.length - 3} more',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 13,
+                        color: zt.accent,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }

@@ -246,6 +246,37 @@ class ApiClient {
     }
   }
 
+  /// Resolves a batch of emails/phone numbers against Zend accounts.
+  /// Returns only those that matched.
+  Future<List<Map<String, dynamic>>> batchResolveContacts(List<String> queries) async {
+    if (queries.isEmpty) return [];
+    try {
+      final response = await _dio.post(
+        '/api/zend/zendtag/batch-resolve',
+        data: {'contacts': queries},
+      );
+      final resolved = (response.data['resolved'] as List<dynamic>? ?? []);
+      return resolved.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Searches for users by zendtag or display name prefix.
+  Future<List<Map<String, dynamic>>> searchUsers(String query, {int limit = 20}) async {
+    if (query.trim().isEmpty) return [];
+    try {
+      final response = await _dio.get(
+        '/api/zend/users/search',
+        queryParameters: {'q': query.trim(), 'limit': limit},
+      );
+      final users = (response.data['users'] as List<dynamic>? ?? []);
+      return users.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<BackupResponse> storeBackup(
     String encryptedKeypairB64,
     String nonceB64,

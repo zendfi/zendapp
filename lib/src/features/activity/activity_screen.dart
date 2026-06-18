@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
@@ -11,7 +12,9 @@ import '../../models/email_intent.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
 import '../send/qr_payment_sheet.dart';
+import 'search_screen.dart';
 import 'transaction_receipt_sheet.dart';
+import '../../navigation/zend_routes.dart';
 
 // ── Unified activity item ─────────────────────────────────────────────────────
 
@@ -51,6 +54,7 @@ class ActivityScreen extends StatefulWidget {
 
 class _ActivityScreenState extends State<ActivityScreen> {
   String _activeFilter = 'All';
+  bool _notificationsMuted = false;
 
   static const _filters = ['All', 'Received', 'Sent', 'Pending', 'Requests'];
 
@@ -60,6 +64,34 @@ class _ActivityScreenState extends State<ActivityScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ZendScope.of(context).fetchHistory();
     });
+    _loadMutePreference();
+  }
+
+  Future<void> _loadMutePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() => _notificationsMuted = prefs.getBool('notifications_muted') ?? false);
+    }
+  }
+
+  Future<void> _toggleNotificationMute() async {
+    final prefs = await SharedPreferences.getInstance();
+    final newValue = !_notificationsMuted;
+    await prefs.setBool('notifications_muted', newValue);
+    setState(() => _notificationsMuted = newValue);
+    HapticFeedback.lightImpact();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newValue ? 'Notifications silenced' : 'Notifications enabled',
+            style: const TextStyle(fontFamily: 'DMSans'),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   bool _intentIsRenderable(EmailIntent intent) {
@@ -160,14 +192,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     ),
                   ),
                   IconButton(
-                    onPressed: null,
-                    icon: Icon(Icons.search,
-                        color: zt.textSecondary.withValues(alpha: 0.4)),
+                    onPressed: () => pushZendSlide(context, const SearchScreen()),
+                    icon: Icon(Icons.search, color: zt.textSecondary),
+                    tooltip: 'Search',
                   ),
                   IconButton(
-                    onPressed: null,
-                    icon: Icon(Icons.notifications_none,
-                        color: zt.textSecondary.withValues(alpha: 0.4)),
+                    onPressed: _toggleNotificationMute,
+                    icon: Icon(
+                      _notificationsMuted
+                          ? Icons.notifications_off_outlined
+                          : Icons.notifications_none,
+                      color: _notificationsMuted
+                          ? zt.textSecondary.withValues(alpha: 0.5)
+                          : zt.textSecondary,
+                    ),
+                    tooltip: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
                   ),
                 ],
               ),
