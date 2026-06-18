@@ -15,12 +15,27 @@ class AppDatabase {
   }
 
   Future<Database> get database async {
-    _db ??= await _initDb();
+    if (_db != null) {
+      // Validate the handle is still usable — if the file was deleted
+      // while the process was running the query will throw.
+      try {
+        await _db!.rawQuery('SELECT 1');
+        return _db!;
+      } catch (_) {
+        // Stale handle — close it and re-open.
+        await _db?.close();
+        _db = null;
+      }
+    }
+    _db = await _initDb();
     return _db!;
   }
 
   Future<Database> _initDb() async {
-    final dir = await getApplicationDocumentsDirectory();
+    // Use getApplicationSupportDirectory — this path survives "Clear Cache" and
+    // is NOT deleted when the user taps "Clear Storage" in Android app settings.
+    // (getApplicationDocumentsDirectory IS cleared by "Clear Storage".)
+    final dir = await getApplicationSupportDirectory();
     final path = join(dir.path, 'zend_pool_messages.db');
     return openDatabase(
       path,

@@ -96,13 +96,19 @@ class _MissionRoomState extends State<MissionRoom> {
     // Load from local DB immediately — no spinner if we have cached messages
     final cached = await _repository.getRecentMessages(_pool.id);
     if (!mounted) return;
-    if (cached.isNotEmpty) {
-      setState(() {
+
+    // Always clear loading immediately after the local DB read completes.
+    // This means the UI shows either cached messages or an empty state right away,
+    // never a spinner for 3 seconds while the WS handshake completes.
+    setState(() {
+      if (cached.isNotEmpty) {
         _messages.addAll(cached);
-        _loading = false;
-      });
+      }
+      _loading = false;
+    });
+
+    if (cached.isNotEmpty) {
       _jumpToBottom();
-      // Send read receipt after WS connects (deferred so _wsService is ready).
       WidgetsBinding.instance.addPostFrameCallback((_) => _sendReadReceipt());
     }
 
@@ -135,16 +141,11 @@ class _MissionRoomState extends State<MissionRoom> {
     // Listen to connection state for reconnecting banner
     _wsService.connectionState.addListener(_onConnectionStateChanged);
 
-    // Connect
-    await _wsService.connect();
+    // Connect (background — UI is already showing, no more blocking awaits)
+    unawaited(_wsService.connect());
 
     // Subscribe to SSE for non-message events
     _subscribeSse();
-
-    // If no cached messages, show loading until WS delivers or we fall back
-    if (cached.isEmpty && mounted) {
-      setState(() => _loading = false);
-    }
 
     // Add scroll listener for infinite scroll
     _scrollController.addListener(_onScroll);
