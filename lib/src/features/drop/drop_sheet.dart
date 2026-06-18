@@ -17,6 +17,7 @@ import '../../services/wallet_session_cache.dart';
 import 'drop_confirm_stage.dart';
 import 'drop_countdown_stage.dart';
 import 'drop_debug_log.dart';
+import 'drop_disambiguate_stage.dart';
 import 'drop_preview_stage.dart';
 import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
@@ -24,11 +25,12 @@ import '../send/send_shared_widgets.dart';
 
 enum DropStage {
   scanning,
-  preview,     // unconfirmed — preview arrived, GATT still in flight
-  confirmed,   // GATT verified — proceed to tier routing (transient)
-  countdown,   // Tier 1 (≤$50): 2-second auto-execute
-  confirm,     // Tier 2 ($51–$500): confirm button
-  biometric,   // Tier 3 ($501–$10,000): confirm + biometric
+  preview,       // unconfirmed — preview arrived, GATT still in flight
+  confirmed,     // GATT verified — proceed to tier routing (transient)
+  disambiguate,  // 2+ confirmed receivers within signal range — user picks one
+  countdown,     // Tier 1 (≤$50): 2-second auto-execute
+  confirm,       // Tier 2 ($51–$500): confirm button
+  biometric,     // Tier 3 ($501–$10,000): confirm + biometric
   processing,
   success,
   error,
@@ -72,7 +74,12 @@ class _DropSheetState extends State<DropSheet>
   StreamSubscription<List<DiscoveredReceiver>>? _scanSub;
 
   DiscoveredReceiver? _confirmedReceiver;
+  List<DiscoveredReceiver> _candidates = []; // for disambiguation
   String? _errorMessage;
+
+  // RSSI gap threshold: if top device is this many dBm stronger than second,
+  // auto-select without showing the disambiguation list.
+  static const int _kAutoSelectRssiGap = 8;
 
   // ── Debug panel visibility ────────────────────────────────────────────────
   bool _showDebugPanel = false;
@@ -162,7 +169,6 @@ class _DropSheetState extends State<DropSheet>
   void _onReceivers(List<DiscoveredReceiver> receivers) {
     if (!mounted) return;
 
-    // If we already have a confirmed receiver and are past scanning, ignore.
     if (_stage == DropStage.processing ||
         _stage == DropStage.success ||
         _stage == DropStage.error) {
@@ -171,27 +177,57 @@ class _DropSheetState extends State<DropSheet>
 
     if (receivers.isEmpty) return;
 
-    // Check if any receiver is confirmed (GATT verified).
     final confirmedList = receivers.where((r) => r.isConfirmed).toList();
+
     if (confirmedList.isNotEmpty) {
-      // Use strongest-signal confirmed receiver.
+      // Only route once — don't re-trigger if already in a tier stage.
+      if (_stage != DropStage.scanning &&
+          _stage != DropStage.preview &&
+          _stage != DropStage.confirmed &&
+          _stage != DropStage.disambiguate) {
+        return;
+      }
+
+      if (confirmedList.length == 1) {
+        // Single confirmed receiver — auto-select immediately.
+        _onReceiverConfirmed(confirmedList.first);
+        return;
+      }
+
+      // Multiple confirmed receivers — check if the top one is dominant.
       final best = confirmedList.first;
-      // Only route to tier stage once (avoid re-triggering).
-      if (_stage == DropStage.scanning ||
-          _stage == DropStage.preview ||
-          _stage == DropStage.confirmed) {
+      final second = confirmedList[1];
+      final gap = best.rssi - second.rssi; // positive = best is stronger
+
+      if (gap >= _kAutoSelectRssiGap) {
+        // Top device is clearly closest — auto-select silently.
+        DropDebugLog.i.add('SHEET',
+            'Auto-selecting @${best.gattPayload?.zendtag} (RSSI gap=${gap}dBm > ${_kAutoSelectRssiGap}dBm threshold)',
+            level: DropLogLevel.ok);
         _onReceiverConfirmed(best);
+      } else {
+        // Too close to call — show the disambiguation list.
+        if (_stage != DropStage.disambiguate) {
+          DropDebugLog.i.add('SHEET',
+              '${confirmedList.length} devices within ${_kAutoSelectRssiGap}dBm — showing disambiguation list');
+          setState(() {
+            _candidates = confirmedList;
+            _stage = DropStage.disambiguate;
+          });
+        } else {
+          // Already showing the list — just update the candidates silently
+          // so signal-strength bars stay live.
+          setState(() => _candidates = confirmedList);
+        }
       }
       return;
     }
 
-    // At least one unconfirmed receiver — show preview stage.
+    // No confirmed receivers yet — handle preview state.
     final previewCandidate = receivers.first;
     if (_stage == DropStage.scanning) {
       setState(() => _stage = DropStage.preview);
     }
-    // Update the confirmed receiver slot even though it's unconfirmed, so
-    // the preview stage can display identity hints.
     if (_stage == DropStage.preview) {
       setState(() => _confirmedReceiver = previewCandidate);
     }
@@ -309,6 +345,9 @@ class _DropSheetState extends State<DropSheet>
       case DropStage.preview:
       case DropStage.confirmed:
         return 0.60;
+      case DropStage.disambiguate:
+        // Taller to show the candidate list comfortably
+        return (_candidates.length > 3) ? 0.80 : 0.70;
       case DropStage.countdown:
         return 0.60;
       case DropStage.confirm:
@@ -391,7 +430,8 @@ class _DropSheetState extends State<DropSheet>
             // Note field — shown above stage content on scanning/preview stages
             if (_stage == DropStage.scanning ||
                 _stage == DropStage.preview ||
-                _stage == DropStage.confirmed)
+                _stage == DropStage.confirmed ||
+                _stage == DropStage.disambiguate)
               _NoteField(
                 controller: _noteController,
                 expanded: _noteExpanded,
@@ -462,6 +502,23 @@ class _DropSheetState extends State<DropSheet>
         return DropScannerStage(
           key: const ValueKey('scanning-fallback2'),
           amount: widget.amount,
+        );
+
+      case DropStage.disambiguate:
+        return DropDisambiguateStage(
+          key: const ValueKey('disambiguate'),
+          amount: widget.amount,
+          candidates: _candidates,
+          onSelect: (receiver) {
+            setState(() => _candidates = []);
+            _onReceiverConfirmed(receiver);
+          },
+          onCancel: () {
+            setState(() => _candidates = []);
+            _bleScannerService.stopScan();
+            _bleScannerService.startScan();
+            _goTo(DropStage.scanning);
+          },
         );
 
       case DropStage.countdown:
