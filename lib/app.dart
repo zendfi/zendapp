@@ -212,7 +212,6 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       if (model.isAuthenticated) {
-        // Notify discoverability service that app is foregrounded
         unawaited(model.dropDiscoverabilityService.onAppForeground());
 
         final bgDuration = _pausedAt != null
@@ -227,6 +226,16 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         unawaited(model.fetchBalance());
         unawaited(model.fetchHistory());
         model.appLockService.startTimer();
+      }
+
+      // Handle pending drop confirmed push notification (arrived while backgrounded)
+      final pendingDrop = PushNotificationService.consumePendingDropConfirmed();
+      if (pendingDrop != null) {
+        Future<void>.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted || !model.isAuthenticated) return;
+          // Feed it through the same SSE handler so balance updates correctly
+          model.handleDropConfirmedFromPush(pendingDrop);
+        });
       }
 
       // Consume any pending payment request notification that arrived while

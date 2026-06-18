@@ -24,6 +24,10 @@ class PushNotificationService {
   /// Consumed once by the app after session restore.
   static PaymentRequestNotification? pendingPaymentRequestFromNotification;
 
+  /// Pending drop confirmation from a push notification (background/terminated).
+  /// Consumed by the app on resume to trigger haptics + overlay.
+  static Map<String, dynamic>? pendingDropConfirmedFromNotification;
+
   PushNotificationService({required ApiClient apiClient})
       : _apiClient = apiClient;
 
@@ -161,10 +165,11 @@ class PushNotificationService {
       if (type == 'payment_request') {
         final notification = PaymentRequestNotification.fromJson(data);
         if (notification.requesterZendtag.isNotEmpty && notification.amountUsdc > 0) {
-          // Store for consumption after session restore (terminated app case)
-          // or immediate use (background app case — handled by app.dart)
           pendingPaymentRequestFromNotification = notification;
         }
+      } else if (type == 'drop_confirmed') {
+        // Store so app.dart can trigger haptics + overlay on next foreground resume
+        pendingDropConfirmedFromNotification = data;
       }
     } catch (e) {
       if (kDebugMode) {
@@ -174,10 +179,16 @@ class PushNotificationService {
   }
 
   /// Consume and return the pending payment request notification from a tap.
-  /// Returns null if there is no pending notification.
   static PaymentRequestNotification? consumePendingPaymentRequest() {
     final pending = pendingPaymentRequestFromNotification;
     pendingPaymentRequestFromNotification = null;
+    return pending;
+  }
+
+  /// Consume and return the pending drop confirmation from a background push.
+  static Map<String, dynamic>? consumePendingDropConfirmed() {
+    final pending = pendingDropConfirmedFromNotification;
+    pendingDropConfirmedFromNotification = null;
     return pending;
   }
 }

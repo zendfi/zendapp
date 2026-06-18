@@ -281,26 +281,39 @@ class ZendAppModel extends ChangeNotifier {
         // A Drop transfer was confirmed.
         // 1. Update balance immediately from the SSE payload so the UI reacts
         //    in real time without waiting for fetchBalance() to complete.
-        final amountStr = event.data['amount_usdc'] as String?;
-        final role = event.data['role'] as String?;
-        final dropAmount = double.tryParse(amountStr ?? '') ?? 0.0;
+        //    We use the server-computed new_balance for the sender (authoritative),
+        //    and add the amount for the receiver (server doesn't know their balance).
+        //    Critically: do NOT call fetchBalance() immediately — Solana hasn't
+        //    confirmed yet and the chain query will return the pre-transfer balance,
+        //    causing the UI to dial back down.
+        final dropAmountStr = event.data['amount_usdc'] as String?;
+        final dropRole = event.data['role'] as String?;
+        final dropAmount = double.tryParse(dropAmountStr ?? '') ?? 0.0;
+        final newBalanceStr = event.data['new_balance_usdc'] as String?;
+        final serverNewBalance = newBalanceStr != null ? double.tryParse(newBalanceStr) : null;
+
         if (dropAmount > 0) {
-          if (role == 'receiver') {
-            // Receiver: add the incoming amount immediately
+          if (dropRole == 'sender' && serverNewBalance != null) {
+            // Sender: use the server-computed balance (it subtracted the amount)
+            balance = serverNewBalance;
+            spendableBalance = serverNewBalance;
+          } else if (dropRole == 'receiver') {
+            // Receiver: add incoming amount to cached balance immediately
             balance = (balance + dropAmount).clamp(0.0, double.maxFinite);
             spendableBalance = (spendableBalance + dropAmount).clamp(0.0, double.maxFinite);
-          } else if (role == 'sender') {
-            // Sender: deduct immediately
-            balance = (balance - dropAmount).clamp(0.0, double.maxFinite);
-            spendableBalance = (spendableBalance - dropAmount).clamp(0.0, double.maxFinite);
           }
           notifyListeners();
         }
-        // 2. Follow up with authoritative server values (async — non-blocking)
-        unawaited(fetchBalance());
-        unawaited(fetchHistory());
-        // 3. Broadcast to Drop UI for haptics/animations/overlay
+        // 2. Broadcast to Drop UI for haptics/animations/overlay immediately
         _dropConfirmedController.add(event.data);
+        // 3. Schedule authoritative re-fetch after 4s — by then Solana should have
+        //    confirmed and the chain balance will match what we showed optimistically.
+        Future.delayed(const Duration(seconds: 4), () {
+          if (isAuthenticated) {
+            unawaited(fetchBalance());
+            unawaited(fetchHistory());
+          }
+        });
       default:
         break;
     }
@@ -335,7 +348,12 @@ class ZendAppModel extends ChangeNotifier {
   void startPolling() => startRealTimeUpdates();
   void stopPolling() => stopRealTimeUpdates();
 
-  /// Force-restart SSE regardless of current state.
+  /// Handle a drop confirmed event that arrived via push notification
+  /// (when the app was backgrounded and SSE was not connected).
+  /// Triggers the same UI reactions as the SSE path.
+  void handleDropConfirmedFromPush(Map<String, dynamic> data) {
+    _onSseEvent(SseEvent(type: SseEventType.dropConfirmed, data: data));
+  }
   /// Use this when coming back from a long background period where
   /// the SSE connection is known to be stale (e.g. > 5 minutes paused).
   void forceRestartRealTimeUpdates() {
