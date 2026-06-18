@@ -51,9 +51,6 @@ class DropDiscoverabilityService extends ChangeNotifier {
   // ── Constructor / init ─────────────────────────────────────────────────────
 
   void _setupNativeCallbackListener() {
-    // flutter_blue_plus sets up a MethodChannel handler; we set one too for our
-    // own DROP_ADVERTISER channel to receive "onPermissionDenied" push.
-    // This is a receive-only handler (Flutter receives from native).
     const callbackChannel = MethodChannel('com.zendfi.app/drop_advertiser');
     callbackChannel.setMethodCallHandler((call) async {
       if (call.method == 'onPermissionDenied') {
@@ -66,13 +63,6 @@ class DropDiscoverabilityService extends ChangeNotifier {
       }
     });
   }
-
-  bool _isDiscoverable = false;
-  bool _isLoading = false;
-  bool _appInForeground = true; // assume foreground until told otherwise
-  GattPayload? _currentPayload;
-  Timer? _refreshTimer;
-  String? _lastError;
 
   /// Whether the device is currently advertising as discoverable.
   bool get isDiscoverable => _isDiscoverable;
