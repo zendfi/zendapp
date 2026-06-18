@@ -292,53 +292,48 @@ class DropDiscoverabilityService extends ChangeNotifier {
   }
 
   Future<void> _startNativeService(GattPayload payload) async {
-    if (Platform.isAndroid) {
-      // Don't call startService when the activity is backgrounded — on Android 15
-      // this queues a deferred start in MainActivity which fires on every subsequent
-      // onResume, creating confusion. The service either keeps running (if already up)
-      // or will be started when onAppForeground() is called.
-      if (!_appInForeground) {
-        DropDebugLog.i.add('DISC', 'App is backgrounded — skipping native service start (will restart on foreground)');
+    if (!Platform.isAndroid) return;
+
+    if (!_appInForeground) {
+      DropDebugLog.i.add('DISC', 'App backgrounded — skipping native start (will restart on foreground)');
+      return;
+    }
+
+    try {
+      // Check permissions first. If not granted, startAdvertising will trigger
+      // the system dialog natively — but we MUST NOT do the isServiceRunning
+      // check in that case, since the service hasn't had a chance to start yet.
+      final hasPerms = await _channel.invokeMethod<bool>('checkBlePermissions') ?? false;
+
+      await _channel.invokeMethod('startAdvertising', {
+        'zendtag': payload.zendtag,
+        'nonce': payload.nonce,
+        'timestamp': payload.timestamp,
+        'expires_at': payload.expiresAt,
+        'signature': payload.signature,
+      });
+
+      if (!hasPerms) {
+        // Permission dialog is now showing — return without the isServiceRunning
+        // check. The service will start once the user grants permission, and the
+        // next beacon refresh cycle will confirm it's running.
+        DropDebugLog.i.add('DISC', 'Permission dialog shown — skipping service confirmation check');
         return;
       }
-      try {
-        // First check if BLE permissions are granted — avoids the SecurityException
-        // by surfacing a permission prompt before we even try to start the service.
-        final hasPerms = await _channel.invokeMethod<bool>('checkBlePermissions') ?? false;
-        if (!hasPerms) {
-          DropDebugLog.i.add('DISC', 'BLE permissions not granted — requesting from user', level: DropLogLevel.warn);
-          // The startAdvertising call will trigger the permission dialog natively.
-          // onPermissionDenied callback will be fired if user denies.
-        }
 
-        await _channel.invokeMethod('startAdvertising', {
-          'zendtag': payload.zendtag,
-          'nonce': payload.nonce,
-          'timestamp': payload.timestamp,
-          'expires_at': payload.expiresAt,
-          'signature': payload.signature,
-        });
-        DropDebugLog.i.add('DISC', 'Android: startService() called — waiting for service to confirm',
-            level: DropLogLevel.info);
-        await Future.delayed(const Duration(milliseconds: 500));
-        final running = await _isServiceRunning();
-        if (!running) {
-          DropDebugLog.i.add('DISC',
-              'Android: service not running after start — BLE permission denied or battery restriction',
-              level: DropLogLevel.error);
-          throw PlatformException(
-            code: 'FGS_BLOCKED',
-            message: 'SERVICE_NOT_RUNNING',
-          );
-        }
-        DropDebugLog.i.add('DISC', 'Android foreground service confirmed running',
-            level: DropLogLevel.ok);
-      } on PlatformException catch (e) {
+      DropDebugLog.i.add('DISC', 'startService() called — waiting for service to confirm');
+      await Future.delayed(const Duration(milliseconds: 500));
+      final running = await _isServiceRunning();
+      if (!running) {
         DropDebugLog.i.add('DISC',
-            'Android service start failed: ${e.message}',
+            'Service not running after start — BLE permission denied or battery restriction',
             level: DropLogLevel.error);
-        rethrow;
+        throw PlatformException(code: 'FGS_BLOCKED', message: 'SERVICE_NOT_RUNNING');
       }
+      DropDebugLog.i.add('DISC', 'Android foreground service confirmed running', level: DropLogLevel.ok);
+    } on PlatformException catch (e) {
+      DropDebugLog.i.add('DISC', 'Service start failed: ${e.message}', level: DropLogLevel.error);
+      rethrow;
     }
   }
 
