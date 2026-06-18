@@ -47,7 +47,7 @@ class PushNotificationService {
   Future<void> _setupLocalNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
-      requestAlertPermission: false, // We request separately
+      requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
@@ -69,10 +69,16 @@ class PushNotificationService {
       playSound: true,
     );
 
-    await _localNotifications
+    final androidImpl = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidImpl?.createNotificationChannel(channel);
+
+    // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+).
+    // Without this grant, notifications will not appear in the status bar
+    // even if FCM delivers them successfully.
+    await androidImpl?.requestNotificationsPermission();
   }
 
   Future<void> _requestPermissions() async {
@@ -90,7 +96,6 @@ class PushNotificationService {
       );
     }
   }
-
   Future<void> _registerToken() async {
     final token = await FirebaseMessaging.instance.getToken();
     if (token != null) {
