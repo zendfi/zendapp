@@ -81,6 +81,12 @@ class _DropSheetState extends State<DropSheet>
   // auto-select without showing the disambiguation list.
   static const int _kAutoSelectRssiGap = 8;
 
+  // Timeout: if we're stuck in preview (GATT in-flight) for more than this
+  // duration, reset back to scanning. Handles the case where GATT fails
+  // silently (e.g. both devices scanning simultaneously — nonce race).
+  Timer? _previewTimeoutTimer;
+  static const Duration _kPreviewTimeout = Duration(seconds: 8);
+
   // ── Debug panel visibility ────────────────────────────────────────────────
   bool _showDebugPanel = false;
 
@@ -106,6 +112,7 @@ class _DropSheetState extends State<DropSheet>
 
   @override
   void dispose() {
+    _previewTimeoutTimer?.cancel();
     _scanSub?.cancel();
     _bleScannerService.stopScan();
     _bleScannerService.dispose();
@@ -227,6 +234,24 @@ class _DropSheetState extends State<DropSheet>
     final previewCandidate = receivers.first;
     if (_stage == DropStage.scanning) {
       setState(() => _stage = DropStage.preview);
+      // Start a timeout — if GATT doesn't confirm within 8s, reset to scanning.
+      // This handles the simultaneous-drop race condition where both devices
+      // try to GATT-connect each other and one fails silently.
+      _previewTimeoutTimer?.cancel();
+      _previewTimeoutTimer = Timer(_kPreviewTimeout, () {
+        if (!mounted) return;
+        if (_stage == DropStage.preview) {
+          DropDebugLog.i.add('SHEET',
+              'Preview timed out (${_kPreviewTimeout.inSeconds}s) — GATT may have failed. Resetting to scan.',
+              level: DropLogLevel.warn);
+          setState(() {
+            _confirmedReceiver = null;
+            _stage = DropStage.scanning;
+          });
+          _bleScannerService.stopScan();
+          _bleScannerService.startScan();
+        }
+      });
     }
     if (_stage == DropStage.preview) {
       setState(() => _confirmedReceiver = previewCandidate);
@@ -234,6 +259,8 @@ class _DropSheetState extends State<DropSheet>
   }
 
   void _onReceiverConfirmed(DiscoveredReceiver receiver) {
+    _previewTimeoutTimer?.cancel();
+    _previewTimeoutTimer = null;
     final tag = receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
     DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
     setState(() => _confirmedReceiver = receiver);
