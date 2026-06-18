@@ -361,16 +361,9 @@ class _SendScreenState extends State<SendScreen>
                               Row(
                                 children: [
                                   Expanded(
-                                    child: Opacity(
-                                      opacity: (_usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance)
-                                          ? 1.0
-                                          : 0.4,
-                                      child: _GlassPill(
-                                        label: 'Drop',
-                                        onTap: (_usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance)
-                                            ? () => showDropSheet(context, amount: _usdAmount)
-                                            : () {},
-                                      ),
+                                    child: _DropHoldButton(
+                                      enabled: _usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance,
+                                      onActivated: () => showDropSheet(context, amount: _usdAmount),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -416,6 +409,177 @@ class _SendScreenState extends State<SendScreen>
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Drop button that requires a 3-second press-and-hold to activate.
+///
+/// While held:
+/// - A fill arc sweeps clockwise over 3 seconds
+/// - On completion: light haptic cascade + a brief scale pulse
+/// - Releasing early cancels with no action
+///
+/// When not held the button looks identical to _GlassPill but with a subtle
+/// lightning bolt / drop icon hint.
+class _DropHoldButton extends StatefulWidget {
+  const _DropHoldButton({required this.enabled, required this.onActivated});
+  final bool enabled;
+  final VoidCallback onActivated;
+
+  @override
+  State<_DropHoldButton> createState() => _DropHoldButtonState();
+}
+
+class _DropHoldButtonState extends State<_DropHoldButton>
+    with TickerProviderStateMixin {
+  static const Duration _holdDuration = Duration(seconds: 3);
+
+  late final AnimationController _fillCtrl;
+  late final AnimationController _pulseCtrl;
+  bool _holding = false;
+  bool _fired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fillCtrl = AnimationController(vsync: this, duration: _holdDuration);
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fillCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed && _holding && !_fired) {
+        _onHoldComplete();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _fillCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onPointerDown() {
+    if (!widget.enabled) return;
+    setState(() {
+      _holding = true;
+      _fired = false;
+    });
+    _fillCtrl.forward(from: 0);
+  }
+
+  void _onPointerUp() {
+    if (!_holding) return;
+    setState(() => _holding = false);
+    if (!_fired) _fillCtrl.reverse();
+  }
+
+  Future<void> _onHoldComplete() async {
+    _fired = true;
+    setState(() => _holding = false);
+
+    // Haptic cascade: two light taps + one medium
+    await HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 60));
+    await HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 60));
+    await HapticFeedback.mediumImpact();
+
+    // Pulse animation
+    await _pulseCtrl.forward();
+    await _pulseCtrl.reverse();
+
+    _fillCtrl.reset();
+    if (mounted) widget.onActivated();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => _onPointerDown(),
+      onPointerUp: (_) => _onPointerUp(),
+      onPointerCancel: (_) => _onPointerUp(),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_fillCtrl, _pulseCtrl]),
+        builder: (context, _) {
+          final fill = _fillCtrl.value;
+          final pulse = _pulseCtrl.value;
+          final scale = 1.0 + pulse * 0.04;
+
+          return Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: widget.enabled ? 1.0 : 0.4,
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0x1AF0F0F0),
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  border: Border.all(
+                    color: fill > 0
+                        ? ZendColors.accentBright.withValues(alpha: 0.6)
+                        : const Color(0x26F0F0F0),
+                    width: fill > 0 ? 1.5 : 1.0,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Fill progress bar
+                      if (fill > 0)
+                        Positioned.fill(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: fill,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: ZendColors.accentBright.withValues(alpha: 0.18),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Label
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            size: 14,
+                            color: fill > 0
+                                ? ZendColors.accentBright
+                                : ZendColors.textOnDeep.withValues(alpha: 0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            fill > 0
+                                ? 'Hold… ${(3 - fill * 3).ceil()}s'
+                                : 'Drop',
+                            style: TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 14,
+                              color: fill > 0
+                                  ? ZendColors.accentBright
+                                  : ZendColors.textOnDeep,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

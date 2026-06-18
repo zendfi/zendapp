@@ -119,7 +119,7 @@ class DropDiscoverabilityService extends ChangeNotifier {
     }
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final ttlRemaining = payload.expiresAt - now;
-    if (ttlRemaining < 10) {
+    if (ttlRemaining < 30) {
       DropDebugLog.i.add('DISC', 'Beacon stale on foreground ($ttlRemaining s) — refreshing immediately');
       await _startAdvertising(fromInit: true);
     } else {
@@ -269,7 +269,9 @@ class DropDiscoverabilityService extends ChangeNotifier {
     _refreshTimer?.cancel();
     final expiresAt =
         DateTime.fromMillisecondsSinceEpoch(payload.expiresAt * 1000);
-    final refreshAt = expiresAt.subtract(const Duration(seconds: 5));
+    // Refresh 30s before expiry — gives enough buffer even with network latency.
+    // With the 300s TTL, this fires at ~270s = 4.5 minutes of stable advertising.
+    final refreshAt = expiresAt.subtract(const Duration(seconds: 30));
     final delay = refreshAt.difference(DateTime.now());
 
     if (delay.isNegative) {
