@@ -43,6 +43,32 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
   bool _isDiscoverable = false;
   bool _isLoading = false;
+  bool _appInForeground = true;
+  GattPayload? _currentPayload;
+  Timer? _refreshTimer;
+  String? _lastError;
+
+  // ── Constructor / init ─────────────────────────────────────────────────────
+
+  void _setupNativeCallbackListener() {
+    // flutter_blue_plus sets up a MethodChannel handler; we set one too for our
+    // own DROP_ADVERTISER channel to receive "onPermissionDenied" push.
+    // This is a receive-only handler (Flutter receives from native).
+    const callbackChannel = MethodChannel('com.zendfi.app/drop_advertiser');
+    callbackChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onPermissionDenied') {
+        DropDebugLog.i.add('DISC', 'BLE permission denied by user', level: DropLogLevel.error);
+        _isLoading = false;
+        _isDiscoverable = false;
+        _lastError = 'Bluetooth permission required. '
+            'Go to Settings → Apps → Zend! App → Permissions → Nearby devices → Allow.';
+        notifyListeners();
+      }
+    });
+  }
+
+  bool _isDiscoverable = false;
+  bool _isLoading = false;
   bool _appInForeground = true; // assume foreground until told otherwise
   GattPayload? _currentPayload;
   Timer? _refreshTimer;
@@ -66,6 +92,7 @@ class DropDiscoverabilityService extends ChangeNotifier {
   /// Loads the persisted preference and, if it was on, restarts advertising.
   /// Call this once after the user has authenticated.
   Future<void> init() async {
+    _setupNativeCallbackListener();
     final prefs = await SharedPreferences.getInstance();
     final wasOn = prefs.getBool(_prefKey) ?? false;
     if (wasOn) {
@@ -228,8 +255,19 @@ class DropDiscoverabilityService extends ChangeNotifier {
       // Surface a user-visible error for the FGS_BLOCKED case so the profile
       // tile can show a hint about battery optimization settings.
       if (e is PlatformException && e.code == 'FGS_BLOCKED') {
-        _lastError = 'Android blocked the background service. '
-            'Go to Settings → Battery → Zend! App → set to "Unrestricted".';
+        if (e.message == 'SERVICE_NOT_RUNNING') {
+          // Could be permission denial OR battery restriction — check permissions
+          final hasPerms = await _checkBlePermsQuiet();
+          if (!hasPerms) {
+            _lastError = 'Nearby devices permission required.\n'
+                'Go to Settings → Apps → Zend! App → Permissions → Nearby devices → Allow.';
+          } else {
+            _lastError = 'Android restricted the background service.\n'
+                'Go to Settings → Battery → Zend! App → set to "Unrestricted".';
+          }
+        } else {
+          _lastError = e.message;
+        }
       } else {
         _lastError = null;
       }
@@ -274,6 +312,15 @@ class DropDiscoverabilityService extends ChangeNotifier {
         return;
       }
       try {
+        // First check if BLE permissions are granted — avoids the SecurityException
+        // by surfacing a permission prompt before we even try to start the service.
+        final hasPerms = await _channel.invokeMethod<bool>('checkBlePermissions') ?? false;
+        if (!hasPerms) {
+          DropDebugLog.i.add('DISC', 'BLE permissions not granted — requesting from user', level: DropLogLevel.warn);
+          // The startAdvertising call will trigger the permission dialog natively.
+          // onPermissionDenied callback will be fired if user denies.
+        }
+
         await _channel.invokeMethod('startAdvertising', {
           'zendtag': payload.zendtag,
           'nonce': payload.nonce,
@@ -283,17 +330,15 @@ class DropDiscoverabilityService extends ChangeNotifier {
         });
         DropDebugLog.i.add('DISC', 'Android: startService() called — waiting for service to confirm',
             level: DropLogLevel.info);
-        // Give the service 400ms to either start or fail+stop.
-        await Future.delayed(const Duration(milliseconds: 400));
+        await Future.delayed(const Duration(milliseconds: 500));
         final running = await _isServiceRunning();
         if (!running) {
           DropDebugLog.i.add('DISC',
-              'Android: service stopped immediately — startForeground blocked by OS (API 35 / battery optimization)',
+              'Android: service not running after start — BLE permission denied or battery restriction',
               level: DropLogLevel.error);
           throw PlatformException(
             code: 'FGS_BLOCKED',
-            message: 'Android 15 blocked the foreground service. '
-                'Go to Settings → Battery → Zend! App → set to "Unrestricted".',
+            message: 'SERVICE_NOT_RUNNING',
           );
         }
         DropDebugLog.i.add('DISC', 'Android foreground service confirmed running',
@@ -312,7 +357,15 @@ class DropDiscoverabilityService extends ChangeNotifier {
       final result = await _channel.invokeMethod<bool>('isServiceRunning');
       return result ?? false;
     } catch (_) {
-      // If the method doesn't exist (older build), assume running
+      return true;
+    }
+  }
+
+  Future<bool> _checkBlePermsQuiet() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('checkBlePermissions');
+      return result ?? true;
+    } catch (_) {
       return true;
     }
   }

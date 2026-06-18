@@ -1,10 +1,14 @@
 package com.zendfi.zendapp
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,9 +23,13 @@ class MainActivity : FlutterActivity() {
     private val DROP_ADVERTISER_CHANNEL = "com.zendfi.app/drop_advertiser"
     private val DROP_DIAG_CHANNEL = "com.zendfi.app/drop_diagnostics"
 
+    private val BLE_PERM_REQUEST_CODE = 1001
+
     private var pendingLink: String? = null
     private var deepLinkMethodChannel: MethodChannel? = null
 
+    // Payload waiting for BLE permission grant before we can startService().
+    private var permissionPendingPayload: Map<String, Any>? = null
     // Pending advertiser start — deferred if activity is not fully resumed.
     private var pendingStartPayload: Map<String, Any>? = null
 
@@ -30,18 +38,13 @@ class MainActivity : FlutterActivity() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Persistent crash log file — survives app crashes so we can read it on next launch
-    private val logFile: File by lazy {
-        File(filesDir, "drop_crash.log")
-    }
+    private val logFile: File by lazy { File(filesDir, "drop_crash.log") }
 
     private fun appendLog(tag: String, msg: String) {
         try {
             val ts = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
-            val line = "[$ts][$tag] $msg\n"
             android.util.Log.d("ZendDrop/$tag", msg)
-            logFile.appendText(line)
-            // Keep log under 32KB — trim oldest half if too large
+            logFile.appendText("[$ts][$tag] $msg\n")
             if (logFile.length() > 32_768) {
                 val lines = logFile.readLines()
                 logFile.writeText(lines.drop(lines.size / 2).joinToString("\n") + "\n")
@@ -49,72 +52,140 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {}
     }
 
+    // ── BLE runtime permissions ──────────────────────────────────────────────
+
+    /**
+     * Returns true if all required BLE permissions are already granted.
+     * On API < 31, BLE advertise doesn't require runtime permissions.
+     */
+    private fun hasBlePermissions(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val perms = listOf(
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+        )
+        return perms.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Requests BLE permissions. [payload] is stored and dispatched once the
+     * user grants (or is shown we need it).
+     */
+    private fun requestBlePermissions(payload: Map<String, Any>) {
+        appendLog("PERM", "Requesting BLE runtime permissions (API ${Build.VERSION.SDK_INT})")
+        permissionPendingPayload = payload
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                ),
+                BLE_PERM_REQUEST_CODE
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != BLE_PERM_REQUEST_CODE) return
+
+        val allGranted = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        appendLog("PERM", "BLE permission result: allGranted=$allGranted")
+
+        val payload = permissionPendingPayload ?: return
+        permissionPendingPayload = null
+
+        if (allGranted) {
+            appendLog("PERM", "Permissions granted — proceeding with startAdvertising")
+            startDropAdvertiserService(payload)
+        } else {
+            appendLog("PERM", "Permissions DENIED — cannot start BLE advertiser")
+            // Notify Flutter so the UI can show the correct error
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, DROP_ADVERTISER_CHANNEL)
+                    .invokeMethod("onPermissionDenied", null)
+            }
+        }
+    }
+
+    // ── Flutter engine setup ─────────────────────────────────────────────────
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // ── Deep-link channel ────────────────────────────────────────────────
         deepLinkMethodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             DEEP_LINK_CHANNEL
         )
         deepLinkMethodChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
-                "getInitialLink" -> {
-                    result.success(pendingLink)
-                    pendingLink = null
-                }
+                "getInitialLink" -> { result.success(pendingLink); pendingLink = null }
                 else -> result.notImplemented()
             }
         }
 
-        // ── Drop diagnostics channel — read crash log from Flutter ───────────
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            DROP_DIAG_CHANNEL
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "readCrashLog" -> {
-                    val content = try { logFile.readText() } catch (_: Exception) { "" }
-                    result.success(content)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DROP_DIAG_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "readCrashLog" -> result.success(try { logFile.readText() } catch (_: Exception) { "" })
+                    "clearCrashLog" -> { try { logFile.writeText("") } catch (_: Exception) {}; result.success(null) }
+                    else -> result.notImplemented()
                 }
-                "clearCrashLog" -> {
-                    try { logFile.writeText("") } catch (_: Exception) {}
-                    result.success(null)
-                }
-                else -> result.notImplemented()
             }
-        }
 
-        // ── Drop advertiser channel ──────────────────────────────────────────
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            DROP_ADVERTISER_CHANNEL
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "startAdvertising" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val payload = call.arguments as? Map<String, Any>
-                    if (payload == null) {
-                        result.error("INVALID_ARGS", "startAdvertising requires a beacon payload map", null)
-                        return@setMethodCallHandler
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DROP_ADVERTISER_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startAdvertising" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val payload = call.arguments as? Map<String, Any>
+                        if (payload == null) {
+                            result.error("INVALID_ARGS", "startAdvertising requires a beacon payload map", null)
+                            return@setMethodCallHandler
+                        }
+                        appendLog("ADV", "startAdvertising called from Flutter isResumed=$isActivityResumed API=${Build.VERSION.SDK_INT}")
+
+                        if (!hasBlePermissions()) {
+                            appendLog("ADV", "BLE permissions not granted — requesting from user")
+                            requestBlePermissions(payload)
+                            // Return success to Flutter — the actual start will happen in
+                            // onRequestPermissionsResult once the user grants.
+                            result.success(null)
+                        } else {
+                            startDropAdvertiserService(payload)
+                            result.success(null)
+                        }
                     }
-                    appendLog("ADV", "startAdvertising called from Flutter, isResumed=$isActivityResumed API=${Build.VERSION.SDK_INT}")
-                    startDropAdvertiserService(payload)
-                    result.success(null)
+                    "stopAdvertising" -> {
+                        appendLog("ADV", "stopAdvertising called from Flutter")
+                        stopDropAdvertiserService()
+                        result.success(null)
+                    }
+                    "isServiceRunning" -> {
+                        result.success(DropAdvertiserService.isRunning)
+                        appendLog("ADV", "isServiceRunning=${DropAdvertiserService.isRunning}")
+                    }
+                    "checkBlePermissions" -> {
+                        val granted = hasBlePermissions()
+                        appendLog("ADV", "checkBlePermissions=$granted")
+                        result.success(granted)
+                    }
+                    else -> result.notImplemented()
                 }
-                "stopAdvertising" -> {
-                    appendLog("ADV", "stopAdvertising called from Flutter")
-                    stopDropAdvertiserService()
-                    result.success(null)
-                }
-                "isServiceRunning" -> {
-                    result.success(DropAdvertiserService.isRunning)
-                    appendLog("ADV", "isServiceRunning=${DropAdvertiserService.isRunning}")
-                }
-                else -> result.notImplemented()
             }
-        }
     }
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -136,40 +207,17 @@ class MainActivity : FlutterActivity() {
     override fun onPause() {
         super.onPause()
         isActivityResumed = false
-        // Clear any pending deferred start — the beacon will be refreshed by
-        // Flutter's onAppForeground() when the activity resumes, so a stale
-        // deferred payload would just cause an unnecessary double-start.
         pendingStartPayload = null
         appendLog("LIFECYCLE", "onPause — cleared pendingStartPayload")
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val url = extractUrl(intent)
-        if (url != null) {
-            deepLinkMethodChannel?.invokeMethod("onDeepLink", url)
-        }
+        extractUrl(intent)?.let { deepLinkMethodChannel?.invokeMethod("onDeepLink", it) }
     }
 
     // ── Drop advertiser helpers ──────────────────────────────────────────────
 
-    /**
-     * Starts the DropAdvertiserService as a foreground service.
-     *
-     * Android 14/15 (API 34/35+) enforce that startForeground() can only be called
-     * while the app is in a "foreground-allowed" state — i.e., while the activity
-     * is resumed and visible.  Flutter's MethodChannel callbacks arrive on the
-     * platform thread while the activity may momentarily be in onPause (e.g. a
-     * bottom sheet animation triggered onPause on older API levels) or the system
-     * may not yet consider the activity fully visible.
-     *
-     * Strategy:
-     *  1. Post to the main thread (ensures we're not on the binder thread).
-     *  2. If the activity is currently resumed, start immediately.
-     *  3. If not, store as pendingStartPayload — onResume() will dispatch it.
-     *  4. Catch ForegroundServiceStartNotAllowedException (API 31+) and store as
-     *     pending in case the activity transitions just as we post.
-     */
     private fun startDropAdvertiserService(payload: Map<String, Any>) {
         mainHandler.post {
             if (isActivityResumed) {
@@ -200,7 +248,7 @@ class MainActivity : FlutterActivity() {
             startService(intent)
             appendLog("ADV", "doStart: startService() succeeded")
         } catch (e: Exception) {
-            appendLog("ADV", "doStart: startService() FAILED: ${e.javaClass.simpleName}: ${e.message} — deferring to next resume")
+            appendLog("ADV", "doStart: FAILED ${e.javaClass.simpleName}: ${e.message}")
             pendingStartPayload = payload
         }
     }
@@ -209,10 +257,9 @@ class MainActivity : FlutterActivity() {
         pendingStartPayload = null
         mainHandler.post {
             try {
-                val intent = Intent(this, DropAdvertiserService::class.java).apply {
+                stopService(Intent(this, DropAdvertiserService::class.java).apply {
                     action = DropAdvertiserService.ACTION_STOP
-                }
-                stopService(intent)
+                })
                 appendLog("ADV", "stopService() succeeded")
             } catch (e: Exception) {
                 appendLog("ADV", "stopService() failed: ${e.message}")
@@ -222,18 +269,13 @@ class MainActivity : FlutterActivity() {
 
     // ── Deep-link helpers ────────────────────────────────────────────────────
 
-    private fun handleIntent(intent: Intent?) {
-        val url = extractUrl(intent) ?: return
-        pendingLink = url
-    }
+    private fun handleIntent(intent: Intent?) { extractUrl(intent)?.let { pendingLink = it } }
 
     private fun extractUrl(intent: Intent?): String? {
         if (intent == null) return null
-        val action = intent.action
-        val data = intent.data
         return when {
-            action == Intent.ACTION_VIEW && data != null -> data.toString()
-            action == Intent.ACTION_VIEW && data?.scheme == "zendapp" -> data.toString()
+            intent.action == Intent.ACTION_VIEW && intent.data != null -> intent.data.toString()
+            intent.action == Intent.ACTION_VIEW && intent.data?.scheme == "zendapp" -> intent.data.toString()
             else -> null
         }
     }
