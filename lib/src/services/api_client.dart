@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/pools/pool.dart';
@@ -47,10 +48,35 @@ class ApiClient {
       },
       onError: (error, handler) async {
         if (error.type == DioExceptionType.connectionError) {
+          // Log the real underlying error for debugging — connectionError wraps
+          // SocketException, HandshakeException, and other OS-level errors.
+          final inner = error.error;
+          debugPrint('ApiClient connectionError — inner: ${inner.runtimeType}: $inner');
+          debugPrint('ApiClient connectionError — message: ${error.message}');
+
+          // Distinguish TLS/SSL failures (wrong cert, hostname mismatch) from
+          // genuine "no network" errors so we show a useful message.
+          String userMessage;
+          if (inner.toString().contains('HandshakeException') ||
+              inner.toString().contains('CERTIFICATE') ||
+              inner.toString().contains('certificate') ||
+              inner.toString().contains('ssl') ||
+              inner.toString().contains('SSL') ||
+              inner.toString().contains('tls') ||
+              inner.toString().contains('TLS')) {
+            userMessage = 'Connection security error. Please update the app.';
+          } else if (inner.toString().contains('Connection refused') ||
+              inner.toString().contains('Connection timed out') ||
+              error.message?.contains('Connection refused') == true) {
+            userMessage = 'Server is unreachable. Please try again shortly.';
+          } else {
+            userMessage = 'No internet connection. Check your network and try again.';
+          }
+
           handler.reject(
             DioException(
               requestOptions: error.requestOptions,
-              error: NetworkException(),
+              error: _DetailedNetworkException(userMessage, inner),
               type: error.type,
             ),
           );
@@ -1479,4 +1505,18 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+}
+
+/// A network exception that carries the original underlying error for debugging.
+class _DetailedNetworkException extends NetworkException {
+  _DetailedNetworkException(this._message, this.innerError);
+
+  final String _message;
+  final Object? innerError;
+
+  @override
+  String get userMessage => _message;
+
+  @override
+  String toString() => 'NetworkException($innerError): $_message';
 }
