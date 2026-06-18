@@ -37,6 +37,7 @@ class PushNotificationService {
     await _registerToken();
     _listenForTokenRefresh();
     _listenForForegroundMessages();
+    _listenForBackgroundNotificationTaps();
   }
 
   void dispose() {
@@ -103,18 +104,51 @@ class PushNotificationService {
     });
   }
 
+  /// Handles notification taps when the app was backgrounded (not killed).
+  /// When the app is killed, [getInitialMessage] handles it — call that
+  /// from main() or initState of your root widget.
+  void _listenForBackgroundNotificationTaps() {
+    // App was in background and user tapped the notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _handleNotificationData(message.data);
+    });
+  }
+
+  void _handleNotificationData(Map<String, dynamic> data) {
+    final type = data['type'] as String? ?? '';
+    if (type == 'payment_request') {
+      try {
+        final notification = PaymentRequestNotification.fromJson(data);
+        if (notification.requesterZendtag.isNotEmpty && notification.amountUsdc > 0) {
+          pendingPaymentRequestFromNotification = notification;
+        }
+      } catch (_) {}
+    } else if (type == 'drop_confirmed') {
+      pendingDropConfirmedFromNotification = data;
+    }
+  }
+
   void _listenForForegroundMessages() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // We use data-only messages so onMessage fires reliably in foreground.
-      // Title and body are in message.data, not message.notification.
+      // With 'notification' field in the FCM payload, the system bar shows
+      // the notification automatically when the app is backgrounded.
+      // When the app is FOREGROUND, Android suppresses the system notification
+      // so we show a local one here — but only for messages the user needs to see.
       final title = message.data['title'] as String? ??
           message.notification?.title ??
           'Zend';
       final body = message.data['body'] as String? ??
           message.notification?.body ??
           '';
+      final type = message.data['type'] as String? ?? '';
 
       if (body.isEmpty) return;
+
+      // Don't show foreground notification for drop_confirmed on the sender's side
+      // — they're already seeing the success animation in the Drop sheet.
+      // Do show it for the receiver (role = 'receiver') and all other types.
+      final role = message.data['role'] as String? ?? '';
+      if (type == 'drop_confirmed' && role == 'sender') return;
 
       _localNotifications.show(
         message.hashCode,
@@ -157,25 +191,10 @@ class PushNotificationService {
 
   void _onNotificationTap(NotificationResponse response) {
     if (response.payload == null) return;
-
     try {
       final data = jsonDecode(response.payload!) as Map<String, dynamic>;
-      final type = data['type'] as String?;
-
-      if (type == 'payment_request') {
-        final notification = PaymentRequestNotification.fromJson(data);
-        if (notification.requesterZendtag.isNotEmpty && notification.amountUsdc > 0) {
-          pendingPaymentRequestFromNotification = notification;
-        }
-      } else if (type == 'drop_confirmed') {
-        // Store so app.dart can trigger haptics + overlay on next foreground resume
-        pendingDropConfirmedFromNotification = data;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('PushNotifications: failed to parse notification payload: $e');
-      }
-    }
+      _handleNotificationData(data);
+    } catch (_) {}
   }
 
   /// Consume and return the pending payment request notification from a tap.

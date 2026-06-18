@@ -106,24 +106,24 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     final senderTag = data['counterparty_zendtag'] as String? ?? '';
     final note = data['note'] as String?;
 
-    // Subtle haptic cascade first (before overlay renders)
+    // Haptics fire immediately — they work regardless of widget state
     unawaited(_triggerReceiverHaptics());
 
-    // Show overlay if we have a valid context
-    final ctx = _navigatorKey.currentContext;
-    if (ctx == null || !mounted) return;
+    // Overlay needs a valid context — defer to next frame in case this fires
+    // during a navigation transition (ctx may be null mid-push).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null) return;
 
-    showDropReceivedOverlay(
-      context: ctx,
-      amount: amount,
-      senderZendtag: senderTag,
-      note: note,
-      onTap: () {
-        // Navigate to activity screen
-        // The shell's tab controller can be accessed via a global or model callback.
-        // For now route to the root and let the user navigate — avoids coupling.
-      },
-    );
+      showDropReceivedOverlay(
+        context: ctx,
+        amount: amount,
+        senderZendtag: senderTag,
+        note: note,
+        onTap: () {},
+      );
+    });
   }
 
   Future<void> _triggerReceiverHaptics() async {
@@ -214,6 +214,8 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       if (model.isAuthenticated) {
         unawaited(model.dropDiscoverabilityService.onAppForeground());
 
+        // Restart or reconnect SSE — forceRestart if backgrounded > 2 min
+        // (connection is likely dead), otherwise just ensure it's running.
         final bgDuration = _pausedAt != null
             ? DateTime.now().difference(_pausedAt!)
             : const Duration(minutes: 10);
@@ -268,7 +270,12 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       // Pause discoverability refresh timer so it doesn't fire startService
       // calls while the activity is paused (Android 15 background restriction).
       model.dropDiscoverabilityService.onAppBackground();
-      model.stopRealTimeUpdates();
+      // Don't stop SSE immediately on pause — the app may be briefly backgrounded
+      // (notification shade, quick settings) and we don't want to miss Drop events.
+      // Stop SSE only when the app is fully detached or after a lock.
+      if (state == AppLifecycleState.detached) {
+        model.stopRealTimeUpdates();
+      }
       if (model.isAuthenticated) {
         model.appLockService.lock();
       }
