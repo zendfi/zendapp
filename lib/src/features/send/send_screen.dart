@@ -230,22 +230,33 @@ class _SendScreenState extends State<SendScreen>
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Balance pill — same height as profile button (36px)
                               GestureDetector(
                                 onTap: ZendScope.of(context).toggleBalanceHidden,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: Text(
-                                    ZendScope.of(context).balanceHidden
-                                        ? '••••'
-                                        : _balanceFormatted(ZendScope.of(context).spendableBalance),
-                                    key: ValueKey(ZendScope.of(context).balanceHidden
-                                        ? 'hidden'
-                                        : ZendScope.of(context).spendableBalance.toStringAsFixed(2)),
-                                    style: const TextStyle(
-                                      fontFamily: 'InstrumentSerif',
-                                      fontSize: 15,
-                                      fontStyle: FontStyle.italic,
-                                      color: Color(0xCCF0F0F0),
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x1AF0F0F0),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: const Color(0x26F0F0F0)),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Text(
+                                      ZendScope.of(context).balanceHidden
+                                          ? '••••'
+                                          : _balanceFormatted(ZendScope.of(context).spendableBalance),
+                                      key: ValueKey(ZendScope.of(context).balanceHidden
+                                          ? 'hidden'
+                                          : ZendScope.of(context).spendableBalance.toStringAsFixed(2)),
+                                      style: const TextStyle(
+                                        fontFamily: 'InstrumentSerif',
+                                        fontSize: 15,
+                                        fontStyle: FontStyle.italic,
+                                        color: Color(0xCCF0F0F0),
+                                      ),
                                     ),
                                   ),
                                 ),
