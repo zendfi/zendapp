@@ -22,7 +22,8 @@ class ZendShell extends StatefulWidget {
 }
 
 class _ZendShellState extends State<ZendShell> {
-  int _tabIndex = 0;
+  // Start on the Send tab (index 1) — the primary action in Zend.
+  int _tabIndex = 1;
   Timer? _bannerTimer;
   // Tracks the last notification ID so re-arrival of a new request
   // forces the banner widget to rebuild and replay the slide-in animation.

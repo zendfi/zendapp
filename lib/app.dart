@@ -214,11 +214,15 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       if (model.isAuthenticated) {
         unawaited(model.dropDiscoverabilityService.onAppForeground());
 
-        // Restart or reconnect SSE — forceRestart if backgrounded > 2 min
-        // (connection is likely dead), otherwise just ensure it's running.
         final bgDuration = _pausedAt != null
             ? DateTime.now().difference(_pausedAt!)
             : const Duration(minutes: 10);
+
+        // Lock if backgrounded for 2+ minutes — brief switches don't lock.
+        if (bgDuration.inSeconds >= 120 && model.appLockService.pinIsAvailable) {
+          model.appLockService.lock();
+        }
+
         if (bgDuration.inMinutes >= 2) {
           model.forceRestartRealTimeUpdates();
         } else {
@@ -267,17 +271,21 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused ||
                state == AppLifecycleState.detached) {
       _pausedAt = DateTime.now();
-      // Pause discoverability refresh timer so it doesn't fire startService
-      // calls while the activity is paused (Android 15 background restriction).
       model.dropDiscoverabilityService.onAppBackground();
-      // Don't stop SSE immediately on pause — the app may be briefly backgrounded
-      // (notification shade, quick settings) and we don't want to miss Drop events.
-      // Stop SSE only when the app is fully detached or after a lock.
       if (state == AppLifecycleState.detached) {
         model.stopRealTimeUpdates();
       }
       if (model.isAuthenticated) {
-        model.appLockService.lock();
+        // Don't lock immediately on every background transition — brief switches
+        // (notification shade, permission dialogs) would lock constantly.
+        // Lock is applied on RESUME if we were gone long enough (see above).
+        // Only lock immediately on detached (process about to die).
+        if (state == AppLifecycleState.detached) {
+          model.appLockService.lock();
+        }
+        // For paused: stopTimer so the inactivity countdown stops while backgrounded.
+        // Lock will be applied on resume if bgDuration >= threshold.
+        model.appLockService.stopTimer();
       }
     }
   }

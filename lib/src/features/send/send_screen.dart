@@ -108,6 +108,13 @@ class _SendScreenState extends State<SendScreen>
   String get _currencyLabel =>
       _inputMode == _InputMode.usd ? 'USD' : 'NGN';
 
+  String _balanceFormatted(double balance) {
+    if (balance == balance.roundToDouble()) {
+      return '\$${balance.toStringAsFixed(0)}';
+    }
+    return '\$${balance.toStringAsFixed(2)}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -219,18 +226,45 @@ class _SendScreenState extends State<SendScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _IconPill(icon: Icons.qr_code_2, onTap: () => pushZendSlide(context, const QrScannerScreen())),
-                          GestureDetector(
-                            onTap: () => pushZendSlide(context, const ProfileScreen()),
-                            child: ZendAvatar(
-                              radius: 18,
-                              photoUrl: ZendScope.of(context).currentAvatarUrl,
-                              initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
-                                  ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
-                                  : ZendScope.of(context).username.isNotEmpty
-                                      ? ZendScope.of(context).username[0].toUpperCase()
-                                      : null,
-                              backgroundColor: const Color(0x3095D5B2),
-                            ),
+                          // Balance + profile — right-aligned, tap balance to toggle hide
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: ZendScope.of(context).toggleBalanceHidden,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Text(
+                                    ZendScope.of(context).balanceHidden
+                                        ? '••••'
+                                        : _balanceFormatted(ZendScope.of(context).spendableBalance),
+                                    key: ValueKey(ZendScope.of(context).balanceHidden
+                                        ? 'hidden'
+                                        : ZendScope.of(context).spendableBalance.toStringAsFixed(2)),
+                                    style: const TextStyle(
+                                      fontFamily: 'InstrumentSerif',
+                                      fontSize: 15,
+                                      fontStyle: FontStyle.italic,
+                                      color: Color(0xCCF0F0F0),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              GestureDetector(
+                                onTap: () => pushZendSlide(context, const ProfileScreen()),
+                                child: ZendAvatar(
+                                  radius: 18,
+                                  photoUrl: ZendScope.of(context).currentAvatarUrl,
+                                  initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
+                                      ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
+                                      : ZendScope.of(context).username.isNotEmpty
+                                          ? ZendScope.of(context).username[0].toUpperCase()
+                                          : null,
+                                  backgroundColor: const Color(0x3095D5B2),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
