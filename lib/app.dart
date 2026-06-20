@@ -216,7 +216,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
 
         final bgDuration = _pausedAt != null
             ? DateTime.now().difference(_pausedAt!)
-            : const Duration(minutes: 10);
+            : Duration.zero; // null means we were never actually paused
 
         // Lock if backgrounded for 2+ minutes — brief switches don't lock.
         if (bgDuration.inSeconds >= 120 && model.appLockService.pinIsAvailable) {
@@ -287,6 +287,14 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         // Lock will be applied on resume if bgDuration >= threshold.
         model.appLockService.stopTimer();
       }
+    } else if (state == AppLifecycleState.inactive) {
+      // The notification shade was pulled down, another app overlaid,
+      // or the app switcher was opened — the app is still visible (not fully
+      // backgrounded). Record the time so that if the user quickly returns
+      // we know the actual elapsed time and don't default to a large value.
+      // Do NOT stop the inactivity timer or lock here — these brief overlays
+      // should be transparent to the lock mechanism.
+      _pausedAt ??= DateTime.now();
     }
   }
 

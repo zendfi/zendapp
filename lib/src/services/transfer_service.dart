@@ -44,6 +44,9 @@ class TransferService {
     );
 
     // Step 2: Build and sign the transaction locally.
+    // Use server-provided ATAs when available — they're derived from the wallet
+    // address stored in the DB which is authoritative. Re-deriving locally can
+    // produce a mismatch if the keypair address doesn't exactly match.
     final String partiallySignedTxB64;
     if (keypairBytes != null) {
       // Session-signing path
@@ -54,6 +57,8 @@ class TransferService {
         recipientAddress: prepared.recipientWalletAddress,
         blockhash: prepared.blockhash,
         feePayerAddress: prepared.feePayer,
+        senderAtaOverride: prepared.senderAta,
+        recipientAtaOverride: prepared.recipientAta,
       );
     } else {
       // PIN path
@@ -63,6 +68,8 @@ class TransferService {
         recipientAddress: prepared.recipientWalletAddress,
         blockhash: prepared.blockhash,
         feePayerAddress: prepared.feePayer,
+        senderAtaOverride: prepared.senderAta,
+        recipientAtaOverride: prepared.recipientAta,
       );
     }
 

@@ -444,12 +444,20 @@ class PrepareTransferResponse {
   final String recipientWalletAddress;
   final String feePayer;
   final bool ataCreated;
+  // Server-derived ATAs and sender pubkey — always use these rather than
+  // re-deriving locally, since the server verifies against the DB wallet address.
+  final String? senderAta;
+  final String? recipientAta;
+  final String? senderPubkey;
 
   PrepareTransferResponse({
     required this.blockhash,
     required this.recipientWalletAddress,
     required this.feePayer,
     required this.ataCreated,
+    this.senderAta,
+    this.recipientAta,
+    this.senderPubkey,
   });
 
   factory PrepareTransferResponse.fromJson(Map<String, dynamic> json) {
@@ -458,6 +466,9 @@ class PrepareTransferResponse {
       recipientWalletAddress: json['recipient_wallet_address'] as String,
       feePayer: json['fee_payer'] as String,
       ataCreated: json['ata_created'] as bool,
+      senderAta: json['sender_ata'] as String?,
+      recipientAta: json['recipient_ata'] as String?,
+      senderPubkey: json['sender_pubkey'] as String?,
     );
   }
 }

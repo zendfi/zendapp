@@ -425,6 +425,8 @@ class WalletService {
     required String recipientAddress,
     required String blockhash,
     required String feePayerAddress,
+    String? senderAtaOverride,
+    String? recipientAtaOverride,
   }) async {
     final privateKeyBytes = await _decryptLocalKeypair(pin);
 
@@ -437,14 +439,15 @@ class WalletService {
       final recipientPubkey = Ed25519HDPublicKey.fromBase58(recipientAddress);
       final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
-      final senderAta = await findAssociatedTokenAddress(
-        owner: senderPubkey,
-        mint: usdcMint,
-      );
-      final recipientAta = await findAssociatedTokenAddress(
-        owner: recipientPubkey,
-        mint: usdcMint,
-      );
+      // Use server-provided ATAs when available — they're derived from the wallet
+      // address stored in the DB which is authoritative. Deriving locally can
+      // produce a mismatch if the stored keypair address doesn't exactly match.
+      final senderAta = senderAtaOverride != null
+          ? Ed25519HDPublicKey.fromBase58(senderAtaOverride)
+          : await findAssociatedTokenAddress(owner: senderPubkey, mint: usdcMint);
+      final recipientAta = recipientAtaOverride != null
+          ? Ed25519HDPublicKey.fromBase58(recipientAtaOverride)
+          : await findAssociatedTokenAddress(owner: recipientPubkey, mint: usdcMint);
 
       final amountTokens = (amountUsdc * 1000000).round();
 
@@ -1030,6 +1033,8 @@ class WalletService {
     required String recipientAddress,
     required String blockhash,
     required String feePayerAddress,
+    String? senderAtaOverride,
+    String? recipientAtaOverride,
   }) async {
     final keyCopy = Uint8List.fromList(keypairBytes);
     try {
@@ -1041,14 +1046,13 @@ class WalletService {
       final recipientPubkey = Ed25519HDPublicKey.fromBase58(recipientAddress);
       final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
-      final senderAta = await findAssociatedTokenAddress(
-        owner: senderPubkey,
-        mint: usdcMint,
-      );
-      final recipientAta = await findAssociatedTokenAddress(
-        owner: recipientPubkey,
-        mint: usdcMint,
-      );
+      // Use server-provided ATAs when available — authoritative from the DB.
+      final senderAta = senderAtaOverride != null
+          ? Ed25519HDPublicKey.fromBase58(senderAtaOverride)
+          : await findAssociatedTokenAddress(owner: senderPubkey, mint: usdcMint);
+      final recipientAta = recipientAtaOverride != null
+          ? Ed25519HDPublicKey.fromBase58(recipientAtaOverride)
+          : await findAssociatedTokenAddress(owner: recipientPubkey, mint: usdcMint);
 
       final amountTokens = (amountUsdc * 1000000).round();
       final transferInstruction = TokenInstruction.transfer(
