@@ -355,7 +355,7 @@ class WalletService {
     final keyCopy = Uint8List.fromList(senderKeypairBytes);
     try {
     final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-      privateKey: keyCopy.toList(),
+      privateKey: _extractSeed(keyCopy).toList(),
     );
 
     final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
@@ -432,7 +432,7 @@ class WalletService {
 
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: privateKeyBytes.toList(),
+        privateKey: _extractSeed(privateKeyBytes).toList(),
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
@@ -501,7 +501,7 @@ class WalletService {
 
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: privateKeyBytes.toList(),
+        privateKey: _extractSeed(privateKeyBytes).toList(),
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
@@ -574,7 +574,7 @@ class WalletService {
     final privateKeyBytes = await _decryptLocalKeypair(pin);
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: privateKeyBytes.toList(),
+        privateKey: _extractSeed(privateKeyBytes).toList(),
       );
 
       final txBytes = base64Decode(txBytesB64);
@@ -732,6 +732,19 @@ class WalletService {
     await _secureStorage.delete(key: _encryptionNonceKey);
     await _secureStorage.delete(key: _kdfVersionKey);
     await _secureStorage.delete(key: _pinLengthKey);
+  }
+
+  /// Normalises a keypair byte array to the 32-byte Ed25519 seed.
+  ///
+  /// Accounts created on zendonline store a 64-byte keypair (seed || pubkey).
+  /// Accounts created on zendapp store a 32-byte seed only.
+  /// `Ed25519HDKeyPair.fromPrivateKeyBytes` accepts exactly 32 bytes, so we
+  /// always take the first 32 bytes regardless of the total length.
+  static Uint8List _extractSeed(Uint8List keypairBytes) {
+    if (keypairBytes.length >= 64) {
+      return Uint8List.fromList(keypairBytes.sublist(0, 32));
+    }
+    return keypairBytes; // already 32 bytes — return as-is
   }
 
   Future<Uint8List> _decryptLocalKeypair(String pin) async {
@@ -1039,7 +1052,7 @@ class WalletService {
     final keyCopy = Uint8List.fromList(keypairBytes);
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: keyCopy.toList(),
+        privateKey: _extractSeed(keyCopy).toList(),
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
@@ -1098,7 +1111,7 @@ class WalletService {
     final keyCopy = Uint8List.fromList(keypairBytes);
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: keyCopy.toList(),
+        privateKey: _extractSeed(keyCopy).toList(),
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
@@ -1155,7 +1168,7 @@ class WalletService {
     final keyCopy = Uint8List.fromList(keypairBytes);
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-        privateKey: keyCopy.toList(),
+        privateKey: _extractSeed(keyCopy).toList(),
       );
 
       final txBytes = base64Decode(txBytesB64);
