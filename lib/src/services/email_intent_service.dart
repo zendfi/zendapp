@@ -48,9 +48,10 @@ class EmailIntentService {
       'Exactly one of pin or keypairBytes must be provided',
     );
 
-    // Step 1: Fetch the fee payer pubkey from the backend
-    final delegationParams = await _apiClient.getDelegationParams();
-    final feePayerPubkeyB58 = delegationParams['fee_payer'] as String;
+    // Step 1: Fetch blockhash for the approve tx. fee_payer from params is the
+    // gas payer; the SPL delegate will be ek_pub generated below.
+    await _apiClient.getDelegationParams();
+    // delegationParams['fee_payer'] is used server-side; we don't need it here.
 
     // Step 2: Get the sender's wallet keypair (either decrypt or copy from cache)
     final senderKeypairBytes = keypairBytes != null
@@ -68,9 +69,14 @@ class EmailIntentService {
 
     try {
       // Step 4: Build and submit the on-chain SPL Approve transaction.
+      // SECURITY: approve ek_pub (the per-intent ephemeral key) as the SPL delegate,
+      // NOT fee_payer. This means:
+      // - The backend (fee_payer) can pay gas but cannot move tokens unilaterally.
+      // - Only whoever holds ek_priv (the claim link recipient) can execute the transfer.
+      // - A compromised backend cannot sweep any pending intent's funds.
       final approveTxSig = await _walletService.buildAndSubmitSplApprove(
         senderKeypairBytes: senderKeypairBytes,
-        feePayerPubkeyB58: feePayerPubkeyB58,
+        delegatePubkeyB58: base58encode(ekPub.bytes), // ek_pub is the SPL delegate
         amountUsdc: amountUsdc,
         pin: pin ?? '',
       );

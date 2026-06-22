@@ -1505,6 +1505,54 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── Telegram integration ───────────────────────────────────────────────────
+
+  /// Create a Telegram pending intent (send to a non-Zend TG user).
+  Future<Map<String, dynamic>> createTelegramIntent({
+    required String recipientTgUsername,
+    required double amountUsdc,
+    required String encryptedDelegation,
+    required String ekPub,
+    required String ekPrivForLink,
+    String? note,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/tg/intents',
+        data: {
+          'recipient_tg_username': recipientTgUsername,
+          'amount_usdc': amountUsdc,
+          'encrypted_delegation': encryptedDelegation,
+          'ek_pub': ekPub,
+          'ek_priv_for_link': ekPrivForLink,
+          'note': note,
+        }..removeWhere((_, v) => v == null),
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Store a pending signed tx for the native app signing bridge.
+  Future<void> storePendingSignedTx({
+    required String sessionId,
+    required String partiallySignedTx,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/zend/tg/pending-tx',
+        data: {
+          'session_id': sessionId,
+          'partially_signed_tx': partiallySignedTx,
+        },
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 }
 
 /// A network exception that carries the original underlying error for debugging.

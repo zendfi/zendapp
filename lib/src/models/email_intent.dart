@@ -60,18 +60,25 @@ class EmailIntent {
   }
 }
 
-/// Result from `POST /api/zend/email-intents`.
+/// Result from `POST /api/zend/email-intents` or `POST /api/zend/tg/intents`.
 class CreateIntentResult {
   final String id;
   final double amountUsdc;
   final DateTime expiry;
   final String status;
+  /// Masked recipient hint — e.g. "to***@gmail.com" or "@alice".
+  final String recipientHint;
+  /// Direct claim URL (present for Telegram intents; null for email intents
+  /// since the link is sent directly to the recipient's email).
+  final String? claimLink;
 
   const CreateIntentResult({
     required this.id,
     required this.amountUsdc,
     required this.expiry,
     required this.status,
+    this.recipientHint = '',
+    this.claimLink,
   });
 
   factory CreateIntentResult.fromJson(Map<String, dynamic> json) {
@@ -80,6 +87,8 @@ class CreateIntentResult {
       amountUsdc: (json['amount_usdc'] as num).toDouble(),
       expiry: DateTime.parse(json['expiry'] as String),
       status: json['status'] as String,
+      recipientHint: json['recipient_hint'] as String? ?? '',
+      claimLink: json['claim_link'] as String?,
     );
   }
 }

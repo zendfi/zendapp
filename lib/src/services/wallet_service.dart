@@ -342,16 +342,22 @@ class WalletService {
 
   /// Builds, signs, and submits an SPL Token `Approve` instruction on-chain.
   ///
-  /// This grants [feePayerPubkeyB58] delegate authority over [amountUsdc] of
-  /// USDC in the sender's token account. The tokens stay in the sender's wallet.
+  /// Grants [delegatePubkeyB58] delegate authority over [amountUsdc] of USDC
+  /// in the sender's token account. The tokens stay in the sender's wallet.
+  ///
+  /// [delegatePubkeyB58] — the SPL delegate: the key that can later sign a
+  ///   `transfer_checked` on the sender's behalf. For email/Telegram intents
+  ///   this should be the per-intent ephemeral public key (ek_pub), NOT
+  ///   fee_payer. Approving fee_payer would give the backend standing custodial
+  ///   authority over the sender's funds.
+  ///
   /// Returns the transaction signature.
   Future<String> buildAndSubmitSplApprove({
     required Uint8List senderKeypairBytes,
-    required String feePayerPubkeyB58,
+    required String delegatePubkeyB58,
     required double amountUsdc,
     required String pin,
   }) async {
-    // Defensive copy so we can zero on exit, regardless of what the caller does.
     final keyCopy = Uint8List.fromList(senderKeypairBytes);
     try {
     final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
@@ -359,7 +365,7 @@ class WalletService {
     );
 
     final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
-    final feePayerPubkey = Ed25519HDPublicKey.fromBase58(feePayerPubkeyB58);
+    final delegatePubkey = Ed25519HDPublicKey.fromBase58(delegatePubkeyB58);
     final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
     final senderAta = await findAssociatedTokenAddress(
@@ -367,30 +373,29 @@ class WalletService {
       mint: usdcMint,
     );
 
-    // Amount in USDC base units (6 decimals)
     final amountTokens = (amountUsdc * 1_000_000).round();
-
-    // SPL Token Approve instruction: discriminator = 4, followed by 8-byte LE amount
-    // accounts: [source (writable), delegate, owner (signer)]
     final amountBytes = Uint8List(8);
     var v = amountTokens;
     for (var i = 0; i < 8; i++) { amountBytes[i] = v & 0xFF; v >>= 8; }
 
+    // SPL Token Approve: accounts = [source (writable), delegate, owner (signer)]
     final approveIx = Instruction(
       programId: Ed25519HDPublicKey.fromBase58(
           'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
       accounts: [
         AccountMeta(pubKey: senderAta, isWriteable: true, isSigner: false),
-        AccountMeta(pubKey: feePayerPubkey, isWriteable: false, isSigner: false),
+        AccountMeta(pubKey: delegatePubkey, isWriteable: false, isSigner: false), // ← delegate (ek_pub)
         AccountMeta(pubKey: senderPubkey, isWriteable: false, isSigner: true),
       ],
       data: ByteArray(Uint8List.fromList([4, 0, 0, 0, ...amountBytes])),
     );
 
-    // Fetch a fresh blockhash from the backend
+    // Fetch blockhash and the actual gas fee payer from the backend.
+    // Note: fee_payer here is Zend's escrow wallet that pays SOL gas only —
+    // it is NOT the SPL delegate.
     final prepData = await _apiClient.prepareApproveTransaction(
       amountUsdc: amountUsdc,
-      feePayerPubkey: feePayerPubkeyB58,
+      feePayerPubkey: delegatePubkeyB58, // pass delegate for server-side ATA check
     );
     final blockhash = prepData['blockhash'] as String;
     final feePayer = Ed25519HDPublicKey.fromBase58(prepData['fee_payer'] as String);
@@ -409,12 +414,9 @@ class WalletService {
     );
 
     final txB64 = base64Encode(signedTx.toByteArray().toList());
-
-    // Submit the partially-signed approve tx; backend fee-payer co-signs and submits
     final result = await _apiClient.submitApproveTransaction(txB64: txB64);
     return result['transaction_signature'] as String;
     } finally {
-      // Zero the defensive keypair copy regardless of outcome
       for (var i = 0; i < keyCopy.length; i++) { keyCopy[i] = 0; }
     }
   }
