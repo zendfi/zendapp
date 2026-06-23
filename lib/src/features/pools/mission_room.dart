@@ -161,24 +161,35 @@ class _MissionRoomState extends State<MissionRoom> {
       setState(() => _showReconnecting = shouldShow);
     }
     if (state == WsConnectionState.connected) {
+      final isFirstConnect = !_hasConnectedOnce;
       _hasConnectedOnce = true;
       if (_showReconnecting) setState(() => _showReconnecting = false);
+      // On reconnect: always fetch missed messages.
+      // On first connect: fetch if the local cache was empty (e.g. opened via
+      // push notification before the WS message frame was ever received).
+      if (!isFirstConnect || _messages.isEmpty) {
+        unawaited(_onWsReconnected());
+      }
     }
   }
 
   Future<void> _onWsReconnected() async {
-    if (_messages.isEmpty) return;
-    final lastServerId = _messages.lastWhere(
-      (m) => m.serverId != null,
-      orElse: () => _messages.last,
-    ).serverId;
-    if (lastServerId == null) return;
+    // Find the last server-acknowledged message ID to use as a cursor.
+    // If we have no messages at all (e.g. first open after a push notification),
+    // afterId stays null — the API will return the most recent messages.
+    String? lastServerId;
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].serverId != null) {
+        lastServerId = _messages[i].serverId;
+        break;
+      }
+    }
 
     try {
       final model = ZendScope.of(context);
       final missed = await model.walletService.apiClient.listMessages(
         poolId: _pool.id,
-        afterId: lastServerId,
+        afterId: lastServerId,   // null → fetches latest batch (no cursor)
         limit: 100,
       );
       if (!mounted) return;
@@ -187,7 +198,11 @@ class _MissionRoomState extends State<MissionRoom> {
         await _repository.upsertMessage(local);
         _upsertMessageLocal(local);
       }
-      if (missed.isNotEmpty && mounted) setState(() {});
+      if (missed.isNotEmpty && mounted) {
+        setState(() {});
+        _jumpToBottom();
+        _sendReadReceipt();
+      }
     } catch (_) {}
   }
 
