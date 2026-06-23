@@ -167,36 +167,27 @@ class _MissionRoomState extends State<MissionRoom> {
   }
 
   Future<void> _onWsReconnected() async {
+    if (_messages.isEmpty) return;
+    final lastServerId = _messages.lastWhere(
+      (m) => m.serverId != null,
+      orElse: () => _messages.last,
+    ).serverId;
+    if (lastServerId == null) return;
+
     try {
       final model = ZendScope.of(context);
-
-      // Find the most recent server-assigned message ID we know about.
-      // On first connect this will be null (empty room or no cached messages),
-      // in which case we do a plain initial fetch of the latest N messages.
-      String? lastServerId;
-      for (var i = _messages.length - 1; i >= 0; i--) {
-        if (_messages[i].serverId != null) {
-          lastServerId = _messages[i].serverId;
-          break;
-        }
-      }
-
-      final fetched = await model.walletService.apiClient.listMessages(
+      final missed = await model.walletService.apiClient.listMessages(
         poolId: _pool.id,
-        afterId: lastServerId, // null → returns the most recent batch
+        afterId: lastServerId,
         limit: 100,
       );
       if (!mounted) return;
-      for (final msg in fetched) {
+      for (final msg in missed) {
         final local = PoolMessageLocal.fromPoolMessage(msg);
         await _repository.upsertMessage(local);
         _upsertMessageLocal(local);
       }
-      if (fetched.isNotEmpty && mounted) {
-        setState(() {});
-        _jumpToBottom();
-        _sendReadReceipt();
-      }
+      if (missed.isNotEmpty && mounted) setState(() {});
     } catch (_) {}
   }
 

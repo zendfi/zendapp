@@ -105,14 +105,14 @@ class PoolWebSocketService {
       _channel = WebSocketChannel.connect(uri);
       await _channel!.ready;
 
+      final wasReconnect = _reconnectAttempts > 0;
       connectionState.value = WsConnectionState.connected;
       _reconnectAttempts = 0;
       _consecutiveFailures = 0;
 
-      // Always invoke onReconnected — both on first connect and on reconnects —
-      // so the room can fetch any messages that arrived while the WS was not
-      // connected (e.g. the user opened the room from a push notification).
-      onReconnected?.call();
+      if (wasReconnect) {
+        onReconnected?.call();
+      }
 
       _channelSub = _channel!.stream.listen(
         (data) {
