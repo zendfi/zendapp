@@ -35,6 +35,8 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
 
   static const Duration _sheetResize = Duration(milliseconds: 220);
 
+  static const double _minWithdrawUsdc = 5.0;
+
   double get _parsedAmount =>
       _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
 
@@ -43,9 +45,11 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
     return _parsedAmount > 0 && _parsedAmount > model.balance;
   }
 
+  bool get _belowMinimum => _parsedAmount > 0 && _parsedAmount < _minWithdrawUsdc;
+
   bool get _canContinue {
     final model = ZendScope.of(context);
-    return _parsedAmount > 0 && _parsedAmount <= model.balance;
+    return _parsedAmount >= _minWithdrawUsdc && _parsedAmount <= model.balance;
   }
 
   String get _amountFormatted {
@@ -113,6 +117,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                       parsedAmount: _parsedAmount,
                       amountFormatted: _amountFormatted,
                       insufficientBalance: _insufficientBalance,
+                      belowMinimum: _belowMinimum,
                       canContinue: _canContinue,
                       onKey: _onKey,
                       onContinue: () =>
@@ -142,6 +147,7 @@ class _AmountStage extends StatelessWidget {
     required this.parsedAmount,
     required this.amountFormatted,
     required this.insufficientBalance,
+    required this.belowMinimum,
     required this.canContinue,
     required this.onKey,
     required this.onContinue,
@@ -151,6 +157,7 @@ class _AmountStage extends StatelessWidget {
   final double parsedAmount;
   final String amountFormatted;
   final bool insufficientBalance;
+  final bool belowMinimum;
   final bool canContinue;
   final ValueChanged<String> onKey;
   final VoidCallback onContinue;
@@ -212,6 +219,18 @@ class _AmountStage extends StatelessWidget {
                 ),
               ),
             ),
+          if (belowMinimum)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Minimum withdrawal is \$5.00',
+                style: TextStyle(
+                  fontFamily: 'DMMono',
+                  fontSize: 11,
+                  color: ZendColors.destructive,
+                ),
+              ),
+            ),
           const Spacer(),
 
           // ── Amount display ──────────────────────────────────────────
@@ -236,7 +255,11 @@ class _AmountStage extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: PrimaryButton(
-              label: canContinue ? 'Continue' : 'Enter amount',
+              label: canContinue
+                  ? 'Continue'
+                  : belowMinimum
+                      ? 'Minimum \$5.00'
+                      : 'Enter amount',
               onPressed: canContinue ? onContinue : null,
             ),
           ),

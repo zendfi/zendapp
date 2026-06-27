@@ -628,6 +628,9 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
   double? get _effectiveAmount =>
       widget.resolvedAmount ?? (_parsedAmount > 0 ? _parsedAmount : null);
 
+  // Minimum for an open-intent zdfi.me payment — $0.50 USDC.
+  static const double _minOpenIntentUsdc = 0.5;
+
   String _formatAmount(double amount) {
     if (amount == amount.roundToDouble()) {
       return '\$${amount.toStringAsFixed(0)}';
@@ -664,10 +667,16 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
 
     bool canConfirm;
     if (_isOpenIntent) {
-      canConfirm = _parsedAmount > 0 && !balanceUnknown && !insufficientBalance;
+      canConfirm = _parsedAmount >= _minOpenIntentUsdc &&
+          !balanceUnknown &&
+          !insufficientBalance;
     } else {
       canConfirm = !balanceUnknown && !insufficientBalance;
     }
+
+    final bool belowMinimum = _isOpenIntent &&
+        _parsedAmount > 0 &&
+        _parsedAmount < _minOpenIntentUsdc;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
@@ -712,10 +721,19 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             // Keypad-driven amount — mirrors SendScreen's _UsdAmountDisplay
             _AmountDisplay(digits: widget.digits, compact: compact),
             const SizedBox(height: 4),
-            // NGN equivalent placeholder (shown once FX is fetched after confirm)
+            // Inline hint for below-minimum or insufficient balance
             if (insufficientBalance)
               Text(
                 'Insufficient balance',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13,
+                  color: ZendColors.destructive,
+                ),
+              )
+            else if (belowMinimum)
+              Text(
+                'Minimum payment is \$0.50',
                 style: TextStyle(
                   fontFamily: 'DMSans',
                   fontSize: 13,
@@ -785,9 +803,11 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           // ── Confirm button ───────────────────────────────────────────────
           PrimaryButton(
             label: _isOpenIntent
-                ? (_parsedAmount > 0
-                    ? 'Zend ${_formatAmount(_parsedAmount)}'
-                    : 'Enter amount')
+                ? (belowMinimum
+                    ? 'Minimum \$0.50'
+                    : _parsedAmount > 0
+                        ? 'Zend ${_formatAmount(_parsedAmount)}'
+                        : 'Enter amount')
                 : 'Zend ${_formatAmount(widget.resolvedAmount ?? 0)}',
             onPressed: canConfirm ? widget.onConfirm : null,
           ),
