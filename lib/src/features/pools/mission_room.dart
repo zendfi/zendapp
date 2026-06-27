@@ -122,7 +122,6 @@ class _MissionRoomState extends State<MissionRoom> {
       poolId: _pool.id,
       baseWsUrl: wsBaseUrl,
       getToken: () => storage.read(key: 'zend_session_token'),
-      onReconnected: _onWsReconnected,
     );
 
     // Set up outbox queue
@@ -161,15 +160,12 @@ class _MissionRoomState extends State<MissionRoom> {
       setState(() => _showReconnecting = shouldShow);
     }
     if (state == WsConnectionState.connected) {
-      final isFirstConnect = !_hasConnectedOnce;
       _hasConnectedOnce = true;
       if (_showReconnecting) setState(() => _showReconnecting = false);
-      // On reconnect: always fetch missed messages.
-      // On first connect: fetch if the local cache was empty (e.g. opened via
-      // push notification before the WS message frame was ever received).
-      if (!isFirstConnect || _messages.isEmpty) {
-        unawaited(_onWsReconnected());
-      }
+      // Always sync missed messages on every successful connection —
+      // both first connect (cache may be stale/empty) and reconnects.
+      // The afterId cursor makes this cheap when nothing was missed.
+      unawaited(_onWsReconnected());
     }
   }
 
@@ -185,25 +181,35 @@ class _MissionRoomState extends State<MissionRoom> {
       }
     }
 
-    try {
-      final model = ZendScope.of(context);
-      final missed = await model.walletService.apiClient.listMessages(
-        poolId: _pool.id,
-        afterId: lastServerId,   // null → fetches latest batch (no cursor)
-        limit: 100,
-      );
-      if (!mounted) return;
-      for (final msg in missed) {
-        final local = PoolMessageLocal.fromPoolMessage(msg);
-        await _repository.upsertMessage(local);
-        _upsertMessageLocal(local);
+    // Retry up to 3 times with a short delay on transient failures.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final model = ZendScope.of(context);
+        final missed = await model.walletService.apiClient.listMessages(
+          poolId: _pool.id,
+          afterId: lastServerId,   // null → fetches latest batch
+          limit: 100,
+        );
+        if (!mounted) return;
+        for (final msg in missed) {
+          final local = PoolMessageLocal.fromPoolMessage(msg);
+          await _repository.upsertMessage(local);
+          _upsertMessageLocal(local);
+        }
+        if (missed.isNotEmpty && mounted) {
+          setState(() {});
+          _jumpToBottom();
+          _sendReadReceipt();
+        }
+        return; // success — done
+      } catch (_) {
+        if (attempt < 2) {
+          await Future<void>.delayed(Duration(seconds: (attempt + 1) * 2));
+          if (!mounted) return;
+        }
+        // Final attempt failed — messages will be fetched on next reconnect
       }
-      if (missed.isNotEmpty && mounted) {
-        setState(() {});
-        _jumpToBottom();
-        _sendReadReceipt();
-      }
-    } catch (_) {}
+    }
   }
 
   @override
@@ -226,10 +232,10 @@ class _MissionRoomState extends State<MissionRoom> {
   /// Called when the app returns to the foreground.
   void _onAppResume() {
     if (!mounted) return;
-    // Reconnect WebSocket if disconnected
-    if (_wsService.connectionState.value == WsConnectionState.disconnected) {
-      _wsService.connect();
-    }
+    // Always reset and reconnect on foreground — this handles both the normal
+    // "briefly backgrounded" case and the case where reconnection has given up
+    // after 5 consecutive failures (resetAndReconnect clears the counter).
+    unawaited(_wsService.resetAndReconnect());
   }
 
   // ── WebSocket frame handling ─────────────────────────────────────────────────
@@ -793,7 +799,7 @@ class _MissionRoomState extends State<MissionRoom> {
           Builder(builder: (context) {
             final zt = ZendTheme.of(context);
             return GestureDetector(
-              onTap: () => _wsService.connect(),
+              onTap: () => _wsService.resetAndReconnect(),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),

@@ -43,9 +43,6 @@ class PoolWebSocketService {
   /// Callback that returns the current JWT, or `null` if unauthenticated.
   final Future<String?> Function() getToken;
 
-  /// Optional callback invoked after a successful reconnect.
-  final VoidCallback? onReconnected;
-
   final ValueNotifier<WsConnectionState> connectionState =
       ValueNotifier(WsConnectionState.disconnected);
 
@@ -71,7 +68,6 @@ class PoolWebSocketService {
     required this.poolId,
     required this.baseWsUrl,
     required this.getToken,
-    this.onReconnected,
   });
 
   int get consecutiveFailures => _consecutiveFailures;
@@ -105,14 +101,9 @@ class PoolWebSocketService {
       _channel = WebSocketChannel.connect(uri);
       await _channel!.ready;
 
-      final wasReconnect = _reconnectAttempts > 0;
       connectionState.value = WsConnectionState.connected;
       _reconnectAttempts = 0;
       _consecutiveFailures = 0;
-
-      if (wasReconnect) {
-        onReconnected?.call();
-      }
 
       _channelSub = _channel!.stream.listen(
         (data) {
@@ -148,6 +139,8 @@ class PoolWebSocketService {
 
     if (_consecutiveFailures >= _maxConsecutiveFailures) {
       connectionState.value = WsConnectionState.disconnected;
+      // Don't schedule another automatic retry — caller must invoke
+      // resetAndReconnect() or connect() explicitly to try again.
       return;
     }
 
@@ -156,6 +149,17 @@ class PoolWebSocketService {
     final delaySecs = (1 << _reconnectAttempts).clamp(1, 30);
     _reconnectAttempts++;
     _reconnectTimer = Timer(Duration(seconds: delaySecs), connect);
+  }
+
+  /// Resets the failure counter and reconnects from scratch.
+  /// Use this for explicit user-triggered retries or app-resume reconnects
+  /// so the service doesn't permanently stop after [_maxConsecutiveFailures].
+  Future<void> resetAndReconnect() async {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _consecutiveFailures = 0;
+    _reconnectAttempts = 0;
+    await connect();
   }
 
   /// Closes the connection and cancels any pending reconnect timer.

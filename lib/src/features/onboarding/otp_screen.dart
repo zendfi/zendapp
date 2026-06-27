@@ -187,6 +187,11 @@ class _OtpScreenState extends State<OtpScreen> {
           final hasKeypair = await model.walletService.hasLocalKeypair();
           if (!mounted) return;
 
+          // Dismiss the system keyboard before navigating to a PIN screen
+          // (which uses a custom keypad). Without this, the keyboard pops up
+          // briefly then snaps closed during the route transition.
+          FocusScope.of(context).unfocus();
+
           if (hasKeypair) {
             navigator.pushAndRemoveUntil(
                 zendRoute(page: const ZendShell()), (route) => false);

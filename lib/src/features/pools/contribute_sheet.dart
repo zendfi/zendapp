@@ -52,7 +52,16 @@ class _ContributeSheetState extends State<ContributeSheet> {
     return double.tryParse(_amountInput) ?? 0.0;
   }
 
-  bool get _amountValid => _parsedAmount >= 0.01 && _parsedAmount <= 10000.0;
+  /// How much the pool still needs to reach its target.
+  double get _remainingAmount {
+    final rem = widget.pool.targetAmount - widget.pool.gathered;
+    return rem < 0 ? 0.0 : rem;
+  }
+
+  bool get _amountValid =>
+      _parsedAmount >= 0.01 &&
+      _parsedAmount <= 10000.0 &&
+      _parsedAmount <= _remainingAmount;
 
   double get _userBalance {
     try {
@@ -81,13 +90,30 @@ class _ContributeSheetState extends State<ContributeSheet> {
       }
       final dotIdx = _amountInput.indexOf('.');
       if (dotIdx >= 0 && _amountInput.length - dotIdx > 2) return;
+
+      // Build the candidate value and cap it at the remaining pool amount.
+      final candidate = _amountInput + key;
+      final candidateValue = double.tryParse(candidate) ?? 0.0;
+      final cap = _remainingAmount;
+      if (cap > 0 && candidateValue > cap) {
+        // Snap to the exact remaining amount and show a hint.
+        _amountInput = cap.toStringAsFixed(2);
+        _amountError = 'Max contribution is \$${cap.toStringAsFixed(2)}';
+        return;
+      }
+
       _amountInput += key;
     });
   }
 
   void _onAmountConfirm() {
+    if (_remainingAmount <= 0) {
+      setState(() => _amountError = 'This pool is already full');
+      return;
+    }
     if (!_amountValid) {
-      setState(() => _amountError = 'Enter an amount between \$0.01 and \$10,000');
+      setState(() => _amountError =
+          'Enter an amount between \$0.01 and \$${_remainingAmount.toStringAsFixed(2)}');
       return;
     }
     if (!_hasSufficientBalance) {
@@ -274,6 +300,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
           amountInput: _amountInput,
           amountError: _amountError,
           userBalance: _userBalance,
+          remainingAmount: _remainingAmount,
           hasSufficientBalance: _hasSufficientBalance,
           onKey: _onAmountKey,
           onConfirm: _onAmountConfirm,
@@ -321,6 +348,7 @@ class _AmountStage extends StatelessWidget {
     required this.amountInput,
     required this.amountError,
     required this.userBalance,
+    required this.remainingAmount,
     required this.hasSufficientBalance,
     required this.onKey,
     required this.onConfirm,
@@ -330,6 +358,7 @@ class _AmountStage extends StatelessWidget {
   final String amountInput;
   final String? amountError;
   final double userBalance;
+  final double remainingAmount;
   final bool hasSufficientBalance;
   final ValueChanged<String> onKey;
   final VoidCallback onConfirm;
@@ -341,7 +370,9 @@ class _AmountStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final parsedAmount = double.tryParse(amountInput) ?? 0.0;
-    final isValid = parsedAmount >= 0.01 && hasSufficientBalance;
+    final isValid = parsedAmount >= 0.01 &&
+        hasSufficientBalance &&
+        (remainingAmount <= 0 ? false : parsedAmount <= remainingAmount);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -360,13 +391,27 @@ class _AmountStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.xs),
           PoolProgressBar(progress: pool.progress),
           const SizedBox(height: ZendSpacing.xxs),
-          Text(
-            '${pool.formattedGathered} of ${pool.formattedTarget}',
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 12,
-              color: zt.textSecondary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${pool.formattedGathered} of ${pool.formattedTarget}',
+                style: TextStyle(
+                  fontFamily: 'DMMono',
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
+              ),
+              if (remainingAmount > 0)
+                Text(
+                  '\$${remainingAmount.toStringAsFixed(2)} left',
+                  style: TextStyle(
+                    fontFamily: 'DMMono',
+                    fontSize: 12,
+                    color: zt.accent,
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: ZendSpacing.lg),
 
