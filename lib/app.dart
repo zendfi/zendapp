@@ -18,6 +18,8 @@ import 'src/features/onboarding/pin_migration_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/services/pending_deep_link_service.dart';
 import 'src/features/send/qr_payment_sheet.dart';
+import 'src/features/send/dev_payment_modal_sheet.dart';
+import 'src/features/pairing/pairing_approval_sheet.dart';
 import 'src/services/qr_scanner_state.dart';
 import 'src/services/push_notification_service.dart';
 
@@ -176,6 +178,21 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   }
 
   void _handleDeepLink(DeepLinkPayload payload) {
+    // "Pay with Zend" CLI device pairing — zdfi.me/cli-auth/{code}. Routed
+    // directly to the approval sheet; no QrPaymentIntent involved, and no
+    // pending-deep-link storage since pairing approval requires the user
+    // to already be authenticated and unlocked (it's a sensitive
+    // account-access grant, not a payment).
+    if (payload.isCliPairing) {
+      if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      if (context == null) return;
+      showPairingApprovalSheet(context, pairingCode: payload.cliPairingCode!);
+      return;
+    }
+
     final intent = QrPaymentIntent(
       zendtag: payload.zendtag,
       amountUsdc: payload.amountUsdc,
@@ -194,7 +211,51 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       return;
     }
     if (QrScannerState.isActive) return;
-    showQrPaymentSheet(context, intent: intent);
+    _dispatchPaymentIntent(context, intent);
+  }
+
+  /// Dispatches a resolved [QrPaymentIntent] to either the existing
+  /// [QrPaymentSheet] (peer-to-peer, `source='app'`) or the new
+  /// `DevPaymentModalSheet` (Developer-created, `source='api'` — "Pay with
+  /// Zend"). Both share the identical `zdfi.me/@{zendtag}/{request_id}`
+  /// URL shape, so the dispatch decision can only be made after fetching
+  /// the request's `source` field (Requirement 4.1) — open/fixed-amount
+  /// intents with no `requestLinkId` are always peer-to-peer and go
+  /// straight to [QrPaymentSheet] without any fetch.
+  Future<void> _dispatchPaymentIntent(BuildContext context, QrPaymentIntent intent) async {
+    if (intent.requestLinkId == null) {
+      showQrPaymentSheet(context, intent: intent);
+      return;
+    }
+
+    String source = 'app';
+    try {
+      final details = await widget.model.walletService.apiClient
+          .getPublicUserRequestData(intent.zendtag, intent.requestLinkId!);
+      source = details.source;
+    } catch (_) {
+      // Fetch failure (e.g. 404 for an expired/paid request) — fall back to
+      // QrPaymentSheet, which already has its own fetch-and-error-state
+      // handling for exactly this case.
+      source = 'app';
+    }
+
+    if (!mounted) return;
+    // Use NavigatorState (not BuildContext) captured after the async gap,
+    // matching the existing showQrPaymentSheetFromNavigator pattern in this
+    // file — avoids holding a BuildContext across the await above.
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+
+    if (source == 'api') {
+      showDevPaymentModalSheet(
+        navigator.context,
+        zendtag: intent.zendtag,
+        requestLinkId: intent.requestLinkId!,
+      );
+    } else {
+      showQrPaymentSheetFromNavigator(navigator, intent: intent);
+    }
   }
 
   void _onModelChanged() {

@@ -1262,6 +1262,147 @@ class ApiClient {
     }
   }
 
+  /// Unfiltered status lookup for a "Pay with Zend" payment request —
+  /// unlike [getPublicUserRequestData], does NOT throw 404 for
+  /// expired/paid/cancelled requests, so [DevPaymentModalSheet] can
+  /// distinguish "never existed" from "exists but terminal" and show the
+  /// correct terminal state (Requirements 4.4, 4.7).
+  ///
+  /// Also the mechanism by which a Return Token is lazily issued exactly
+  /// once, on the first poll observing `status: paid` — see
+  /// `get_public_request_status` in `src/user_payment_links.rs`.
+  Future<DevRequestStatus> getPublicRequestStatus(
+    String zendtag,
+    String requestLinkId, {
+    String platform = 'android',
+  }) async {
+    try {
+      final resp = await _dio.get(
+        '/api/v1/public/zend/$zendtag/$requestLinkId/status',
+        queryParameters: {'platform': platform},
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
+      );
+      return DevRequestStatus.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Reports whether the post-confirmation return-redirect (to a
+  /// Developer's `redirect_url`) succeeded, for per-platform tracking
+  /// (Requirement 5.10). Best-effort — failures here are non-fatal.
+  Future<void> reportReturnRedirectOutcome(
+    String requestId, {
+    required String platform,
+    required bool success,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/v1/public/zend/requests/$requestId/return-redirect-outcome',
+        data: {'platform': platform, 'success': success},
+        options: Options(receiveTimeout: const Duration(seconds: 10)),
+      );
+    } on DioException catch (_) {
+      // Best-effort — never surface this failure to the user.
+    }
+  }
+
+  /// Prepares a direct peer-to-peer transfer to settle a Developer-created
+  /// ("Pay with Zend") payment request — mirrors [prepareTransfer]'s shape
+  /// exactly, scoped to a specific request instead of an arbitrary
+  /// recipient zendtag (Requirement 4.3: reuses existing signing, no new
+  /// logic introduced).
+  Future<PrepareTransferResponse> prepareDevRequestPayment(
+    String zendtag,
+    String requestLinkId,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/dev-requests/$zendtag/$requestLinkId/prepare',
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return PrepareTransferResponse.fromJson(data);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Submits the payer-signed transaction for a Developer-created payment
+  /// request. On success, the backend marks the request paid, fires the
+  /// Developer Webhook Event, and — if applicable — issues a Return Token
+  /// returned in [DevRequestPaymentResult.returnToken].
+  Future<DevRequestPaymentResult> submitDevRequestPayment(
+    String zendtag,
+    String requestLinkId,
+    String partiallySignedTxB64, {
+    required String platform,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/dev-requests/$zendtag/$requestLinkId/submit',
+        data: {
+          'partially_signed_tx': partiallySignedTxB64,
+          'platform': platform,
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return DevRequestPaymentResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── "Pay with Zend" CLI pairing (approval screen) ───────────────────────
+
+  /// Fetches a CLI pairing session's status by its Pairing Code (from the
+  /// `zdfi.me/cli-auth/{code}` deep link) — public endpoint, no auth header
+  /// needed (the session isn't sensitive pre-approval). The response
+  /// includes the session's database id, which the approval screen then
+  /// uses for the subsequent approve/deny call
+  /// (`cli_pairing::get_session_status` accepts either an id or a code in
+  /// the same path segment).
+  Future<CliPairingSessionStatus> getCliPairingSessionByCode(String code) async {
+    try {
+      final response = await _dio.get('/api/v1/dev/cli-auth/sessions/$code');
+      return CliPairingSessionStatus.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Approves a CLI pairing session, submitting the signature produced by
+  /// [WalletService.signArbitraryMessage] over the pairing code.
+  Future<void> approveCliPairingSession(String sessionId, String signatureB64) async {
+    try {
+      await _dio.post(
+        '/api/v1/dev/cli-auth/sessions/$sessionId/approve',
+        data: {'signature': signatureB64},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Denies a CLI pairing session.
+  Future<void> denyCliPairingSession(String sessionId) async {
+    try {
+      await _dio.post('/api/v1/dev/cli-auth/sessions/$sessionId/deny');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   // ── Email intents ────────────────────────────────────────────────────────────
 
   /// Creates a new email intent (pending USDC send to an email address).

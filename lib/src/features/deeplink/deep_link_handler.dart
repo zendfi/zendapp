@@ -55,6 +55,19 @@ class DeepLinkHandler {
     try {
       final uri = Uri.parse(url);
 
+      // https://zdfi.me/cli-auth/{code} — "Pay with Zend" CLI device
+      // pairing approval link. Parsed here as a distinct payload type;
+      // routing to the PairingApprovalSheet happens one layer up (in
+      // app.dart), same pattern as the zendtag branch below.
+      if (uri.host == 'zdfi.me' &&
+          uri.pathSegments.length == 2 &&
+          uri.pathSegments[0] == 'cli-auth') {
+        final code = uri.pathSegments[1];
+        if (code.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', cliPairingCode: code);
+        }
+      }
+
       // https://zdfi.me/@john_o
       // https://zdfi.me/@john_o/abc123
       if (uri.host == 'zdfi.me' && uri.pathSegments.isNotEmpty) {
@@ -105,15 +118,23 @@ class DeepLinkPayload {
   final double? amountUsdc;
   final String? note;
 
+  /// Non-null only for `zdfi.me/cli-auth/{code}` links ("Pay with Zend" CLI
+  /// device pairing). When set, [zendtag]/[requestId]/[amountUsdc]/[note]
+  /// are not meaningful — check this field first.
+  final String? cliPairingCode;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
     this.amountUsdc,
     this.note,
+    this.cliPairingCode,
   });
+
+  bool get isCliPairing => cliPairingCode != null;
 
   @override
   String toString() =>
       'DeepLinkPayload(zendtag: $zendtag, requestId: $requestId, '
-      'amountUsdc: $amountUsdc, note: $note)';
+      'amountUsdc: $amountUsdc, note: $note, cliPairingCode: $cliPairingCode)';
 }

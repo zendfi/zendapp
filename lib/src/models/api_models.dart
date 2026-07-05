@@ -450,6 +450,12 @@ class PrepareTransferResponse {
   final String? recipientAta;
   final String? senderPubkey;
 
+  /// Populated only by the "Pay with Zend" dev-request prepare endpoint
+  /// (`prepareDevRequestPayment`) — the authoritative payable amount for the
+  /// request being confirmed, so the app signs for exactly this amount
+  /// rather than trusting a value it fetched separately.
+  final double? amountUsdc;
+
   PrepareTransferResponse({
     required this.blockhash,
     required this.recipientWalletAddress,
@@ -458,9 +464,11 @@ class PrepareTransferResponse {
     this.senderAta,
     this.recipientAta,
     this.senderPubkey,
+    this.amountUsdc,
   });
 
   factory PrepareTransferResponse.fromJson(Map<String, dynamic> json) {
+    final rawAmount = json['amount_usdc'];
     return PrepareTransferResponse(
       blockhash: json['blockhash'] as String,
       recipientWalletAddress: json['recipient_wallet_address'] as String,
@@ -469,6 +477,55 @@ class PrepareTransferResponse {
       senderAta: json['sender_ata'] as String?,
       recipientAta: json['recipient_ata'] as String?,
       senderPubkey: json['sender_pubkey'] as String?,
+      amountUsdc: rawAmount is num ? rawAmount.toDouble() : null,
+    );
+  }
+}
+
+/// A "Pay with Zend" CLI pairing session's status, resolved by Pairing Code
+/// from `GET /api/v1/dev/cli-auth/sessions/{codeOrId}`.
+class CliPairingSessionStatus {
+  final String sessionId;
+  final String status;
+  final String cliDisplayName;
+  final DateTime? expiresAt;
+
+  const CliPairingSessionStatus({
+    required this.sessionId,
+    required this.status,
+    required this.cliDisplayName,
+    this.expiresAt,
+  });
+
+  factory CliPairingSessionStatus.fromJson(Map<String, dynamic> json) {
+    final expiresAtStr = json['expires_at'] as String?;
+    return CliPairingSessionStatus(
+      sessionId: json['session_id'] as String,
+      status: json['status'] as String,
+      cliDisplayName: json['cli_display_name'] as String,
+      expiresAt: expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null,
+    );
+  }
+}
+
+/// Result of confirming payment for a "Pay with Zend" Developer-created
+/// request, from `POST /api/zend/dev-requests/{zendtag}/{request_id}/submit`.
+class DevRequestPaymentResult {
+  final String transactionSignature;
+  final String status;
+  final String? returnToken;
+
+  const DevRequestPaymentResult({
+    required this.transactionSignature,
+    required this.status,
+    this.returnToken,
+  });
+
+  factory DevRequestPaymentResult.fromJson(Map<String, dynamic> json) {
+    return DevRequestPaymentResult(
+      transactionSignature: json['transaction_signature'] as String,
+      status: json['status'] as String,
+      returnToken: json['return_token'] as String?,
     );
   }
 }
@@ -519,16 +576,38 @@ class RequestLinkDetails {
   final String? description;
   final DateTime? expiresAt;
 
+  /// `'app'` (peer-to-peer, created from within the Zend App) or `'api'`
+  /// (Developer-created via zend-sdk/zend-cli — "Pay with Zend"). Used to
+  /// decide whether to open [QrPaymentSheet] or `DevPaymentModalSheet`.
+  final String source;
+
+  /// The requesting account's display name, shown in the confirm stage for
+  /// Developer-created ('api'-sourced) requests.
+  final String? requesterDisplayName;
+
+  /// The requesting account's zendtag.
+  final String? requesterZendtag;
+
+  /// Present only for `source='api'` requests with a configured
+  /// `redirect_url` — used by `DevPaymentModalSheet` to perform the
+  /// post-confirmation return redirect (Requirement 5.3).
+  final String? redirectUrl;
+
   const RequestLinkDetails({
     required this.amountUsdc,
     this.description,
     this.expiresAt,
+    this.source = 'app',
+    this.requesterDisplayName,
+    this.requesterZendtag,
+    this.redirectUrl,
   });
 
   factory RequestLinkDetails.fromJson(Map<String, dynamic> json) {
     // The backend wraps request data under a 'request' key.
     // Fall back to top-level for any legacy callers.
     final requestData = json['request'] as Map<String, dynamic>? ?? json;
+    final userData = json['user'] as Map<String, dynamic>?;
 
     final rawAmount = requestData['amount_usdc'];
     final double amount;
@@ -546,6 +625,43 @@ class RequestLinkDetails {
       amountUsdc: amount,
       description: requestData['description'] as String?,
       expiresAt: expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null,
+      source: requestData['source'] as String? ?? 'app',
+      requesterDisplayName: userData?['display_name'] as String?,
+      requesterZendtag: userData?['zendtag'] as String?,
+      redirectUrl: requestData['redirect_url'] as String?,
+    );
+  }
+}
+
+/// Result of `GET /api/v1/public/zend/{zendtag}/{requestLinkId}/status` —
+/// an unfiltered status lookup used by `DevPaymentModalSheet` for terminal
+/// states, the pre-sign race check, and lazy Return Token issuance
+/// (Requirements 4.4, 4.7, 4.8, 5.1).
+class DevRequestStatus {
+  final bool found;
+  final String? status;
+  final String? source;
+  final bool expired;
+  final bool payable;
+  final String? returnToken;
+
+  const DevRequestStatus({
+    required this.found,
+    this.status,
+    this.source,
+    this.expired = false,
+    this.payable = false,
+    this.returnToken,
+  });
+
+  factory DevRequestStatus.fromJson(Map<String, dynamic> json) {
+    return DevRequestStatus(
+      found: json['found'] as bool? ?? false,
+      status: json['status'] as String?,
+      source: json['source'] as String?,
+      expired: json['expired'] as bool? ?? false,
+      payable: json['payable'] as bool? ?? false,
+      returnToken: json['return_token'] as String?,
     );
   }
 }

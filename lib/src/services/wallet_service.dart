@@ -340,6 +340,45 @@ class WalletService {
     return _decryptLocalKeypair(pin);
   }
 
+  /// Signs an arbitrary UTF-8 message with the wallet's existing Ed25519
+  /// keypair — used by the "Pay with Zend" CLI pairing approval flow to
+  /// sign a pairing code (not a Solana transaction). No new signing
+  /// primitive is introduced: this reuses the same `keypair.sign()` call
+  /// already used by [signExistingTransaction], just over raw message
+  /// bytes instead of a transaction's message bytes (Requirement 1.5).
+  ///
+  /// Accepts either a decrypted keypair from [decryptLocalKeypair] (PIN
+  /// path) or a cached keypair from [WalletSessionCache] (session-signing
+  /// path) — same dual-path shape as every other signing method in this
+  /// class. Returns the raw 64-byte signature.
+  Future<Uint8List> signArbitraryMessage({
+    required String message,
+    String? pin,
+    Uint8List? keypairBytes,
+  }) async {
+    assert(
+      (pin != null) ^ (keypairBytes != null),
+      'Exactly one of pin or keypairBytes must be provided',
+    );
+
+    final resolvedKeypairBytes = keypairBytes ?? await _decryptLocalKeypair(pin!);
+    final ownsBytes = keypairBytes == null; // only zero what we decrypted ourselves
+
+    try {
+      final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: _extractSeed(resolvedKeypairBytes).toList(),
+      );
+      final signature = await keypair.sign(utf8.encode(message));
+      return Uint8List.fromList(signature.bytes);
+    } finally {
+      if (ownsBytes) {
+        for (var i = 0; i < resolvedKeypairBytes.length; i++) {
+          resolvedKeypairBytes[i] = 0;
+        }
+      }
+    }
+  }
+
   /// Builds, signs, and submits an SPL Token `Approve` instruction on-chain.
   ///
   /// Grants [delegatePubkeyB58] delegate authority over [amountUsdc] of USDC
