@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
 import '../../services/qr_scanner_state.dart';
+import '../pairing/pairing_approval_sheet.dart';
 import 'qr_payment_sheet.dart';
 
 /// Full-screen QR scanner that decodes `zdfi.me` payment URLs.
@@ -71,6 +72,26 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       uri = Uri.parse(rawValue);
     } catch (_) {
       _showErrorSnackBar('Could not read QR code data.');
+      return;
+    }
+
+    // https://zdfi.me/cli-auth/{code} — "Pay with Zend" CLI device pairing
+    // approval link. Must be checked before QrPaymentIntent.fromUri, since
+    // that parser treats any non-empty first path segment as a zendtag and
+    // would otherwise misread "cli-auth" as one, sending this down the
+    // payment-intent path where it 404s as a nonexistent payment request.
+    // Mirrors DeepLinkHandler._parse's cli-auth branch — this is the same
+    // link, just scanned via the in-app camera instead of the OS/App Link.
+    if (uri.host.toLowerCase() == 'zdfi.me' &&
+        uri.pathSegments.length == 2 &&
+        uri.pathSegments[0] == 'cli-auth' &&
+        uri.pathSegments[1].isNotEmpty) {
+      _hasScanned = true;
+      HapticFeedback.mediumImpact();
+      _controller.stop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      showPairingApprovalSheet(context, pairingCode: uri.pathSegments[1]);
       return;
     }
 
