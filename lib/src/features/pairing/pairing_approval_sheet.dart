@@ -9,14 +9,22 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/wallet_session_cache.dart';
+import '../send/send_shared_widgets.dart';
 
 /// Stage machine for the "Pay with Zend" CLI device-pairing approval
-/// screen — deliberately smaller than [QrPaymentSheet]'s, since there's no
-/// amount to confirm here, just an identity/access decision.
+/// screen. Reuses the exact same PIN-entry widget, shake animation, and
+/// session-signing decision pattern as [QrPaymentSheet]
+/// (`_proceedFromConfirm` → `SigningPolicyService`/`WalletSessionCache`) —
+/// no bespoke dialog, no new signing UI, so the pairing flow feels and
+/// behaves identically to every other confirmation surface in the app.
 ///
 ///   loading  → fetch session by code, verify pending/unexpired
 ///   review   → show cli_display_name, Approve/Deny
-///   signing  → on Approve: existing biometric/PIN flow signs the pairing
+///   pin      → shown only when session-signing doesn't apply (no cached
+///              keypair, or the user has PIN-per-payment enabled) — same
+///              [SendPinStage] widget, shake-on-error, 5-attempt lockout
+///   signing  → session-signing path (cached keypair, no PIN prompt) OR
+///              immediately after correct PIN entry: signs the pairing
 ///              code with the wallet's existing key (Requirement 1.5),
 ///              retrying signature creation up to 3 attempts on failure
 ///              before surfacing an error (Requirement 1.6)
@@ -26,7 +34,7 @@ import '../../services/wallet_session_cache.dart';
 ///
 /// Deny short-circuits directly from `review` to a denial POST — no
 /// signing involved.
-enum PairingApprovalStage { loading, review, signing, success, error, denied }
+enum PairingApprovalStage { loading, review, pin, signing, success, error, denied }
 
 Future<void> showPairingApprovalSheet(
   BuildContext context, {
@@ -53,7 +61,8 @@ class PairingApprovalSheet extends StatefulWidget {
   State<PairingApprovalSheet> createState() => _PairingApprovalSheetState();
 }
 
-class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
+class _PairingApprovalSheetState extends State<PairingApprovalSheet>
+    with SingleTickerProviderStateMixin {
   static const int _maxSigningAttempts = 3;
 
   PairingApprovalStage _stage = PairingApprovalStage.loading;
@@ -61,10 +70,32 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
   String? _cliDisplayName;
   String? _errorMessage;
 
+  String _pinDigits = '';
+  int _pinAttempts = 0;
+  String? _pinError;
+
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _shakeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut));
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchSession());
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchSession() async {
@@ -107,35 +138,102 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
     }
   }
 
-  Future<void> _approve() async {
+  /// Mirrors `QrPaymentSheet._proceedFromConfirm()`: if a session keypair
+  /// is cached and the user hasn't opted into PIN-per-payment, sign
+  /// directly with no prompt. Otherwise fall through to the PIN stage.
+  /// There is no amount here (unlike a payment), so the amount-threshold
+  /// half of `SigningPolicyService.requiresPinForAmount` doesn't apply —
+  /// only the PIN-per-payment override is consulted.
+  Future<void> _onApproveTap() async {
+    final model = ZendScope.of(context);
+    final cache = WalletSessionCache.instance;
+    final pinPerPaymentEnabled = await model.signingPolicyService.pinPerPaymentEnabled;
+
+    if (!mounted) return;
+    if (!pinPerPaymentEnabled && cache.hasKeypair) {
+      setState(() => _stage = PairingApprovalStage.signing);
+      await _signAndApprove(pin: null, keypairBytes: cache.keypair);
+    } else {
+      setState(() {
+        _pinDigits = '';
+        _pinError = null;
+        _stage = PairingApprovalStage.pin;
+      });
+    }
+  }
+
+  void _onPinKey(String value) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _pinError = null;
+      if (value == 'del') {
+        if (_pinDigits.isNotEmpty) _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        return;
+      }
+      if (_pinDigits.length >= 6) return;
+      _pinDigits += value;
+    });
+    if (_pinDigits.length == 6) _submitPin();
+  }
+
+  Future<void> _submitPin() async {
+    final pin = _pinDigits;
     setState(() => _stage = PairingApprovalStage.signing);
 
     final model = ZendScope.of(context);
     final cache = WalletSessionCache.instance;
+
+    if (cache.hasKeypair) {
+      final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+      if (!valid) {
+        if (!mounted) return;
+        _handleWrongPin();
+        return;
+      }
+      await _signAndApprove(pin: null, keypairBytes: cache.keypair);
+    } else {
+      await _signAndApprove(pin: pin, keypairBytes: null);
+    }
+  }
+
+  void _handleWrongPin() {
+    _pinAttempts++;
+    if (_pinAttempts >= 5) {
+      final model = ZendScope.of(context);
+      model.appLockService.lock();
+      setState(() {
+        _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+        _stage = PairingApprovalStage.error;
+      });
+    } else {
+      _shakeController.forward(from: 0);
+      setState(() {
+        _pinDigits = '';
+        _pinError = 'Incorrect PIN';
+        _stage = PairingApprovalStage.pin;
+      });
+    }
+  }
+
+  Future<void> _signAndApprove({String? pin, dynamic keypairBytes}) async {
+    final model = ZendScope.of(context);
 
     Uint8List? signature;
     Object? lastError;
 
     for (var attempt = 1; attempt <= _maxSigningAttempts; attempt++) {
       try {
-        if (cache.hasKeypair) {
-          signature = await model.walletService.signArbitraryMessage(
-            message: widget.pairingCode,
-            keypairBytes: cache.keypair,
-          );
-        } else {
-          final pin = await _promptForPin();
-          if (pin == null) {
-            // User cancelled the PIN prompt — return to review without
-            // treating this as a signing failure.
-            if (mounted) setState(() => _stage = PairingApprovalStage.review);
-            return;
-          }
-          signature = await model.walletService.signArbitraryMessage(
-            message: widget.pairingCode,
-            pin: pin,
-          );
-        }
+        signature = await model.walletService.signArbitraryMessage(
+          message: widget.pairingCode,
+          pin: pin,
+          keypairBytes: keypairBytes,
+        );
+        break;
+      } on PinDecryptionException catch (e) {
+        // Wrong PIN is not a signing-infrastructure failure — surface it
+        // immediately rather than burning retry attempts on it.
+        lastError = e;
+        signature = null;
         break;
       } catch (e) {
         lastError = e;
@@ -146,13 +244,16 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
       }
     }
 
+    if (!mounted) return;
+
     if (signature == null) {
-      if (!mounted) return;
+      if (lastError is PinDecryptionException) {
+        _handleWrongPin();
+        return;
+      }
       setState(() {
         _stage = PairingApprovalStage.error;
-        _errorMessage = lastError is PinDecryptionException
-            ? 'Incorrect PIN. Please try again.'
-            : 'Could not sign the approval. Please try again.';
+        _errorMessage = 'Could not sign the approval. Please try again.';
       });
       return;
     }
@@ -179,39 +280,6 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
     }
   }
 
-  Future<String?> _promptForPin() async {
-    // Reuses the app's existing PIN entry primitive via SigningPolicyService
-    // consumers elsewhere — for the pairing flow specifically, we prompt
-    // through a minimal dialog since there's no amount/recipient context to
-    // show alongside a full PIN stage. This does not introduce a new
-    // cryptographic signing path, only a new (thin) PIN-collection surface
-    // in front of the existing signArbitraryMessage call.
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Enter your PIN'),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _deny() async {
     if (_sessionId == null) return;
     try {
@@ -228,137 +296,184 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ZendSheetHandle(),
-          const SizedBox(height: 20),
-          _buildContent(context),
-        ],
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return PopScope(
+      canPop: _stage != PairingApprovalStage.signing,
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          height: screenHeight * 0.7,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 14),
+              const ZendSheetHandle(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  reverseDuration: const Duration(milliseconds: 140),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation);
+                    return FadeTransition(opacity: animation, child: SlideTransition(position: slide, child: child));
+                  },
+                  child: RepaintBoundary(child: _buildStageContent()),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildStageContent() {
     final zt = ZendTheme.of(context);
     switch (_stage) {
       case PairingApprovalStage.loading:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: Center(child: ZendLoader(size: 32)),
-        );
+        return const Center(key: ValueKey('loading'), child: ZendLoader(size: 32));
 
       case PairingApprovalStage.review:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Approve CLI access?',
-              style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
-                fontSize: 26,
-                color: zt.textPrimary,
+        return Padding(
+          key: const ValueKey('review'),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Approve CLI access?',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontStyle: FontStyle.italic,
+                  fontSize: 26,
+                  color: zt.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _cliDisplayName ?? 'A CLI',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'is requesting access to create payment requests on your behalf.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(label: 'Approve', onPressed: _approve),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlineActionButton(label: 'Deny', onPressed: _deny),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                _cliDisplayName ?? 'A CLI',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'is requesting access to create payment requests on your behalf.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: PrimaryButton(label: 'Approve', onPressed: _onApproveTap),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlineActionButton(label: 'Deny', onPressed: _deny),
+              ),
+            ],
+          ),
+        );
+
+      case PairingApprovalStage.pin:
+        return SendPinStage(
+          key: const ValueKey('pin'),
+          amountFormatted: 'CLI access',
+          recipientZendtag: _cliDisplayName ?? 'cli',
+          note: '',
+          pinDigits: _pinDigits,
+          pinError: _pinError,
+          shakeAnimation: _shakeAnimation,
+          shakeController: _shakeController,
+          onKey: _onPinKey,
+          onBack: () => setState(() {
+            _pinDigits = '';
+            _pinError = null;
+            _stage = PairingApprovalStage.review;
+          }),
         );
 
       case PairingApprovalStage.signing:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: Center(child: ZendLoader(size: 32)),
-        );
+        return const Center(key: ValueKey('signing'), child: ZendLoader(size: 32));
 
       case PairingApprovalStage.success:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-              child: const Icon(Icons.check, color: Colors.white, size: 32),
+        return Center(
+          key: const ValueKey('success'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
+                  child: const Icon(Icons.check, color: Colors.white, size: 32),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'CLI access approved',
+                  style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, color: zt.textPrimary),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: PrimaryButton(label: 'Done', onPressed: _dismiss)),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'CLI access approved',
-              style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, color: zt.textPrimary),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(label: 'Done', onPressed: _dismiss),
-            ),
-          ],
+          ),
         );
 
       case PairingApprovalStage.denied:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Access denied',
-              style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, color: zt.textPrimary),
+        return Center(
+          key: const ValueKey('denied'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Access denied',
+                  style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 24, color: zt.textPrimary),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: PrimaryButton(label: 'Done', onPressed: _dismiss)),
+              ],
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(label: 'Done', onPressed: _dismiss),
-            ),
-          ],
+          ),
         );
 
       case PairingApprovalStage.error:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(color: ZendColors.destructive, shape: BoxShape.circle),
-              child: const Icon(Icons.close, color: Colors.white, size: 32),
+        return Center(
+          key: const ValueKey('error'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(color: ZendColors.destructive, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, color: Colors.white, size: 32),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage ?? 'Something went wrong.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Close', onPressed: _dismiss)),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage ?? 'Something went wrong.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: OutlineActionButton(label: 'Close', onPressed: _dismiss),
-            ),
-          ],
+          ),
         );
     }
   }
