@@ -9,6 +9,8 @@ import '../features/request/payment_request.dart';
 import '../models/api_models.dart';
 import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
+import '../models/activity_edge.dart';
+import '../services/activity_data_service.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
 import '../services/contacts_service.dart';
@@ -132,6 +134,11 @@ class ZendAppModel extends ChangeNotifier {
   /// Contacts service — reads device contacts and resolves against Zend accounts.
   late final ContactsService contactsService =
       ContactsService(apiClient: walletService.apiClient);
+
+  /// Activity Relationship Graph (Phase 2/3) data service — parallel to
+  /// [transferService]/`fetchHistory()`, not a replacement for it.
+  late final ActivityDataService activityDataService =
+      ActivityDataService(apiClient: walletService.apiClient);
 
   /// On-device SQLite database for pool message persistence.
   final AppDatabase localDb;
@@ -418,6 +425,56 @@ class ZendAppModel extends ChangeNotifier {
   List<RecentContact> recentContacts = [];
   bool historyLoading = false;
   String? lastHistoryError;
+
+  // ── Threaded activity (Phase 2 Activity Relationship Graph) ──
+  // A parallel, additive state slice consumed only by ThreadedActivityScreen.
+  // Deliberately independent of recentTransactions/fetchHistory() above —
+  // see design.md's "parallel path, not extend/wrap fetchHistory()" decision
+  // (Req 22.4 backward compatibility).
+  List<ActivityEdge> threadedActivityEdges = [];
+  bool threadedActivityLoading = false;
+  String? lastThreadedActivityError;
+  String? _threadedActivityNextCursor;
+
+  /// Fetches the first page of the visibility-filtered Activity_Edge feed.
+  /// Called by `ThreadedActivityScreen.initState()`, mirroring exactly how
+  /// `ActivityScreen.initState()` calls `fetchHistory()`.
+  Future<void> fetchThreadedActivity() async {
+    threadedActivityLoading = true;
+    lastThreadedActivityError = null;
+    notifyListeners();
+    try {
+      final response = await activityDataService.getActivityEdges(limit: 50);
+      threadedActivityEdges = response.edges;
+      _threadedActivityNextCursor = response.nextCursor;
+    } catch (e) {
+      lastThreadedActivityError = e.toString();
+    } finally {
+      threadedActivityLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Loads and appends the next page, if any. No-op if there is no further
+  /// page or a fetch is already in flight.
+  Future<void> fetchMoreThreadedActivity() async {
+    if (threadedActivityLoading || _threadedActivityNextCursor == null) return;
+    threadedActivityLoading = true;
+    notifyListeners();
+    try {
+      final response = await activityDataService.getActivityEdges(
+        cursor: _threadedActivityNextCursor,
+        limit: 50,
+      );
+      threadedActivityEdges = [...threadedActivityEdges, ...response.edges];
+      _threadedActivityNextCursor = response.nextCursor;
+    } catch (e) {
+      lastThreadedActivityError = e.toString();
+    } finally {
+      threadedActivityLoading = false;
+      notifyListeners();
+    }
+  }
 
   Locale _locale = const Locale('en');
   late String greetingPrefix = _greetingForLocale(_locale);

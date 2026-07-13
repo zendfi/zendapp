@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/pools/pool.dart';
+import '../models/activity_edge.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 import '../models/crypto_send_models.dart';
@@ -684,6 +685,43 @@ class ApiClient {
     try {
       final response = await _dio.get('/api/zend/crypto/deposits');
       return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Activity Relationship Graph (Phase 2/3) ─────────────────────────────────
+  // These calls sit alongside getTransferHistory() but are consumed
+  // exclusively by ActivityDataService — fetchHistory() and everything it
+  // powers remain completely untouched (Req 22.4 backward compatibility).
+
+  Future<ActivityEdgesResponse> getActivityEdges({
+    String? cursor,
+    int? limit,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/activity/edges',
+        queryParameters: <String, dynamic>{
+          'cursor': cursor,
+          'limit': limit,
+        }..removeWhere((_, v) => v == null),
+      );
+      return ActivityEdgesResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PoolContributorsResponse> getPoolContributors(String poolId) async {
+    try {
+      final response =
+          await _dio.get('/api/zend/activity/pools/$poolId/contributors');
+      return PoolContributorsResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }

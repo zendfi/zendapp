@@ -12,6 +12,10 @@ import '../activity/transaction_receipt_sheet.dart';
 import '../pools/pool_list_drawer.dart';
 import '../profile/profile_screen.dart';
 import '../savings/pocket_screen.dart';
+import 'card_carousel.dart';
+import 'card_dismissal_store.dart';
+import 'carousel_card_model.dart';
+import 'educational_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -42,9 +46,17 @@ class _HomeScreenState extends State<HomeScreen> {
   double _previousBalance = 0.0;
   StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
 
+  // Card_Dismissal_State (Req 25.6) — whether the Debit_Card_Teaser has
+  // been dismissed by this User in a previous session. Loaded once in
+  // initState(), mirroring how activity_screen.dart loads
+  // _notificationsMuted in _loadMutePreference().
+  bool _teaserDismissed = false;
+  final CardDismissalStore _cardDismissalStore = CardDismissalStore();
+
   @override
   void initState() {
     super.initState();
+    _loadTeaserDismissalState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final model = ZendScope.of(context);
       _displayedBalance = model.spendableBalance;
@@ -91,6 +103,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onModelBalanceChanged() {
     // Kept for compatibility — delegates to _onModelChanged.
     _onModelChanged();
+  }
+
+  Future<void> _loadTeaserDismissalState() async {
+    final dismissed = await _cardDismissalStore.isDismissed();
+    if (mounted) setState(() => _teaserDismissed = dismissed);
+  }
+
+  Future<void> _dismissTeaser() async {
+    await _cardDismissalStore.dismiss();
+    if (mounted) setState(() => _teaserDismissed = true);
   }
 
   @override
@@ -374,6 +396,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 18),
                                 Row(children: [Expanded(child: _SavingsCard(model: model)), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
                                 const SizedBox(height: 18),
+                                // --- Card_Carousel (Req 24.1 — directly below Savings/Pools row, directly above Recent_Section) ---
+                                CardCarousel(
+                                  cards: buildCarouselCards(teaserDismissed: _teaserDismissed),
+                                  onCardTap: (card) => showEducationalModal(context, card: card),
+                                  onDismissTeaser: _dismissTeaser,
+                                ),
+                                const SizedBox(height: 18),
+                                // --- end Card_Carousel ---
                                 const Divider(),
                                 const SizedBox(height: 14),
                                 Builder(builder: (context) {
@@ -387,7 +417,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ]);
                                 }),
                                 const SizedBox(height: 14),
-                                for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
+                                // Req 23.2: reduced from 5 to 3 items. Tap-through wiring (Req 23.4)
+                                // and the "view all" header above (Req 23.3) are otherwise unchanged.
+                                for (var i = 0; i < model.recentTransactions.take(3).length; i++) ...[
                                   _TransactionRow.fromTransaction(
                                     model.recentTransactions[i],
                                     onTap: model.recentTransactions[i].entry != null || model.recentTransactions[i].bankOrder != null
@@ -397,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             )
                                         : null,
                                   ),
-                                  if (i != model.recentTransactions.take(5).length - 1) Divider(color: ZendTheme.of(context).border.withValues(alpha: 0.5), height: 1),
+                                  if (i != model.recentTransactions.take(3).length - 1) Divider(color: ZendTheme.of(context).border.withValues(alpha: 0.5), height: 1),
                                 ],
                                 const SizedBox(height: 26),
                               ]),
