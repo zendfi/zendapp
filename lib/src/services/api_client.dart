@@ -727,6 +727,73 @@ class ApiClient {
     }
   }
 
+  /// "This person's activity" — used by the Graph_View's node-tap detail
+  /// view. Includes the caller's own edges with [userId] plus, when the
+  /// caller is a Shared_Network_Viewer of [userId], that person's own
+  /// Shared_Network edges with other people too.
+  Future<ActivityEdgesResponse> getActivityEdgesForUser(
+    String userId, {
+    String? cursor,
+    int? limit,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/activity/users/$userId/edges',
+        queryParameters: <String, dynamic>{
+          'cursor': cursor,
+          'limit': limit,
+        }..removeWhere((_, v) => v == null),
+      );
+      return ActivityEdgesResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<List<EdgeReactionCount>> getEdgeReactions(String edgeKind, String edgeId) async {
+    try {
+      final response = await _dio.get('/api/zend/activity/edges/$edgeKind/$edgeId/reactions');
+      final data = response.data as Map<String, dynamic>;
+      return (data['reactions'] as List<dynamic>? ?? [])
+          .map((r) => EdgeReactionCount.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> addEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+    try {
+      await _dio.post(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/reactions',
+        data: {'emoji': emoji},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> removeEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+    try {
+      await _dio.delete(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/reactions',
+        data: {'emoji': emoji},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> makeEdgePublic(String edgeKind, String edgeId) async {
+    try {
+      await _dio.post('/api/zend/activity/edges/$edgeKind/$edgeId/make-public');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> getBridgeKycStatus() async {
     try {
       final response = await _dio.get('/api/zend/bridge/kyc/status');

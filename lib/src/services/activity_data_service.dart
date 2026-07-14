@@ -30,4 +30,30 @@ class ActivityDataService {
   Future<PoolContributorsResponse> getPoolContributors(String poolId) {
     return _apiClient.getPoolContributors(poolId);
   }
+
+  /// "This person's activity" — used by the Graph_View's node-tap detail
+  /// view (Your Mutuals).
+  Future<ActivityEdgesResponse> getActivityEdgesForUser(
+    String userId, {
+    String? cursor,
+    int? limit,
+  }) {
+    return _apiClient.getActivityEdgesForUser(userId, cursor: cursor, limit: limit);
+  }
+
+  Future<List<EdgeReactionCount>> getEdgeReactions(String edgeKind, String edgeId) {
+    return _apiClient.getEdgeReactions(edgeKind, edgeId);
+  }
+
+  Future<void> addEdgeReaction(String edgeKind, String edgeId, String emoji) {
+    return _apiClient.addEdgeReaction(edgeKind, edgeId, emoji);
+  }
+
+  Future<void> removeEdgeReaction(String edgeKind, String edgeId, String emoji) {
+    return _apiClient.removeEdgeReaction(edgeKind, edgeId, emoji);
+  }
+
+  Future<void> makeEdgePublic(String edgeKind, String edgeId) {
+    return _apiClient.makeEdgePublic(edgeKind, edgeId);
+  }
 }

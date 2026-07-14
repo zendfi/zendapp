@@ -6,7 +6,6 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
-import '../../models/api_models.dart';
 import '../../models/email_intent.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
@@ -14,7 +13,7 @@ import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
 import 'search_screen.dart';
-import 'transaction_receipt_sheet.dart';
+import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
@@ -88,82 +87,25 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
 
   // ── Tap-through routing (Req 15) ────────────────────────────────────────
   //
-  // Every ActivityEdge now carries its own sender/recipient identity and
-  // transaction detail fields (added alongside the zendtag/avatar fix —
-  // see activity_data_service.rs), so the receipt is built directly from
-  // the edge itself rather than cross-referencing a second, separately
-  // fetched/paginated list (recentTransactions) that may not contain every
-  // edge this viewer is authorized to see via Shared_Network visibility.
-  // That cross-reference was the root cause of the "Loading details…"
-  // fallback firing for edges that were perfectly renderable.
-  void _openEdge(ActivityEdge edge) {
-    if (edge.edgeKind == ActivityEdgeKind.zendTransfer || edge.edgeKind == ActivityEdgeKind.poolContribution) {
-      final entry = _entryFromEdge(edge);
-      if (entry != null) {
-        showTransactionReceipt(
-          context,
-          tx: ZendTransaction(
-            name: edge.counterparty.displayLabel,
-            note: edge.note ?? '',
-            amount: edge.amountHidden
-                ? 'Hidden'
-                : '${edge.isOutgoing ? '-' : '+'}\$${edge.amountUsdc ?? '0'}',
-            time: '',
-            avatarLabel: edge.counterparty.initialLetter,
-            avatarUrl: edge.counterparty.avatarUrl,
-            entry: entry,
-            createdAt: edge.createdAt,
-          ),
-        );
-        return;
-      }
+  // Tapping a User thread opens the Twitter-feed-style thread detail screen
+  // (every activity with that person, reactions, make-public); tapping a
+  // Pool thread still opens the contributor sheet directly.
+  void _openThread(CounterpartyThread thread) {
+    if (thread.counterparty.isPool) {
+      _openPoolContributorSheet(thread.counterparty.id);
+      return;
     }
-
-    if (edge.edgeKind == ActivityEdgeKind.requestFulfillment) {
-      final model = ZendScope.of(context);
-      final outboundMatch = model.outboundPaymentRequests.where((r) => r.id == edge.edgeId);
-      if (outboundMatch.isNotEmpty) {
-        showOutboundRequestDetail(context, outboundMatch.first);
-        return;
-      }
-    }
-
-    // Genuinely missing detail (e.g. a still-hidden amount with no
-    // reconstructable receipt) — this should now be rare.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'DMSans')),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    pushZendSlide(context, ThreadDetailScreen(counterparty: thread.counterparty, edges: thread.edges));
   }
 
-  /// Reconstructs the [TransferHistoryEntry] the receipt sheet needs
-  /// directly from an [ActivityEdge]'s own carried fields. Returns null
-  /// only if the edge is missing the minimum fields required to render a
-  /// receipt (e.g. a very old cached response predating this fix).
-  TransferHistoryEntry? _entryFromEdge(ActivityEdge edge) {
-    final model = ZendScope.of(context);
-    final isSender = edge.isOutgoing;
-    final senderZendtag = isSender ? model.currentZendtag : edge.counterparty.zendtag;
-    final recipientZendtag = isSender ? edge.counterparty.zendtag : model.currentZendtag;
-    if (edge.transactionSignature == null || senderZendtag == null || recipientZendtag == null) {
-      return null;
-    }
-
-    return TransferHistoryEntry(
-      id: edge.edgeId,
-      senderZendtag: senderZendtag,
-      recipientZendtag: recipientZendtag,
-      amountUsdc: edge.amountUsdc ?? '0',
-      transactionSignature: edge.transactionSignature!,
-      note: edge.note,
-      status: edge.status ?? 'confirmed',
-      createdAt: edge.createdAt,
-      senderAvatarUrl: isSender ? model.currentAvatarUrl : edge.counterparty.avatarUrl,
-      recipientAvatarUrl: isSender ? edge.counterparty.avatarUrl : model.currentAvatarUrl,
-      senderDisplayName: isSender ? model.currentDisplayName : edge.counterparty.displayName,
-      recipientDisplayName: isSender ? edge.counterparty.displayName : model.currentDisplayName,
+  void _openPoolContributorSheet(String poolId) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PoolContributorSheet(poolId: poolId),
     );
   }
 
@@ -266,7 +208,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     IconButton(
                       onPressed: widget.onOpenGraphView,
                       icon: Icon(Icons.hub_outlined, color: zt.textSecondary),
-                      tooltip: 'View relationship graph',
+                      tooltip: 'Your mutuals',
                     ),
                   IconButton(
                     onPressed: () => pushZendSlide(context, const SearchScreen()),
@@ -326,11 +268,11 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                                   _ThreadFeedItem(thread: final thread) => thread.counterparty.isPool
                                       ? _PoolThreadTile(
                                           thread: thread,
-                                          onTap: () => _openEdge(thread.mostRecentEdge),
+                                          onTap: () => _openThread(thread),
                                         )
                                       : _UserThreadTile(
                                           thread: thread,
-                                          onTap: () => _openEdge(thread.mostRecentEdge),
+                                          onTap: () => _openThread(thread),
                                         ),
                                   _RequestsFeedItem(group: final group) => _RequestsThreadTile(
                                       group: group,
@@ -727,12 +669,14 @@ class _UserThreadTile extends StatelessWidget {
     final isOutgoing = mostRecent.isOutgoing;
     final amountLabel = mostRecent.amountHidden ? 'Hidden' : '\$${mostRecent.amountUsdc ?? '0'}';
 
-    // Venmo-style feed sentence: "You paid @omooba" / "@omooba paid you" —
-    // the relationship/action reads as a sentence, with the amount
-    // demoted to a secondary pill rather than dominating the row.
-    final actionSpan = isOutgoing ? 'You paid ' : '';
+    // Venmo-style feed sentence with word variety: "You paid/sent/zapped
+    // @omooba" / "@omooba paid/sent/zapped you" — deterministic per edge
+    // (feedVerbFor) so the same edge never flickers between phrasings on
+    // rebuild, while different threads get visual variety.
+    final verb = feedVerbFor(mostRecent);
+    final actionSpan = isOutgoing ? 'You $verb ' : '';
     final subjectSpan = counterparty.displayLabel;
-    final trailingSpan = isOutgoing ? '' : ' paid you';
+    final trailingSpan = isOutgoing ? '' : ' $verb';
 
     return Material(
       color: zt.bgSecondary,

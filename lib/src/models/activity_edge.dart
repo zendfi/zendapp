@@ -223,6 +223,28 @@ class ActivityEdge {
   }
 }
 
+/// A single emoji reaction count on an [ActivityEdge], from
+/// `GET /api/zend/activity/edges/:edge_kind/:edge_id/reactions`.
+class EdgeReactionCount {
+  final String emoji;
+  final int count;
+  final bool reactedByMe;
+
+  const EdgeReactionCount({
+    required this.emoji,
+    required this.count,
+    required this.reactedByMe,
+  });
+
+  factory EdgeReactionCount.fromJson(Map<String, dynamic> json) {
+    return EdgeReactionCount(
+      emoji: json['emoji'] as String,
+      count: (json['count'] as num).toInt(),
+      reactedByMe: json['reacted_by_me'] as bool? ?? false,
+    );
+  }
+}
+
 /// Response envelope for `GET /api/zend/activity/edges`.
 class ActivityEdgesResponse {
   final List<ActivityEdge> edges;

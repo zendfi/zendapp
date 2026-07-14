@@ -11,6 +11,21 @@ library;
 
 import '../../models/activity_edge.dart';
 
+// ── Feed headline word variations (social feel — Venmo-style sentences) ─────
+
+const _outgoingVerbs = ['paid', 'sent', 'zapped', 'dropped', 'shipped'];
+const _incomingVerbs = ['paid you', 'sent you', 'zapped you', 'came through for you'];
+
+/// Deterministically picks a verb variation for [edge] so the same edge
+/// always renders the same phrase across rebuilds (no flicker), while
+/// different edges/counterparties get visual variety instead of every
+/// thread reading identically as "paid"/"paid you".
+String feedVerbFor(ActivityEdge edge) {
+  final pool = edge.isOutgoing ? _outgoingVerbs : _incomingVerbs;
+  final index = edge.edgeId.hashCode.abs() % pool.length;
+  return pool[index];
+}
+
 /// One grouped thread of [ActivityEdge]s sharing the same counterparty
 /// (a Zend user or a Pool), per design.md's `CounterpartyThread` sketch.
 class CounterpartyThread {

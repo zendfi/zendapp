@@ -6,7 +6,9 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../navigation/zend_routes.dart';
 import 'graph_model.dart';
+import 'person_activity_screen.dart';
 
 /// Phase 3 Graph_View — an opt-in node/edge visualization of the same
 /// visibility-authorized `ActivityEdge` data the Threaded_Activity_View
@@ -68,6 +70,12 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
     );
   }
 
+  void _openPersonActivity(GraphNode node) {
+    final selfId = ZendScope.of(context).currentUserId ?? 'self';
+    if (node.id == selfId || node.kind != GraphNodeKind.user) return;
+    pushZendSlide(context, PersonActivityScreen(userId: node.id, label: node.label, avatarUrl: node.avatarUrl));
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -85,7 +93,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Relationship Graph',
+                      'Your Mutuals',
                       style: TextStyle(
                         fontFamily: 'InstrumentSerif',
                         fontSize: 22,
@@ -122,6 +130,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
                               positions: positions,
                               size: constraints.biggest,
                               onTapOthers: () => _openOthersDrillDown(_model!),
+                              onTapNode: _openPersonActivity,
                             );
                           },
                         ),
@@ -261,12 +270,14 @@ class _GraphCanvas extends StatelessWidget {
     required this.positions,
     required this.size,
     required this.onTapOthers,
+    required this.onTapNode,
   });
 
   final GraphModel model;
   final Map<String, Offset> positions;
   final Size size;
   final VoidCallback onTapOthers;
+  final void Function(GraphNode node) onTapNode;
 
   double _nodeRadius(GraphNode node) {
     final base = node.kind == GraphNodeKind.others ? 22.0 : 24.0;
@@ -292,7 +303,11 @@ class _GraphCanvas extends StatelessWidget {
                 left: positions[node.id]!.dx - _nodeRadius(node),
                 top: positions[node.id]!.dy - _nodeRadius(node),
                 child: GestureDetector(
-                  onTap: node.kind == GraphNodeKind.others ? onTapOthers : null,
+                  onTap: node.kind == GraphNodeKind.others
+                      ? onTapOthers
+                      : node.kind == GraphNodeKind.user
+                          ? () => onTapNode(node)
+                          : null,
                   child: _GraphNodeWidget(node: node, radius: _nodeRadius(node)),
                 ),
               ),
