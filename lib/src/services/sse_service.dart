@@ -21,6 +21,8 @@ enum SseEventType {
   paymentRequest,
   // ── Drop ──
   dropConfirmed,
+  // Req: notify the other party on an Activity_Edge when a reaction is added.
+  activityEdgeReaction,
   unknown,
 }
 
@@ -44,6 +46,7 @@ class SseEvent {
       'pool_status_changed' => SseEventType.poolStatusChanged,
       'payment_request' => SseEventType.paymentRequest,
       'drop_confirmed' => SseEventType.dropConfirmed,
+      'activity_edge_reaction' => SseEventType.activityEdgeReaction,
       _ => SseEventType.unknown,
     };
 

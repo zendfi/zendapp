@@ -187,10 +187,10 @@ class _PersonActivityRow extends StatelessWidget {
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
                       Text(
-                        '"${edge.note}"',
+                        edge.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 12.5, fontStyle: FontStyle.italic, color: zt.textSecondary),
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
                     ],
                   ],

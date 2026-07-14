@@ -108,33 +108,56 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   }
 
   void _showReactionPicker(ActivityEdge edge) {
+    final reactedEmojis = (_reactionsByEdgeId[edge.edgeId] ?? const [])
+        .where((r) => r.reactedByMe)
+        .map((r) => r.emoji)
+        .toSet();
+
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         final zt = ZendTheme.of(sheetContext);
+        final bottomInset = MediaQuery.of(sheetContext).viewPadding.bottom;
         return Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final emoji in _kReactionEmojis)
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    _toggleReaction(edge, emoji);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    margin: const EdgeInsets.all(4),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.md)),
-                    child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                  ),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 ),
+              ),
+              Text(
+                'React to this',
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final emoji in _kReactionEmojis)
+                    _ReactionPickerChip(
+                      emoji: emoji,
+                      selected: reactedEmojis.contains(emoji),
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        _toggleReaction(edge, emoji);
+                      },
+                    ),
+                ],
+              ),
             ],
           ),
         );
@@ -290,6 +313,50 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   }
 }
 
+/// A single large, tappable emoji option in the reaction picker sheet —
+/// highlights when it's the viewer's current reaction, and does a small
+/// press-scale animation for a bit of tactile feedback.
+class _ReactionPickerChip extends StatefulWidget {
+  const _ReactionPickerChip({required this.emoji, required this.selected, required this.onTap});
+
+  final String emoji;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_ReactionPickerChip> createState() => _ReactionPickerChipState();
+}
+
+class _ReactionPickerChipState extends State<_ReactionPickerChip> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.85 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: 52,
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.selected ? zt.accent.withValues(alpha: 0.18) : zt.bgPrimary,
+            borderRadius: BorderRadius.circular(ZendRadii.lg),
+            border: widget.selected ? Border.all(color: zt.accent.withValues(alpha: 0.6), width: 1.5) : null,
+          ),
+          child: Text(widget.emoji, style: const TextStyle(fontSize: 26)),
+        ),
+      ),
+    );
+  }
+}
+
 class _FeedPost extends StatelessWidget {
   const _FeedPost({
     required this.edge,
@@ -323,11 +390,16 @@ class _FeedPost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
     final isOutgoing = edge.isOutgoing;
     final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
     final verb = feedVerbFor(edge);
     final actionSpan = isOutgoing ? 'You $verb ' : '';
     final trailingSpan = isOutgoing ? '' : ' $verb';
+    final selfAvatarUrl = model.currentAvatarUrl;
+    final selfInitial = model.currentZendtag?.isNotEmpty == true
+        ? model.currentZendtag![0].toUpperCase()
+        : (model.currentDisplayName?.isNotEmpty == true ? model.currentDisplayName![0].toUpperCase() : 'Y');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -347,8 +419,8 @@ class _FeedPost extends StatelessWidget {
                   children: [
                     ZendAvatar(
                       radius: 18,
-                      photoUrl: isOutgoing ? null : counterparty.avatarUrl,
-                      initials: isOutgoing ? 'Y' : counterparty.initialLetter,
+                      photoUrl: isOutgoing ? selfAvatarUrl : counterparty.avatarUrl,
+                      initials: isOutgoing ? selfInitial : counterparty.initialLetter,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -394,10 +466,10 @@ class _FeedPost extends StatelessWidget {
                   ],
                 ),
                 if (edge.note?.isNotEmpty == true) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
-                    '"${edge.note}"',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, fontStyle: FontStyle.italic, color: zt.textSecondary),
+                    edge.note!,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, height: 1.35, color: zt.textPrimary.withValues(alpha: 0.9)),
                   ),
                 ],
                 const SizedBox(height: 12),

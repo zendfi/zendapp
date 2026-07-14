@@ -12,6 +12,7 @@ import '../../models/qr_payment_intent.dart';
 import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
+import 'public_feed_screen.dart';
 import 'search_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
@@ -204,6 +205,11 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     ),
                   ),
                   _ViewToggleButton(onTap: widget.onToggleView),
+                  IconButton(
+                    onPressed: () => pushZendSlide(context, const PublicFeedScreen()),
+                    icon: Icon(Icons.public, color: zt.textSecondary),
+                    tooltip: 'Public feed',
+                  ),
                   if (widget.onOpenGraphView != null)
                     IconButton(
                       onPressed: widget.onOpenGraphView,
@@ -715,18 +721,15 @@ class _UserThreadTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      mostRecent.note?.isNotEmpty == true ? '"${mostRecent.note}"' : 'No note added',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        fontStyle: mostRecent.note?.isNotEmpty == true ? FontStyle.italic : FontStyle.normal,
-                        color: zt.textSecondary,
+                    if (mostRecent.note?.isNotEmpty == true) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        mostRecent.note!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -845,14 +848,13 @@ class _PoolThreadTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      mostRecent.note?.isNotEmpty == true ? '"${mostRecent.note}"' : 'A group pool',
+                      mostRecent.note?.isNotEmpty == true ? mostRecent.note! : 'A group pool',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 13,
-                        fontStyle: mostRecent.note?.isNotEmpty == true ? FontStyle.italic : FontStyle.normal,
-                        color: zt.textSecondary,
+                        color: mostRecent.note?.isNotEmpty == true ? zt.textPrimary.withValues(alpha: 0.85) : zt.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),

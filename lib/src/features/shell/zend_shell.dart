@@ -28,6 +28,8 @@ class _ZendShellState extends State<ZendShell> {
   // Tracks the last notification ID so re-arrival of a new request
   // forces the banner widget to rebuild and replay the slide-in animation.
   String? _lastBannerRequestId;
+  Timer? _reactionBannerTimer;
+  String? _lastReactionBannerKey;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _ZendShellState extends State<ZendShell> {
   @override
   void dispose() {
     _bannerTimer?.cancel();
+    _reactionBannerTimer?.cancel();
     super.dispose();
   }
 
@@ -59,6 +62,11 @@ class _ZendShellState extends State<ZendShell> {
   void _dismissBanner(ZendAppModel model) {
     _bannerTimer?.cancel();
     model.clearPendingPaymentRequest();
+  }
+
+  void _dismissReactionBanner(ZendAppModel model) {
+    _reactionBannerTimer?.cancel();
+    model.clearPendingActivityReaction();
   }
 
   void _payFromBanner(BuildContext context, ZendAppModel model, PaymentRequestNotification notification) {
@@ -92,6 +100,7 @@ class _ZendShellState extends State<ZendShell> {
   Widget build(BuildContext context) {
     final model = ZendScope.of(context);
     final pending = model.pendingPaymentRequest;
+    final pendingReaction = model.pendingActivityReaction;
 
     // Start auto-dismiss timer when a new notification arrives
     if (pending != null) {
@@ -107,6 +116,19 @@ class _ZendShellState extends State<ZendShell> {
       }
     } else {
       _lastBannerRequestId = null;
+    }
+
+    if (pendingReaction != null) {
+      final key = '${pendingReaction.edgeKind}:${pendingReaction.edgeId}:${pendingReaction.emoji}:${pendingReaction.reactorZendtag}';
+      if (key != _lastReactionBannerKey) {
+        _lastReactionBannerKey = key;
+        _reactionBannerTimer?.cancel();
+        _reactionBannerTimer = Timer(const Duration(seconds: 5), () {
+          if (mounted) model.clearPendingActivityReaction();
+        });
+      }
+    } else {
+      _lastReactionBannerKey = null;
     }
 
     final pages = <Widget>[
@@ -140,6 +162,19 @@ class _ZendShellState extends State<ZendShell> {
                 notification: pending,
                 onPay: () => _payFromBanner(context, model, pending),
                 onDismiss: () => _dismissBanner(model),
+              ),
+            ),
+          // In-app "someone reacted to your activity" banner — stacked
+          // below the payment-request banner if both are present.
+          if (pendingReaction != null)
+            Positioned(
+              top: pending != null ? 78 : 0,
+              left: 0,
+              right: 0,
+              child: _ActivityReactionBanner(
+                key: ValueKey(_lastReactionBannerKey),
+                notification: pendingReaction,
+                onDismiss: () => _dismissReactionBanner(model),
               ),
             ),
         ],
@@ -402,6 +437,94 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       size: 16,
                       color: Color(0x66F0F0F0),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── In-app Activity_Edge reaction banner ────────────────────────────────────
+
+class _ActivityReactionBanner extends StatefulWidget {
+  // ignore: use_super_parameters
+  const _ActivityReactionBanner({
+    Key? key,
+    required this.notification,
+    required this.onDismiss,
+  }) : super(key: key);
+
+  final ActivityReactionNotification notification;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ActivityReactionBanner> createState() => _ActivityReactionBannerState();
+}
+
+class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.notification;
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF252525),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+                boxShadow: const [BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
+                    child: Text(n.emoji, style: const TextStyle(fontSize: 18)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '@${n.reactorZendtag} reacted ${n.emoji} to your activity',
+                      style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: widget.onDismiss,
+                    child: const Icon(Icons.close, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),

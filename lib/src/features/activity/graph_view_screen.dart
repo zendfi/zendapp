@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
@@ -30,14 +31,35 @@ class GraphViewScreen extends StatefulWidget {
   State<GraphViewScreen> createState() => _GraphViewScreenState();
 }
 
-class _GraphViewScreenState extends State<GraphViewScreen> {
+class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProviderStateMixin {
   GraphModel? _model;
-  _ForceDirectedLayout? _layout;
+  _PhysicsGraphLayout? _layout;
+  Ticker? _ticker;
+  Duration _lastTick = Duration.zero;
+  final TransformationController _transformController = TransformationController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildModel());
+    _ticker = createTicker(_onTick)..start();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    final layout = _layout;
+    if (layout == null) return;
+    final dtMs = (elapsed - _lastTick).inMilliseconds.clamp(0, 48);
+    _lastTick = elapsed;
+    if (dtMs <= 0) return;
+    final moved = layout.step(dtMs / 1000.0);
+    if (moved && mounted) setState(() {});
   }
 
   void _rebuildModel() {
@@ -54,9 +76,22 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
     if (mounted) {
       setState(() {
         _model = graph;
-        _layout = _ForceDirectedLayout(graph);
+        _layout = _PhysicsGraphLayout(graph, selfId: selfId);
       });
     }
+  }
+
+  /// Req 6's "physics reactions on touch" — tapping a node gives it a small
+  /// outward impulse that ripples to its neighbors via the live spring/
+  /// repulsion simulation already running every frame, then everything
+  /// settles back per the same physics. A manual per-node drag was
+  /// considered but rejected: nesting a drag recognizer inside the
+  /// InteractiveViewer's own pan/zoom recognizer for the same node area is
+  /// a well-known Flutter gesture-arena conflict with no clean resolution;
+  /// an impulse-on-tap gives a genuine, reliable physics reaction to touch
+  /// without fighting the pan/zoom gesture.
+  void _kickNode(GraphNode node) {
+    _layout?.applyImpulse(node.id);
   }
 
   void _openOthersDrillDown(GraphModel model) {
@@ -71,6 +106,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
   }
 
   void _openPersonActivity(GraphNode node) {
+    _kickNode(node);
     final selfId = ZendScope.of(context).currentUserId ?? 'self';
     if (node.id == selfId || node.kind != GraphNodeKind.user) return;
     pushZendSlide(context, PersonActivityScreen(userId: node.id, label: node.label, avatarUrl: node.avatarUrl));
@@ -124,13 +160,18 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
                           builder: (context, constraints) {
                             final layout = _layout!;
                             layout.ensureSized(constraints.biggest);
-                            final positions = layout.settle();
-                            return _GraphCanvas(
-                              model: _model!,
-                              positions: positions,
-                              size: constraints.biggest,
-                              onTapOthers: () => _openOthersDrillDown(_model!),
-                              onTapNode: _openPersonActivity,
+                            return InteractiveViewer(
+                              transformationController: _transformController,
+                              minScale: 0.5,
+                              maxScale: 3.0,
+                              boundaryMargin: const EdgeInsets.all(200),
+                              child: _GraphCanvas(
+                                model: _model!,
+                                positions: layout.positions,
+                                size: constraints.biggest,
+                                onTapOthers: () => _openOthersDrillDown(_model!),
+                                onTapNode: _openPersonActivity,
+                              ),
                             );
                           },
                         ),
@@ -142,123 +183,132 @@ class _GraphViewScreenState extends State<GraphViewScreen> {
   }
 }
 
-// ── Force-directed layout (Req 18.3's "lightweight in-Dart physics") ──────
+// ── Physics-driven force-directed layout (Req 18.3's "lightweight in-Dart
+// physics", extended for Req 6's pan/zoom/touch-physics request) ──────────
 //
 // A basic spring/repulsion simulation: every node pair repels, every edge's
-// two endpoints attract. Capped iteration count (rather than open-ended
-// animation) keeps this cheap and deterministic for the ≤31-node cap Req 18
-// guarantees, per design.md's "computationally cheap enough to run entirely
-// on-device" rendering-approach decision.
-class _ForceDirectedLayout {
-  _ForceDirectedLayout(this.model);
+// two endpoints attract. Unlike the original one-shot "settle then freeze"
+// version, this layout keeps a live velocity per node and is stepped every
+// frame by a Ticker, so an external impulse (`applyImpulse`, fired on node
+// tap) visibly ripples through the graph and settles back down — a genuine
+// physics reaction to touch, not just a static picture. Still cheap enough
+// to run at 60fps for the ≤31-node cap Req 18 guarantees.
+class _PhysicsGraphLayout {
+  _PhysicsGraphLayout(this.model, {required this.selfId});
 
   final GraphModel model;
-  final Map<String, Offset> _positions = {};
+  final String selfId;
+  final Map<String, Offset> positions = {};
+  final Map<String, Offset> _velocities = {};
   Size? _size;
-  bool _settled = false;
 
-  static const _maxIterations = 120;
   static const _repulsion = 3200.0;
   static const _springLength = 110.0;
-  static const _springStrength = 0.02;
-  static const _damping = 0.85;
+  static const _springStrength = 0.9;
+  static const _damping = 6.0; // velocity decay per second (exponential)
+  static const _impulseMagnitude = 260.0;
+  static const _velocitySleepThreshold = 0.5;
 
   void ensureSized(Size size) {
     if (_size == size) return;
     _size = size;
-    _settled = false;
-    _positions.clear();
+    positions.clear();
+    _velocities.clear();
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - 40;
-    final rand = math.Random(42); // deterministic layout across rebuilds
+    final rand = math.Random(42); // deterministic initial layout across rebuilds
     for (var i = 0; i < model.nodes.length; i++) {
       final node = model.nodes[i];
-      if (node.id == _selfId) {
-        _positions[node.id] = center;
+      _velocities[node.id] = Offset.zero;
+      if (node.id == selfId) {
+        positions[node.id] = center;
         continue;
       }
       final angle = (i / math.max(1, model.nodes.length - 1)) * 2 * math.pi;
       final jitter = (rand.nextDouble() - 0.5) * 20;
-      _positions[node.id] = center +
-          Offset(math.cos(angle) * (radius * 0.8 + jitter), math.sin(angle) * (radius * 0.8 + jitter));
+      positions[node.id] = center + Offset(math.cos(angle) * (radius * 0.8 + jitter), math.sin(angle) * (radius * 0.8 + jitter));
     }
   }
 
-  String get _selfId {
-    // The self node is whichever node has no incoming edge pointing at it
-    // as a target from another non-spoke edge's source equal to itself —
-    // simpler: the self node is the source of every direct (non-spoke) edge.
-    for (final e in model.edges) {
-      if (!e.isSpoke) return e.sourceId;
-    }
-    return model.nodes.isNotEmpty ? model.nodes.first.id : '';
+  /// Gives [nodeId] (and, via the ongoing spring simulation, its
+  /// neighbors) a small outward kick — the "physics reaction on touch".
+  void applyImpulse(String nodeId) {
+    final pos = positions[nodeId];
+    final size = _size;
+    if (pos == null || size == null) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    var direction = pos - center;
+    if (direction.distance < 1) direction = Offset(math.Random().nextDouble() - 0.5, math.Random().nextDouble() - 0.5);
+    final normalized = direction / direction.distance;
+    _velocities[nodeId] = (_velocities[nodeId] ?? Offset.zero) + normalized * _impulseMagnitude;
   }
 
-  Map<String, Offset> settle() {
-    if (_settled || _size == null) return _positions;
+  /// Advances the simulation by [dt] seconds. Returns true if anything
+  /// moved enough to warrant a repaint.
+  bool step(double dt) {
+    final size = _size;
+    if (size == null || dt <= 0) return false;
 
-    final velocities = <String, Offset>{for (final n in model.nodes) n.id: Offset.zero};
-    final size = _size!;
+    final forces = <String, Offset>{for (final n in model.nodes) n.id: Offset.zero};
 
-    for (var iter = 0; iter < _maxIterations; iter++) {
-      final forces = <String, Offset>{for (final n in model.nodes) n.id: Offset.zero};
-
-      // Repulsion between every pair.
-      for (var i = 0; i < model.nodes.length; i++) {
-        for (var j = i + 1; j < model.nodes.length; j++) {
-          final a = model.nodes[i].id;
-          final b = model.nodes[j].id;
-          final pa = _positions[a]!;
-          final pb = _positions[b]!;
-          var delta = pa - pb;
-          var distance = delta.distance;
-          if (distance < 1) {
-            distance = 1;
-            delta = const Offset(1, 0);
-          }
-          final force = delta / distance * (_repulsion / (distance * distance));
-          forces[a] = forces[a]! + force;
-          forces[b] = forces[b]! - force;
-        }
-      }
-
-      // Spring attraction along edges toward a resting length.
-      for (final e in model.edges) {
-        final pa = _positions[e.sourceId];
-        final pb = _positions[e.targetId];
+    for (var i = 0; i < model.nodes.length; i++) {
+      for (var j = i + 1; j < model.nodes.length; j++) {
+        final a = model.nodes[i].id;
+        final b = model.nodes[j].id;
+        final pa = positions[a];
+        final pb = positions[b];
         if (pa == null || pb == null) continue;
-        var delta = pb - pa;
+        var delta = pa - pb;
         var distance = delta.distance;
         if (distance < 1) {
           distance = 1;
           delta = const Offset(1, 0);
         }
-        final displacement = distance - _springLength;
-        final force = delta / distance * (_springStrength * displacement);
-        forces[e.sourceId] = forces[e.sourceId]! + force;
-        forces[e.targetId] = forces[e.targetId]! - force;
+        final force = delta / distance * (_repulsion / (distance * distance));
+        forces[a] = forces[a]! + force;
+        forces[b] = forces[b]! - force;
       }
-
-      var totalMovement = 0.0;
-      for (final node in model.nodes) {
-        if (node.id == _selfId) continue; // keep self anchored at center
-        final v = (velocities[node.id]! + forces[node.id]!) * _damping;
-        velocities[node.id] = v;
-        final newPos = _positions[node.id]! + v;
-        // Clamp within the canvas with margin.
-        final clamped = Offset(
-          newPos.dx.clamp(30.0, math.max(30.0, size.width - 30.0)),
-          newPos.dy.clamp(30.0, math.max(30.0, size.height - 30.0)),
-        );
-        totalMovement += (clamped - _positions[node.id]!).distance;
-        _positions[node.id] = clamped;
-      }
-
-      if (totalMovement < 0.5) break; // converged early
     }
 
-    _settled = true;
-    return _positions;
+    for (final e in model.edges) {
+      final pa = positions[e.sourceId];
+      final pb = positions[e.targetId];
+      if (pa == null || pb == null) continue;
+      var delta = pb - pa;
+      var distance = delta.distance;
+      if (distance < 1) {
+        distance = 1;
+        delta = const Offset(1, 0);
+      }
+      final displacement = distance - _springLength;
+      final force = delta / distance * (_springStrength * displacement);
+      forces[e.sourceId] = forces[e.sourceId]! + force;
+      forces[e.targetId] = forces[e.targetId]! - force;
+    }
+
+    var anyMoving = false;
+    final dampingFactor = math.exp(-_damping * dt);
+
+    for (final node in model.nodes) {
+      if (node.id == selfId) continue; // keep self anchored at center
+      final currentVelocity = _velocities[node.id] ?? Offset.zero;
+      final accelerated = currentVelocity + forces[node.id]! * dt;
+      final damped = accelerated * dampingFactor;
+      _velocities[node.id] = damped;
+
+      final currentPos = positions[node.id];
+      if (currentPos == null) continue;
+      final newPos = currentPos + damped * dt;
+      final clamped = Offset(
+        newPos.dx.clamp(30.0, math.max(30.0, size.width - 30.0)),
+        newPos.dy.clamp(30.0, math.max(30.0, size.height - 30.0)),
+      );
+      positions[node.id] = clamped;
+
+      if (damped.distance > _velocitySleepThreshold) anyMoving = true;
+    }
+
+    return anyMoving;
   }
 }
 

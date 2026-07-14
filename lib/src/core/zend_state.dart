@@ -95,6 +95,22 @@ class ZendTransaction {
   final String? countryCode;
 }
 
+/// A pending in-app banner for "someone reacted to an Activity_Edge you're
+/// a party on" — delivered over SSE (`SseEventType.activityEdgeReaction`).
+class ActivityReactionNotification {
+  const ActivityReactionNotification({
+    required this.edgeKind,
+    required this.edgeId,
+    required this.reactorZendtag,
+    required this.emoji,
+  });
+
+  final String edgeKind;
+  final String edgeId;
+  final String reactorZendtag;
+  final String emoji;
+}
+
 class ZendAppModel extends ChangeNotifier {
   ZendAppModel({
     required this.authService,
@@ -293,6 +309,17 @@ class ZendAppModel extends ChangeNotifier {
         // Show in-app banner for incoming payment requests
         final notification = PaymentRequestNotification.fromJson(event.data);
         pendingPaymentRequest = notification;
+        notifyListeners();
+      case SseEventType.activityEdgeReaction:
+        // Someone reacted to an Activity_Edge this user is a party on —
+        // surface as an in-app banner (ThreadedActivityScreen listens for
+        // this via pendingActivityReaction), mirroring pendingPaymentRequest.
+        pendingActivityReaction = ActivityReactionNotification(
+          edgeKind: event.data['edge_kind'] as String? ?? '',
+          edgeId: event.data['edge_id'] as String? ?? '',
+          reactorZendtag: event.data['reactor_zendtag'] as String? ?? '',
+          emoji: event.data['emoji'] as String? ?? '',
+        );
         notifyListeners();
       case SseEventType.dropConfirmed:
         // A Drop transfer was confirmed.
@@ -507,6 +534,10 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Pending payment request notification from SSE — shown as in-app banner.
   PaymentRequestNotification? pendingPaymentRequest;
+
+  /// Pending Activity_Edge reaction notification from SSE — shown as an
+  /// in-app banner (Threaded_Activity_View listens for this).
+  ActivityReactionNotification? pendingActivityReaction;
 
   // ── Payment requests (activity feed) ──
   List<PaymentRequestItem> outboundPaymentRequests = [];
@@ -1102,6 +1133,11 @@ class ZendAppModel extends ChangeNotifier {
 
   void addPaymentRequest(PaymentRequest request) {
     paymentRequests.insert(0, request);
+    notifyListeners();
+  }
+
+  void clearPendingActivityReaction() {
+    pendingActivityReaction = null;
     notifyListeners();
   }
 
