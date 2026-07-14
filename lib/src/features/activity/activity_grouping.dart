@@ -61,6 +61,15 @@ List<CounterpartyThread> groupByCounterparty(List<ActivityEdge> edges) {
   final counterpartyById = <String, ActivityCounterparty>{};
 
   for (final edge in edges) {
+    // Exclude "external" edges (Shared_Network activity between two other
+    // people, surfaced only because the viewer is a mutual of one of
+    // them) — those belong exclusively in the Public Feed, never mixed
+    // into the viewer's own Threaded_Activity_View. Without this guard, a
+    // mutual's public @tnxl->@rjayy transfer would render as a thread on
+    // the viewer's own Activity screen even though the viewer was never a
+    // party to it.
+    if (edge.direction == 'external') continue;
+
     final id = edge.counterparty.id;
     counterpartyById.putIfAbsent(id, () => edge.counterparty);
     byCounterpartyId.putIfAbsent(id, () => []).add(edge);

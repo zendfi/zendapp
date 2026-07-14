@@ -204,7 +204,10 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       ),
                     ),
                   ),
-                  _ViewToggleButton(onTap: widget.onToggleView),
+                  // Legacy Ledger view toggle temporarily disabled — not
+                  // surfaced in the header for now. widget.onToggleView is
+                  // still wired through from ActivityScreen's router so
+                  // it's a one-line change to re-enable.
                   IconButton(
                     onPressed: () => pushZendSlide(context, const PublicFeedScreen()),
                     icon: Icon(Icons.public, color: zt.textSecondary),
@@ -555,23 +558,6 @@ class _RequestsThreadSheet extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── View toggle control (Req 12.2) ──────────────────────────────────────────
-
-class _ViewToggleButton extends StatelessWidget {
-  const _ViewToggleButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return IconButton(
-      onPressed: onTap,
-      icon: Icon(Icons.list_alt_outlined, color: zt.textSecondary),
-      tooltip: 'Switch to flat list view',
     );
   }
 }

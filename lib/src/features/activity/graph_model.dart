@@ -147,6 +147,14 @@ GraphModel buildRawGraph({
   final graphEdges = <GraphEdge>[];
 
   for (final edge in edges) {
+    // "Your Mutuals" is a graph of the viewer's own direct relationships —
+    // exclude "external" edges (Shared_Network activity between two other
+    // people, surfaced only because the viewer is a mutual of one of them).
+    // Without this guard, an external edge's synthesized non-identity
+    // counterparty (see build_edge_response server-side) would render as a
+    // fake node with a fake self->it edge.
+    if (edge.direction == 'external') continue;
+
     final counterparty = edge.counterparty;
     nodesById.putIfAbsent(
       counterparty.id,

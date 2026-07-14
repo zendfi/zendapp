@@ -978,7 +978,7 @@ class _RecipientStageState extends State<_RecipientStage> {
 
                   // ── For field ─────────────────────────────────────────
                   _FieldRow(
-                    label: 'For',
+                    label: 'Note',
                     child: TextField(
                       controller: widget.noteController,
                       focusNode: _forFocus,

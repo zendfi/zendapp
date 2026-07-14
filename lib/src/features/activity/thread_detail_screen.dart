@@ -229,17 +229,18 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     );
     showTransactionReceipt(context, tx: tx).then((_) {});
     if (reactions.isNotEmpty) {
-      // Float the top reaction up over the sheet briefly, per the requested
-      // "reaction floats up when the sheet opens" affordance.
-      _showFloatingReactionOverlay(reactions.first.emoji);
+      // Float every current reaction up from the bottom over the sheet
+      // briefly, per the requested "reaction floats up when the sheet
+      // opens" affordance — previously only the first reaction was shown.
+      _showFloatingReactionOverlay(reactions.map((r) => r.emoji).toList());
     }
   }
 
-  void _showFloatingReactionOverlay(String emoji) {
+  void _showFloatingReactionOverlay(List<String> emojis) {
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
     entry = OverlayEntry(
-      builder: (context) => _FloatingReactionBadge(emoji: emoji, onDone: () => entry.remove()),
+      builder: (context) => _FloatingReactionBadge(emojis: emojis, onDone: () => entry.remove()),
     );
     overlay.insert(entry);
   }
@@ -548,13 +549,16 @@ class _FeedPost extends StatelessWidget {
   }
 }
 
-/// A short-lived overlay badge that floats a reaction emoji upward and fades
-/// out — used when opening a receipt for an activity that already has a
-/// reaction, so the reaction feels acknowledged rather than silently lost
-/// once the sheet covers the feed post.
+/// A short-lived overlay showing every current reaction on an activity,
+/// floating up from the bottom of the screen and fading out — used when
+/// opening a receipt for an activity that already has reactions, so they
+/// feel acknowledged rather than silently lost once the sheet covers the
+/// feed post. Each emoji gets its own small horizontal offset and a
+/// slightly staggered start so a multi-reaction activity doesn't render as
+/// one overlapping blob.
 class _FloatingReactionBadge extends StatefulWidget {
-  const _FloatingReactionBadge({required this.emoji, required this.onDone});
-  final String emoji;
+  const _FloatingReactionBadge({required this.emojis, required this.onDone});
+  final List<String> emojis;
   final VoidCallback onDone;
 
   @override
@@ -567,7 +571,7 @@ class _FloatingReactionBadgeState extends State<_FloatingReactionBadge> with Sin
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
     _controller.forward().whenComplete(widget.onDone);
   }
 
@@ -580,20 +584,48 @@ class _FloatingReactionBadgeState extends State<_FloatingReactionBadge> with Sin
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final emojis = widget.emojis.take(6).toList(); // cap to avoid overcrowding
+    final spacing = 44.0;
+    final totalWidth = (emojis.length - 1) * spacing;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final t = _controller.value;
-        final opacity = t < 0.75 ? 1.0 : (1.0 - t) * 4;
-        return Positioned(
-          left: size.width / 2 - 24,
-          top: size.height * 0.35 - (t * 80),
-          child: Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
-            child: Text(widget.emoji, style: const TextStyle(fontSize: 40)),
-          ),
+        return Stack(
+          children: [
+            for (var i = 0; i < emojis.length; i++)
+              _buildEmoji(size, emojis[i], i, emojis.length, totalWidth, spacing),
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildEmoji(Size size, String emoji, int index, int count, double totalWidth, double spacing) {
+    // Small per-emoji stagger so they don't all move in perfect lockstep.
+    final stagger = index * 0.08;
+    final localT = ((_controller.value - stagger) / (1 - stagger)).clamp(0.0, 1.0);
+    final opacity = localT < 0.7 ? 1.0 : ((1.0 - localT) / 0.3).clamp(0.0, 1.0);
+    final riseDistance = 140.0;
+    final xOffset = -totalWidth / 2 + index * spacing;
+
+    return Positioned(
+      left: size.width / 2 - 20 + xOffset,
+      // Float up from near the bottom of the screen, not the middle.
+      bottom: 90 + (localT * riseDistance),
+      child: Opacity(
+        opacity: opacity,
+        child: Text(
+          emoji,
+          // Explicit style with no decoration — without this, Text widgets
+          // inserted directly into the root Overlay (no Material/
+          // DefaultTextStyle ancestor) fall back to Flutter's default debug
+          // style, which includes a visible underline decoration. That was
+          // the "yellow line under the emoji" — not an intentional design
+          // element, just missing style inheritance.
+          style: const TextStyle(fontSize: 36, decoration: TextDecoration.none),
+        ),
+      ),
     );
   }
 }

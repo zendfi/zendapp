@@ -252,12 +252,20 @@ class ZendAppModel extends ChangeNotifier {
 
     switch (event.type) {
       case SseEventType.transferUpdate:
-        // A transfer happened — refresh both balance and history
+        // A transfer happened — refresh balance, legacy history, and the
+        // Threaded_Activity_View feed. fetchThreadedActivity() was
+        // previously only called from ThreadedActivityScreen.initState(),
+        // which doesn't re-run on tab switches (IndexedStack keeps the
+        // widget alive) — so real-time transfer updates never reached the
+        // Activity tab's threaded feed without a full app restart. This is
+        // a no-op if the Activity tab hasn't been opened yet this session.
         unawaited(fetchBalance());
         unawaited(fetchHistory());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
       case SseEventType.transferFailed:
         // A pending transfer failed — refresh history so status is accurate
         unawaited(fetchHistory());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
       case SseEventType.balanceUpdate:
         // Direct balance update from server — re-fetch for accuracy
         // (empty usdc_balance means "please re-fetch")
@@ -275,6 +283,7 @@ class ZendAppModel extends ChangeNotifier {
         // Server told us we missed events — do a full refresh
         unawaited(fetchBalance());
         unawaited(fetchHistory());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
       case SseEventType.poolContribution:
         // Update the cached pool's gathered amount
         final poolId = event.data['pool_id'] as String?;
@@ -488,10 +497,18 @@ class ZendAppModel extends ChangeNotifier {
   String? lastThreadedActivityError;
   String? _threadedActivityNextCursor;
 
+  // Set true the first time fetchThreadedActivity() runs (i.e. once the
+  // Activity tab has been opened this session). Used to gate SSE-driven
+  // refreshes of the threaded feed so we don't fetch it before it's ever
+  // been needed — see _onSseEvent()'s transferUpdate/transferFailed/
+  // refreshRequired cases.
+  bool _threadedActivityEverLoaded = false;
+
   /// Fetches the first page of the visibility-filtered Activity_Edge feed.
   /// Called by `ThreadedActivityScreen.initState()`, mirroring exactly how
   /// `ActivityScreen.initState()` calls `fetchHistory()`.
   Future<void> fetchThreadedActivity() async {
+    _threadedActivityEverLoaded = true;
     threadedActivityLoading = true;
     lastThreadedActivityError = null;
     notifyListeners();
