@@ -111,6 +111,22 @@ class ActivityReactionNotification {
   final String emoji;
 }
 
+/// A pending in-app banner for "someone commented on an Activity_Edge
+/// you're a party on" — delivered over SSE (`SseEventType.activityEdgeComment`).
+class ActivityCommentNotification {
+  const ActivityCommentNotification({
+    required this.edgeKind,
+    required this.edgeId,
+    required this.authorZendtag,
+    required this.body,
+  });
+
+  final String edgeKind;
+  final String edgeId;
+  final String authorZendtag;
+  final String body;
+}
+
 class ZendAppModel extends ChangeNotifier {
   ZendAppModel({
     required this.authService,
@@ -319,6 +335,15 @@ class ZendAppModel extends ChangeNotifier {
           edgeId: event.data['edge_id'] as String? ?? '',
           reactorZendtag: event.data['reactor_zendtag'] as String? ?? '',
           emoji: event.data['emoji'] as String? ?? '',
+        );
+        notifyListeners();
+      case SseEventType.activityEdgeComment:
+        // Someone commented on an Activity_Edge this user is a party on.
+        pendingActivityComment = ActivityCommentNotification(
+          edgeKind: event.data['edge_kind'] as String? ?? '',
+          edgeId: event.data['edge_id'] as String? ?? '',
+          authorZendtag: event.data['author_zendtag'] as String? ?? '',
+          body: event.data['body'] as String? ?? '',
         );
         notifyListeners();
       case SseEventType.dropConfirmed:
@@ -538,6 +563,10 @@ class ZendAppModel extends ChangeNotifier {
   /// Pending Activity_Edge reaction notification from SSE — shown as an
   /// in-app banner (Threaded_Activity_View listens for this).
   ActivityReactionNotification? pendingActivityReaction;
+
+  /// Pending Activity_Edge comment notification from SSE — shown as an
+  /// in-app banner.
+  ActivityCommentNotification? pendingActivityComment;
 
   // ── Payment requests (activity feed) ──
   List<PaymentRequestItem> outboundPaymentRequests = [];
@@ -1138,6 +1167,11 @@ class ZendAppModel extends ChangeNotifier {
 
   void clearPendingActivityReaction() {
     pendingActivityReaction = null;
+    notifyListeners();
+  }
+
+  void clearPendingActivityComment() {
+    pendingActivityComment = null;
     notifyListeners();
   }
 

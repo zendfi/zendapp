@@ -794,6 +794,39 @@ class ApiClient {
     }
   }
 
+  /// Read access follows the edge's normal authorization (direct
+  /// participant or Shared_Network_Viewer).
+  Future<List<EdgeComment>> getEdgeComments(String edgeKind, String edgeId) async {
+    try {
+      final response = await _dio.get('/api/zend/activity/edges/$edgeKind/$edgeId/comments');
+      final data = response.data as Map<String, dynamic>;
+      return (data['comments'] as List<dynamic>? ?? [])
+          .map((c) => EdgeComment.fromJson(c as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Write access is direct-participant-only (sender/recipient) — never
+  /// extended to Shared_Network_Viewers.
+  Future<void> addEdgeComment(String edgeKind, String edgeId, String body) async {
+    try {
+      await _dio.post('/api/zend/activity/edges/$edgeKind/$edgeId/comments', data: {'body': body});
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Delete-your-own only — no editing, no moderator override in v1.
+  Future<void> deleteEdgeComment(String edgeKind, String edgeId, String commentId) async {
+    try {
+      await _dio.delete('/api/zend/activity/edges/$edgeKind/$edgeId/comments/$commentId');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> getBridgeKycStatus() async {
     try {
       final response = await _dio.get('/api/zend/bridge/kyc/status');

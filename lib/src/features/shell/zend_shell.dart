@@ -30,6 +30,8 @@ class _ZendShellState extends State<ZendShell> {
   String? _lastBannerRequestId;
   Timer? _reactionBannerTimer;
   String? _lastReactionBannerKey;
+  Timer? _commentBannerTimer;
+  String? _lastCommentBannerKey;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _ZendShellState extends State<ZendShell> {
   void dispose() {
     _bannerTimer?.cancel();
     _reactionBannerTimer?.cancel();
+    _commentBannerTimer?.cancel();
     super.dispose();
   }
 
@@ -67,6 +70,11 @@ class _ZendShellState extends State<ZendShell> {
   void _dismissReactionBanner(ZendAppModel model) {
     _reactionBannerTimer?.cancel();
     model.clearPendingActivityReaction();
+  }
+
+  void _dismissCommentBanner(ZendAppModel model) {
+    _commentBannerTimer?.cancel();
+    model.clearPendingActivityComment();
   }
 
   void _payFromBanner(BuildContext context, ZendAppModel model, PaymentRequestNotification notification) {
@@ -131,6 +139,20 @@ class _ZendShellState extends State<ZendShell> {
       _lastReactionBannerKey = null;
     }
 
+    final pendingComment = model.pendingActivityComment;
+    if (pendingComment != null) {
+      final key = '${pendingComment.edgeKind}:${pendingComment.edgeId}:${pendingComment.body}';
+      if (key != _lastCommentBannerKey) {
+        _lastCommentBannerKey = key;
+        _commentBannerTimer?.cancel();
+        _commentBannerTimer = Timer(const Duration(seconds: 6), () {
+          if (mounted) model.clearPendingActivityComment();
+        });
+      }
+    } else {
+      _lastCommentBannerKey = null;
+    }
+
     final pages = <Widget>[
       HomeScreen(
         onOpenReceive: () => _openReceiveScreen(context),
@@ -175,6 +197,19 @@ class _ZendShellState extends State<ZendShell> {
                 key: ValueKey(_lastReactionBannerKey),
                 notification: pendingReaction,
                 onDismiss: () => _dismissReactionBanner(model),
+              ),
+            ),
+          // In-app "someone commented on your activity" banner — stacked
+          // below whichever of the above banners are present.
+          if (pendingComment != null)
+            Positioned(
+              top: (pending != null ? 78 : 0) + (pendingReaction != null ? 78 : 0),
+              left: 0,
+              right: 0,
+              child: _ActivityCommentBanner(
+                key: ValueKey(_lastCommentBannerKey),
+                notification: pendingComment,
+                onDismiss: () => _dismissCommentBanner(model),
               ),
             ),
         ],
@@ -519,6 +554,106 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                       style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: widget.onDismiss,
+                    child: const Icon(Icons.close, size: 16, color: Color(0x66F0F0F0)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── In-app Activity_Edge comment banner ─────────────────────────────────────
+
+class _ActivityCommentBanner extends StatefulWidget {
+  // ignore: use_super_parameters
+  const _ActivityCommentBanner({
+    Key? key,
+    required this.notification,
+    required this.onDismiss,
+  }) : super(key: key);
+
+  final ActivityCommentNotification notification;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_ActivityCommentBanner> createState() => _ActivityCommentBannerState();
+}
+
+class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.notification;
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF252525),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+                boxShadow: const [BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
+                    child: const Icon(Icons.chat_bubble_outline, size: 16, color: ZendColors.accentPop),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '@${n.authorZendtag} commented on your activity',
+                          style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          n.body,
+                          style: const TextStyle(fontFamily: 'DMSans', fontSize: 11, color: Color(0x99F0F0F0)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),

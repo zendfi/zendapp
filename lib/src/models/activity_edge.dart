@@ -245,6 +245,42 @@ class EdgeReactionCount {
   }
 }
 
+/// A single comment on an [ActivityEdge], from
+/// `GET /api/zend/activity/edges/:edge_kind/:edge_id/comments`. Writable
+/// only by the edge's two direct participants (sender/recipient) — never a
+/// Shared_Network_Viewer, regardless of the edge's visibility tier.
+class EdgeComment {
+  final String id;
+  final String authorUserId;
+  final String authorZendtag;
+  final String authorDisplayName;
+  final String? authorAvatarUrl;
+  final String body;
+  final DateTime createdAt;
+
+  const EdgeComment({
+    required this.id,
+    required this.authorUserId,
+    required this.authorZendtag,
+    required this.authorDisplayName,
+    this.authorAvatarUrl,
+    required this.body,
+    required this.createdAt,
+  });
+
+  factory EdgeComment.fromJson(Map<String, dynamic> json) {
+    return EdgeComment(
+      id: json['id'] as String,
+      authorUserId: json['author_user_id'] as String,
+      authorZendtag: json['author_zendtag'] as String,
+      authorDisplayName: json['author_display_name'] as String,
+      authorAvatarUrl: json['author_avatar_url'] as String?,
+      body: json['body'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
 /// Response envelope for `GET /api/zend/activity/edges`.
 class ActivityEdgesResponse {
   final List<ActivityEdge> edges;

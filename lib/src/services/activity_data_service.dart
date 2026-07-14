@@ -56,4 +56,16 @@ class ActivityDataService {
   Future<void> makeEdgePublic(String edgeKind, String edgeId) {
     return _apiClient.makeEdgePublic(edgeKind, edgeId);
   }
+
+  Future<List<EdgeComment>> getEdgeComments(String edgeKind, String edgeId) {
+    return _apiClient.getEdgeComments(edgeKind, edgeId);
+  }
+
+  Future<void> addEdgeComment(String edgeKind, String edgeId, String body) {
+    return _apiClient.addEdgeComment(edgeKind, edgeId, body);
+  }
+
+  Future<void> deleteEdgeComment(String edgeKind, String edgeId, String commentId) {
+    return _apiClient.deleteEdgeComment(edgeKind, edgeId, commentId);
+  }
 }

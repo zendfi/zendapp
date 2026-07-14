@@ -23,6 +23,8 @@ enum SseEventType {
   dropConfirmed,
   // Req: notify the other party on an Activity_Edge when a reaction is added.
   activityEdgeReaction,
+  // Req: notify the other party on an Activity_Edge when a comment is added.
+  activityEdgeComment,
   unknown,
 }
 
@@ -47,6 +49,7 @@ class SseEvent {
       'payment_request' => SseEventType.paymentRequest,
       'drop_confirmed' => SseEventType.dropConfirmed,
       'activity_edge_reaction' => SseEventType.activityEdgeReaction,
+      'activity_edge_comment' => SseEventType.activityEdgeComment,
       _ => SseEventType.unknown,
     };
 
