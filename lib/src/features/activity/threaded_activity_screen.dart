@@ -191,6 +191,22 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
         intent.expiry.isAfter(DateTime.fromMillisecondsSinceEpoch(0));
   }
 
+  void _openRequestsThread(_RequestsGroup group) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RequestsThreadSheet(
+        group: group,
+        onOpenIntent: _openPendingIntent,
+        onOpenInbound: _openInboundRequest,
+        onOpenOutbound: _openOutboundRequest,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -203,8 +219,23 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
         .toList();
     final pendingInbound = model.inboundPaymentRequests.where((r) => r.isPending).toList();
     final pendingOutbound = model.outboundPaymentRequests.where((r) => r.amountUsdc > 0).toList();
-    final hasPendingSection =
-        pendingIntents.isNotEmpty || pendingInbound.isNotEmpty || pendingOutbound.isNotEmpty;
+
+    // Requests (pending email intents + inbound + outbound payment requests)
+    // are not Activity_Edges (per design.md's tap-through table), so they
+    // don't naturally fall out of groupByCounterparty(). They're folded into
+    // one synthetic "Requests" thread here instead, so they take their place
+    // in the same recency-sorted feed as every other thread rather than
+    // living in a separate pinned section above it.
+    final requestsGroup = _RequestsGroup(
+      intents: pendingIntents,
+      inbound: pendingInbound,
+      outbound: pendingOutbound,
+    );
+
+    final feedItems = <_FeedItem>[
+      for (final thread in threads) _FeedItem.thread(thread),
+      if (requestsGroup.isNotEmpty) _FeedItem.requests(requestsGroup),
+    ]..sort((a, b) => b.mostRecentAt.compareTo(a.mostRecentAt));
 
     final isLoading = model.threadedActivityLoading && threads.isEmpty;
 
@@ -264,7 +295,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 onRefresh: () => model.fetchThreadedActivity(),
                 child: isLoading
                     ? const Center(child: ZendLoader(size: 24))
-                    : (!hasPendingSection && threads.isEmpty)
+                    : feedItems.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
@@ -283,27 +314,16 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                               ),
                             ],
                           )
-                        : ListView(
+                        : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            children: [
-                              if (hasPendingSection) ...[
-                                _SectionLabel(label: 'Pending', zt: zt),
-                                const SizedBox(height: 8),
-                                ..._buildPendingTiles(
-                                  zt,
-                                  pendingIntents,
-                                  pendingInbound,
-                                  pendingOutbound,
-                                ),
-                                const SizedBox(height: 20),
-                              ],
-                              if (threads.isNotEmpty) _SectionLabel(label: 'Threads', zt: zt),
-                              const SizedBox(height: 8),
-                              for (final thread in threads)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: thread.counterparty.isPool
+                            itemCount: feedItems.length,
+                            itemBuilder: (context, i) {
+                              final item = feedItems[i];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: switch (item) {
+                                  _ThreadFeedItem(thread: final thread) => thread.counterparty.isPool
                                       ? _PoolThreadTile(
                                           thread: thread,
                                           onTap: () => _openEdge(thread.mostRecentEdge),
@@ -312,8 +332,13 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                                           thread: thread,
                                           onTap: () => _openEdge(thread.mostRecentEdge),
                                         ),
-                                ),
-                            ],
+                                  _RequestsFeedItem(group: final group) => _RequestsThreadTile(
+                                      group: group,
+                                      onTap: () => _openRequestsThread(group),
+                                    ),
+                                },
+                              );
+                            },
                           ),
               ),
             ),
@@ -336,42 +361,253 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     );
   }
 
-  List<Widget> _buildPendingTiles(
-    ZendTheme zt,
-    List<EmailIntent> intents,
-    List<PaymentRequestItem> inbound,
-    List<PaymentRequestItem> outbound,
-  ) {
-    final tiles = <Widget>[
-      for (final intent in intents)
-        _PendingRowTile(
-          zt: zt,
-          avatarLabel: intent.recipientHint.isNotEmpty ? intent.recipientHint[0].toUpperCase() : '?',
-          title: intent.recipientHint,
-          subtitle: 'pending claim',
-          amount: '-${intent.amountFormatted}',
-          onTap: () => _openPendingIntent(intent),
-        ),
-      for (final request in inbound)
-        _PendingRowTile(
-          zt: zt,
-          avatarLabel: request.avatarInitial,
-          title: request.counterpartyLabel,
-          subtitle: 'Requesting payment',
-          amount: '-${request.formattedAmount}',
-          onTap: () => _openInboundRequest(request),
-        ),
-      for (final request in outbound)
-        _PendingRowTile(
-          zt: zt,
-          avatarLabel: request.avatarInitial,
-          title: request.counterpartyLabel,
-          subtitle: request.isPending ? 'Pending' : request.status,
-          amount: '+${request.formattedAmount}',
-          onTap: () => _openOutboundRequest(request),
-        ),
+}
+
+// ── Requests grouping (folds pending intents/inbound/outbound requests into
+// one synthetic thread, since none of these are Activity_Edges) ──────────
+
+/// All of a User's non-Activity_Edge "asks": pending email intents, inbound
+/// payment requests, and outbound payment requests — folded into a single
+/// group so they render as one thread in the feed instead of a separate
+/// pinned section.
+class _RequestsGroup {
+  const _RequestsGroup({
+    required this.intents,
+    required this.inbound,
+    required this.outbound,
+  });
+
+  final List<EmailIntent> intents;
+  final List<PaymentRequestItem> inbound;
+  final List<PaymentRequestItem> outbound;
+
+  bool get isNotEmpty => intents.isNotEmpty || inbound.isNotEmpty || outbound.isNotEmpty;
+
+  int get totalCount => intents.length + inbound.length + outbound.length;
+
+  DateTime get mostRecentAt {
+    final dates = <DateTime>[
+      ...intents.map((i) => i.createdAt),
+      ...inbound.map((r) => r.createdAt),
+      ...outbound.map((r) => r.createdAt),
     ];
-    return tiles;
+    return dates.isEmpty ? DateTime.fromMillisecondsSinceEpoch(0) : dates.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+}
+
+// ── Unified feed item (threads + the one Requests group, sorted together
+// by recency so Requests takes its place in the normal feed) ──────────────
+
+sealed class _FeedItem {
+  DateTime get mostRecentAt;
+
+  factory _FeedItem.thread(CounterpartyThread thread) = _ThreadFeedItem;
+  factory _FeedItem.requests(_RequestsGroup group) = _RequestsFeedItem;
+}
+
+class _ThreadFeedItem implements _FeedItem {
+  const _ThreadFeedItem(this.thread);
+  final CounterpartyThread thread;
+  @override
+  DateTime get mostRecentAt => thread.mostRecentEdge.createdAt;
+}
+
+class _RequestsFeedItem implements _FeedItem {
+  const _RequestsFeedItem(this.group);
+  final _RequestsGroup group;
+  @override
+  DateTime get mostRecentAt => group.mostRecentAt;
+}
+
+// ── Requests thread tile (feed row) ─────────────────────────────────────────
+
+class _RequestsThreadTile extends StatelessWidget {
+  const _RequestsThreadTile({required this.group, required this.onTap});
+
+  final _RequestsGroup group;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final owedToYou = group.inbound.length;
+    final youOwe = group.outbound.length + group.intents.length;
+
+    return Material(
+      color: zt.bgSecondary,
+      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: ZendColors.destructive.withValues(alpha: 0.12),
+                child: Icon(Icons.receipt_long_outlined, color: ZendColors.destructive, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Requests',
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Money asks between you and others',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (owedToYou > 0)
+                          _CountPill(count: owedToYou, label: 'owed to you', color: ZendColors.positive),
+                        if (owedToYou > 0 && youOwe > 0) const SizedBox(width: 6),
+                        if (youOwe > 0)
+                          _CountPill(count: youOwe, label: 'pending', color: zt.textSecondary),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: zt.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.count, required this.label, required this.color});
+  final int count;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
+      ),
+      child: Text(
+        '$count $label',
+        style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// ── Requests thread detail sheet (tap-through destination) ─────────────────
+
+class _RequestsThreadSheet extends StatelessWidget {
+  const _RequestsThreadSheet({
+    required this.group,
+    required this.onOpenIntent,
+    required this.onOpenInbound,
+    required this.onOpenOutbound,
+  });
+
+  final _RequestsGroup group;
+  final void Function(EmailIntent) onOpenIntent;
+  final void Function(PaymentRequestItem) onOpenInbound;
+  final void Function(PaymentRequestItem) onOpenOutbound;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+      decoration: BoxDecoration(
+        color: zt.bgSecondary,
+        borderRadius: BorderRadius.circular(ZendRadii.xxl),
+      ),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+              ),
+            ),
+            Text(
+              'Requests',
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${group.totalCount} total',
+              style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final request in group.inbound)
+                    _PendingRowTile(
+                      zt: zt,
+                      avatarLabel: request.avatarInitial,
+                      title: request.counterpartyLabel,
+                      subtitle: 'Requesting payment',
+                      amount: '-${request.formattedAmount}',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onOpenInbound(request);
+                      },
+                    ),
+                  for (final request in group.outbound)
+                    _PendingRowTile(
+                      zt: zt,
+                      avatarLabel: request.avatarInitial,
+                      title: request.counterpartyLabel,
+                      subtitle: request.isPending ? 'Pending' : request.status,
+                      amount: '+${request.formattedAmount}',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onOpenOutbound(request);
+                      },
+                    ),
+                  for (final intent in group.intents)
+                    _PendingRowTile(
+                      zt: zt,
+                      avatarLabel: intent.recipientHint.isNotEmpty ? intent.recipientHint[0].toUpperCase() : '?',
+                      title: intent.recipientHint,
+                      subtitle: 'Pending claim',
+                      amount: '-${intent.amountFormatted}',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onOpenIntent(intent);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -388,26 +624,6 @@ class _ViewToggleButton extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(Icons.list_alt_outlined, color: zt.textSecondary),
       tooltip: 'Switch to flat list view',
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label, required this.zt});
-  final String label;
-  final ZendTheme zt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        fontFamily: 'DMSans',
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
-        color: zt.textSecondary,
-      ),
     );
   }
 }
