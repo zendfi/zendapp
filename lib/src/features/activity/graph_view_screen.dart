@@ -370,7 +370,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: ZendAvatar(
             radius: radius,
             photoUrl: node.avatarUrl,
-            initials: node.label.isNotEmpty ? node.label[0].toUpperCase() : '?',
+            initials: node.initialLetter,
           ),
         );
     }
@@ -471,7 +471,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                     leading: ZendAvatar(
                       radius: 18,
                       photoUrl: node.avatarUrl,
-                      initials: node.label.isNotEmpty ? node.label[0].toUpperCase() : '?',
+                      initials: node.initialLetter,
                     ),
                     title: Text(node.label, style: TextStyle(fontFamily: 'DMSans', color: zt.textPrimary)),
                   );

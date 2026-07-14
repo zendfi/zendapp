@@ -39,6 +39,14 @@ class GraphNode {
     this.clusteredIds = const [],
   });
 
+  /// First letter suitable for an avatar-initial fallback — strips a
+  /// leading '@' from [label] (since labels are often `@zendtag`) so the
+  /// avatar never shows a bare "@" as its initial.
+  String get initialLetter {
+    final stripped = label.startsWith('@') ? label.substring(1) : label;
+    return stripped.isNotEmpty ? stripped[0].toUpperCase() : '?';
+  }
+
   GraphNode copyWith({double? visualWeight}) {
     return GraphNode(
       id: id,
@@ -145,9 +153,7 @@ GraphModel buildRawGraph({
       () => GraphNode(
         id: counterparty.id,
         kind: counterparty.isPool ? GraphNodeKind.pool : GraphNodeKind.user,
-        label: counterparty.isPool
-            ? (counterparty.poolName ?? 'Pool')
-            : (counterparty.zendtag ?? counterparty.id),
+        label: counterparty.isPool ? (counterparty.poolName ?? 'Pool') : counterparty.displayLabel,
         avatarUrl: counterparty.avatarUrl,
       ),
     );

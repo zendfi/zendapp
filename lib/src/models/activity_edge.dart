@@ -59,6 +59,7 @@ class ActivityCounterparty {
   final String kind; // 'user' | 'pool'
   final String id;
   final String? zendtag;
+  final String? displayName;
   final String? poolName;
   final String? avatarUrl;
 
@@ -66,17 +67,44 @@ class ActivityCounterparty {
     required this.kind,
     required this.id,
     this.zendtag,
+    this.displayName,
     this.poolName,
     this.avatarUrl,
   });
 
   bool get isPool => kind == 'pool';
 
+  /// The best available human-readable label for this counterparty —
+  /// prefers `@zendtag`, falls back to `displayName`, and only as a last
+  /// resort (a legacy response missing both) falls back to a short id
+  /// fragment. Never renders a bare full UUID.
+  String get displayLabel {
+    if (zendtag != null && zendtag!.isNotEmpty) return '@$zendtag';
+    if (displayName != null && displayName!.isNotEmpty) return displayName!;
+    if (poolName != null && poolName!.isNotEmpty) return poolName!;
+    return id.length > 6 ? id.substring(0, 6) : id;
+  }
+
+  /// Initial letter used for the avatar fallback — derived from whichever
+  /// identity field is actually available, in the same preference order as
+  /// [displayLabel].
+  String get initialLetter {
+    final source = zendtag?.isNotEmpty == true
+        ? zendtag!
+        : displayName?.isNotEmpty == true
+            ? displayName!
+            : poolName?.isNotEmpty == true
+                ? poolName!
+                : id;
+    return source.isNotEmpty ? source[0].toUpperCase() : '?';
+  }
+
   factory ActivityCounterparty.fromJson(Map<String, dynamic> json) {
     return ActivityCounterparty(
       kind: json['kind'] as String,
       id: json['id'] as String,
       zendtag: json['zendtag'] as String?,
+      displayName: json['display_name'] as String?,
       poolName: json['pool_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
     );
@@ -87,6 +115,7 @@ class ActivityCounterparty {
       'kind': kind,
       'id': id,
       if (zendtag != null) 'zendtag': zendtag,
+      if (displayName != null) 'display_name': displayName,
       if (poolName != null) 'pool_name': poolName,
       if (avatarUrl != null) 'avatar_url': avatarUrl,
     };
@@ -109,6 +138,20 @@ class ActivityEdge {
   final String? note;
   final DateTime createdAt;
 
+  // Carried directly on the edge (server-side, see activity_data_service.rs)
+  // so the client can build a full transaction receipt without a second,
+  // separately-scoped fetch (fetchHistory()/recentTransactions) that may not
+  // contain every edge this viewer is authorized to see via Shared_Network
+  // visibility. All optional/defaulted so older cached responses still parse.
+  final String? transactionSignature;
+  final String? status;
+  final String? senderZendtag;
+  final String? senderDisplayName;
+  final String? senderAvatarUrl;
+  final String? recipientZendtag;
+  final String? recipientDisplayName;
+  final String? recipientAvatarUrl;
+
   const ActivityEdge({
     required this.edgeId,
     required this.edgeKind,
@@ -120,6 +163,14 @@ class ActivityEdge {
     required this.isDirectParticipant,
     this.note,
     required this.createdAt,
+    this.transactionSignature,
+    this.status,
+    this.senderZendtag,
+    this.senderDisplayName,
+    this.senderAvatarUrl,
+    this.recipientZendtag,
+    this.recipientDisplayName,
+    this.recipientAvatarUrl,
   });
 
   bool get isOutgoing => direction == 'outgoing';
@@ -137,6 +188,14 @@ class ActivityEdge {
       isDirectParticipant: json['is_direct_participant'] as bool? ?? true,
       note: json['note'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
+      transactionSignature: json['transaction_signature'] as String?,
+      status: json['status'] as String?,
+      senderZendtag: json['sender_zendtag'] as String?,
+      senderDisplayName: json['sender_display_name'] as String?,
+      senderAvatarUrl: json['sender_avatar_url'] as String?,
+      recipientZendtag: json['recipient_zendtag'] as String?,
+      recipientDisplayName: json['recipient_display_name'] as String?,
+      recipientAvatarUrl: json['recipient_avatar_url'] as String?,
     );
   }
 
@@ -152,6 +211,14 @@ class ActivityEdge {
       'is_direct_participant': isDirectParticipant,
       if (note != null) 'note': note,
       'created_at': createdAt.toIso8601String(),
+      if (transactionSignature != null) 'transaction_signature': transactionSignature,
+      if (status != null) 'status': status,
+      if (senderZendtag != null) 'sender_zendtag': senderZendtag,
+      if (senderDisplayName != null) 'sender_display_name': senderDisplayName,
+      if (senderAvatarUrl != null) 'sender_avatar_url': senderAvatarUrl,
+      if (recipientZendtag != null) 'recipient_zendtag': recipientZendtag,
+      if (recipientDisplayName != null) 'recipient_display_name': recipientDisplayName,
+      if (recipientAvatarUrl != null) 'recipient_avatar_url': recipientAvatarUrl,
     };
   }
 }

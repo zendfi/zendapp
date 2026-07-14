@@ -6,6 +6,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import '../../models/api_models.dart';
 import '../../models/email_intent.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
@@ -87,25 +88,39 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
 
   // ── Tap-through routing (Req 15) ────────────────────────────────────────
   //
-  // Maps an ActivityEdge back to the existing object the Legacy view already
-  // taps through with, then dispatches to the same handler. No new sheet
-  // widgets are introduced here — only routing logic (design.md decision).
+  // Every ActivityEdge now carries its own sender/recipient identity and
+  // transaction detail fields (added alongside the zendtag/avatar fix —
+  // see activity_data_service.rs), so the receipt is built directly from
+  // the edge itself rather than cross-referencing a second, separately
+  // fetched/paginated list (recentTransactions) that may not contain every
+  // edge this viewer is authorized to see via Shared_Network visibility.
+  // That cross-reference was the root cause of the "Loading details…"
+  // fallback firing for edges that were perfectly renderable.
   void _openEdge(ActivityEdge edge) {
-    final model = ZendScope.of(context);
-
-    if (edge.edgeKind == ActivityEdgeKind.zendTransfer ||
-        edge.edgeKind == ActivityEdgeKind.poolContribution) {
-      final match = model.recentTransactions.where((tx) {
-        return tx.entry?.id == edge.edgeId ||
-            (tx.bankOrder != null && tx.bankOrder!['id'] == edge.edgeId);
-      });
-      if (match.isNotEmpty) {
-        showTransactionReceipt(context, tx: match.first);
+    if (edge.edgeKind == ActivityEdgeKind.zendTransfer || edge.edgeKind == ActivityEdgeKind.poolContribution) {
+      final entry = _entryFromEdge(edge);
+      if (entry != null) {
+        showTransactionReceipt(
+          context,
+          tx: ZendTransaction(
+            name: edge.counterparty.displayLabel,
+            note: edge.note ?? '',
+            amount: edge.amountHidden
+                ? 'Hidden'
+                : '${edge.isOutgoing ? '-' : '+'}\$${edge.amountUsdc ?? '0'}',
+            time: '',
+            avatarLabel: edge.counterparty.initialLetter,
+            avatarUrl: edge.counterparty.avatarUrl,
+            entry: entry,
+            createdAt: edge.createdAt,
+          ),
+        );
         return;
       }
     }
 
     if (edge.edgeKind == ActivityEdgeKind.requestFulfillment) {
+      final model = ZendScope.of(context);
       final outboundMatch = model.outboundPaymentRequests.where((r) => r.id == edge.edgeId);
       if (outboundMatch.isNotEmpty) {
         showOutboundRequestDetail(context, outboundMatch.first);
@@ -113,12 +128,42 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
       }
     }
 
-    // Details for this edge aren't loaded yet (e.g. history still fetching).
+    // Genuinely missing detail (e.g. a still-hidden amount with no
+    // reconstructable receipt) — this should now be rare.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Loading details…', style: TextStyle(fontFamily: 'DMSans')),
+        content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'DMSans')),
         duration: Duration(seconds: 2),
       ),
+    );
+  }
+
+  /// Reconstructs the [TransferHistoryEntry] the receipt sheet needs
+  /// directly from an [ActivityEdge]'s own carried fields. Returns null
+  /// only if the edge is missing the minimum fields required to render a
+  /// receipt (e.g. a very old cached response predating this fix).
+  TransferHistoryEntry? _entryFromEdge(ActivityEdge edge) {
+    final model = ZendScope.of(context);
+    final isSender = edge.isOutgoing;
+    final senderZendtag = isSender ? model.currentZendtag : edge.counterparty.zendtag;
+    final recipientZendtag = isSender ? edge.counterparty.zendtag : model.currentZendtag;
+    if (edge.transactionSignature == null || senderZendtag == null || recipientZendtag == null) {
+      return null;
+    }
+
+    return TransferHistoryEntry(
+      id: edge.edgeId,
+      senderZendtag: senderZendtag,
+      recipientZendtag: recipientZendtag,
+      amountUsdc: edge.amountUsdc ?? '0',
+      transactionSignature: edge.transactionSignature!,
+      note: edge.note,
+      status: edge.status ?? 'confirmed',
+      createdAt: edge.createdAt,
+      senderAvatarUrl: isSender ? model.currentAvatarUrl : edge.counterparty.avatarUrl,
+      recipientAvatarUrl: isSender ? edge.counterparty.avatarUrl : model.currentAvatarUrl,
+      senderDisplayName: isSender ? model.currentDisplayName : edge.counterparty.displayName,
+      recipientDisplayName: isSender ? edge.counterparty.displayName : model.currentDisplayName,
     );
   }
 
@@ -449,15 +494,29 @@ class _UserThreadTile extends StatelessWidget {
   final CounterpartyThread thread;
   final VoidCallback onTap;
 
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${dt.month}/${dt.day}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final counterparty = thread.counterparty;
-    final label = counterparty.zendtag ?? counterparty.id.substring(0, 6);
     final mostRecent = thread.mostRecentEdge;
-    final signedAmount = mostRecent.amountHidden
-        ? 'Hidden'
-        : '${mostRecent.isOutgoing ? '-' : '+'}\$${mostRecent.amountUsdc ?? '0'}';
+    final isOutgoing = mostRecent.isOutgoing;
+    final amountLabel = mostRecent.amountHidden ? 'Hidden' : '\$${mostRecent.amountUsdc ?? '0'}';
+
+    // Venmo-style feed sentence: "You paid @omooba" / "@omooba paid you" —
+    // the relationship/action reads as a sentence, with the amount
+    // demoted to a secondary pill rather than dominating the row.
+    final actionSpan = isOutgoing ? 'You paid ' : '';
+    final subjectSpan = counterparty.displayLabel;
+    final trailingSpan = isOutgoing ? '' : ' paid you';
 
     return Material(
       color: zt.bgSecondary,
@@ -468,46 +527,90 @@ class _UserThreadTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ZendAvatar(
-                radius: 24,
+                radius: 22,
                 photoUrl: counterparty.avatarUrl,
-                initials: label.isNotEmpty ? label[0].toUpperCase() : '?',
+                initials: counterparty.initialLetter,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Sentence headline, feed-style.
+                    RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
+                        children: [
+                          if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
+                          TextSpan(
+                            text: subjectSpan,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 3),
                     Text(
-                      '@$label',
+                      mostRecent.note?.isNotEmpty == true ? '"${mostRecent.note}"' : 'No note added',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'DMSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: zt.textPrimary,
+                        fontSize: 13,
+                        fontStyle: mostRecent.note?.isNotEmpty == true ? FontStyle.italic : FontStyle.normal,
+                        color: zt.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${thread.edges.length} activity${thread.edges.length == 1 ? '' : 'ies'} · running total \$${thread.runningTotal.toStringAsFixed(2)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          _relativeTime(mostRecent.createdAt),
+                          style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8)),
+                        ),
+                        if (thread.edges.length > 1) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: zt.accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(ZendRadii.pill),
+                            ),
+                            child: Text(
+                              '${thread.edges.length}x together',
+                              style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                signedAmount,
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 20,
-                  fontStyle: FontStyle.italic,
-                  color: zt.textPrimary,
+              // Amount as a secondary pill, not a dominant serif figure —
+              // the sentence above carries the primary "story", the amount
+              // is supporting detail.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
+                child: Text(
+                  '${isOutgoing ? '-' : '+'}$amountLabel',
+                  style: TextStyle(
+                    fontFamily: 'DMMono',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: isOutgoing ? zt.textSecondary : ZendColors.positive,
+                  ),
                 ),
               ),
             ],
@@ -546,6 +649,7 @@ class _PoolThreadTile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final counterparty = thread.counterparty;
     final label = counterparty.poolName ?? 'Pool';
+    final mostRecent = thread.mostRecentEdge;
 
     return Material(
       color: zt.bgSecondary,
@@ -556,39 +660,77 @@ class _PoolThreadTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: 22,
                 backgroundColor: zt.accent.withValues(alpha: 0.15),
-                child: Icon(Icons.groups_outlined, color: zt.accent, size: 22),
+                child: Icon(Icons.groups_outlined, color: zt.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
+                        children: [
+                          const TextSpan(text: 'You chipped into '),
+                          TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 3),
                     Text(
-                      label,
+                      mostRecent.note?.isNotEmpty == true ? '"${mostRecent.note}"' : 'A group pool',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'DMSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: zt.textPrimary,
+                        fontSize: 13,
+                        fontStyle: mostRecent.note?.isNotEmpty == true ? FontStyle.italic : FontStyle.normal,
+                        color: zt.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Pool · \$${thread.runningTotal.toStringAsFixed(2)} contributed',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: zt.accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          ),
+                          child: Text(
+                            '${thread.edges.length} contribution${thread.edges.length == 1 ? '' : 's'}',
+                            style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'tap for progress',
+                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: zt.textSecondary),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: zt.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
+                child: Text(
+                  '\$${thread.runningTotal.toStringAsFixed(2)}',
+                  style: TextStyle(fontFamily: 'DMMono', fontSize: 12.5, fontWeight: FontWeight.w700, color: zt.accent),
+                ),
+              ),
             ],
           ),
         ),
@@ -729,8 +871,8 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                   Expanded(
                     child: Text(
                       switch (contributor.entry) {
-                        PoolContributorUser(zendtag: final tag, userId: final id) =>
-                          tag != null ? '@$tag' : 'User ${id.substring(0, 6)}',
+                        PoolContributorUser(zendtag: final tag) =>
+                          tag != null && tag.isNotEmpty ? '@$tag' : 'A contributor',
                         PoolContributorExternalAnonymized(aggregateCount: final count) =>
                           '$count external contributor${count == 1 ? '' : 's'}',
                       },
