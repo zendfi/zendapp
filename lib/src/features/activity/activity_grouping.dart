@@ -13,24 +13,30 @@ import '../../models/activity_edge.dart';
 
 // ── Feed headline word variations (social feel — Venmo-style sentences) ─────
 
-const _outgoingVerbs = ['paid', 'sent', 'zapped', 'dropped', 'shipped'];
-const _incomingVerbs = ['paid you', 'sent you', 'zapped you', 'came through for you'];
-// Third-person verbs for external (public feed) edges where neither party
-// is the viewer — no "you" pronoun, both sides are named @handles.
-const _externalVerbs = ['paid', 'sent', 'zapped', 'dropped'];
+// Five-verb symmetric set: each verb reads naturally both ways without any
+// tech/crypto baggage. "dropped" is reserved for the Drop (Bluetooth
+// proximity) feature and deliberately excluded here so it keeps its
+// meaning as a distinct signal.
+const _verbs = ['paid', 'sent', 'floated', 'spotted', 'covered'];
 
-/// Deterministically picks a verb variation for [edge] so the same edge
-/// always renders the same phrase across rebuilds (no flicker), while
-/// different edges/counterparties get visual variety instead of every
-/// thread reading identically as "paid"/"paid you".
+// Third-person verbs for external (public feed) edges where neither party
+// is the viewer — same safe base set, no "you" pronoun needed.
+const _externalVerbs = ['paid', 'sent', 'floated', 'spotted', 'covered'];
+
+/// Returns the base verb for [edge] (e.g. "paid").
+/// Caller appends " you" for incoming edges via [incomingLabel]:
+///   outgoing: "You paid @omooba"
+///   incoming: "@omooba paid you"
+/// Deterministic per edge — same phrase on every rebuild, variety across
+/// different threads/counterparties.
 String feedVerbFor(ActivityEdge edge) {
-  final pool = edge.direction == 'external'
-      ? _externalVerbs
-      : edge.isOutgoing
-          ? _outgoingVerbs
-          : _incomingVerbs;
+  final pool = edge.direction == 'external' ? _externalVerbs : _verbs;
   final index = edge.edgeId.hashCode.abs() % pool.length;
-  return pool[index];
+  final verb = pool[index];
+  // For incoming and external edges the caller reads the raw verb;
+  // the " you" suffix is added in the rendering layer so both the thread
+  // tile and the thread detail screen share one clean helper.
+  return edge.isOutgoing || edge.direction == 'external' ? verb : '$verb you';
 }
 
 /// One grouped thread of [ActivityEdge]s sharing the same counterparty
@@ -40,12 +46,17 @@ class CounterpartyThread {
   final List<ActivityEdge> edges;
   final double runningTotal;
   final ActivityEdge mostRecentEdge;
+  /// Whether [edges.length] is the true total (all pages loaded) or a
+  /// lower-bound count (more pages remain server-side). When false, the
+  /// UI should render the count as "N+" to signal the list is incomplete.
+  final bool countIsExact;
 
   const CounterpartyThread({
     required this.counterparty,
     required this.edges,
     required this.runningTotal,
     required this.mostRecentEdge,
+    this.countIsExact = true,
   });
 }
 
@@ -58,12 +69,20 @@ double _parseAmount(String? amountUsdc) {
 /// total (sum of non-hidden amounts) and most-recent-edge pointer, then
 /// sorts the groups by their most-recent edge's `createdAt` descending.
 ///
+/// [countIsExact] should be `true` when all server pages have been loaded
+/// (i.e. `!ZendAppModel.threadedActivityHasMore`) and `false` when a next
+/// cursor still exists — this is propagated to each [CounterpartyThread]
+/// so the UI can render counts as "N+" when they may be understated.
+///
 /// Property 15 guarantees:
 ///  (a) every input edge appears in exactly one output group
 ///  (b) each group's running total equals the sum of its edges' amounts
 ///  (c) each group's most-recent pointer equals the max-createdAt edge
 ///  (d) groups are ordered by most-recent timestamp, descending
-List<CounterpartyThread> groupByCounterparty(List<ActivityEdge> edges) {
+List<CounterpartyThread> groupByCounterparty(
+  List<ActivityEdge> edges, {
+  bool countIsExact = true,
+}) {
   final byCounterpartyId = <String, List<ActivityEdge>>{};
   final counterpartyById = <String, ActivityCounterparty>{};
 
@@ -96,6 +115,7 @@ List<CounterpartyThread> groupByCounterparty(List<ActivityEdge> edges) {
       edges: groupEdges,
       runningTotal: runningTotal,
       mostRecentEdge: mostRecent,
+      countIsExact: countIsExact,
     );
   }).toList();
 

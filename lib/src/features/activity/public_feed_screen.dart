@@ -16,16 +16,68 @@ import 'activity_grouping.dart';
 /// neither a direct party to these activities, nor able to comment on them
 /// (enforced server-side), and tapping to open a comment sheet would be
 /// confusing since they can only observe. The tile is therefore non-tappable.
-class PublicFeedScreen extends StatelessWidget {
+class PublicFeedScreen extends StatefulWidget {
   const PublicFeedScreen({super.key});
+
+  @override
+  State<PublicFeedScreen> createState() => _PublicFeedScreenState();
+}
+
+class _PublicFeedScreenState extends State<PublicFeedScreen> {
+  bool _filterActive = false;
+  String _filterQuery = '';
+  final TextEditingController _filterController = TextEditingController();
+  final FocusNode _filterFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _filterController.addListener(() {
+      setState(() => _filterQuery = _filterController.text.toLowerCase().trim());
+    });
+  }
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    _filterFocus.dispose();
+    super.dispose();
+  }
+
+  void _toggleFilter() {
+    setState(() {
+      _filterActive = !_filterActive;
+      if (!_filterActive) {
+        _filterController.clear();
+        _filterFocus.unfocus();
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _filterFocus.requestFocus());
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    final publicEdges = model.threadedActivityEdges.where((e) => !e.isDirectParticipant).toList()
+    final allPublic = model.threadedActivityEdges
+        .where((e) => !e.isDirectParticipant)
+        .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // Filter by sender tag, recipient tag, or note — all three because
+    // the viewer is a spectator and may be searching for any party.
+    final publicEdges = _filterQuery.isEmpty
+        ? allPublic
+        : allPublic.where((e) {
+            final sender = (e.senderZendtag ?? '').toLowerCase();
+            final recipient = (e.recipientZendtag ?? '').toLowerCase();
+            final note = (e.note ?? '').toLowerCase();
+            return sender.contains(_filterQuery) ||
+                recipient.contains(_filterQuery) ||
+                note.contains(_filterQuery);
+          }).toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -33,8 +85,9 @@ class PublicFeedScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ── Header ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
               child: Row(
                 children: [
                   IconButton(
@@ -57,17 +110,64 @@ class PublicFeedScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    onPressed: _toggleFilter,
+                    icon: Icon(
+                      _filterActive ? Icons.search_off : Icons.search,
+                      color: _filterActive ? zt.accent : zt.textSecondary,
+                    ),
+                    tooltip: _filterActive ? 'Clear filter' : 'Filter feed',
+                  ),
                 ],
               ),
             ),
+
+            // ── Inline filter bar ──
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: _filterActive
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(
+                        controller: _filterController,
+                        focusNode: _filterFocus,
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Filter by @handle or note…',
+                          hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                          prefixIcon: Icon(Icons.search, size: 18, color: zt.textSecondary),
+                          suffixIcon: _filterQuery.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () => _filterController.clear(),
+                                  child: Icon(Icons.close, size: 18, color: zt.textSecondary),
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: zt.bgSecondary,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.pill),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+
             Divider(color: zt.border, height: 1),
+
+            // ── Feed ──
             Expanded(
               child: publicEdges.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          "Nothing public yet. When one of your mutuals shares an activity with their network, it shows up here.",
+                          _filterQuery.isNotEmpty
+                              ? 'No public activity matching "$_filterQuery"'
+                              : "Nothing public yet. When one of your mutuals shares an activity with their network, it shows up here.",
                           textAlign: TextAlign.center,
                           style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
                         ),
@@ -79,7 +179,7 @@ class PublicFeedScreen extends StatelessWidget {
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final edge = publicEdges[i];
-                        return _PublicPostRow(edge: edge);
+                        return _PublicPostRow(edge: edge, highlightQuery: _filterQuery);
                       },
                     ),
             ),
@@ -91,9 +191,10 @@ class PublicFeedScreen extends StatelessWidget {
 }
 
 class _PublicPostRow extends StatelessWidget {
-  const _PublicPostRow({required this.edge});
+  const _PublicPostRow({required this.edge, this.highlightQuery = ''});
 
   final ActivityEdge edge;
+  final String highlightQuery;
 
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);

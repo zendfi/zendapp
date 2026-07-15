@@ -497,6 +497,11 @@ class ZendAppModel extends ChangeNotifier {
   String? lastThreadedActivityError;
   String? _threadedActivityNextCursor;
 
+  /// True when all pages have been loaded locally — i.e. there is no
+  /// outstanding next cursor. When false, per-counterparty edge counts
+  /// derived from the local list are lower bounds, not exact totals.
+  bool get threadedActivityHasMore => _threadedActivityNextCursor != null;
+
   // Set true the first time fetchThreadedActivity() runs (i.e. once the
   // Activity tab has been opened this session). Used to gate SSE-driven
   // refreshes of the threaded feed so we don't fetch it before it's ever

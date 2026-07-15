@@ -13,7 +13,6 @@ import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
 import 'public_feed_screen.dart';
-import 'search_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 
@@ -56,6 +55,10 @@ class ThreadedActivityScreen extends StatefulWidget {
 
 class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   bool _notificationsMuted = false;
+  bool _filterActive = false;
+  String _filterQuery = '';
+  final TextEditingController _filterController = TextEditingController();
+  final FocusNode _filterFocus = FocusNode();
 
   @override
   void initState() {
@@ -70,6 +73,29 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
       model.fetchThreadedActivity();
     });
     _loadMutePreference();
+    _filterController.addListener(() {
+      setState(() => _filterQuery = _filterController.text.toLowerCase().trim());
+    });
+  }
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    _filterFocus.dispose();
+    super.dispose();
+  }
+
+  void _toggleFilter() {
+    setState(() {
+      _filterActive = !_filterActive;
+      if (!_filterActive) {
+        _filterController.clear();
+        _filterFocus.unfocus();
+      } else {
+        // Give the field a frame to mount before requesting focus.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _filterFocus.requestFocus());
+      }
+    });
   }
 
   Future<void> _loadMutePreference() async {
@@ -155,7 +181,21 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    final threads = groupByCounterparty(model.threadedActivityEdges);
+    final allThreads = groupByCounterparty(
+      model.threadedActivityEdges,
+      countIsExact: !model.threadedActivityHasMore,
+    );
+
+    // Client-side filter: match counterparty label OR most-recent note.
+    // Requests thread is never hidden by the filter — it has no single
+    // counterparty name to match against.
+    final threads = _filterQuery.isEmpty
+        ? allThreads
+        : allThreads.where((t) {
+            final label = t.counterparty.displayLabel.toLowerCase();
+            final note = (t.mostRecentEdge.note ?? '').toLowerCase();
+            return label.contains(_filterQuery) || note.contains(_filterQuery);
+          }).toList();
 
     final pendingIntents = model.pendingEmailIntents
         .where((i) => i.isPending && _intentIsRenderable(i))
@@ -219,10 +259,14 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       icon: Icon(Icons.hub_outlined, color: zt.textSecondary),
                       tooltip: 'Your mutuals',
                     ),
+                  // Search icon toggles the inline filter bar.
                   IconButton(
-                    onPressed: () => pushZendSlide(context, const SearchScreen()),
-                    icon: Icon(Icons.search, color: zt.textSecondary),
-                    tooltip: 'Search',
+                    onPressed: _toggleFilter,
+                    icon: Icon(
+                      _filterActive ? Icons.search_off : Icons.search,
+                      color: _filterActive ? zt.accent : zt.textSecondary,
+                    ),
+                    tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
                   ),
                   IconButton(
                     onPressed: _toggleNotificationMute,
@@ -240,6 +284,40 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
               ),
             ),
 
+            // ── Inline filter bar (shown when search icon is active) ──
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: _filterActive
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: TextField(
+                        controller: _filterController,
+                        focusNode: _filterFocus,
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Filter by person or note…',
+                          hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                          prefixIcon: Icon(Icons.search, size: 18, color: zt.textSecondary),
+                          suffixIcon: _filterQuery.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () => _filterController.clear(),
+                                  child: Icon(Icons.close, size: 18, color: zt.textSecondary),
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: zt.bgSecondary,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.pill),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+
             // ── Content ──
             Expanded(
               child: RefreshIndicator(
@@ -254,7 +332,9 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                                 height: 200,
                                 child: Center(
                                   child: Text(
-                                    'No activity yet',
+                                    _filterQuery.isNotEmpty
+                                        ? 'No matches for "$_filterQuery"'
+                                        : 'No activity yet',
                                     style: TextStyle(
                                       fontFamily: 'DMSans',
                                       fontSize: 14,
@@ -732,7 +812,9 @@ class _UserThreadTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(ZendRadii.pill),
                             ),
                             child: Text(
-                              '${thread.edges.length}x together',
+                              thread.countIsExact
+                                  ? '${thread.edges.length}x together'
+                                  : '${thread.edges.length}+ together',
                               style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -853,7 +935,9 @@ class _PoolThreadTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(ZendRadii.pill),
                           ),
                           child: Text(
-                            '${thread.edges.length} contribution${thread.edges.length == 1 ? '' : 's'}',
+                            thread.countIsExact
+                                ? '${thread.edges.length} contribution${thread.edges.length == 1 ? '' : 's'}'
+                                : '${thread.edges.length}+ contributions',
                             style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
                           ),
                         ),
