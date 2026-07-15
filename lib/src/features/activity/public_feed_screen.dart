@@ -4,6 +4,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'thread_detail_screen.dart';
@@ -31,6 +32,23 @@ class PublicFeedScreen extends StatelessWidget {
     }
     final tx = zendTransactionFromEdge(edge, entry, avatarLabel: edge.counterparty.initialLetter, avatarUrl: edge.counterparty.avatarUrl);
     showTransactionReceipt(context, tx: tx);
+  }
+
+  /// Tapping a public post opens the comment sheet first (consistent with
+  /// Thread_Detail's own tap-through) — neither party here is necessarily
+  /// the viewer, so the headline reads as a third-party observation.
+  void _openActivity(BuildContext context, ActivityEdge edge) {
+    final verb = feedVerbFor(edge);
+    final senderLabel = edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone';
+    final recipientLabel = edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone';
+    showActivityCommentSheet(
+      context,
+      edge: edge,
+      headline: '$senderLabel $verb $recipientLabel',
+      avatarUrl: edge.senderAvatarUrl,
+      avatarInitial: senderLabel.isNotEmpty && senderLabel != 'Someone' ? senderLabel[1].toUpperCase() : '?',
+      onViewReceipt: () => _openReceipt(context, edge),
+    );
   }
 
   @override
@@ -95,7 +113,7 @@ class PublicFeedScreen extends StatelessWidget {
                         final edge = publicEdges[i];
                         return _PublicPostRow(
                           edge: edge,
-                          onTap: () => _openReceipt(context, edge),
+                          onTap: () => _openActivity(context, edge),
                           onOpenThread: () => Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => ThreadDetailScreen(counterparty: edge.counterparty, edges: [edge]),
                           )),

@@ -5,6 +5,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
@@ -66,6 +67,27 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
       avatarUrl: edge.counterparty.avatarUrl,
     );
     showTransactionReceipt(context, tx: tx);
+  }
+
+  /// Tapping an activity opens the comment sheet first — consistent with
+  /// Thread_Detail's tap-through. The headline is whatever _describeEdge
+  /// already produced for this row. For a direct viewer<->target edge, the
+  /// "other side" avatar is always the target person (widget.avatarUrl) —
+  /// there's no separate self-avatar row on this screen, unlike
+  /// Thread_Detail. For an external edge (neither party is the viewer),
+  /// the sender's own avatar is shown instead.
+  void _openActivity(ActivityEdge edge, String headline) {
+    final isExternal = edge.direction == 'external';
+    showActivityCommentSheet(
+      context,
+      edge: edge,
+      headline: headline,
+      avatarUrl: isExternal ? edge.senderAvatarUrl : widget.avatarUrl,
+      avatarInitial: isExternal
+          ? (edge.senderZendtag?.isNotEmpty == true ? edge.senderZendtag![0].toUpperCase() : '?')
+          : (widget.label.startsWith('@') ? widget.label.substring(1, 2).toUpperCase() : (widget.label.isNotEmpty ? widget.label[0].toUpperCase() : '?')),
+      onViewReceipt: () => _openReceipt(edge),
+    );
   }
 
   String _describeEdge(ActivityEdge edge, ZendAppModel model) {
@@ -137,10 +159,11 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                               separatorBuilder: (_, _) => const SizedBox(height: 10),
                               itemBuilder: (context, i) {
                                 final edge = _edges[i];
+                                final headline = _describeEdge(edge, model);
                                 return _PersonActivityRow(
-                                  headline: _describeEdge(edge, model),
+                                  headline: headline,
                                   edge: edge,
-                                  onTap: () => _openReceipt(edge),
+                                  onTap: () => _openActivity(edge, headline),
                                 );
                               },
                             ),
