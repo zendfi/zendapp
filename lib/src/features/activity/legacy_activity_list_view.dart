@@ -267,7 +267,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
               child: RefreshIndicator(
                 onRefresh: () => model.fetchHistory(),
                 child: model.historyLoading && model.recentTransactions.isEmpty
-                    ? const Center(child: ZendLoader(size: 24))
+                    ? Center(child: ZendLoader(size: 24))
                     : items.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -886,13 +886,10 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
                   ),
                 ),
                 child: _cancelling
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: ZendColors.textOnDeep,
-                        ),
+                    ? ZendLoader(
+                        size: 20,
+                        strokeWidth: 2,
+                        color: ZendColors.textOnDeep,
                       )
                     : const Text(
                         'Cancel send',

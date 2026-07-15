@@ -250,7 +250,9 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      height: screenHeight * 0.9,
+      // Full-screen height, matching the receipt sheet — the comment sheet
+      // is a primary destination, not a peek; it needs all the space.
+      height: screenHeight,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
@@ -380,7 +382,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           // ── Comments (replies) ──
           Expanded(
             child: _loading
-                ? const Center(child: ZendLoader(size: 22))
+                ? Center(child: ZendLoader(size: 22))
                 : _comments.isEmpty
                     ? Center(
                         child: Padding(
@@ -409,42 +411,84 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           ),
 
           // ── Composer ──
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomInset),
+          // Elevated card-style bar: user avatar | field | send button.
+          // A top border + slight elevation separates it from the comment list
+          // without an ugly flat band. Keyboard-aware via viewInsets.
+          Container(
+            decoration: BoxDecoration(
+              color: zt.bgPrimary,
+              border: Border(top: BorderSide(color: zt.border)),
+            ),
+            padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + bottomInset),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    maxLength: 280,
-                    maxLines: 4,
-                    minLines: 1,
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, color: zt.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'Add a comment…',
-                      hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, color: zt.textSecondary),
-                      filled: true,
-                      fillColor: zt.bgSecondary,
-                      counterText: '',
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
-                    ),
+                // Current user's avatar
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: ZendAvatar(
+                    radius: 16,
+                    photoUrl: model.currentAvatarUrl,
+                    initials: model.currentZendtag?.isNotEmpty == true
+                        ? model.currentZendtag![0].toUpperCase()
+                        : (model.currentDisplayName?.isNotEmpty == true
+                            ? model.currentDisplayName![0].toUpperCase()
+                            : 'Y'),
                   ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _postingComment ? null : _postComment,
+                const SizedBox(width: 10),
+                // Composed input bubble
+                Expanded(
                   child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
-                    child: _postingComment
-                        ? const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                          )
-                        : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.xl),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _commentController,
+                            maxLength: 280,
+                            maxLines: 4,
+                            minLines: 1,
+                            textInputAction: TextInputAction.newline,
+                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                            decoration: InputDecoration(
+                              hintText: 'Add a comment…',
+                              hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                              border: InputBorder.none,
+                              counterText: '',
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                        // Send button inside the bubble
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4, left: 4),
+                          child: GestureDetector(
+                            onTap: _postingComment ? null : _postComment,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: _postingComment ? zt.accent.withValues(alpha: 0.5) : zt.accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: _postingComment
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

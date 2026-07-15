@@ -876,10 +876,7 @@ class _ProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(
-            valueColor:
-                AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
-          ),
+          ZendLoader(color: ZendColors.accentBright),
           const SizedBox(height: 20),
           Text(
             'Cashing out...',

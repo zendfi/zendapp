@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 
@@ -157,13 +158,10 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
               ),
               alignment: Alignment.center,
               child: _biometricInProgress
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                  ? ZendLoader(
+                      size: 20,
+                      strokeWidth: 2,
+                      color: Colors.white,
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,

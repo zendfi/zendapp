@@ -143,10 +143,8 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: CircularProgressIndicator(
-        valueColor: const AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
-      ),
+    return const Center(
+      child: ZendLoader(color: ZendColors.accentBright),
     );
   }
 }

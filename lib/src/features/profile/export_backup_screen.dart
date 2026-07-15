@@ -108,7 +108,7 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
               onKey: _onPinKey,
             ),
           _ExportBackupStage.warning => _WarningStage(zt: zt, onConfirm: _export),
-          _ExportBackupStage.exporting => const Center(child: CircularProgressIndicator()),
+          _ExportBackupStage.exporting => Center(child: ZendLoader()),
           _ExportBackupStage.done => _DoneStage(zt: zt, onDone: () => Navigator.of(context).pop()),
         },
       ),
@@ -146,8 +146,7 @@ class _PinStage extends StatelessWidget {
                 ? Text(errorMessage!, textAlign: TextAlign.center,
                     style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive))
                 : loading
-                    ? const Center(child: SizedBox(width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 1.5)))
+                    ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                     : null,
           ),
           const Spacer(),

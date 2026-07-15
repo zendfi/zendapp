@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
 import '../../services/sound_service.dart';
@@ -196,20 +197,17 @@ class _GeneratingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: ZendColors.accentPop,
-            ),
+          ZendLoader(
+            size: 32,
+            strokeWidth: 2,
+            color: ZendColors.accentPop,
           ),
-          SizedBox(height: 20),
-          Text(
+          const SizedBox(height: 20),
+          const Text(
             'Getting ready…',
             style: TextStyle(
               fontFamily: 'DMSans',

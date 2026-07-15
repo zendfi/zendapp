@@ -128,7 +128,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                         : TextButton(
                             onPressed: _saving ? null : _save,
                             child: _saving
-                                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: zt.accent))
+                                ? ZendLoader(size: 16, strokeWidth: 2, color: zt.accent)
                                 : Text('Save', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: zt.accent)),
                           ),
                   ),
@@ -136,7 +136,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
               ),
               const SizedBox(height: 8),
               if (_loading)
-                const Expanded(child: Center(child: ZendLoader()))
+                Expanded(child: Center(child: ZendLoader()))
               else
                 Expanded(
                   child: ZendScrollPage(

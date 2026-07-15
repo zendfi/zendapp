@@ -245,7 +245,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
               child: RefreshIndicator(
                 onRefresh: () => model.fetchThreadedActivity(),
                 child: isLoading
-                    ? const Center(child: ZendLoader(size: 24))
+                    ? Center(child: ZendLoader(size: 24))
                     : feedItems.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),

@@ -268,7 +268,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               const Spacer(),
 
               if (_loading)
-                const Center(child: CircularProgressIndicator())
+                Center(child: ZendLoader())
               else
                 PrimaryButton(
                   label: 'Save recovery backup',

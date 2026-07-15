@@ -112,9 +112,7 @@ class PoolListDrawer extends StatelessWidget {
   Widget _buildBody(BuildContext context, ZendAppModel model, ZendTheme zt) {
     if (model.poolsLoading && model.pools.isEmpty) {
       return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
-        ),
+        child: ZendLoader(color: zt.accentBright),
       );
     }
 

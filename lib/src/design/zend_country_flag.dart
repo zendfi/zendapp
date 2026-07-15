@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'zend_primitives.dart';
 import 'zend_tokens.dart';
 
 /// ISO 3166-1 alpha-2 country codes supported by the local PNG assets.
@@ -137,14 +138,11 @@ class ZendPinDotsOrSpinner extends StatelessWidget {
         dotColor: dotColor,
         emptyBorderColor: emptyBorderColor,
       ),
-      secondChild: SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2.0,
-            color: spinnerColor,
-          ),
+      secondChild: Center(
+        child: ZendLoader(
+          size: 44,
+          strokeWidth: 2.0,
+          color: spinnerColor,
         ),
       ),
     );

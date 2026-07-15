@@ -295,13 +295,10 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                       )
                     : _loading
                         ? const Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                color: ZendColors.accentPop,
-                              ),
+                            child: ZendLoader(
+                              size: 16,
+                              strokeWidth: 1.5,
+                              color: ZendColors.accentPop,
                             ),
                           )
                         : null,

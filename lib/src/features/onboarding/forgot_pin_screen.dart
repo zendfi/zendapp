@@ -226,7 +226,7 @@ class _RequestView extends StatelessWidget {
         const Spacer(),
         if (loading)
           const Center(
-              child: CircularProgressIndicator(color: ZendColors.accentPop))
+              child: ZendLoader(color: ZendColors.accentPop))
         else
           PrimaryButton(
             label: 'Send verification code',
@@ -324,7 +324,7 @@ class _OtpView extends StatelessWidget {
           _OtpKeypad(onTap: onKey)
         else
           const Center(
-            child: CircularProgressIndicator(color: ZendColors.accentPop),
+            child: ZendLoader(color: ZendColors.accentPop),
           ),
         const SizedBox(height: 24),
       ],

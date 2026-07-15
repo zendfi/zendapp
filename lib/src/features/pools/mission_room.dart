@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
 import '../../data/local/pool_message_repository.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
 import '../../services/outbox_queue.dart';
@@ -783,10 +784,7 @@ class _MissionRoomState extends State<MissionRoom> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 12, height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
-                  ),
+                  ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
                   const SizedBox(width: 8),
                   Text('Reconnecting...', style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
                 ],
@@ -833,9 +831,7 @@ class _MissionRoomState extends State<MissionRoom> {
         Expanded(
           child: _loading
               ? Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(ZendTheme.of(context).accentBright),
-                  ),
+                  child: ZendLoader(color: ZendTheme.of(context).accentBright),
                 )
               : _messages.isEmpty
                   ? Center(
@@ -861,12 +857,10 @@ class _MissionRoomState extends State<MissionRoom> {
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   child: Center(
-                                    child: SizedBox(
-                                      width: 20, height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: ZendTheme.of(context).accentBright,
-                                      ),
+                                    child: ZendLoader(
+                                      size: 20,
+                                      strokeWidth: 2,
+                                      color: ZendTheme.of(context).accentBright,
                                     ),
                                   ),
                                 );
@@ -1293,7 +1287,7 @@ class _InputBarState extends State<_InputBar> {
                         shape: BoxShape.circle,
                       ),
                       child: widget.sending
-                          ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
+                          ? Padding(padding: const EdgeInsets.all(10), child: ZendLoader(size: 20, strokeWidth: 2, color: Colors.white))
                           : Icon(Icons.send, size: 18, color: overLimit || _charCount == 0 ? ZendTheme.of(context).textSecondary : Colors.white),
                     ),
                   ),

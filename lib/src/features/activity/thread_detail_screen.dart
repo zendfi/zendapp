@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import 'activity_comment_sheet.dart';
@@ -529,7 +530,7 @@ class _FeedPost extends StatelessWidget {
                         onPressed: isMakingPublic ? null : onMakePublic,
                         style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                         child: isMakingPublic
-                            ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: zt.accent))
+                            ? ZendLoader(size: 14, strokeWidth: 2, color: zt.accent)
                             : Text(
                                 'Make public',
                                 style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),

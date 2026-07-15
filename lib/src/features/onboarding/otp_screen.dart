@@ -286,10 +286,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         child: _resending
                             ? Align(
                                 alignment: Alignment.centerLeft,
-                                child: SizedBox(
-                                  height: 16, width: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: zt.textSecondary),
-                                ),
+                                child: ZendLoader(size: 16, strokeWidth: 2, color: zt.textSecondary),
                               )
                             : const Text(
                                 'Resend code',

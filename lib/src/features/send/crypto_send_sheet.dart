@@ -762,7 +762,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ZendLoader(size: 32),
+            ZendLoader(size: 32),
             const SizedBox(height: 20),
             Text(
               'Processing...',

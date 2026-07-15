@@ -4,52 +4,20 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
-import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
-import 'activity_receipt_builder.dart';
-import 'thread_detail_screen.dart';
-import 'transaction_receipt_sheet.dart';
 
 /// Answers "where do users see public posts?" — a dedicated feed of every
 /// Shared_Network Activity_Edge the viewer is authorized to see via a
 /// mutual connection (i.e. `!isDirectParticipant` rows already included in
 /// `ZendAppModel.threadedActivityEdges`, per Req 5.3's Shared_Network_Viewer
-/// grant). Direct-participant edges the viewer made public themselves are
-/// intentionally excluded here — those already show in the viewer's own
-/// threads; this feed is specifically "activity other people chose to
-/// share with their network that I can see because we're mutuals."
+/// grant).
+///
+/// Public feed posts are deliberately READ-ONLY for the viewer: they are
+/// neither a direct party to these activities, nor able to comment on them
+/// (enforced server-side), and tapping to open a comment sheet would be
+/// confusing since they can only observe. The tile is therefore non-tappable.
 class PublicFeedScreen extends StatelessWidget {
   const PublicFeedScreen({super.key});
-
-  void _openReceipt(BuildContext context, ActivityEdge edge) {
-    final model = ZendScope.of(context);
-    final entry = entryFromEdgeForViewer(edge, model);
-    if (entry == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'DMSans'))),
-      );
-      return;
-    }
-    final tx = zendTransactionFromEdge(edge, entry, avatarLabel: edge.counterparty.initialLetter, avatarUrl: edge.counterparty.avatarUrl);
-    showTransactionReceipt(context, tx: tx);
-  }
-
-  /// Tapping a public post opens the comment sheet first (consistent with
-  /// Thread_Detail's own tap-through) — neither party here is necessarily
-  /// the viewer, so the headline reads as a third-party observation.
-  void _openActivity(BuildContext context, ActivityEdge edge) {
-    final verb = feedVerbFor(edge);
-    final senderLabel = edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone';
-    final recipientLabel = edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone';
-    showActivityCommentSheet(
-      context,
-      edge: edge,
-      headline: '$senderLabel $verb $recipientLabel',
-      avatarUrl: edge.senderAvatarUrl,
-      avatarInitial: senderLabel.isNotEmpty && senderLabel != 'Someone' ? senderLabel[1].toUpperCase() : '?',
-      onViewReceipt: () => _openReceipt(context, edge),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,13 +79,7 @@ class PublicFeedScreen extends StatelessWidget {
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final edge = publicEdges[i];
-                        return _PublicPostRow(
-                          edge: edge,
-                          onTap: () => _openActivity(context, edge),
-                          onOpenThread: () => Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => ThreadDetailScreen(counterparty: edge.counterparty, edges: [edge]),
-                          )),
-                        );
+                        return _PublicPostRow(edge: edge);
                       },
                     ),
             ),
@@ -129,71 +91,81 @@ class PublicFeedScreen extends StatelessWidget {
 }
 
 class _PublicPostRow extends StatelessWidget {
-  const _PublicPostRow({required this.edge, required this.onTap, required this.onOpenThread});
+  const _PublicPostRow({required this.edge});
 
   final ActivityEdge edge;
-  final VoidCallback onTap;
-  final VoidCallback onOpenThread;
+
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${dt.month}/${dt.day}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+
+    // Always third-person: "@sender paid @recipient" — feedVerbFor returns
+    // a third-person verb for direction=='external' edges (no "you" pronoun).
     final verb = feedVerbFor(edge);
+    final senderTag = edge.senderZendtag;
+    final recipientTag = edge.recipientZendtag;
+    final senderLabel = senderTag != null && senderTag.isNotEmpty ? '@$senderTag' : 'Someone';
+    final recipientLabel = recipientTag != null && recipientTag.isNotEmpty ? '@$recipientTag' : 'someone';
+    final senderInitial = senderTag?.isNotEmpty == true ? senderTag![0].toUpperCase() : '?';
 
-    // Neither party is necessarily the viewer here — describe as a
-    // third-party observation: "@sender paid @recipient".
-    final senderLabel = edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone';
-    final recipientLabel = edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone';
-
-    return Material(
-      color: zt.bgSecondary,
-      borderRadius: BorderRadius.circular(ZendRadii.xl),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onOpenThread,
+    return Container(
+      decoration: BoxDecoration(
+        color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xl),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ZendAvatar(radius: 18, photoUrl: edge.senderAvatarUrl, initials: senderLabel.isNotEmpty ? senderLabel[1].toUpperCase() : '?'),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                        children: [
-                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                          TextSpan(text: ' $verb '),
-                          TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
-                    if (edge.note?.isNotEmpty == true) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        edge.note!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
-                      ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ZendAvatar(radius: 18, photoUrl: edge.senderAvatarUrl, initials: senderInitial),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                    children: [
+                      TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      TextSpan(text: ' $verb '),
+                      TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                amountLabel,
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  _relativeTime(edge.createdAt),
+                  style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                ),
+                if (edge.note?.isNotEmpty == true) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    edge.note!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          Text(
+            amountLabel,
+            style: TextStyle(fontFamily: 'DMMono', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
+          ),
+        ],
       ),
     );
   }

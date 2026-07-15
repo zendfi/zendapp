@@ -339,7 +339,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
     final zt = ZendTheme.of(context);
     switch (_stage) {
       case PairingApprovalStage.loading:
-        return const Center(key: ValueKey('loading'), child: ZendLoader(size: 32));
+        return Center(key: const ValueKey('loading'), child: ZendLoader(size: 32));
 
       case PairingApprovalStage.review:
         return Padding(
@@ -402,7 +402,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
         );
 
       case PairingApprovalStage.signing:
-        return const Center(key: ValueKey('signing'), child: ZendLoader(size: 32));
+        return Center(key: const ValueKey('signing'), child: ZendLoader(size: 32));
 
       case PairingApprovalStage.success:
         return Center(

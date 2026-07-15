@@ -235,7 +235,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
 
               if (_loading)
                 const Center(
-                  child: CircularProgressIndicator(
+                  child: ZendLoader(
                     color: ZendColors.accentPop,
                   ),
                 )

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
 
@@ -326,10 +327,7 @@ class _VoiceNoteRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (message.localStatus == LocalStatus.sending)
-                        SizedBox(
-                          width: 24, height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: zt.accent),
-                        )
+                        ZendLoader(size: 24, strokeWidth: 2, color: zt.accent)
                       else
                         Icon(
                           isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,

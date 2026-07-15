@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
@@ -519,13 +520,10 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                  child: ZendLoader(
+                    size: 20,
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -702,13 +700,10 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       ),
                     ),
                     if (isLoading)
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: ZendColors.accentBright,
-                        ),
+                      ZendLoader(
+                        size: 20,
+                        strokeWidth: 2,
+                        color: ZendColors.accentBright,
                       )
                     else
                       Switch.adaptive(

@@ -169,7 +169,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
             // ── Content ──
             Expanded(
               child: _loading
-                  ? const Center(child: ZendLoader())
+                  ? Center(child: ZendLoader())
                   : _error != null
                       ? Center(
                           child: Column(

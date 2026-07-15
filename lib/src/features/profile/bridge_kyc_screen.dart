@@ -116,7 +116,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
               ),
               const SizedBox(height: 18),
               if (_loading)
-                const Expanded(child: Center(child: ZendLoader()))
+                Expanded(child: Center(child: ZendLoader()))
               else
                 Expanded(
                   child: ZendScrollPage(

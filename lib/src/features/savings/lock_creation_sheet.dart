@@ -185,9 +185,7 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
   Widget _buildStage() {
     if (_processing) {
       return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
-        ),
+        child: ZendLoader(color: ZendColors.accentBright),
       );
     }
 

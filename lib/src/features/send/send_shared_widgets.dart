@@ -252,7 +252,7 @@ class SendProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ZendLoader(size: 32),
+          ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
             'Sending $amountFormatted to @$recipientZendtag...',

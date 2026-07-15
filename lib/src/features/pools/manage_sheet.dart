@@ -231,14 +231,10 @@ class _ManageSheetState extends State<ManageSheet> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white),
-                            ),
+                        ? ZendLoader(
+                            size: 18,
+                            strokeWidth: 2,
+                            color: Colors.white,
                           )
                         : const Text(
                             'Cancel pool',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/biometric_service.dart';
@@ -166,7 +167,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             const SizedBox(height: 8),
             if (_loading)
               const Expanded(
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ZendLoader()),
               )
             else
               Expanded(

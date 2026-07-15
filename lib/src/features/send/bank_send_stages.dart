@@ -600,7 +600,7 @@ class _ResolvingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ZendLoader(size: 32),
+          ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
             message,
@@ -1034,7 +1034,7 @@ class _ProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ZendLoader(size: 32),
+          ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
             'Sending to your bank...',
@@ -1458,7 +1458,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
             ),
           ),
           if (_saving)
-            const Center(child: ZendLoader(size: 28))
+            Center(child: ZendLoader(size: 28))
           else
             ElevatedButton(
               onPressed: _canSave ? _save : null,

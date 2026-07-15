@@ -575,14 +575,7 @@ class _SavingsCard extends StatelessWidget {
             ),
             const Spacer(),
             model.savingsLoading
-                ? SizedBox(
-                    height: 14,
-                    width: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      color: zt.textSecondary,
-                    ),
-                  )
+                ? ZendLoader(size: 14, strokeWidth: 1.5, color: zt.textSecondary)
                 : Text(
                     balanceStr,
                     style: TextStyle(

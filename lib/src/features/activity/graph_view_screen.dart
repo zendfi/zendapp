@@ -148,7 +148,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
             ),
             Expanded(
               child: (zendModel.threadedActivityLoading && _model == null)
-                  ? const Center(child: ZendLoader(size: 24))
+                  ? Center(child: ZendLoader(size: 24))
                   : (_model == null || _model!.nodes.length <= 1)
                       ? Center(
                           child: Text(

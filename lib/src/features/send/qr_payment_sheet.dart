@@ -575,7 +575,7 @@ class _QrLoadingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ZendLoader(size: 32),
+          ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
             'Loading payment request...',
@@ -700,7 +700,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (balanceUnknown)
-                    const ZendLoader(size: 12)
+                    ZendLoader(size: 12)
                   else
                     Text(
                       '\$${balance.toStringAsFixed(2)}',

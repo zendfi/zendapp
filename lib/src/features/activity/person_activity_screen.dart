@@ -138,7 +138,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
             Divider(color: zt.border, height: 1),
             Expanded(
               child: _loading
-                  ? const Center(child: ZendLoader(size: 24))
+                  ? Center(child: ZendLoader(size: 24))
                   : _error != null
                       ? Center(
                           child: Text(

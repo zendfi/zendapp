@@ -61,7 +61,7 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
 
   Widget _buildChainList() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: ZendLoader());
     }
 
     if (_error != null) {

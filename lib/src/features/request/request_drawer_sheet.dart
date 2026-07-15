@@ -305,7 +305,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const ZendLoader(size: 32),
+                ZendLoader(size: 32),
                 const SizedBox(height: 20),
                 Text(
                   'Creating request…',
@@ -479,14 +479,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                   suffixIcon: _resolvingZendtag
                       ? Padding(
                           padding: const EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: zt.textSecondary,
-                            ),
-                          ),
+                          child: ZendLoader(size: 16, strokeWidth: 2, color: zt.textSecondary),
                         )
                       : _resolvedZendtag != null
                           ? Icon(Icons.check_circle, size: 20, color: zt.positive)

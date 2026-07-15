@@ -191,9 +191,7 @@ class _GoalCreationSheetState extends State<GoalCreationSheet> {
   Widget _buildStage() {
     if (_processing) {
       return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(ZendColors.accentBright),
-        ),
+        child: ZendLoader(color: ZendColors.accentBright),
       );
     }
 

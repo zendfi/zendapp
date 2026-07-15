@@ -15,13 +15,20 @@ import '../../models/activity_edge.dart';
 
 const _outgoingVerbs = ['paid', 'sent', 'zapped', 'dropped', 'shipped'];
 const _incomingVerbs = ['paid you', 'sent you', 'zapped you', 'came through for you'];
+// Third-person verbs for external (public feed) edges where neither party
+// is the viewer — no "you" pronoun, both sides are named @handles.
+const _externalVerbs = ['paid', 'sent', 'zapped', 'dropped'];
 
 /// Deterministically picks a verb variation for [edge] so the same edge
 /// always renders the same phrase across rebuilds (no flicker), while
 /// different edges/counterparties get visual variety instead of every
 /// thread reading identically as "paid"/"paid you".
 String feedVerbFor(ActivityEdge edge) {
-  final pool = edge.isOutgoing ? _outgoingVerbs : _incomingVerbs;
+  final pool = edge.direction == 'external'
+      ? _externalVerbs
+      : edge.isOutgoing
+          ? _outgoingVerbs
+          : _incomingVerbs;
   final index = edge.edgeId.hashCode.abs() % pool.length;
   return pool[index];
 }

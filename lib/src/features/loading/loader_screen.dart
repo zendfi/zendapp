@@ -46,7 +46,7 @@ class LoaderScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const ZendLoader(),
+                ZendLoader(),
               ],
             ),
           ),

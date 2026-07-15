@@ -544,9 +544,7 @@ class _ProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(zt.accentBright),
-          ),
+          ZendLoader(color: zt.accentBright),
           const SizedBox(height: 20),
           Text(
             'Contributing \$${amount.toStringAsFixed(2)} to ${pool.name}...',

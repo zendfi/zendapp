@@ -909,14 +909,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                           maxHeight: 24,
                         ),
                         suffixIcon: _resolving
-                            ? SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 1.5,
-                                  color: zt.textSecondary,
-                                ),
-                              )
+                            ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
                             : _resolvedDisplayName != null
                                 ? Icon(
                                     Icons.check_circle_outline,
@@ -1529,14 +1522,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 ),
                 const Spacer(),
                 if (svc.loading)
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      color: zt.textSecondary,
-                    ),
-                  ),
+                  ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
               ],
             ),
             const SizedBox(height: 12),

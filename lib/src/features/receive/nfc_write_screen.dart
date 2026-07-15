@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
 /// Full-screen NFC tag writer.
@@ -171,13 +172,10 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
     switch (_state) {
       case _WriteState.checking:
         return const Center(
-          child: SizedBox(
-            width: 64,
-            height: 64,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: ZendColors.accentPop,
-            ),
+          child: ZendLoader(
+            size: 64,
+            strokeWidth: 2,
+            color: ZendColors.accentPop,
           ),
         );
 
@@ -207,13 +205,10 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
 
       case _WriteState.writing:
         return const Center(
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: ZendColors.accentPop,
-            ),
+          child: ZendLoader(
+            size: 80,
+            strokeWidth: 3,
+            color: ZendColors.accentPop,
           ),
         );
 

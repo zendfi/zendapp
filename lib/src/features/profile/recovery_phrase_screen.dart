@@ -149,8 +149,7 @@ class _PinStage extends StatelessWidget {
               ? Text(errorMessage!, textAlign: TextAlign.center,
                   style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive))
               : loading
-                  ? const Center(child: SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 1.5)))
+                  ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                   : null),
         const Spacer(),
         Opacity(opacity: loading ? 0.3 : 1.0,
@@ -224,8 +223,7 @@ class _ConfirmStage extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
             ),
             child: loading
-                ? const SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
                 : const Text('Show recovery phrase',
                     style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
           ),

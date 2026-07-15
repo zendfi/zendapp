@@ -7,6 +7,7 @@ import 'package:gal/gal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
 /// The branded Zend! QR card — a printable, shareable payment card.
@@ -310,14 +311,10 @@ class _CardButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (loading)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.5,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Color(0x99E8F4EC)),
-                ),
+              ZendLoader(
+                size: 16,
+                strokeWidth: 1.5,
+                color: Color(0x99E8F4EC),
               )
             else
               Icon(icon, size: 16, color: const Color(0x99E8F4EC)),
