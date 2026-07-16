@@ -77,9 +77,13 @@ class ZendTheme {
     textSecondary: Color(0xFF8A8A8A),
     border: Color(0xFF2A2A2A),
     accent: Color(0xFF52B788),
-    accentBright: Color(0xFF6FCF97),
-    accentPop: Color(0xFF95D5B2),
-    positive: Color(0xFF52B788),
+    // accentBright in dark is deliberately quieter than light — the #52B788
+    // / #6FCF97 values were too vivid against the dark background, clashing
+    // with the muted dark palette. A slightly desaturated mid-green reads as
+    // "branded" without the visual shout.
+    accentBright: Color(0xFF4A9E72),
+    accentPop: Color(0xFF7BC4A0),
+    positive: Color(0xFF4A9E72),
     destructive: Color(0xFFE05C3A),
     isDark: true,
   );

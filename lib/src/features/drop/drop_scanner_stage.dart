@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../design/zend_tokens.dart';
 
@@ -12,28 +11,30 @@ class DropScannerStage extends StatefulWidget {
 
 class _DropScannerStageState extends State<DropScannerStage>
     with TickerProviderStateMixin {
-  // Primary wave pulse — drives the expanding grid ripple
-  late final AnimationController _waveCtrl;
-  // Secondary stagger — offsets each cell's pulse for a wave-like feel
-  late final AnimationController _staggerCtrl;
+  // Three staggered wave controllers — each offset by 1/3 cycle so rings
+  // feel like continuous water ripples, not synchronized pulses.
+  late final AnimationController _wave1;
+  late final AnimationController _wave2;
+  late final AnimationController _wave3;
 
   @override
   void initState() {
     super.initState();
-    _waveCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
-    _staggerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
+    const duration = Duration(milliseconds: 2800);
+    _wave1 = AnimationController(vsync: this, duration: duration)..repeat();
+    _wave2 = AnimationController(vsync: this, duration: duration)
+      ..forward(from: 0.33)
+      ..addStatusListener((s) { if (s == AnimationStatus.completed) _wave2.repeat(); });
+    _wave3 = AnimationController(vsync: this, duration: duration)
+      ..forward(from: 0.66)
+      ..addStatusListener((s) { if (s == AnimationStatus.completed) _wave3.repeat(); });
   }
 
   @override
   void dispose() {
-    _waveCtrl.dispose();
-    _staggerCtrl.dispose();
+    _wave1.dispose();
+    _wave2.dispose();
+    _wave3.dispose();
     super.dispose();
   }
 
@@ -48,37 +49,42 @@ class _DropScannerStageState extends State<DropScannerStage>
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 24),
-        // Amount
+        const Spacer(flex: 2),
+        // Amount — large, centred
         Text(
           _amountFormatted,
           style: TextStyle(
             fontFamily: 'InstrumentSerif',
-            fontSize: 48,
+            fontSize: 56,
             fontStyle: FontStyle.italic,
             color: zt.textPrimary,
           ),
         ),
-        const SizedBox(height: 32),
-        // Grid pulse animation
-        SizedBox(
-          width: 140,
-          height: 140,
-          child: AnimatedBuilder(
-            animation: _waveCtrl,
-            builder: (context, _) {
-              return CustomPaint(
-                painter: _GridPulsePainter(
-                  progress: _waveCtrl.value,
-                  accentColor: zt.accentBright,
-                ),
-              );
-            },
+        const SizedBox(height: 52),
+        // Fluid ripple canvas — fills available width, fixed aspect
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_wave1, _wave2, _wave3]),
+              builder: (context, _) {
+                return CustomPaint(
+                  painter: _FluidRipplePainter(
+                    wave1: _wave1.value,
+                    wave2: _wave2.value,
+                    wave3: _wave3.value,
+                    accentColor: zt.accent,
+                    accentBrightColor: zt.accentBright,
+                    isDark: zt.isDark,
+                  ),
+                );
+              },
+            ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 36),
         Text(
           'Scanning for nearby Zend users\u2026',
           style: TextStyle(
@@ -87,75 +93,95 @@ class _DropScannerStageState extends State<DropScannerStage>
             color: zt.textSecondary,
           ),
         ),
-        const SizedBox(height: 40),
+        const Spacer(flex: 3),
       ],
     );
   }
 }
 
-/// Paints a 5×5 grid of dots that pulse outward from the center in a
-/// concentric-ring wave pattern — like a sonar ping on a grid.
-class _GridPulsePainter extends CustomPainter {
-  _GridPulsePainter({required this.progress, required this.accentColor});
+/// Paints three concentric expanding rings (water ripple / sonar style) and
+/// a small solid centre dot. Each ring uses an eased opacity curve so it
+/// fades in as it expands and fades out before disappearing — giving a
+/// continuous, fluid feel rather than discrete concentric flashes.
+///
+/// The three waves are staggered in phase so there's always a ring in motion.
+class _FluidRipplePainter extends CustomPainter {
+  _FluidRipplePainter({
+    required this.wave1,
+    required this.wave2,
+    required this.wave3,
+    required this.accentColor,
+    required this.accentBrightColor,
+    required this.isDark,
+  });
 
-  final double progress;
+  final double wave1;
+  final double wave2;
+  final double wave3;
   final Color accentColor;
-
-  static const int _cols = 5;
-  static const int _rows = 5;
+  final Color accentBrightColor;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cellW = size.width / _cols;
-    final cellH = size.height / _rows;
-    final centerX = (_cols - 1) / 2.0;
-    final centerY = (_rows - 1) / 2.0;
-    // Max distance from center to corner (Manhattan-ish, clamped for smooth spread)
-    const maxDist = 2.83; // sqrt(2^2 + 2^2) = corner distance
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final maxRadius = size.shortestSide / 2;
 
-    final paint = Paint()..style = PaintingStyle.fill;
+    // Draw three expanding rings
+    _drawRing(canvas, cx, cy, maxRadius, wave1);
+    _drawRing(canvas, cx, cy, maxRadius, wave2);
+    _drawRing(canvas, cx, cy, maxRadius, wave3);
 
-    for (int row = 0; row < _rows; row++) {
-      for (int col = 0; col < _cols; col++) {
-        final dx = (col - centerX).abs();
-        final dy = (row - centerY).abs();
-        final dist = sqrt(dx * dx + dy * dy);
+    // Centre dot
+    final centrePaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.9)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(cx, cy), 5, centrePaint);
 
-        // Phase: wave front passes through each cell based on its distance
-        // from center. Cells closer to center lead; corners trail.
-        final phase = (dist / maxDist).clamp(0.0, 1.0);
+    // Inner static ring
+    final staticRingPaint = Paint()
+      ..color = accentColor.withValues(alpha: isDark ? 0.15 : 0.10)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawCircle(Offset(cx, cy), maxRadius * 0.18, staticRingPaint);
+  }
 
-        // The wave front position in [0,1] — wraps with progress
-        // Each cell pulses when the wave front reaches it.
-        // Use a smooth sine-based brightness at that phase.
-        const waveWidth = 0.35; // how wide the wave front is
-        double t = (progress - phase * (1.0 - waveWidth)).remainder(1.0);
-        if (t < 0) t += 1.0;
+  void _drawRing(Canvas canvas, double cx, double cy, double maxRadius, double t) {
+    // Use a smooth ease-in-out curve so the ring accelerates gently from
+    // centre and decelerates as it reaches the edge — more water-like.
+    final easedT = _easeInOutCubic(t);
+    final radius = easedT * maxRadius;
 
-        // Smooth pulse curve: bright flash then fade
-        double brightness;
-        if (t < waveWidth) {
-          final localT = t / waveWidth;
-          // Attack fast, decay slowly
-          brightness = localT < 0.2
-              ? localT / 0.2
-              : 1.0 - ((localT - 0.2) / 0.8) * 0.85;
-        } else {
-          brightness = 0.15; // dim baseline
-        }
-
-        final opacity = (brightness * 0.9).clamp(0.0, 1.0);
-        final radius = (2.5 + brightness * 2.5).clamp(1.0, 5.0);
-
-        final cx = (col + 0.5) * cellW;
-        final cy = (row + 0.5) * cellH;
-
-        paint.color = accentColor.withValues(alpha: opacity);
-        canvas.drawCircle(Offset(cx, cy), radius, paint);
-      }
+    // Opacity: fade in quickly (0→0.3 of progress), hold, then fade out
+    double opacity;
+    if (t < 0.15) {
+      opacity = t / 0.15;
+    } else if (t < 0.65) {
+      opacity = 1.0;
+    } else {
+      opacity = 1.0 - ((t - 0.65) / 0.35);
     }
+    opacity = (opacity * (isDark ? 0.55 : 0.40)).clamp(0.0, 1.0);
+
+    // Stroke width tapers from thick at centre to thin at edge
+    final strokeWidth = (2.5 * (1.0 - easedT * 0.7)).clamp(0.5, 2.5);
+
+    final ringPaint = Paint()
+      ..color = accentColor.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    canvas.drawCircle(Offset(cx, cy), radius.clamp(1.0, maxRadius), ringPaint);
+  }
+
+  double _easeInOutCubic(double t) {
+    if (t < 0.5) return 4 * t * t * t;
+    final f = 2 * t - 2;
+    return 0.5 * f * f * f + 1;
   }
 
   @override
-  bool shouldRepaint(_GridPulsePainter old) => old.progress != progress;
+  bool shouldRepaint(_FluidRipplePainter old) =>
+      old.wave1 != wave1 || old.wave2 != wave2 || old.wave3 != wave3;
 }

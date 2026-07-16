@@ -29,7 +29,7 @@ class MissionRoomMessage extends StatelessWidget {
 
   final PoolMessageLocal message;
   final String? currentUserId;
-  final VoidCallback onLongPress;
+  final void Function(BuildContext ctx) onLongPress;
   final ValueChanged<String> onReactionTap;
   final bool isContinuation;
   /// Number of pool participants. ≤ 3 enables iMessage-style bubble layout.
@@ -45,22 +45,22 @@ class MissionRoomMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPress: onLongPress,
+      onLongPress: () => onLongPress(context),
       child: Padding(
         padding: EdgeInsets.only(top: isContinuation ? 2 : 6, bottom: 2),
         child: switch (message.messageTypeEnum) {
           PoolMessageType.contributionEvent => _ContributionEventRow(
-              message: message, onLongPress: onLongPress,
+              message: message, onLongPress: () => onLongPress(context),
               onReactionTap: onReactionTap, currentUserId: currentUserId,
               onRetry: onRetry, readers: readers),
           PoolMessageType.voiceNote => _VoiceNoteRow(
-              message: message, onLongPress: onLongPress,
+              message: message, onLongPress: () => onLongPress(context),
               onReactionTap: onReactionTap, currentUserId: currentUserId,
               isContinuation: isContinuation, isCompact: _isCompact,
               onRetry: onRetry, player: player, onPlayTap: onPlayTap,
               readers: readers),
           _ => _TextMessageRow(
-              message: message, onLongPress: onLongPress,
+              message: message, onLongPress: () => onLongPress(context),
               onReactionTap: onReactionTap, currentUserId: currentUserId,
               isContinuation: isContinuation, isCompact: _isCompact,
               onRetry: onRetry, readers: readers),

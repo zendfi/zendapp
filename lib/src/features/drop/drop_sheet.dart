@@ -369,12 +369,11 @@ class _DropSheetState extends State<DropSheet>
   double get _sheetHeightFraction {
     switch (_stage) {
       case DropStage.scanning:
-        return 0.55;
+        return 1.0;  // Full screen — the sonar grid needs room to breathe
       case DropStage.preview:
       case DropStage.confirmed:
         return 0.60;
       case DropStage.disambiguate:
-        // Taller to show the candidate list comfortably
         return (_candidates.length > 3) ? 0.80 : 0.70;
       case DropStage.countdown:
         return 0.60;

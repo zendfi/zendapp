@@ -266,7 +266,7 @@ class ZendBottomBar extends StatelessWidget {
                     onDeepBg: onSendTab,
                   ),
                   _BottomNavIcon(
-                    icon: SolarIconsBold.clockCircle,
+                    icon: SolarIconsBold.transferHorizontal,
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
                     onDeepBg: onSendTab,

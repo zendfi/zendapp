@@ -594,16 +594,33 @@ class _MissionRoomState extends State<MissionRoom> {
 
   // ── Reactions ────────────────────────────────────────────────────────────────
 
-  void _showReactionPicker(PoolMessageLocal message) {
-    // Show an inline floating 6-emoji quick-react bar in an Overlay,
-    // anchored above the long-pressed message. No sheet navigation needed —
-    // tap an emoji, it dismisses and applies. Tap outside, it dismisses.
+  void _showReactionPicker(PoolMessageLocal message, BuildContext messageContext) {
+    // Position the picker inline near the long-pressed message — no sheet,
+    // no bottom-of-screen popup. Anchors above the message (or below when
+    // the message is near the top of the screen).
+    final renderBox = messageContext.findRenderObject() as RenderBox?;
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
+
+    // Compute vertical anchor for the picker.
+    double? topPosition;
+    if (renderBox != null && renderBox.hasSize) {
+      final globalOffset = renderBox.localToGlobal(Offset.zero);
+      final msgHeight = renderBox.size.height;
+      final screenHeight = MediaQuery.of(context).size.height;
+      const pickerHeight = 56.0;
+      // Prefer above; fall back to below if not enough space.
+      if (globalOffset.dy - pickerHeight - 12 > 60) {
+        topPosition = globalOffset.dy - pickerHeight - 12;
+      } else {
+        topPosition = (globalOffset.dy + msgHeight + 12).clamp(60.0, screenHeight - pickerHeight - 60);
+      }
+    }
 
     entry = OverlayEntry(
       builder: (ctx) => _QuickReactOverlay(
         emojis: _curatedEmojis.take(6).toList(),
+        anchorTop: topPosition,
         onSelect: (emoji) {
           entry.remove();
           _toggleReaction(message, emoji);
@@ -886,7 +903,7 @@ class _MissionRoomState extends State<MissionRoom> {
                                   currentUserId: currentUserId,
                                   isContinuation: msgItem.isContinuation,
                                   participantCount: _pool.participants.length,
-                                  onLongPress: () => _showReactionPicker(msg),
+                                  onLongPress: (ctx) => _showReactionPicker(msg, ctx),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
                                   // Only show read receipt avatars on my own messages.
                                   readers: msg.senderUserId == currentUserId
@@ -1225,101 +1242,134 @@ class _InputBarState extends State<_InputBar> {
   Widget build(BuildContext context) {
     final remaining = 280 - _charCount;
     final overLimit = remaining < 0;
-    // Keyboard inset — pushes the bar above the keyboard, WhatsApp-style
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final zt = ZendTheme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(ZendSpacing.md, ZendSpacing.xs, ZendSpacing.md, ZendSpacing.sm),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: ZendTheme.of(context).border)),
-        ),
-        child: widget.isRecording
-            ? Row(
-                children: [
-                  const Icon(SolarIconsBold.recordCircle, color: ZendColors.destructive, size: 14),
-                  const SizedBox(width: ZendSpacing.xs),
-                  Text(
-                    'Recording ${widget.recordingSeconds}s / 30s',
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: ZendTheme.of(context).textPrimary),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => unawaited(widget.onMicStop()),
-                    child: const Text('Stop', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
-                  ),
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: widget.controller,
-                      maxLines: 4,
-                      minLines: 1,
-                      maxLength: 280,
-                      textInputAction: TextInputAction.newline,
-                      buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
-                        if (!isFocused || !overLimit) return null;
-                        return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Message the group...',
-                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
-                        filled: true,
-                        fillColor: ZendTheme.of(context).bgSecondary,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: ZendSpacing.xs),
-                  GestureDetector(
-                    onLongPressStart: (_) => unawaited(widget.onMicStart()),
-                    onLongPressEnd: (_) => unawaited(widget.onMicStop()),
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(color: ZendTheme.of(context).bgSecondary, shape: BoxShape.circle),
-                      child: Icon(SolarIconsBold.microphone, size: 20, color: ZendTheme.of(context).textSecondary),
-                    ),
-                  ),
-                  const SizedBox(width: ZendSpacing.xs),
-                  GestureDetector(
-                    onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: overLimit || _charCount == 0 ? ZendTheme.of(context).bgSecondary : ZendTheme.of(context).accent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: widget.sending
-                          ? Padding(padding: const EdgeInsets.all(10), child: ZendLoader(size: 20, strokeWidth: 2, color: Colors.white))
-                          : Icon(SolarIconsBold.sendSquare, size: 18, color: overLimit || _charCount == 0 ? ZendTheme.of(context).textSecondary : Colors.white),
-                    ),
-                  ),
-                ],
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        border: Border(top: BorderSide(color: zt.border)),
       ),
+      padding: EdgeInsets.fromLTRB(ZendSpacing.md, 10, ZendSpacing.md, 12 + bottomInset),
+      child: widget.isRecording
+          ? Row(
+              children: [
+                const Icon(SolarIconsBold.recordCircle, color: ZendColors.destructive, size: 14),
+                const SizedBox(width: ZendSpacing.xs),
+                Text('Recording ${widget.recordingSeconds}s / 30s',
+                    style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textPrimary)),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => unawaited(widget.onMicStop()),
+                  child: const Text('Stop', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
+                ),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Mic button — kept outside bubble since it's a secondary action
+                GestureDetector(
+                  onLongPressStart: (_) => unawaited(widget.onMicStart()),
+                  onLongPressEnd: (_) => unawaited(widget.onMicStop()),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    margin: const EdgeInsets.only(bottom: 2),
+                    decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+                    child: Icon(SolarIconsBold.microphone, size: 18, color: zt.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: ZendSpacing.xs),
+                // Message input bubble with embedded send button
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.xl),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: widget.controller,
+                            maxLines: 4,
+                            minLines: 1,
+                            maxLength: 280,
+                            textInputAction: TextInputAction.newline,
+                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                            buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
+                              if (!isFocused || !overLimit) return null;
+                              return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Message the group...',
+                              hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                              border: InputBorder.none,
+                              counterText: '',
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                        // Send button embedded inside bubble
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4, left: 4),
+                          child: GestureDetector(
+                            onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: overLimit || _charCount == 0
+                                    ? zt.border
+                                    : zt.accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: widget.sending
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                                    )
+                                  : Icon(
+                                      SolarIconsBold.plain,
+                                      size: 16,
+                                      color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
 
 // ── Quick-react overlay ───────────────────────────────────────────────────────
 
-/// A floating 6-emoji row that appears at the bottom of the screen on
-/// long-press — no sheet navigation, just tap-and-done.
+/// A floating 6-emoji row that appears anchored near the long-pressed message
+/// rather than at the bottom of the screen — no sheet navigation, just tap-
+/// and-done. Falls back to center-screen if no anchor position is provided.
 class _QuickReactOverlay extends StatefulWidget {
   const _QuickReactOverlay({
     required this.emojis,
     required this.onSelect,
     required this.onDismiss,
+    this.anchorTop,
   });
 
   final List<String> emojis;
   final ValueChanged<String> onSelect;
   final VoidCallback onDismiss;
+  /// Absolute Y position (from screen top) for the picker row.
+  /// Null → centers vertically.
+  final double? anchorTop;
 
   @override
   State<_QuickReactOverlay> createState() => _QuickReactOverlayState();
@@ -1347,27 +1397,37 @@ class _QuickReactOverlayState extends State<_QuickReactOverlay>
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final bottom = MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 80;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final topPos = widget.anchorTop ?? (screenHeight / 2 - 28);
 
     return Stack(
       children: [
         // Tap-outside-to-dismiss layer
         Positioned.fill(
-          child: GestureDetector(onTap: widget.onDismiss, child: const ColoredBox(color: Colors.transparent)),
+          child: GestureDetector(
+            onTap: widget.onDismiss,
+            child: const ColoredBox(color: Colors.transparent),
+          ),
         ),
         Positioned(
-          left: 0,
-          right: 0,
-          bottom: bottom,
+          left: 16,
+          right: 16,
+          top: topPos,
           child: Center(
             child: ScaleTransition(
               scale: _scale,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: zt.bgSecondary,
-                  borderRadius: BorderRadius.circular(ZendRadii.xxl),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 6))],
+                  color: zt.bgElevated,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: zt.isDark ? 0.45 : 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1377,19 +1437,16 @@ class _QuickReactOverlayState extends State<_QuickReactOverlay>
                         onTap: () => widget.onSelect(emoji),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              decoration: TextDecoration.none, // no yellow underline
+                              decorationColor: Colors.transparent,
+                            ),
+                          ),
                         ),
                       ),
-                    const SizedBox(width: 4),
-                    GestureDetector(
-                      onTap: widget.onDismiss,
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(color: zt.bgPrimary, shape: BoxShape.circle),
-                        child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
-                      ),
-                    ),
                   ],
                 ),
               ),

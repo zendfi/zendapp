@@ -272,7 +272,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 Expanded(
                   child: Text(
                     'Activity',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
                 TextButton.icon(
@@ -494,7 +494,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                       padding: EdgeInsets.all(8),
                                       child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                                     )
-                                  : const Icon(SolarIconsBold.sendSquare, size: 16, color: Colors.white),
+                                  : const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
                             ),
                           ),
                         ),

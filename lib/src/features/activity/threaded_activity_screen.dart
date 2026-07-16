@@ -13,6 +13,7 @@ import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
 import 'public_feed_screen.dart';
+import 'search_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -260,14 +261,19 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
                       tooltip: 'Your mutuals',
                     ),
-                  // Search icon toggles the inline filter bar.
-                  IconButton(
-                    onPressed: _toggleFilter,
-                    icon: Icon(
-                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
-                      color: _filterActive ? zt.accent : zt.textSecondary,
+                  // Short-press: toggle inline activity filter.
+                  // Long-press: open full global search (transactions, pools, users).
+                  GestureDetector(
+                    onTap: _toggleFilter,
+                    onLongPress: () => pushZendSlide(context, const SearchScreen()),
+                    child: IconButton(
+                      onPressed: null, // handled by GestureDetector above
+                      icon: Icon(
+                        _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
+                        color: _filterActive ? zt.accent : zt.textSecondary,
+                      ),
+                      tooltip: _filterActive ? 'Clear filter (long-press for full search)' : 'Filter activity (long-press for full search)',
                     ),
-                    tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
                   ),
                   IconButton(
                     onPressed: _toggleNotificationMute,

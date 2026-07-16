@@ -86,13 +86,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   Future<void> _toggleBiometric(bool value) async {
     if (value) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'To enable biometrics, use the lock screen and tap "Use biometrics" after PIN entry.'),
-          duration: Duration(seconds: 4),
-        ),
-      );
+      _showBiometricSetupGuide(context);
     } else {
       await _biometric.disable();
       if (!mounted) return;
@@ -101,6 +95,81 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         const SnackBar(content: Text('Biometric unlock disabled.')),
       );
     }
+  }
+
+  /// Shows a clear step-by-step guide for enabling biometrics — replaces
+  /// the confusing "close app, enter pin, tap use biometrics" snackbar with
+  /// a proper bottom sheet that explains the flow with numbered steps.
+  void _showBiometricSetupGuide(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          decoration: BoxDecoration(
+            color: zt.bgPrimary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    child: Icon(SolarIconsBold.faceScanCircle, size: 22, color: zt.accent),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    'Enable biometric unlock',
+                    style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Biometrics are linked to your PIN on this device. To enable them:',
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              _BiometricStep(number: 1, text: 'Lock the app by pressing the home button or letting the screen time out.', zt: zt),
+              const SizedBox(height: 14),
+              _BiometricStep(number: 2, text: 'Re-open Zend and enter your PIN on the lock screen.', zt: zt),
+              const SizedBox(height: 14),
+              _BiometricStep(number: 3, text: 'Tap "Use biometrics" that appears below the keypad after successful PIN entry.', zt: zt),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: zt.accent,
+                    foregroundColor: ZendColors.textOnDeep,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Got it', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _togglePinPerPayment(bool value) async {
@@ -210,16 +279,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               icon: SolarIconsBold.faceScanCircle,
                               label: 'Biometric unlock',
                               zt: zt,
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Lock the app, enter your PIN, then tap "Use biometrics" to enable.',
-                                    ),
-                                    duration: Duration(seconds: 4),
-                                  ),
-                                );
-                              },
+                              onTap: () => _showBiometricSetupGuide(context),
                             ),
                         ]),
                         const SizedBox(height: 20),
@@ -357,6 +417,40 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Biometric setup step ──────────────────────────────────────────────────────
+
+class _BiometricStep extends StatelessWidget {
+  const _BiometricStep({required this.number, required this.text, required this.zt});
+  final int number;
+  final String text;
+  final ZendTheme zt;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26, height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+          child: Text(
+            '$number',
+            style: TextStyle(fontFamily: 'DMMono', fontSize: 12, fontWeight: FontWeight.w700, color: zt.accent),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary, height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 }

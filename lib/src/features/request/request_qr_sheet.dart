@@ -183,37 +183,42 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
             child: Center(
               child: RepaintBoundary(
                 key: _repaintKey,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    QrImageView(
-                      data: _link,
-                      version: QrVersions.auto,
-                      size: 248,
-                      errorCorrectionLevel: QrErrorCorrectLevel.H,
-                      backgroundColor: const Color(0xFF1C2B1E),
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.circle,
-                        color: Color(0xFF52B787),
+                child: Builder(builder: (ctx) {
+                  final zt = ZendTheme.of(ctx);
+                  final moduleColor = zt.isDark ? const Color(0xFFE8F4EC) : const Color(0xFF122018);
+                  final eyeColor   = zt.isDark ? const Color(0xFF52B788)  : const Color(0xFF2D6A4F);
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      QrImageView(
+                        data: _link,
+                        version: QrVersions.auto,
+                        size: 248,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                        // No backgroundColor — transparent, blends with sheet background.
+                        eyeStyle: QrEyeStyle(
+                          eyeShape: QrEyeShape.circle,
+                          color: eyeColor,
+                        ),
+                        dataModuleStyle: QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.circle,
+                          color: moduleColor,
+                        ),
                       ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.circle,
-                        color: Color(0xFFE8F4EC),
+                      // Centre logo sits on the sheet's own background color
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: zt.bgPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset('assets/logo/Zend.png'),
                       ),
-                    ),
-                    // Center logo badge
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1C2B1E),
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(10),
-                      child: Image.asset('assets/logo/Zend.png'),
-                    ),
-                  ],
-                ),
+                    ],
+                  );
+                }),
               ),
             ),
           ),
