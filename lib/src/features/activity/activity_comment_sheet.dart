@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
-import 'package:solar_icons/solar_icons.dart';
 
 const _kCommentSheetReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
 
@@ -287,25 +287,33 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
 
           // ── Activity tile (the "post") ──
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ZendAvatar(radius: 20, photoUrl: widget.avatarUrl, initials: widget.avatarInitial),
-                const SizedBox(width: 12),
+                ZendAvatar(radius: 22, photoUrl: widget.avatarUrl, initials: widget.avatarInitial),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Headline is the primary text — larger, more prominent
+                      Text(
+                        widget.headline,
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary, height: 1.3),
+                      ),
+                      const SizedBox(height: 6),
+                      // Note (payment memo) rendered as post body copy
+                      if (edge.note?.isNotEmpty == true) ...[
+                        Text(
+                          edge.note!,
+                          style: TextStyle(fontFamily: 'DMSans', fontSize: 15, height: 1.45, color: zt.textPrimary.withValues(alpha: 0.88)),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      // Amount + timestamp on the same row
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              widget.headline,
-                              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
-                            ),
-                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
@@ -314,60 +322,62 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                             ),
                             child: Text(
                               '${edge.isOutgoing ? '-' : '+'}$amountLabel',
-                              style: TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: edge.isOutgoing ? zt.textSecondary : ZendColors.positive,
-                              ),
+                              style: TextStyle(fontFamily: 'DMMono', fontSize: 12, fontWeight: FontWeight.w700,
+                                  color: edge.isOutgoing ? zt.textSecondary : ZendColors.positive),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(_relativeTime(edge.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8))),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _relativeTime(edge.createdAt),
-                        style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8)),
-                      ),
-                      if (edge.note?.isNotEmpty == true) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          edge.note!,
-                          style: TextStyle(fontFamily: 'DMSans', fontSize: 14, height: 1.35, color: zt.textPrimary.withValues(alpha: 0.9)),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      // ── Reaction row ──
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final r in _reactions)
-                            GestureDetector(
-                              onTap: () => _toggleReaction(r.emoji),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: r.reactedByMe ? zt.accent.withValues(alpha: 0.18) : zt.bgSecondary,
-                                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                                  border: r.reactedByMe ? Border.all(color: zt.accent.withValues(alpha: 0.5)) : null,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                      // ── Existing reactions (tappable pills) ──
+                      if (_reactions.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final r in _reactions)
+                              GestureDetector(
+                                onTap: () => _toggleReaction(r.emoji),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: r.reactedByMe ? zt.accent.withValues(alpha: 0.18) : zt.bgSecondary,
+                                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                                    border: r.reactedByMe ? Border.all(color: zt.accent.withValues(alpha: 0.5)) : null,
+                                  ),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                                     Text(r.emoji, style: const TextStyle(fontSize: 13)),
                                     const SizedBox(width: 4),
                                     Text('${r.count}', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
-                                  ],
+                                  ]),
                                 ),
                               ),
+                          ],
+                        ),
+                      ],
+                      // ── Inline 6-emoji quick-react bar ──
+                      // Always visible below the note — no modal needed for
+                      // the common case of adding one of the 6 core reactions.
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          for (final emoji in _kCommentSheetReactionEmojis.take(6))
+                            GestureDetector(
+                              onTap: () => _toggleReaction(emoji),
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                              ),
                             ),
+                          // "More" button opens the full 12-emoji picker
                           GestureDetector(
                             onTap: _showReactionPicker,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 15, color: zt.textSecondary),
+                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 16, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -383,7 +393,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           // ── Comments (replies) ──
           Expanded(
             child: _loading
-                ? Center(child: ZendLoader(size: 22))
+                ? _CommentSkeleton()
                 : _comments.isEmpty
                     ? Center(
                         child: Padding(
@@ -512,54 +522,121 @@ class _CommentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ZendAvatar(
-          radius: 16,
-          photoUrl: comment.authorAvatarUrl,
-          initials: comment.authorZendtag.isNotEmpty ? comment.authorZendtag[0].toUpperCase() : '?',
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    '@${comment.authorZendtag}',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(relativeTime, style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                comment.body,
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9)),
-              ),
-            ],
+    return GestureDetector(
+      onLongPress: isMine
+          ? () => showDialog<void>(
+                context: context,
+                barrierDismissible: true,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete comment?'),
+                  content: const Text("This can't be undone."),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        onDelete();
+                      },
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(color: ZendColors.destructive),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+          : null,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ZendAvatar(
+            radius: 16,
+            photoUrl: comment.authorAvatarUrl,
+            initials: comment.authorZendtag.isNotEmpty ? comment.authorZendtag[0].toUpperCase() : '?',
           ),
-        ),
-        if (isMine)
-          GestureDetector(
-            onTap: onDelete,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(SolarIconsBold.trashBinMinimalistic, size: 16, color: zt.textSecondary.withValues(alpha: 0.6)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('@${comment.authorZendtag}',
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                    const SizedBox(width: 6),
+                    Text(relativeTime, style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(comment.body, style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9))),
+              ],
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// Large, tappable emoji option in the reaction picker sheet — mirrors the
-/// one built for `thread_detail_screen.dart`'s picker, duplicated here
-/// rather than shared since it's a small private widget local to each
-/// sheet's own reaction picker.
+/// Skeleton loading placeholder — 3 shimmering comment rows shown while
+/// reactions and comments are being fetched from the server.
+class _CommentSkeleton extends StatefulWidget {
+  @override
+  State<_CommentSkeleton> createState() => _CommentSkeletonState();
+}
+
+class _CommentSkeletonState extends State<_CommentSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        final opacity = 0.3 + 0.35 * _anim.value;
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          itemCount: 3,
+          separatorBuilder: (_, _) => const SizedBox(height: 14),
+          itemBuilder: (context, i) => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(width: 32, height: 32, decoration: BoxDecoration(color: zt.border.withValues(alpha: opacity), shape: BoxShape.circle)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(height: 11, width: 80, decoration: BoxDecoration(color: zt.border.withValues(alpha: opacity), borderRadius: BorderRadius.circular(4))),
+                  const SizedBox(height: 6),
+                  Container(height: 13, width: double.infinity, decoration: BoxDecoration(color: zt.border.withValues(alpha: opacity * 0.7), borderRadius: BorderRadius.circular(4))),
+                  const SizedBox(height: 4),
+                  Container(height: 13, width: i == 1 ? 160 : 120, decoration: BoxDecoration(color: zt.border.withValues(alpha: opacity * 0.5), borderRadius: BorderRadius.circular(4))),
+                ]),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Large, tappable emoji option in the reaction picker sheet
 class _CommentSheetReactionChip extends StatefulWidget {
   const _CommentSheetReactionChip({required this.emoji, required this.selected, required this.onTap});
 

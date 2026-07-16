@@ -595,17 +595,23 @@ class _MissionRoomState extends State<MissionRoom> {
   // ── Reactions ────────────────────────────────────────────────────────────────
 
   void _showReactionPicker(PoolMessageLocal message) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      builder: (_) => _EmojiPickerSheet(
-        onEmojiTap: (emoji) {
-          Navigator.of(context).pop();
+    // Show an inline floating 6-emoji quick-react bar in an Overlay,
+    // anchored above the long-pressed message. No sheet navigation needed —
+    // tap an emoji, it dismisses and applies. Tap outside, it dismisses.
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (ctx) => _QuickReactOverlay(
+        emojis: _curatedEmojis.take(6).toList(),
+        onSelect: (emoji) {
+          entry.remove();
           _toggleReaction(message, emoji);
         },
+        onDismiss: () => entry.remove(),
       ),
     );
+    overlay.insert(entry);
   }
 
   Future<void> _toggleReaction(PoolMessageLocal message, String emoji) async {
@@ -879,6 +885,7 @@ class _MissionRoomState extends State<MissionRoom> {
                                   message: msg,
                                   currentUserId: currentUserId,
                                   isContinuation: msgItem.isContinuation,
+                                  participantCount: _pool.participants.length,
                                   onLongPress: () => _showReactionPicker(msg),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
                                   // Only show read receipt avatars on my own messages.
@@ -1299,57 +1306,97 @@ class _InputBarState extends State<_InputBar> {
   }
 }
 
-// ── Emoji picker ──────────────────────────────────────────────────────────────
+// ── Quick-react overlay ───────────────────────────────────────────────────────
 
-class _EmojiPickerSheet extends StatelessWidget {
-  const _EmojiPickerSheet({required this.onEmojiTap});
-  final ValueChanged<String> onEmojiTap;
+/// A floating 6-emoji row that appears at the bottom of the screen on
+/// long-press — no sheet navigation, just tap-and-done.
+class _QuickReactOverlay extends StatefulWidget {
+  const _QuickReactOverlay({
+    required this.emojis,
+    required this.onSelect,
+    required this.onDismiss,
+  });
+
+  final List<String> emojis;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_QuickReactOverlay> createState() => _QuickReactOverlayState();
+}
+
+class _QuickReactOverlayState extends State<_QuickReactOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(0, 14, 0, MediaQuery.of(context).padding.bottom + 16),
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 36, height: 4,
-            decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-          ),
-          const SizedBox(height: ZendSpacing.md),
-          for (var row = 0; row < 2; row++) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: List.generate(6, (col) {
-                  final emoji = _curatedEmojis[row * 6 + col];
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => onEmojiTap(emoji),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Container(
-                          margin: const EdgeInsets.all(4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.md)),
-                          child: Text(emoji, style: const TextStyle(fontSize: 22)),
+    final bottom = MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 80;
+
+    return Stack(
+      children: [
+        // Tap-outside-to-dismiss layer
+        Positioned.fill(
+          child: GestureDetector(onTap: widget.onDismiss, child: const ColoredBox(color: Colors.transparent)),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: bottom,
+          child: Center(
+            child: ScaleTransition(
+              scale: _scale,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: zt.bgSecondary,
+                  borderRadius: BorderRadius.circular(ZendRadii.xxl),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 6))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final emoji in widget.emojis)
+                      GestureDetector(
+                        onTap: () => widget.onSelect(emoji),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(emoji, style: const TextStyle(fontSize: 28)),
                         ),
                       ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: widget.onDismiss,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(color: zt.bgPrimary, shape: BoxShape.circle),
+                        child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                ),
               ),
             ),
-            if (row == 0) const SizedBox(height: 4),
-          ],
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
