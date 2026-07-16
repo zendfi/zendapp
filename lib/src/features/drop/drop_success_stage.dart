@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class DropSuccessStage extends StatefulWidget {
   const DropSuccessStage({
@@ -139,7 +140,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                         border: Border.all(color: zt.accentBright, width: 1.5),
                       ),
                       child: Icon(
-                        Icons.check_rounded,
+                        SolarIconsBold.checkCircle,
                         color: zt.accentBright,
                         size: 28,
                       ),

@@ -10,6 +10,7 @@ import '../../services/app_lock_service.dart';
 import '../../services/biometric_service.dart';
 import '../../services/wallet_session_cache.dart';
 import '../onboarding/forgot_pin_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Full-screen PIN overlay shown when the app is locked due to inactivity.
 ///
@@ -252,7 +253,7 @@ class _LockScreenState extends State<_LockScreen>
                 SizedBox(height: compact ? 40 : 64),
                 // Lock icon
                 const Icon(
-                  Icons.lock_outline_rounded,
+                  SolarIconsBold.lockKeyhole,
                   color: ZendColors.accentPop,
                   size: 36,
                 ),
@@ -319,7 +320,7 @@ class _LockScreenState extends State<_LockScreen>
                 if (_biometricAvailable && _biometricFailures < _maxBiometricFailures && !_loading && !_isLockedOut) ...[
                   TextButton.icon(
                     onPressed: _tryBiometricUnlock,
-                    icon: const Icon(Icons.fingerprint, size: 20),
+                    icon: const Icon(SolarIconsBold.faceScanCircle, size: 20),
                     label: const Text('Use biometrics'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0x99E8F4EC),

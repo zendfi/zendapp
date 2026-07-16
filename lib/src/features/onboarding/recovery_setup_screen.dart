@@ -4,6 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'national_id_entry_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Shown after onboarding and accessible from Settings → Security.
 ///
@@ -42,7 +43,7 @@ class RecoverySetupScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     icon: Icon(
-                      isFirstTime ? Icons.close : Icons.arrow_back,
+                      isFirstTime ? SolarIconsBold.closeCircle : SolarIconsBold.altArrowLeft,
                       color: zt.textPrimary,
                     ),
                     onPressed: () => _skip(context),
@@ -61,7 +62,7 @@ class RecoverySetupScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.shield_outlined,
+                    SolarIconsBold.shieldMinimalistic,
                     size: 36,
                     color: zt.accent,
                   ),
@@ -94,19 +95,19 @@ class RecoverySetupScreen extends StatelessWidget {
 
               // Benefits list
               _BulletItem(
-                icon: Icons.cloud_outlined,
+                icon: SolarIconsBold.cloudSun,
                 text: 'Your recovery file is saved to your Google Drive or iCloud — Zend never sees it.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: Icons.fingerprint,
+                icon: SolarIconsBold.faceScanCircle,
                 text: 'Your government ID number is the only key — we can\'t decrypt it for you.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: Icons.lock_outline,
+                icon: SolarIconsBold.lockKeyhole,
                 text: 'Even if your phone is lost, your money stays recoverable.',
                 zt: zt,
               ),

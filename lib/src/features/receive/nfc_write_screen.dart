@@ -3,6 +3,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Full-screen NFC tag writer.
 ///
@@ -134,7 +135,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: ZendColors.textOnDeep),
+          icon: const Icon(SolarIconsBold.altArrowLeft, color: ZendColors.textOnDeep),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -195,7 +196,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
                 ),
               ),
               child: const Icon(
-                Icons.nfc_rounded,
+                SolarIconsBold.bluetooth,
                 size: 56,
                 color: ZendColors.accentPop,
               ),
@@ -222,7 +223,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               color: ZendColors.positive,
             ),
             child: const Icon(
-              Icons.check_rounded,
+              SolarIconsBold.checkCircle,
               size: 52,
               color: Colors.white,
             ),
@@ -240,7 +241,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               border: Border.all(color: ZendColors.destructive, width: 2),
             ),
             child: const Icon(
-              Icons.error_outline_rounded,
+              SolarIconsBold.infoCircle,
               size: 52,
               color: ZendColors.destructive,
             ),
@@ -250,7 +251,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       case _WriteState.unavailable:
         return const Center(
           child: Icon(
-            Icons.nfc_rounded,
+            SolarIconsBold.bluetooth,
             size: 80,
             color: Color(0x44E8F4EC),
           ),

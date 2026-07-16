@@ -6,6 +6,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/cloud_backup_service.dart';
 import '../../services/recovery_service.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Collects a government ID number and creates the recovery packet.
 ///
@@ -123,7 +124,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -250,7 +251,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               // Privacy note
               Row(
                 children: [
-                  Icon(Icons.lock_outline, size: 14, color: zt.textSecondary),
+                  Icon(SolarIconsBold.lockKeyhole, size: 14, color: zt.textSecondary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(

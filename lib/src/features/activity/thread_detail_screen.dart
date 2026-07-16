@@ -9,6 +9,7 @@ import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 const _kReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
 
@@ -271,7 +272,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                   ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
                   const SizedBox(width: 10),
@@ -519,7 +520,7 @@ class _FeedPost extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(Icons.add_reaction_outlined, size: 15, color: zt.textSecondary),
+                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 15, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -540,7 +541,7 @@ class _FeedPost extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.public, size: 12, color: zt.textSecondary.withValues(alpha: 0.7)),
+                          Icon(SolarIconsBold.shareCircle, size: 12, color: zt.textSecondary.withValues(alpha: 0.7)),
                           const SizedBox(width: 3),
                           Text(
                             'Public',

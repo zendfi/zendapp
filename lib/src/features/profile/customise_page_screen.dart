@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class CustomisePageScreen extends StatefulWidget {
   const CustomisePageScreen({super.key});
@@ -111,7 +112,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -340,7 +341,7 @@ class _ColorPicker extends StatelessWidget {
               border: Border.all(color: isSelected ? zt.textPrimary : Colors.transparent, width: 2.5),
               boxShadow: isSelected ? [BoxShadow(color: _hex(color).withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1)] : null,
             ),
-            child: isSelected ? Icon(Icons.check, size: 16, color: _hex(color).computeLuminance() > 0.4 ? Colors.black : Colors.white) : null,
+            child: isSelected ? Icon(SolarIconsBold.checkCircle, size: 16, color: _hex(color).computeLuminance() > 0.4 ? Colors.black : Colors.white) : null,
           ),
         );
       }).toList(),

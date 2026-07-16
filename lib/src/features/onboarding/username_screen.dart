@@ -6,6 +6,7 @@ import '../../design/zend_tokens.dart';
 import '../../core/zend_state.dart';
 import '../../navigation/zend_routes.dart';
 import 'success_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({super.key});
@@ -172,7 +173,7 @@ class _PreviewCard extends StatelessWidget {
           Container(
             width: 42, height: 42,
             decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.alternate_email, color: zt.textSecondary),
+            child: Icon(SolarIconsBold.user, color: zt.textSecondary),
           ),
           const SizedBox(width: 12),
           Column(
@@ -188,7 +189,7 @@ class _PreviewCard extends StatelessWidget {
           Container(
             width: 34, height: 34,
             decoration: const BoxDecoration(color: ZendColors.accentPop, shape: BoxShape.circle),
-            child: const Icon(Icons.check, size: 18, color: ZendColors.textPrimary),
+            child: const Icon(SolarIconsBold.checkCircle, size: 18, color: ZendColors.textPrimary),
           ),
         ],
       ),

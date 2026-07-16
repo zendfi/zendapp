@@ -5,6 +5,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 const _kCommentSheetReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
 
@@ -276,7 +277,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 ),
                 TextButton.icon(
                   onPressed: widget.onViewReceipt,
-                  icon: Icon(Icons.receipt_long_outlined, size: 16, color: zt.accent),
+                  icon: Icon(SolarIconsBold.bill, size: 16, color: zt.accent),
                   label: Text('Receipt', style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
                 ),
               ],
@@ -366,7 +367,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(Icons.add_reaction_outlined, size: 15, color: zt.textSecondary),
+                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 15, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -483,7 +484,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                       padding: EdgeInsets.all(8),
                                       child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                                     )
-                                  : const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+                                  : const Icon(SolarIconsBold.sendSquare, size: 16, color: Colors.white),
                             ),
                           ),
                         ),
@@ -547,7 +548,7 @@ class _CommentRow extends StatelessWidget {
             onTap: onDelete,
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(Icons.delete_outline, size: 16, color: zt.textSecondary.withValues(alpha: 0.6)),
+              child: Icon(SolarIconsBold.trashBinMinimalistic, size: 16, color: zt.textSecondary.withValues(alpha: 0.6)),
             ),
           ),
       ],

@@ -22,6 +22,7 @@ import 'drop_preview_stage.dart';
 import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
 import '../send/send_shared_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 enum DropStage {
   scanning,
@@ -690,7 +691,7 @@ class _NoteField extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.edit_note_rounded, size: 16, color: zt.textSecondary),
+            Icon(SolarIconsBold.penNewRound, size: 16, color: zt.textSecondary),
             const SizedBox(width: 4),
             Text(
               hasNote ? preview! : 'Add note',
@@ -765,7 +766,7 @@ class _NoteField extends StatelessWidget {
               onTap: onToggle,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(Icons.keyboard_arrow_up_rounded,
+                child: Icon(SolarIconsBold.altArrowUp,
                     size: 18, color: zt.textSecondary),
               ),
             ),

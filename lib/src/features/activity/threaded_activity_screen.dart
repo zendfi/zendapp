@@ -15,6 +15,7 @@ import 'legacy_activity_list_view.dart';
 import 'public_feed_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.
@@ -250,20 +251,20 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   // it's a one-line change to re-enable.
                   IconButton(
                     onPressed: () => pushZendSlide(context, const PublicFeedScreen()),
-                    icon: Icon(Icons.public, color: zt.textSecondary),
+                    icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
                     tooltip: 'Public feed',
                   ),
                   if (widget.onOpenGraphView != null)
                     IconButton(
                       onPressed: widget.onOpenGraphView,
-                      icon: Icon(Icons.hub_outlined, color: zt.textSecondary),
+                      icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
                       tooltip: 'Your mutuals',
                     ),
                   // Search icon toggles the inline filter bar.
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? Icons.search_off : Icons.search,
+                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
@@ -272,8 +273,8 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     onPressed: _toggleNotificationMute,
                     icon: Icon(
                       _notificationsMuted
-                          ? Icons.notifications_off_outlined
-                          : Icons.notifications_none,
+                          ? SolarIconsBold.bellOff
+                          : SolarIconsBold.bell,
                       color: _notificationsMuted
                           ? zt.textSecondary.withValues(alpha: 0.5)
                           : zt.textSecondary,
@@ -298,11 +299,11 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                         decoration: InputDecoration(
                           hintText: 'Filter by person or note…',
                           hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(Icons.search, size: 18, color: zt.textSecondary),
+                          prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(Icons.close, size: 18, color: zt.textSecondary),
+                                  child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,
@@ -478,7 +479,7 @@ class _RequestsThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: ZendColors.destructive.withValues(alpha: 0.12),
-                child: Icon(Icons.receipt_long_outlined, color: ZendColors.destructive, size: 20),
+                child: Icon(SolarIconsBold.bill, color: ZendColors.destructive, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -510,7 +511,7 @@ class _RequestsThreadTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: zt.textSecondary),
+              Icon(SolarIconsBold.altArrowRight, color: zt.textSecondary),
             ],
           ),
         ),
@@ -896,7 +897,7 @@ class _PoolThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: zt.accent.withValues(alpha: 0.15),
-                child: Icon(Icons.groups_outlined, color: zt.accent, size: 20),
+                child: Icon(SolarIconsBold.usersGroupRounded, color: zt.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(

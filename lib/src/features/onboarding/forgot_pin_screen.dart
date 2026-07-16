@@ -7,6 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'recovery_national_id_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// "Forgot PIN?" entry screen.
 ///
@@ -40,7 +41,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back,
+                  icon: const Icon(SolarIconsBold.altArrowLeft,
                       color: ZendColors.textOnDeep),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
@@ -197,7 +198,7 @@ class _RequestView extends StatelessWidget {
           ),
           child: const Row(
             children: [
-              Icon(Icons.mail_outline, color: ZendColors.accentPop, size: 20),
+              Icon(SolarIconsBold.mailbox, color: ZendColors.accentPop, size: 20),
               SizedBox(width: 12),
               Expanded(
                 child: Text(

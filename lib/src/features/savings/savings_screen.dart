@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/savings_models.dart';
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -95,7 +96,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -165,7 +166,7 @@ class _ErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.error_outline,
+              SolarIconsBold.infoCircle,
               size: 48,
               color: zt.textSecondary,
             ),

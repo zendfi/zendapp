@@ -8,6 +8,7 @@ import 'create_pool_drawer.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'pool_info_card.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Opens the Pool List Drawer as a modal bottom sheet.
 Future<void> showPoolListDrawer(BuildContext context) {
@@ -87,7 +88,7 @@ class PoolListDrawer extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add, size: 18, color: zt.accentBright),
+                  Icon(SolarIconsBold.addCircle, size: 18, color: zt.accentBright),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Create Pool',

@@ -5,6 +5,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class MissionRoomMessage extends StatelessWidget {
   const MissionRoomMessage({
@@ -77,13 +78,13 @@ class _DeliveryStatus extends StatelessWidget {
     final zt = ZendTheme.of(context);
     switch (status) {
       case LocalStatus.sending:
-        return Icon(Icons.access_time, size: 12, color: zt.textSecondary.withValues(alpha: 0.5));
+        return Icon(SolarIconsBold.clockCircle, size: 12, color: zt.textSecondary.withValues(alpha: 0.5));
       case LocalStatus.delivered:
-        return Icon(Icons.check, size: 12, color: zt.textSecondary.withValues(alpha: 0.5));
+        return Icon(SolarIconsBold.checkCircle, size: 12, color: zt.textSecondary.withValues(alpha: 0.5));
       case LocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,
-          child: const Icon(Icons.error_outline, size: 12, color: ZendColors.destructive),
+          child: const Icon(SolarIconsBold.infoCircle, size: 12, color: ZendColors.destructive),
         );
     }
   }

@@ -9,6 +9,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
 import '../../services/sound_service.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ShowQrScreen extends StatefulWidget {
   const ShowQrScreen({
@@ -250,7 +251,7 @@ class _ShowingView extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.close, color: Color(0x99E8F4EC)),
+                icon: const Icon(SolarIconsBold.closeCircle, color: Color(0x99E8F4EC)),
                 onPressed: onDismiss,
               ),
             ],
@@ -416,7 +417,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.check_rounded,
+                  SolarIconsBold.checkCircle,
                   color: Colors.white,
                   size: 44,
                 ),
@@ -505,7 +506,7 @@ class _ErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.wifi_off_rounded,
+              SolarIconsBold.wifiRouter,
               size: 48,
               color: Color(0x44E8F4EC),
             ),

@@ -11,6 +11,7 @@ import '../../models/crypto_send_models.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 Future<void> showCryptoSendSheet(BuildContext context,
     {required double amount}) {
@@ -430,7 +431,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Search chains...',
-                prefixIcon: Icon(Icons.search,
+                prefixIcon: Icon(SolarIconsBold.magnifier,
                     size: 20, color: zt.textSecondary),
                 filled: true,
                 fillColor: zt.bgSecondary,
@@ -538,7 +539,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                 ),
                               ),
                               if (isSelected)
-                                Icon(Icons.check_circle,
+                                Icon(SolarIconsBold.checkCircle,
                                     size: 18, color: zt.accent),
                             ],
                           ),
@@ -619,7 +620,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _quote = null;
                   _stage = CryptoSendStage.chainAndAddress;
                 }),
-                child: Icon(Icons.arrow_back,
+                child: Icon(SolarIconsBold.altArrowLeft,
                     color: zt.textPrimary, size: 22),
               ),
             ),
@@ -695,7 +696,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _pinError = null;
                   _stage = CryptoSendStage.quote;
                 }),
-                child: Icon(Icons.arrow_back,
+                child: Icon(SolarIconsBold.altArrowLeft,
                     color: zt.textPrimary, size: 22),
               ),
             ),
@@ -810,7 +811,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   color: ZendColors.destructive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 36),
+                child: const Icon(SolarIconsBold.closeCircle, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 20),
               Text(
@@ -923,7 +924,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
                   shape: BoxShape.circle,
                 ),
                 child:
-                    const Icon(Icons.check, color: Colors.white, size: 36),
+                    const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),

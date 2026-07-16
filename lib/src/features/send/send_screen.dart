@@ -11,6 +11,7 @@ import '../drop/drop_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
 import 'qr_scanner_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 enum _InputMode { usd, ngn }
 
@@ -225,7 +226,7 @@ class _SendScreenState extends State<SendScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconPill(icon: Icons.qr_code_2, onTap: () => pushZendSlide(context, const QrScannerScreen())),
+                          _IconPill(icon: SolarIconsBold.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
                           // Balance + profile — right-aligned, tap balance to toggle hide
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -363,7 +364,7 @@ class _SendScreenState extends State<SendScreen>
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
-                                            Icons.swap_vert_rounded,
+                                            SolarIconsBold.transferVertical,
                                             color: Color(0x66F0F0F0),
                                             size: 14,
                                           ),
@@ -388,7 +389,7 @@ class _SendScreenState extends State<SendScreen>
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
-                                        Icons.swap_vert_rounded,
+                                        SolarIconsBold.transferVertical,
                                         color: Color(0x44F0F0F0),
                                         size: 12,
                                       ),
@@ -597,7 +598,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.bolt_rounded,
+                            SolarIconsBold.bolt,
                             size: 14,
                             color: fill > 0
                                 ? ZendColors.accentBright

@@ -10,6 +10,7 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'graph_model.dart';
 import 'person_activity_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Phase 3 Graph_View — an opt-in node/edge visualization of the same
 /// visibility-authorized `ActivityEdge` data the Threaded_Activity_View
@@ -140,7 +141,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                   ),
                   IconButton(
                     onPressed: widget.onToggleView,
-                    icon: Icon(Icons.list_alt_outlined, color: zt.textSecondary),
+                    icon: Icon(SolarIconsBold.listArrowDown, color: zt.textSecondary),
                     tooltip: 'Switch to threaded view',
                   ),
                 ],
@@ -415,7 +416,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.accent.withValues(alpha: 0.18),
-            child: Icon(Icons.groups_outlined, color: zt.accent, size: radius * 0.9),
+            child: Icon(SolarIconsBold.usersGroupRounded, color: zt.accent, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.others:
@@ -425,7 +426,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.border,
-            child: Icon(Icons.more_horiz, color: zt.textSecondary, size: radius * 0.9),
+            child: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.user:

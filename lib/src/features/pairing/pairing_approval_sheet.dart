@@ -10,6 +10,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/wallet_session_cache.dart';
 import '../send/send_shared_widgets.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Stage machine for the "Pay with Zend" CLI device-pairing approval
 /// screen. Reuses the exact same PIN-entry widget, shake animation, and
@@ -416,7 +417,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                   width: 56,
                   height: 56,
                   decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, color: Colors.white, size: 32),
+                  child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 32),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -461,7 +462,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                   width: 56,
                   height: 56,
                   decoration: const BoxDecoration(color: ZendColors.destructive, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, color: Colors.white, size: 32),
+                  child: const Icon(SolarIconsBold.closeCircle, color: Colors.white, size: 32),
                 ),
                 const SizedBox(height: 16),
                 Text(

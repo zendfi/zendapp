@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
 import 'carousel_card_model.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// The card-face widget for an Educational_Card in the Card_Carousel.
 /// Tapping opens the Educational_Modal (Req 26.2) via the [onTap] callback
@@ -28,7 +29,7 @@ class EducationalCardTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.lightbulb_outline, size: 20, color: zt.accent),
+            Icon(SolarIconsBold.lightbulb, size: 20, color: zt.accent),
             Text(
               card.topicTitle ?? '',
               maxLines: 2,

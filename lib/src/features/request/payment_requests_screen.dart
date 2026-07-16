@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class PaymentRequestsScreen extends StatefulWidget {
   const PaymentRequestsScreen({super.key});
@@ -99,7 +100,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   // Back button sits left, same weight as activity icons
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -115,7 +116,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    icon: Icon(Icons.refresh, color: zt.textSecondary),
+                    icon: Icon(SolarIconsBold.refresh, color: zt.textSecondary),
                   ),
                 ],
               ),
@@ -373,7 +374,7 @@ class _RequestTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.copy_outlined, size: 14, color: zt.accent),
+                Icon(SolarIconsBold.copy, size: 14, color: zt.accent),
               ],
             ),
           ),

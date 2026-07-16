@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class AccountInformationScreen extends StatelessWidget {
   const AccountInformationScreen({super.key});
@@ -100,7 +101,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(

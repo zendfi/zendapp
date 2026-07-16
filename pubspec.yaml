@@ -139,6 +139,9 @@ dependencies:
   # UUID generation for client-side message IDs
   uuid: ^4.4.0
 
+  # Solar Icons — Bold style (7000+ icons, drop-in replacement for Material Icons)
+  solar_icons: ^0.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

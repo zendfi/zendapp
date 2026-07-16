@@ -11,6 +11,7 @@ import '../../models/api_exceptions.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 part 'bank_send_stages.dart';
 

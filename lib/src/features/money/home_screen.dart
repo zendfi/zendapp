@@ -16,6 +16,7 @@ import 'card_carousel.dart';
 import 'card_dismissal_store.dart';
 import 'carousel_card_model.dart';
 import 'educational_modal.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -308,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   GestureDetector(
                                     onTap: model.toggleBalanceHidden,
                                     child: Icon(
-                                      model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      model.balanceHidden ? SolarIconsBold.eyeClosed : SolarIconsBold.eye,
                                       color: const Color(0x80F0F0F0),
                                       size: 20,
                                     ),
@@ -349,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 GestureDetector(
                                   onTap: model.toggleBalanceHidden,
                                   child: Icon(
-                                    model.balanceHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    model.balanceHidden ? SolarIconsBold.eyeClosed : SolarIconsBold.eye,
                                     color: const Color(0x80F0F0F0),
                                     size: 18,
                                   ),
@@ -561,7 +562,7 @@ class _SavingsCard extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-              Icon(Icons.savings_outlined, size: 16, color: zt.textSecondary),
+              Icon(SolarIconsBold.walletMoney, size: 16, color: zt.textSecondary),
             ]),
             const SizedBox(height: 3),
             Text(
@@ -619,7 +620,7 @@ class _PoolsCard extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text('Pools',
                 style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-            Icon(Icons.groups_2_outlined,
+            Icon(SolarIconsBold.usersGroupTwoRounded,
                 size: 16, color: zt.textSecondary),
           ]),
           const SizedBox(height: 3),

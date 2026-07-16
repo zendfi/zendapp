@@ -5,6 +5,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import 'activity_grouping.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Answers "where do users see public posts?" — a dedicated feed of every
 /// Shared_Network Activity_Edge the viewer is authorized to see via a
@@ -92,7 +93,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                   Expanded(
                     child: Column(
@@ -113,7 +114,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? Icons.search_off : Icons.search,
+                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter feed',
@@ -136,11 +137,11 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                         decoration: InputDecoration(
                           hintText: 'Filter by @handle or note…',
                           hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(Icons.search, size: 18, color: zt.textSecondary),
+                          prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(Icons.close, size: 18, color: zt.textSecondary),
+                                  child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,

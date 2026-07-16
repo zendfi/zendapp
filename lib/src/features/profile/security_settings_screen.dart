@@ -12,6 +12,7 @@ import '../onboarding/recovery_setup_screen.dart';
 import 'change_pin_screen.dart';
 import 'export_backup_screen.dart';
 import 'recovery_phrase_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Settings > Security screen.
 ///
@@ -151,7 +152,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                   Text(
                     'Security',
@@ -181,7 +182,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
-                          icon: Icons.pin_outlined,
+                          icon: SolarIconsBold.lockPassword,
                           label: 'Change PIN',
                           zt: zt,
                           onTap: () =>
@@ -197,7 +198,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         _SettingsGroup(zt: zt, tiles: [
                           if (_biometricEnabled)
                             _ToggleTile(
-                              icon: Icons.fingerprint,
+                              icon: SolarIconsBold.faceScanCircle,
                               label: 'Biometric unlock',
                               subtitle: 'Tap to disable biometric unlock',
                               value: true,
@@ -206,7 +207,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                             )
                           else
                             _Tile(
-                              icon: Icons.fingerprint,
+                              icon: SolarIconsBold.faceScanCircle,
                               label: 'Biometric unlock',
                               zt: zt,
                               onTap: () {
@@ -229,7 +230,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _ToggleTile(
-                          icon: Icons.lock_outline,
+                          icon: SolarIconsBold.lockKeyhole,
                           label: 'Require PIN on every payment',
                           subtitle:
                               'Re-enter PIN before every send, regardless of amount',
@@ -238,7 +239,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                           onChanged: _togglePinPerPayment,
                         ),
                         _ToggleTile(
-                          icon: Icons.price_check,
+                          icon: SolarIconsBold.billCheck,
                           label: 'Require PIN above amount',
                           subtitle: _pinThresholdEnabled && _pinThresholdAmount != null
                               ? 'PIN required for sends over \$${_pinThresholdAmount!.toStringAsFixed(0)}'
@@ -283,8 +284,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
                           icon: _hasRecoveryBackup
-                              ? Icons.verified_outlined
-                              : Icons.shield_outlined,
+                              ? SolarIconsBold.verifiedCheck
+                              : SolarIconsBold.shieldMinimalistic,
                           label: _hasRecoveryBackup
                               ? 'Update recovery backup'
                               : 'Set up PIN recovery',
@@ -323,14 +324,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
-                          icon: Icons.download_outlined,
+                          icon: SolarIconsBold.download,
                           label: 'Export encrypted backup',
                           zt: zt,
                           onTap: () => pushZendSlide(
                               context, const ExportBackupScreen()),
                         ),
                         _Tile(
-                          icon: Icons.key_outlined,
+                          icon: SolarIconsBold.key,
                           label: 'View recovery phrase',
                           zt: zt,
                           onTap: () => pushZendSlide(
@@ -527,7 +528,7 @@ class _Tile extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
+            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),

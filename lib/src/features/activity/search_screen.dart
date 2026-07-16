@@ -12,6 +12,7 @@ import '../pools/pool.dart';
 import '../pools/pool_detail_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import 'transaction_receipt_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// App-wide search screen.
 ///
@@ -152,10 +153,10 @@ class _SearchScreenState extends State<SearchScreen> {
                             fontSize: 14,
                             color: zt.textSecondary,
                           ),
-                          prefixIcon: Icon(Icons.search, color: zt.textSecondary, size: 20),
+                          prefixIcon: Icon(SolarIconsBold.magnifier, color: zt.textSecondary, size: 20),
                           suffixIcon: _query.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear, size: 18, color: zt.textSecondary),
+                                  icon: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
                                   onPressed: () {
                                     _ctrl.clear();
                                     _onQueryChanged('');
@@ -295,7 +296,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                         color: zt.accentBright.withValues(alpha: 0.12),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: Icon(Icons.group_outlined, size: 18, color: zt.accentBright),
+                                      child: Icon(SolarIconsBold.usersGroupRounded, size: 18, color: zt.accentBright),
                                     ),
                                     title: pool.name,
                                     subtitle: '\$${pool.gathered.toStringAsFixed(2)} of \$${pool.targetAmount.toStringAsFixed(2)}',
@@ -323,7 +324,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
+          Icon(SolarIconsBold.magnifier, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text(
             'Search transactions, users, pools',
@@ -467,7 +468,7 @@ class _UserTile extends StatelessWidget {
       ),
       title: name,
       subtitle: '@$zendtag',
-      trailing: Icon(Icons.arrow_forward_ios_rounded, size: 12, color: zt.textSecondary),
+      trailing: Icon(SolarIconsBold.altArrowRight, size: 12, color: zt.textSecondary),
       onTap: onTap,
     );
   }

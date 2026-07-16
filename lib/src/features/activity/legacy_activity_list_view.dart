@@ -15,6 +15,7 @@ import '../send/qr_payment_sheet.dart';
 import 'search_screen.dart';
 import 'transaction_receipt_sheet.dart';
 import '../../navigation/zend_routes.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 // ── Unified activity item ─────────────────────────────────────────────────────
 
@@ -199,20 +200,20 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                   if (widget.onToggleView != null)
                     IconButton(
                       onPressed: widget.onToggleView,
-                      icon: Icon(Icons.hub_outlined, color: zt.textSecondary),
+                      icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
                       tooltip: 'Switch to threaded view',
                     ),
                   IconButton(
                     onPressed: () => pushZendSlide(context, const SearchScreen()),
-                    icon: Icon(Icons.search, color: zt.textSecondary),
+                    icon: Icon(SolarIconsBold.magnifier, color: zt.textSecondary),
                     tooltip: 'Search',
                   ),
                   IconButton(
                     onPressed: _toggleNotificationMute,
                     icon: Icon(
                       _notificationsMuted
-                          ? Icons.notifications_off_outlined
-                          : Icons.notifications_none,
+                          ? SolarIconsBold.bellOff
+                          : SolarIconsBold.bell,
                       color: _notificationsMuted
                           ? zt.textSecondary.withValues(alpha: 0.5)
                           : zt.textSecondary,
@@ -646,7 +647,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(Icons.copy_outlined, size: 14, color: zt.accent),
+                    Icon(SolarIconsBold.copy, size: 14, color: zt.accent),
                   ],
                 ),
               ),

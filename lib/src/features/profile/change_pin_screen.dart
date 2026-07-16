@@ -5,6 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_primitives.dart';
 import '../../models/api_exceptions.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 enum _ChangePinPhase { current, newPin, confirm }
 
@@ -222,7 +223,7 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: _goBack,
-                  child: const Icon(Icons.arrow_back,
+                  child: const Icon(SolarIconsBold.altArrowLeft,
                       color: ZendColors.textOnDeep, size: 24),
                 ),
               ),

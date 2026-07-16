@@ -5,6 +5,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import 'pool.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 Future<void> showManageSheet(
   BuildContext context, {
@@ -108,7 +109,7 @@ class _ManageSheetState extends State<ManageSheet> {
                         borderRadius: BorderRadius.circular(ZendRadii.sm),
                       ),
                       child: const Icon(
-                        Icons.cancel_outlined,
+                        SolarIconsBold.closeCircle,
                         color: ZendColors.destructive,
                         size: 20,
                       ),
@@ -140,7 +141,7 @@ class _ManageSheetState extends State<ManageSheet> {
                       ),
                     ),
                     Icon(
-                      Icons.chevron_right,
+                      SolarIconsBold.altArrowRight,
                       size: 18,
                       color: ZendTheme.of(context).textSecondary,
                     ),

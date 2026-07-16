@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ConnectedAppsScreen extends StatelessWidget {
   const ConnectedAppsScreen({super.key});
@@ -24,7 +25,7 @@ class ConnectedAppsScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.apps_outlined,
+                        SolarIconsBold.menuDotsSquare,
                         size: 48,
                         color: zt.textSecondary,
                       ),
@@ -72,7 +73,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(

@@ -7,6 +7,7 @@ import 'manage_sheet.dart';
 import 'mission_room_sheet.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Full-screen detail view for a single [Pool].
 ///
@@ -67,7 +68,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -241,7 +242,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () =>
                           showMissionRoomSheet(context, pool: _pool),
-                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                      icon: const Icon(SolarIconsBold.chatDots, size: 16),
                       label: const Text(
                         'Message',
                         style: TextStyle(

@@ -13,6 +13,7 @@ import '../send/send_flow_sheet.dart';
 import '../send/send_screen.dart';
 import '../send/withdraw_sheet.dart';
 import '../money/home_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ZendShell extends StatefulWidget {
   const ZendShell({super.key});
@@ -253,19 +254,19 @@ class ZendBottomBar extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _BottomNavIcon(
-                    icon: Icons.account_balance_wallet_outlined,
+                    icon: SolarIconsBold.wallet,
                     active: currentIndex == 0,
                     onTap: () => onChanged(0),
                     onDeepBg: onSendTab,
                   ),
                   _BottomNavIcon(
-                    icon: Icons.attach_money,
+                    icon: SolarIconsBold.dollar,
                     active: currentIndex == 1,
                     onTap: () => onChanged(1),
                     onDeepBg: onSendTab,
                   ),
                   _BottomNavIcon(
-                    icon: Icons.access_time,
+                    icon: SolarIconsBold.clockCircle,
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
                     onDeepBg: onSendTab,
@@ -403,7 +404,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.attach_money,
+                      SolarIconsBold.dollar,
                       size: 20,
                       color: ZendColors.accentPop,
                     ),
@@ -468,7 +469,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                   GestureDetector(
                     onTap: widget.onDismiss,
                     child: const Icon(
-                      Icons.close,
+                      SolarIconsBold.closeCircle,
                       size: 16,
                       color: Color(0x66F0F0F0),
                     ),
@@ -559,7 +560,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(Icons.close, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),
@@ -633,7 +634,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                     height: 36,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                    child: const Icon(Icons.chat_bubble_outline, size: 16, color: ZendColors.accentPop),
+                    child: const Icon(SolarIconsBold.chatDots, size: 16, color: ZendColors.accentPop),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -659,7 +660,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(Icons.close, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),

@@ -15,6 +15,7 @@ import '../../services/pool_websocket_service.dart';
 import '../../services/sse_service.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 const _curatedEmojis = [
   '🔥', '💰', '🙏', '👑', '😭', '⚡',
@@ -1133,7 +1134,7 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
             shape: BoxShape.circle,
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
           ),
-          child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 22),
+          child: const Icon(SolarIconsBold.altArrowDown, color: Colors.white, size: 22),
         ),
       ),
     );
@@ -1230,7 +1231,7 @@ class _InputBarState extends State<_InputBar> {
         child: widget.isRecording
             ? Row(
                 children: [
-                  const Icon(Icons.fiber_manual_record, color: ZendColors.destructive, size: 14),
+                  const Icon(SolarIconsBold.recordCircle, color: ZendColors.destructive, size: 14),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Recording ${widget.recordingSeconds}s / 30s',
@@ -1274,7 +1275,7 @@ class _InputBarState extends State<_InputBar> {
                     child: Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(color: ZendTheme.of(context).bgSecondary, shape: BoxShape.circle),
-                      child: Icon(Icons.mic_none, size: 20, color: ZendTheme.of(context).textSecondary),
+                      child: Icon(SolarIconsBold.microphone, size: 20, color: ZendTheme.of(context).textSecondary),
                     ),
                   ),
                   const SizedBox(width: ZendSpacing.xs),
@@ -1288,7 +1289,7 @@ class _InputBarState extends State<_InputBar> {
                       ),
                       child: widget.sending
                           ? Padding(padding: const EdgeInsets.all(10), child: ZendLoader(size: 20, strokeWidth: 2, color: Colors.white))
-                          : Icon(Icons.send, size: 18, color: overLimit || _charCount == 0 ? ZendTheme.of(context).textSecondary : Colors.white),
+                          : Icon(SolarIconsBold.sendSquare, size: 18, color: overLimit || _charCount == 0 ? ZendTheme.of(context).textSecondary : Colors.white),
                     ),
                   ),
                 ],

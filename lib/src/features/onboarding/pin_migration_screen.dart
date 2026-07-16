@@ -8,6 +8,7 @@ import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/wallet_session_cache.dart';
 import 'device_unlock_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// One-time PIN upgrade screen shown when the user has a legacy 4-digit PIN.
 ///
@@ -284,7 +285,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.security, color: ZendColors.accentPop, size: 14),
+                      Icon(SolarIconsBold.shieldCheck, color: ZendColors.accentPop, size: 14),
                       SizedBox(width: 6),
                       Text(
                         'Security upgrade',

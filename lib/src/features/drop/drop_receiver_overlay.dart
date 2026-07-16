@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../design/zend_tokens.dart';
 import 'drop_particle_painter.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Shows the receiver-side Drop animation as an app-level overlay.
 ///
@@ -268,7 +269,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                     ),
                     // Subtle chevron — signals tappability
                     const Icon(
-                      Icons.chevron_right,
+                      SolarIconsBold.altArrowRight,
                       color: Color(0x66F0F0F0),
                       size: 18,
                     ),

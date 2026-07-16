@@ -5,6 +5,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/wallet_export_service.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Settings > Security > View recovery phrase
 ///
@@ -95,7 +96,7 @@ class _RecoveryPhraseScreenState extends State<RecoveryPhraseScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
           onPressed: () {
             // Zero words before popping
             setState(() => _words = List.filled(_words.length, ''));
@@ -183,7 +184,7 @@ class _ConfirmStage extends StatelessWidget {
             border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.18)),
           ),
           child: Column(children: [
-            const Icon(Icons.key_rounded, color: ZendColors.destructive, size: 36),
+            const Icon(SolarIconsBold.key, color: ZendColors.destructive, size: 36),
             const SizedBox(height: 12),
             Text('Never share this phrase.',
               textAlign: TextAlign.center,
@@ -253,7 +254,7 @@ class _DisplayStage extends StatelessWidget {
             border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.2)),
           ),
           child: Row(children: [
-            const Icon(Icons.warning_amber_rounded, color: ZendColors.destructive, size: 18),
+            const Icon(SolarIconsBold.infoCircle, color: ZendColors.destructive, size: 18),
             const SizedBox(width: 8),
             Expanded(child: Text(
               'Never share this phrase. Zend! staff will never ask for it.',

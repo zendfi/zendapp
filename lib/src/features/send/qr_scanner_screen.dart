@@ -9,6 +9,7 @@ import '../../models/qr_payment_intent.dart';
 import '../../services/qr_scanner_state.dart';
 import '../pairing/pairing_approval_sheet.dart';
 import 'qr_payment_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Full-screen QR scanner that decodes `zdfi.me` payment URLs.
 ///
@@ -191,7 +192,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     children: [
                       // Back button
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(SolarIconsBold.altArrowLeft, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                         tooltip: 'Back',
                       ),
@@ -338,7 +339,7 @@ class _PermissionDeniedOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.camera_alt_outlined,
+              SolarIconsBold.camera,
               color: Colors.white54,
               size: 64,
             ),
@@ -412,7 +413,7 @@ class _CameraErrorOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.videocam_off_outlined,
+              SolarIconsBold.videocamera,
               color: Colors.white54,
               size: 64,
             ),
@@ -474,7 +475,7 @@ class _TorchButton extends StatelessWidget {
           ),
         ),
         child: Icon(
-          torchOn ? Icons.flashlight_on : Icons.flashlight_off,
+          torchOn ? SolarIconsBold.flashlightOn : SolarIconsBold.flashlight,
           color: Colors.white,
           size: 24,
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Shared PIN entry stage widget, extracted from SendFlowSheet for reuse
 /// in QrPaymentSheet and other payment flows.
@@ -42,7 +43,7 @@ class SendPinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
+              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 8),
@@ -328,7 +329,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, color: Colors.white, size: 36),
+                child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
@@ -394,7 +395,7 @@ class SendErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, color: Colors.white, size: 36),
+              child: const Icon(SolarIconsBold.closeCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(

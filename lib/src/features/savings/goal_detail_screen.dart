@@ -9,6 +9,7 @@ import '../../models/pocket_models.dart';
 import 'pocket_screen.dart' show GoalProgressPainter;
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   const GoalDetailScreen({super.key, required this.pocket});
@@ -111,7 +112,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -220,7 +221,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: Row(
                         children: [
                           const Icon(
-                            Icons.lock_outline,
+                            SolarIconsBold.lockKeyhole,
                             size: 16,
                             color: ZendColors.accentBright,
                           ),

@@ -10,6 +10,7 @@ import '../../navigation/zend_routes.dart';
 import '../../services/wallet_session_cache.dart';
 import '../shell/zend_shell.dart';
 import 'pin_setup_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class PinRestoreScreen extends StatefulWidget {
   const PinRestoreScreen({super.key});
@@ -171,7 +172,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
             children: [
               SizedBox(height: compact ? 40 : 64),
               const Icon(
-                Icons.lock_open_rounded,
+                SolarIconsBold.lockKeyholeUnlocked,
                 color: ZendColors.accentPop,
                 size: 36,
               ),

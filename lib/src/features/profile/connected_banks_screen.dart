@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ConnectedBanksScreen extends StatelessWidget {
   const ConnectedBanksScreen({super.key});
@@ -24,7 +25,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.account_balance_outlined,
+                        SolarIconsBold.banknote,
                         size: 48,
                         color: zt.textSecondary,
                       ),
@@ -72,7 +73,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(

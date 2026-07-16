@@ -6,6 +6,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'otp_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Entry screen — user can sign in with phone number OR email.
 class PhoneScreen extends StatefulWidget {
@@ -247,7 +248,7 @@ class _CountryPill extends StatelessWidget {
             const SizedBox(width: 8),
             Text(code, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down, size: 18, color: zt.textSecondary),
+            Icon(SolarIconsBold.altArrowDown, size: 18, color: zt.textSecondary),
           ],
         ),
       ),

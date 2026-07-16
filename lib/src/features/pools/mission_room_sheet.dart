@@ -4,6 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'mission_room.dart';
 import 'pool.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 Future<void> showMissionRoomSheet(
   BuildContext context, {
@@ -61,7 +62,7 @@ class _MissionRoomSheet extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close, color: ZendTheme.of(context).textSecondary, size: 20),
+                          icon: Icon(SolarIconsBold.closeCircle, color: ZendTheme.of(context).textSecondary, size: 20),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],

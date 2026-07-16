@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
@@ -33,11 +34,11 @@ class ContactSupportScreen extends StatelessWidget {
                       style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
                     ),
                     const SizedBox(height: 14),
-                    _SupportRow(icon: Icons.email_outlined, label: 'support@zendfi.com'),
+                    _SupportRow(icon: SolarIconsBold.mailbox, label: 'support@zendfi.com'),
                     const SizedBox(height: 10),
-                    _SupportRow(icon: Icons.chat_bubble_outline, label: 'Live chat'),
+                    _SupportRow(icon: SolarIconsBold.chatDots, label: 'Live chat'),
                     const SizedBox(height: 10),
-                    _SupportRow(icon: Icons.article_outlined, label: 'Help center'),
+                    _SupportRow(icon: SolarIconsBold.clipboard, label: 'Help center'),
                   ],
                 ),
               ),
@@ -85,7 +86,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(

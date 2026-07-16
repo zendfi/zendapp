@@ -6,6 +6,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'bank_send_sheet.dart';
 import 'crypto_send_sheet.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 Future<void> showWithdrawSheet(BuildContext context) {
   return showModalBottomSheet(
@@ -297,7 +298,7 @@ class _DestinationStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
+              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 16),
@@ -314,7 +315,7 @@ class _DestinationStage extends StatelessWidget {
 
           // ── Bank option ─────────────────────────────────────────────
           _DestinationTile(
-            icon: Icons.account_balance_outlined,
+            icon: SolarIconsBold.banknote,
             title: 'Bank account',
             subtitle: 'Nigeria, UK, USA, Europe',
             onTap: () {
@@ -326,7 +327,7 @@ class _DestinationStage extends StatelessWidget {
 
           // ── Blockchain option ───────────────────────────────────────
           _DestinationTile(
-            icon: Icons.currency_bitcoin_outlined,
+            icon: SolarIconsBold.dollar,
             title: 'Crypto wallet',
             subtitle: 'Any chain — Tron, Ethereum, BNB...',
             onTap: () {
@@ -403,7 +404,7 @@ class _DestinationTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
+            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),

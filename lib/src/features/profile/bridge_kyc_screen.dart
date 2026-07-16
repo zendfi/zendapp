@@ -5,6 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class BridgeKycScreen extends StatefulWidget {
   const BridgeKycScreen({super.key});
@@ -110,7 +111,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                 trailing: _loading
                     ? null
                     : IconButton(
-                        icon: Icon(Icons.refresh, color: zt.textSecondary, size: 20),
+                        icon: Icon(SolarIconsBold.refresh, color: zt.textSecondary, size: 20),
                         onPressed: _loadStatus,
                       ),
               ),
@@ -152,7 +153,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.verified_user, color: ZendColors.positive, size: 24),
+                                Icon(SolarIconsBold.shieldUser, color: ZendColors.positive, size: 24),
                                 SizedBox(width: 12),
                                 Expanded(child: Text('Your identity is verified. Local payment rails are enabled.', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendColors.positive, fontWeight: FontWeight.w500))),
                               ],
@@ -199,7 +200,7 @@ class _ScreenHeader extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Row(
       children: [
-        IconButton(onPressed: () => Navigator.of(context).pop(), icon: Icon(Icons.arrow_back, color: zt.textPrimary)),
+        IconButton(onPressed: () => Navigator.of(context).pop(), icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary)),
         const SizedBox(width: 4),
         Expanded(child: Text(title, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary))),
         SizedBox(width: 48, child: trailing),
@@ -231,7 +232,7 @@ class _StatusCard extends StatelessWidget {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(ZendRadii.md)),
-              child: Icon(isApproved ? Icons.verified_user_rounded : Icons.shield_outlined, color: statusColor, size: 22),
+              child: Icon(isApproved ? SolarIconsBold.shieldUser : SolarIconsBold.shieldMinimalistic, color: statusColor, size: 22),
             ),
             const SizedBox(width: 14),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

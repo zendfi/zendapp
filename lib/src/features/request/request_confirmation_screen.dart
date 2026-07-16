@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Full-screen confirmation — used when navigating to a standalone screen.
 class RequestConfirmationScreen extends StatelessWidget {
@@ -118,7 +119,7 @@ class _RequestConfirmationContentState
             CircleAvatar(
               radius: 48,
               backgroundColor: ZendColors.positive.withValues(alpha: 0.12),
-              child: const Icon(Icons.check_rounded,
+              child: const Icon(SolarIconsBold.checkCircle,
                   size: 48, color: ZendColors.positive),
             ),
             const SizedBox(height: 32),

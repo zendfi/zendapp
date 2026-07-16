@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/pocket_models.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 enum _LockStage { amountDate, confirm }
 
@@ -340,7 +341,7 @@ class _AmountDateStage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today_outlined,
+                  Icon(SolarIconsBold.calendar,
                       size: 16, color: zt.textSecondary),
                   const SizedBox(width: ZendSpacing.xs),
                   Expanded(
@@ -357,7 +358,7 @@ class _AmountDateStage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
+                  Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
                 ],
               ),
             ),
@@ -429,7 +430,7 @@ class _ConfirmStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(Icons.arrow_back, color: zt.textPrimary, size: 22),
+              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -447,7 +448,7 @@ class _ConfirmStage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.lock_outline,
+                    const Icon(SolarIconsBold.lockKeyhole,
                         size: 18, color: ZendColors.accentBright),
                     const SizedBox(width: ZendSpacing.xs),
                     Text(

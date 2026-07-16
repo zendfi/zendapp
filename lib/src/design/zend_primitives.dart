@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'zend_tokens.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ZendScrollPage extends StatelessWidget {
   const ZendScrollPage({super.key, required this.child, this.controller});
@@ -242,7 +243,7 @@ class ZendBackspaceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(
-      Icons.backspace_rounded,
+      SolarIconsBold.backspace,
       color: color,
       size: size,
     );

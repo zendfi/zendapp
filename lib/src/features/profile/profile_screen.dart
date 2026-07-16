@@ -19,6 +19,7 @@ import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
 import 'customise_page_screen.dart';
 import '../request/payment_requests_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -45,7 +46,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back, color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
                 ],
               ),
@@ -125,27 +126,27 @@ class ProfileScreen extends StatelessWidget {
                     _SettingsGroup(
                       tiles: [
                         _ProfileTile(
-                          icon: Icons.person_outline,
+                          icon: SolarIconsBold.userCircle,
                           label: 'Account information',
                           onTap: () => pushZendSlide(context, const AccountInformationScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.account_balance_outlined,
+                          icon: SolarIconsBold.banknote,
                           label: 'Connected banks',
                           onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.link,
+                          icon: SolarIconsBold.link,
                           label: 'Connected apps',
                           onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.palette_outlined,
+                          icon: SolarIconsBold.palette,
                           label: 'Customise payment page',
                           onTap: () => pushZendSlide(context, const CustomisePageScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.receipt_long_outlined,
+                          icon: SolarIconsBold.bill,
                           label: 'Payment requests',
                           onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
                         ),
@@ -161,7 +162,7 @@ class ProfileScreen extends StatelessWidget {
                     _SettingsGroup(
                       tiles: [
                         _ProfileToggleTile(
-                          icon: Icons.dark_mode_outlined,
+                          icon: SolarIconsBold.moon,
                           label: 'Dark mode',
                           value: model.isDarkMode,
                           onChanged: (_) => model.toggleDarkMode(),
@@ -174,17 +175,17 @@ class ProfileScreen extends StatelessWidget {
                     _SettingsGroup(
                       tiles: [
                         _ProfileTile(
-                          icon: Icons.security_outlined,
+                          icon: SolarIconsBold.shieldCheck,
                           label: 'Security settings',
                           onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.pin_outlined,
+                          icon: SolarIconsBold.lockPassword,
                           label: 'Change PIN',
                           onTap: () => pushZendSlide(context, const ChangePinScreen()),
                         ),
                         _ProfileTile(
-                          icon: Icons.verified_user_outlined,
+                          icon: SolarIconsBold.shieldUser,
                           label: 'Identity verification',
                           onTap: () => pushZendSlide(context, const BridgeKycScreen()),
                         ),
@@ -196,7 +197,7 @@ class ProfileScreen extends StatelessWidget {
                     _SettingsGroup(
                       tiles: [
                         _ProfileTile(
-                          icon: Icons.support_agent,
+                          icon: SolarIconsBold.userSpeak,
                           label: 'Contact support',
                           onTap: () => pushZendSlide(context, const ContactSupportScreen()),
                         ),
@@ -216,7 +217,7 @@ class ProfileScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.logout, size: 18, color: ZendColors.destructive),
+                            Icon(SolarIconsBold.logout, size: 18, color: ZendColors.destructive),
                             SizedBox(width: 8),
                             Text(
                               'Log out',
@@ -321,7 +322,7 @@ class _ProfileTile extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
+            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),
@@ -417,20 +418,20 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               ),
               const SizedBox(height: 20),
               _SheetOption(
-                icon: Icons.camera_alt_outlined,
+                icon: SolarIconsBold.camera,
                 label: 'Take photo',
                 onTap: () => Navigator.pop(ctx, 'camera'),
                 zt: zt,
               ),
               _SheetOption(
-                icon: Icons.photo_library_outlined,
+                icon: SolarIconsBold.galleryAdd,
                 label: 'Choose from library',
                 onTap: () => Navigator.pop(ctx, 'gallery'),
                 zt: zt,
               ),
               if (hasPhoto)
                 _SheetOption(
-                  icon: Icons.delete_outline,
+                  icon: SolarIconsBold.trashBinMinimalistic,
                   label: 'Remove photo',
                   onTap: () => Navigator.pop(ctx, 'remove'),
                   zt: zt,
@@ -539,7 +540,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                   color: ZendColors.accentBright,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.edit, size: 10, color: Colors.white),
+                child: const Icon(SolarIconsBold.pen2, size: 10, color: Colors.white),
               ),
             ),
         ],
@@ -683,7 +684,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Icon(
-                      Icons.bluetooth_searching,
+                      SolarIconsBold.bluetoothWave,
                       size: 20,
                       color: isOn ? ZendColors.accentBright : zt.textSecondary,
                     ),
@@ -751,7 +752,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.warning_amber_rounded,
+                          const Icon(SolarIconsBold.infoCircle,
                               size: 14, color: Color(0xFFFF5252)),
                           const SizedBox(width: 6),
                           Expanded(
@@ -777,7 +778,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.radio_button_checked,
+                          SolarIconsBold.recordCircle,
                           size: 10,
                           color: ZendColors.accentBright,
                         ),
