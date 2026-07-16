@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sound_service.dart';
@@ -31,6 +32,12 @@ Future<void> showRequestDrawer(
   );
 }
 
+// ── Stage enum — mirrors SendStage pattern ────────────────────────────────────
+
+enum _RequestStage { form, loading, success }
+
+// ── Main sheet widget ─────────────────────────────────────────────────────────
+
 class RequestDrawerSheet extends StatefulWidget {
   const RequestDrawerSheet({
     super.key,
@@ -39,7 +46,6 @@ class RequestDrawerSheet extends StatefulWidget {
   });
 
   final double? initialAmount;
-
   final bool amountReadOnly;
 
   @override
@@ -47,718 +53,555 @@ class RequestDrawerSheet extends StatefulWidget {
 }
 
 class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
-  static const int _descriptionMaxLength = 140;
+  static const int _noteMaxLength = 140;
+  static const Duration _stageTransition = Duration(milliseconds: 180);
+  static const Duration _sheetResize = Duration(milliseconds: 220);
 
-  late final TextEditingController _amountController;
-  late final TextEditingController _descriptionController;
-  late final TextEditingController _recipientController;
+  _RequestStage _stage = _RequestStage.form;
 
+  // Form state
   double _amount = 0;
-  DateTime? _expiryDate;
-  String? _expiryError;
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _toController = TextEditingController();
 
-  // Recipient resolution state
-  String? _resolvedZendtag;       // confirmed zendtag (without @)
-  String? _resolvedDisplayName;   // display name for confirmed zendtag
-  String? _recipientEmail;        // confirmed email address
-  String? _recipientError;        // inline error on the field
-  bool _resolvingZendtag = false;
-  Timer? _resolveDebounce;
+  String _toValue = '';
+  bool _resolving = false;
+  String? _resolvedZendtag;
+  String? _resolvedDisplayName;
+  String? _resolvedAvatarUrl;
+  String? _recipientEmail;
+  String? _resolveError;
+  Timer? _debounceTimer;
+
+  PaymentRequest? _createdRequest;
 
   @override
   void initState() {
     super.initState();
     _amount = widget.initialAmount ?? 0;
-    _amountController = TextEditingController(
-      text: _amount > 0 ? _amount.toString() : '',
-    );
-    _descriptionController = TextEditingController();
-    _recipientController = TextEditingController();
+    if (_amount > 0) _amountController.text = _amount.toStringAsFixed(2);
+    _toController.addListener(() {});
   }
 
   @override
   void dispose() {
-    _resolveDebounce?.cancel();
+    _debounceTimer?.cancel();
     _amountController.dispose();
-    _descriptionController.dispose();
-    _recipientController.dispose();
+    _noteController.dispose();
+    _toController.dispose();
     super.dispose();
+  }
+
+  String get _amountFormatted {
+    if (_amount == _amount.roundToDouble()) return '\$${_amount.toStringAsFixed(0)}';
+    return '\$${_amount.toStringAsFixed(2)}';
   }
 
   bool get _canCreate => _amount > 0;
 
   bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
 
-  // ── Stage ──
-  // null = form, true = loading, false = success
-  bool? _stage; // null=form, true=loading, false=success
-  PaymentRequest? _createdRequest;
-
-  String get _titleText {
-    if (_amount > 0) {
-      return 'Create payment request for ${formatRequestAmount(_amount)}';
-    }
-    return 'Create payment request';
-  }
-
-  String get _buttonLabel {
-    if (!_hasValidRecipient) return 'Create link';
-    if (_resolvedZendtag != null) return 'Send to @$_resolvedZendtag';
-    return 'Send to $_recipientEmail';
-  }
-
-  void _onAmountChanged(String value) {
-    final parsed = validateAmountInput(value);
+  void _onToChanged(String v) {
     setState(() {
-      _amount = parsed ?? 0;
-    });
-  }
-
-  void _onRecipientChanged(String value) {
-    _resolveDebounce?.cancel();
-    final trimmed = value.trim();
-
-    // Clear previous resolution
-    setState(() {
+      _toValue = v;
       _resolvedZendtag = null;
       _resolvedDisplayName = null;
+      _resolvedAvatarUrl = null;
       _recipientEmail = null;
-      _recipientError = null;
-      _resolvingZendtag = false;
+      _resolveError = null;
     });
+    _debounceTimer?.cancel();
+    if (v.trim().isEmpty) return;
 
-    if (trimmed.isEmpty) return;
-
-    if (trimmed.startsWith('@')) {
-      // Zendtag path — debounce 500ms then resolve
-      final tag = trimmed.substring(1).toLowerCase();
-      if (tag.isEmpty) return;
-      _resolveDebounce = Timer(const Duration(milliseconds: 500), () {
-        _resolveZendtag(tag);
-      });
-    } else if (trimmed.contains('@')) {
-      // Email path — basic format check, no backend call needed at this stage
+    final trimmed = v.trim();
+    if (trimmed.contains('@') && trimmed.contains('.') && !trimmed.startsWith('@')) {
+      // Looks like an email
       final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
       if (emailRegex.hasMatch(trimmed)) {
         setState(() => _recipientEmail = trimmed);
       }
-      // If format is invalid, treat as empty (no error shown while typing)
-    }
-    // Otherwise: not a zendtag or email — treat as empty
-  }
-
-  Future<void> _resolveZendtag(String tag) async {
-    if (!mounted) return;
-    final model = ZendScope.of(context);
-
-    // Don't allow self-requests
-    if (tag == model.currentZendtag) {
-      setState(() {
-        _recipientError = "You can't request from yourself.";
-        _resolvingZendtag = false;
-      });
       return;
     }
 
-    setState(() => _resolvingZendtag = true);
+    // Zendtag — strip @ prefix and resolve
+    final tag = trimmed.replaceAll('@', '').toLowerCase();
+    if (tag.isEmpty) return;
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () => _resolveTag(tag));
+  }
 
+  Future<void> _resolveTag(String tag) async {
+    if (!mounted) return;
+    final model = ZendScope.of(context);
+    if (tag == model.currentZendtag) {
+      setState(() => _resolveError = "Can't request from yourself");
+      return;
+    }
+    setState(() { _resolving = true; _resolveError = null; });
     try {
       final resolved = await model.zendtagService.resolve(tag);
       if (!mounted) return;
-
-      // Check again after async gap
-      if (resolved.zendtag == model.currentZendtag) {
-        setState(() {
-          _recipientError = "You can't request from yourself.";
-          _resolvingZendtag = false;
-        });
-        return;
-      }
-
       setState(() {
         _resolvedZendtag = resolved.zendtag;
-        _resolvedDisplayName = resolved.displayName;
-        _recipientError = null;
-        _resolvingZendtag = false;
+        _resolvedDisplayName = resolved.displayName.trim().isNotEmpty ? resolved.displayName : '@${resolved.zendtag}';
+        _resolvedAvatarUrl = resolved.avatarUrl;
+        _resolving = false;
       });
     } catch (_) {
       if (!mounted) return;
-      // Zendtag not found — treat as empty (no error, per spec)
-      setState(() {
-        _resolvedZendtag = null;
-        _resolvedDisplayName = null;
-        _resolvingZendtag = false;
-      });
+      setState(() { _resolving = false; });
     }
   }
 
-  Future<void> _pickExpiryDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _expiryDate ?? now.add(const Duration(days: 7)),
-      firstDate: now,
-      lastDate: DateTime(now.year + 2, now.month, now.day),
-    );
-    if (picked != null) {
-      if (!isValidExpiryDate(picked)) {
-        setState(() {
-          _expiryError = 'Please select a future date';
-        });
-      } else {
-        setState(() {
-          _expiryDate = picked;
-          _expiryError = null;
-        });
-      }
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  void _onCreateLink() {
-    if (!_canCreate || _stage == true) return;
-
+  Future<void> _submit() async {
+    if (!_canCreate || _stage == _RequestStage.loading) return;
     final model = ZendScope.of(context);
-    final resolvedZendtag = _resolvedZendtag;
-    final recipientEmail = _recipientEmail;
 
-    setState(() => _stage = true); // loading
+    setState(() => _stage = _RequestStage.loading);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      PaymentRequest request;
-      try {
-        final response = await model.walletService.apiClient.createPaymentRequest(
-          amountUsdc: _amount > 0 ? _amount : null,
-          description: _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-          expiresAt: _expiryDate,
-          recipientZendtag: resolvedZendtag,
-          recipientEmail: recipientEmail,
-        );
+    PaymentRequest request;
+    try {
+      final response = await model.walletService.apiClient.createPaymentRequest(
+        amountUsdc: _amount,
+        description: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        expiresAt: null,
+        recipientZendtag: _resolvedZendtag,
+        recipientEmail: _recipientEmail,
+      );
+      request = PaymentRequest(
+        id: response['id'] as String,
+        link: response['link_url'] as String,
+        amount: (response['amount_usdc'] as num?)?.toDouble() ?? _amount,
+        description: _noteController.text.trim(),
+        createdAt: DateTime.now(),
+        expiryDate: null,
+        status: PaymentRequestStatus.pending,
+        recipientZendtag: response['recipient_zendtag'] as String? ?? _resolvedZendtag,
+        recipientEmail: response['recipient_email'] as String? ?? _recipientEmail,
+      );
+    } catch (_) {
+      final requestId = generateRequestId();
+      request = PaymentRequest(
+        id: requestId,
+        link: buildRequestLink(model.username, requestId),
+        amount: _amount,
+        description: _noteController.text.trim(),
+        createdAt: DateTime.now(),
+        expiryDate: null,
+        status: PaymentRequestStatus.pending,
+        recipientZendtag: _resolvedZendtag,
+        recipientEmail: _recipientEmail,
+      );
+    }
 
-        request = PaymentRequest(
-          id: response['id'] as String,
-          link: response['link_url'] as String,
-          amount: (response['amount_usdc'] as num?)?.toDouble() ?? _amount,
-          description: _descriptionController.text.trim(),
-          createdAt: DateTime.now(),
-          expiryDate: _expiryDate,
-          status: PaymentRequestStatus.pending,
-          recipientZendtag: response['recipient_zendtag'] as String? ?? resolvedZendtag,
-          recipientEmail: response['recipient_email'] as String? ?? recipientEmail,
-        );
-      } catch (_) {
-        final requestId = generateRequestId();
-        final link = buildRequestLink(model.username, requestId);
-        request = PaymentRequest(
-          id: requestId,
-          link: link,
-          amount: _amount,
-          description: _descriptionController.text.trim(),
-          createdAt: DateTime.now(),
-          expiryDate: _expiryDate,
-          status: PaymentRequestStatus.pending,
-          recipientZendtag: resolvedZendtag,
-          recipientEmail: recipientEmail,
-        );
-      }
-
-      model.addPaymentRequest(request);
-
-      if (mounted) {
-        HapticFeedback.mediumImpact();
-        unawaited(SoundService.playZentSuccess());
-        setState(() {
-          _stage = false; // success
-          _createdRequest = request;
-        });
-      }
-    });
+    model.addPaymentRequest(request);
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    unawaited(SoundService.playZentSuccess());
+    setState(() { _stage = _RequestStage.success; _createdRequest = request; });
   }
 
   @override
   Widget build(BuildContext context) {
-    final descRemaining = remainingCharacters(
-      _descriptionController.text,
-      _descriptionMaxLength,
-    );
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    // ── Loading stage ──────────────────────────────────────────────────────
-    if (_stage == true) {
-      final zt = ZendTheme.of(context);
-      return Container(
+    final double heightFraction = switch (_stage) {
+      _RequestStage.form    => 1.0,
+      _RequestStage.loading => 0.45,
+      _RequestStage.success => 0.55,
+    };
+
+    return PopScope(
+      canPop: _stage != _RequestStage.loading,
+      child: AnimatedContainer(
+        duration: _sheetResize,
+        curve: Curves.easeOutCubic,
+        height: screenHeight * heightFraction,
         decoration: BoxDecoration(
-          color: zt.bgPrimary,
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
         ),
-        child: SizedBox(
-          height: 280,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ZendLoader(size: 32),
-                const SizedBox(height: 20),
-                Text(
-                  'Creating request…',
-                  style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: zt.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // ── Success stage ──────────────────────────────────────────────────────
-    if (_stage == false && _createdRequest != null) {
-      return _RequestSuccessStage(
-        request: _createdRequest!,
-        onDone: () => Navigator.of(context).pop(),
-        onShowQr: () => showRequestQrSheet(context, request: _createdRequest!),
-      );
-    }
-
-    // ── Form stage ─────────────────────────────────────────────────────────
-    final zt = ZendTheme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(ZendRadii.xxl),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: ZendScrollPage(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const ZendSheetHandle(),
-              const SizedBox(height: ZendSpacing.lg),
-
-              Text(
-                _titleText,
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: zt.textPrimary,
-                ),
-              ),
-              const SizedBox(height: ZendSpacing.xl),
-
-              if (widget.amountReadOnly) ...[
-                Text(
-                  formatRequestAmount(_amount),
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 40,
-                    fontWeight: FontWeight.w700,
-                    fontStyle: FontStyle.italic,
-                    color: zt.textPrimary,
-                  ),
-                ),
-              ] else ...[
-                TextField(
-                  controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: _onAmountChanged,
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 28,
-                    fontWeight: FontWeight.w500,
-                    color: zt.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    prefixText: r'$ ',
-                    prefixStyle: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w500,
-                      color: zt.textSecondary,
-                    ),
-                    hintText: '0.00',
-                    hintStyle: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w500,
-                      color: zt.textSecondary,
-                    ),
-                    filled: true,
-                    fillColor: zt.bgSecondary,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(ZendRadii.md),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: ZendSpacing.md,
-                      vertical: ZendSpacing.sm,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: ZendSpacing.lg),
-
-              TextField(
-                controller: _descriptionController,
-                maxLines: 2,
-                minLines: 1,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(_descriptionMaxLength),
-                ],
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Description (optional)',
-                  hintStyle: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: zt.textSecondary,
-                  ),
-                  filled: true,
-                  fillColor: zt.bgSecondary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.md,
-                    vertical: ZendSpacing.sm,
-                  ),
-                ),
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: zt.textPrimary,
-                ),
-              ),
-              const SizedBox(height: ZendSpacing.xxs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '$descRemaining remaining',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: descRemaining < 20
-                        ? ZendColors.destructive
-                        : zt.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: ZendSpacing.md),
-
-              TextField(
-                controller: _recipientController,
-                onChanged: _onRecipientChanged,
-                decoration: InputDecoration(
-                  hintText: '@zendtag or email address',
-                  hintStyle: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 15,
-                    color: zt.textSecondary,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.person_outline,
-                    size: 20,
-                    color: zt.textSecondary,
-                  ),
-                  suffixIcon: _resolvingZendtag
-                      ? Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: ZendLoader(size: 16, strokeWidth: 2, color: zt.textSecondary),
-                        )
-                      : _resolvedZendtag != null
-                          ? Icon(Icons.check_circle, size: 20, color: zt.positive)
-                          : _recipientEmail != null
-                              ? Icon(Icons.check_circle, size: 20, color: zt.positive)
-                              : null,
-                  filled: true,
-                  fillColor: zt.bgSecondary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.md,
-                    vertical: ZendSpacing.sm,
-                  ),
-                ),
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: zt.textPrimary,
-                ),
-              ),
-              if (_resolvedDisplayName != null) ...[
-                const SizedBox(height: ZendSpacing.xxs),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    '$_resolvedDisplayName (@$_resolvedZendtag)',
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 12,
-                      color: zt.positive,
-                    ),
-                  ),
-                ),
-              ],
-              if (_recipientError != null) ...[
-                const SizedBox(height: ZendSpacing.xxs),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    _recipientError!,
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 12,
-                      color: ZendColors.destructive,
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: ZendSpacing.md),
-
-              _TappableRow(
-                label: _expiryDate != null
-                    ? 'Expires ${_formatDate(_expiryDate!)}'
-                    : 'Set expiry date',
-                trailing: Icon(Icons.chevron_right, size: 18, color: zt.textSecondary),
-                onTap: _pickExpiryDate,
-              ),
-              if (_expiryError != null) ...[
-                const SizedBox(height: ZendSpacing.xxs),
-                Text(
-                  _expiryError!,
-                  style: const TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 12,
-                    color: ZendColors.destructive,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: ZendSpacing.xxl),
-              const Spacer(),
-
-              PrimaryButton(
-                label: _buttonLabel,
-                onPressed: _canCreate ? _onCreateLink : () {},
-                backgroundColor: _canCreate ? zt.accent : zt.bgSecondary,
-                foregroundColor: _canCreate ? ZendColors.textOnDeep : zt.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TappableRow extends StatelessWidget {
-  const _TappableRow({
-    required this.label,
-    required this.trailing,
-    required this.onTap,
-  });
-
-  final String label;
-  final Widget trailing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return InkWell(
-      borderRadius: BorderRadius.circular(ZendRadii.sm),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ZendSpacing.md,
-          vertical: ZendSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: zt.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.sm),
-        ),
-        child: Row(
+        child: Column(
           children: [
+            const SizedBox(height: 14),
+            const ZendSheetHandle(),
+            const SizedBox(height: 8),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  color: zt.textPrimary,
+              child: AnimatedSwitcher(
+                duration: _stageTransition,
+                reverseDuration: const Duration(milliseconds: 140),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
+                    child: child,
+                  ),
                 ),
+                child: RepaintBoundary(child: _buildStage()),
               ),
             ),
-            trailing,
           ],
         ),
       ),
     );
   }
+
+  Widget _buildStage() {
+    return switch (_stage) {
+      _RequestStage.form    => _FormStage(
+          key: const ValueKey('form'),
+          amountController: _amountController,
+          amountReadOnly: widget.amountReadOnly,
+          noteController: _noteController,
+          noteMaxLength: _noteMaxLength,
+          toController: _toController,
+          toValue: _toValue,
+          resolving: _resolving,
+          resolvedZendtag: _resolvedZendtag,
+          resolvedDisplayName: _resolvedDisplayName,
+          resolvedAvatarUrl: _resolvedAvatarUrl,
+          recipientEmail: _recipientEmail,
+          resolveError: _resolveError,
+          canCreate: _canCreate,
+          hasValidRecipient: _hasValidRecipient,
+          amountFormatted: _amountFormatted,
+          onAmountChanged: (v) => setState(() => _amount = double.tryParse(v) ?? 0),
+          onToChanged: _onToChanged,
+          onSubmit: _submit,
+        ),
+      _RequestStage.loading => _LoadingStage(key: const ValueKey('loading')),
+      _RequestStage.success => _SuccessStage(
+          key: const ValueKey('success'),
+          request: _createdRequest!,
+          onDone: () => Navigator.of(context).pop(),
+          onShowQr: () => showRequestQrSheet(context, request: _createdRequest!),
+        ),
+    };
+  }
 }
 
-// ── Request success stage ─────────────────────────────────────────────────────
+// ── Form Stage ────────────────────────────────────────────────────────────────
 
-class _RequestSuccessStage extends StatefulWidget {
-  const _RequestSuccessStage({
-    required this.request,
-    required this.onDone,
-    required this.onShowQr,
+class _FormStage extends StatelessWidget {
+  const _FormStage({
+    super.key,
+    required this.amountController,
+    required this.amountReadOnly,
+    required this.noteController,
+    required this.noteMaxLength,
+    required this.toController,
+    required this.toValue,
+    required this.resolving,
+    required this.resolvedZendtag,
+    required this.resolvedDisplayName,
+    required this.resolvedAvatarUrl,
+    required this.recipientEmail,
+    required this.resolveError,
+    required this.canCreate,
+    required this.hasValidRecipient,
+    required this.amountFormatted,
+    required this.onAmountChanged,
+    required this.onToChanged,
+    required this.onSubmit,
   });
+
+  final TextEditingController amountController;
+  final bool amountReadOnly;
+  final TextEditingController noteController;
+  final int noteMaxLength;
+  final TextEditingController toController;
+  final String toValue;
+  final bool resolving;
+  final String? resolvedZendtag;
+  final String? resolvedDisplayName;
+  final String? resolvedAvatarUrl;
+  final String? recipientEmail;
+  final String? resolveError;
+  final bool canCreate;
+  final bool hasValidRecipient;
+  final String amountFormatted;
+  final ValueChanged<String> onAmountChanged;
+  final ValueChanged<String> onToChanged;
+  final VoidCallback onSubmit;
+
+  String get _buttonLabel {
+    if (!hasValidRecipient) return 'Request $amountFormatted';
+    if (resolvedZendtag != null) return 'Request from @$resolvedZendtag';
+    return 'Send to $recipientEmail';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardOpen = keyboardHeight > 50;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            bottom: 72 + (keyboardOpen ? keyboardHeight : 0),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header ──
+                  Text(
+                    'Request $amountFormatted',
+                    style: TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Amount field (editable unless read-only) ──
+                  if (!amountReadOnly) ...[
+                    _FieldRow(
+                      label: r'$',
+                      child: TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        onChanged: onAmountChanged,
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: TextStyle(color: zt.textSecondary),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Divider(color: zt.border, height: 1),
+                    const SizedBox(height: 4),
+                  ],
+
+                  // ── To field ──
+                  _FieldRow(
+                    label: 'To',
+                    child: TextField(
+                      controller: toController,
+                      onChanged: onToChanged,
+                      textInputAction: TextInputAction.next,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '@username or email',
+                        hintStyle: TextStyle(color: zt.textSecondary),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        suffixIconConstraints: const BoxConstraints(maxWidth: 24, maxHeight: 24),
+                        suffixIcon: resolving
+                            ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
+                            : (resolvedZendtag != null || recipientEmail != null)
+                                ? Icon(Icons.check_circle_outline, size: 16, color: zt.accentBright)
+                                : null,
+                      ),
+                    ),
+                  ),
+
+                  // Resolved name or error
+                  if (resolvedDisplayName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48, top: 4),
+                      child: Row(
+                        children: [
+                          if (resolvedAvatarUrl != null) ...[
+                            ZendAvatar(radius: 10, photoUrl: resolvedAvatarUrl, initials: resolvedDisplayName![0].toUpperCase()),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(resolvedDisplayName!, style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.accentBright)),
+                        ],
+                      ),
+                    )
+                  else if (resolveError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48, top: 4),
+                      child: Text(resolveError!, style: const TextStyle(fontFamily: 'DMMono', fontSize: 12, color: ZendColors.destructive)),
+                    ),
+
+                  const SizedBox(height: 4),
+                  Divider(color: zt.border, height: 1),
+                  const SizedBox(height: 4),
+
+                  // ── Note field ──
+                  _FieldRow(
+                    label: 'Note',
+                    child: TextField(
+                      controller: noteController,
+                      maxLength: noteMaxLength,
+                      textInputAction: TextInputAction.done,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'optional',
+                        hintStyle: TextStyle(color: zt.textSecondary),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        counterText: '',
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+                  Divider(color: zt.border, height: 1),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Floating request button ──
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: (keyboardOpen ? keyboardHeight : 0) + 16,
+            child: PrimaryButton(
+              label: _buttonLabel,
+              onPressed: canCreate ? onSubmit : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Loading Stage ─────────────────────────────────────────────────────────────
+
+class _LoadingStage extends StatelessWidget {
+  const _LoadingStage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ZendLoader(size: 32, color: zt.accent),
+          const SizedBox(height: 20),
+          Text('Creating request…', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Success Stage ─────────────────────────────────────────────────────────────
+
+class _SuccessStage extends StatefulWidget {
+  const _SuccessStage({super.key, required this.request, required this.onDone, required this.onShowQr});
 
   final PaymentRequest request;
   final VoidCallback onDone;
   final VoidCallback onShowQr;
 
   @override
-  State<_RequestSuccessStage> createState() => _RequestSuccessStageState();
+  State<_SuccessStage> createState() => _SuccessStageState();
 }
 
-class _RequestSuccessStageState extends State<_RequestSuccessStage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _checkController;
-  late final Animation<double> _checkScale;
+class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _checkController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _checkScale = CurvedAnimation(
-      parent: _checkController,
-      curve: Curves.elasticOut,
-    );
-    _checkController.forward();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl.forward();
   }
 
   @override
-  void dispose() {
-    _checkController.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   String _headline() {
-    if (widget.request.recipientZendtag != null) {
-      return 'Zent It!';
-    }
-    if (widget.request.recipientEmail != null) {
-      return 'Request emailed!';
-    }
+    if (widget.request.recipientZendtag != null) return 'Zent it!';
+    if (widget.request.recipientEmail != null) return 'Request emailed!';
     return 'Link created!';
   }
 
   String _subline() {
-    if (widget.request.recipientZendtag != null) {
-      return '@${widget.request.recipientZendtag} will get a notification.';
-    }
-    if (widget.request.recipientEmail != null) {
-      return 'Sent to ${widget.request.recipientEmail}';
-    }
+    if (widget.request.recipientZendtag != null) return '@${widget.request.recipientZendtag} will get a notification.';
+    if (widget.request.recipientEmail != null) return 'Sent to ${widget.request.recipientEmail}';
     return 'Share the link or show the QR.';
-  }
-
-  String _formatAmount(double amount) {
-    if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
-    }
-    return '\$${amount.toStringAsFixed(2)}';
   }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+    final amount = widget.request.amount;
+    final amountStr = amount == amount.roundToDouble() ? '\$${amount.toStringAsFixed(0)}' : '\$${amount.toStringAsFixed(2)}';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 24),
+          ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 64, height: 64,
+              decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(_headline(), style: TextStyle(fontFamily: 'InstrumentSerif', fontStyle: FontStyle.italic, fontSize: 40, color: zt.textPrimary)),
+          const SizedBox(height: 6),
+          Text(amountStr, style: TextStyle(fontFamily: 'DMMono', fontSize: 16, color: zt.textSecondary)),
+          const SizedBox(height: 4),
+          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+          const SizedBox(height: 32),
+          SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr)),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Done', onPressed: widget.onDone)),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ZendSheetHandle(),
-            const SizedBox(height: 32),
-            ScaleTransition(
-              scale: _checkScale,
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: ZendColors.positive,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _headline(),
-              style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
-                fontSize: 40,
-                color: zt.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _formatAmount(widget.request.amount),
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 16,
-                color: zt.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _subline(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 14,
-                color: zt.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Show QR',
-                onPressed: widget.onShowQr,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlineActionButton(
-                label: 'Done',
-                onPressed: widget.onDone,
-              ),
-            ),
-          ],
-        ),
+    );
+  }
+}
+
+// ── Shared field row widget ───────────────────────────────────────────────────
+
+class _FieldRow extends StatelessWidget {
+  const _FieldRow({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 36,
+            child: Text(label, style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: child),
+        ],
       ),
     );
   }

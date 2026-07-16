@@ -894,7 +894,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                       },
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        hintText: '@username or email@domain.com',
+                        hintText: '@username or email',
                         hintStyle: TextStyle(color: zt.textSecondary),
                         // No border at all — we draw our own divider below
                         border: InputBorder.none,
