@@ -7,16 +7,17 @@ import '../../models/activity_edge.dart';
 import 'activity_grouping.dart';
 import 'package:solar_icons/solar_icons.dart';
 
+const _kPublicFeedEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
+
 /// Answers "where do users see public posts?" — a dedicated feed of every
 /// Shared_Network Activity_Edge the viewer is authorized to see via a
 /// mutual connection (i.e. `!isDirectParticipant` rows already included in
 /// `ZendAppModel.threadedActivityEdges`, per Req 5.3's Shared_Network_Viewer
 /// grant).
 ///
-/// Public feed posts are deliberately READ-ONLY for the viewer: they are
-/// neither a direct party to these activities, nor able to comment on them
-/// (enforced server-side), and tapping to open a comment sheet would be
-/// confusing since they can only observe. The tile is therefore non-tappable.
+/// Public feed posts are read-only for comments (only sender/recipient can
+/// comment, enforced server-side), but any authorized viewer may react via
+/// long-press → emoji picker.
 class PublicFeedScreen extends StatefulWidget {
   const PublicFeedScreen({super.key});
 
@@ -67,8 +68,6 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    // Filter by sender tag, recipient tag, or note — all three because
-    // the viewer is a spectator and may be searching for any party.
     final publicEdges = _filterQuery.isEmpty
         ? allPublic
         : allPublic.where((e) {
@@ -180,7 +179,10 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final edge = publicEdges[i];
-                        return _PublicPostRow(edge: edge, highlightQuery: _filterQuery);
+                        return _PublicPostRow(
+                          key: ValueKey(edge.edgeId),
+                          edge: edge,
+                        );
                       },
                     ),
             ),
@@ -191,11 +193,172 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
   }
 }
 
-class _PublicPostRow extends StatelessWidget {
-  const _PublicPostRow({required this.edge, this.highlightQuery = ''});
+// ── Public post row (with reactions) ─────────────────────────────────────────
 
+class _PublicPostRow extends StatefulWidget {
+  const _PublicPostRow({super.key, required this.edge});
   final ActivityEdge edge;
-  final String highlightQuery;
+
+  @override
+  State<_PublicPostRow> createState() => _PublicPostRowState();
+}
+
+class _PublicPostRowState extends State<_PublicPostRow> {
+  List<EdgeReactionCount> _reactions = const [];
+
+  String get _edgeKindStr {
+    switch (widget.edge.edgeKind) {
+      case ActivityEdgeKind.zendTransfer:      return 'zend_transfer';
+      case ActivityEdgeKind.poolContribution:  return 'pool_contribution';
+      case ActivityEdgeKind.requestFulfillment: return 'request_fulfillment';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReactions();
+  }
+
+  Future<void> _loadReactions() async {
+    final model = ZendScope.of(context);
+    try {
+      final reactions = await model.activityDataService.getEdgeReactions(
+        _edgeKindStr, widget.edge.edgeId,
+      );
+      if (mounted) setState(() => _reactions = reactions);
+    } catch (_) {
+      // Non-fatal — tile renders without reactions
+    }
+  }
+
+  Future<void> _toggleReaction(String emoji) async {
+    final model = ZendScope.of(context);
+    final existing = _reactions.where((r) => r.emoji == emoji).firstOrNull;
+    final alreadyReacted = existing?.reactedByMe ?? false;
+
+    // Optimistic update
+    setState(() {
+      final updated = List<EdgeReactionCount>.of(_reactions);
+      final idx = updated.indexWhere((r) => r.emoji == emoji);
+      if (alreadyReacted && idx != -1) {
+        final newCount = updated[idx].count - 1;
+        if (newCount <= 0) {
+          updated.removeAt(idx);
+        } else {
+          updated[idx] = EdgeReactionCount(emoji: emoji, count: newCount, reactedByMe: false);
+        }
+      } else if (idx != -1) {
+        updated[idx] = EdgeReactionCount(emoji: emoji, count: updated[idx].count + 1, reactedByMe: true);
+      } else {
+        updated.add(EdgeReactionCount(emoji: emoji, count: 1, reactedByMe: true));
+      }
+      _reactions = updated;
+    });
+
+    try {
+      if (alreadyReacted) {
+        await model.activityDataService.removeEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
+      } else {
+        await model.activityDataService.addEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
+      }
+    } catch (_) {
+      if (mounted) _loadReactions(); // revert on error
+    }
+  }
+
+  void _showReactionPicker(BuildContext tileContext) {
+    final renderBox = tileContext.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+
+    double? topPosition;
+    if (renderBox != null && renderBox.hasSize) {
+      final globalOffset = renderBox.localToGlobal(Offset.zero);
+      final msgHeight = renderBox.size.height;
+      final screenHeight = MediaQuery.of(context).size.height;
+      const pickerHeight = 56.0;
+      if (globalOffset.dy - pickerHeight - 12 > 60) {
+        topPosition = globalOffset.dy - pickerHeight - 12;
+      } else {
+        topPosition = (globalOffset.dy + msgHeight + 12).clamp(60.0, screenHeight - pickerHeight - 60);
+      }
+    }
+
+    final reactedEmojis = _reactions.where((r) => r.reactedByMe).map((r) => r.emoji).toSet();
+
+    entry = OverlayEntry(
+      builder: (ctx) {
+        final zt = ZendTheme.of(context);
+        final screenHeight = MediaQuery.of(context).size.height;
+        final topPos = topPosition ?? (screenHeight / 2 - 28);
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => entry.remove(),
+                child: const ColoredBox(color: Colors.transparent),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              top: topPos,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: zt.bgElevated,
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: zt.isDark ? 0.45 : 0.12),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final emoji in _kPublicFeedEmojis.take(8))
+                          GestureDetector(
+                            onTap: () {
+                              entry.remove();
+                              _toggleReaction(emoji);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                              child: AnimatedScale(
+                                scale: reactedEmojis.contains(emoji) ? 1.25 : 1.0,
+                                duration: const Duration(milliseconds: 120),
+                                child: Text(
+                                  emoji,
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    decoration: TextDecoration.none,
+                                    decorationColor: Colors.transparent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    overlay.insert(entry);
+  }
 
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
@@ -211,14 +374,10 @@ class _PublicPostRow extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    // Amount is shown only when the sender opted in to sharing it (server
-    // sets amount_hidden = false) AND the viewer has "show amounts on public
-    // posts" enabled in their settings. Default: amounts hidden.
-    final showAmount = model.showAmountOnPublicPosts && !edge.amountHidden;
-    final amountLabel = '\$${edge.amountUsdc ?? '0'}';
+    final showAmount = model.showAmountOnPublicPosts && !widget.edge.amountHidden;
+    final amountLabel = '\$${widget.edge.amountUsdc ?? '0'}';
+    final edge = widget.edge;
 
-    // Always third-person: "@sender paid @recipient" — feedVerbFor returns
-    // a third-person verb for direction=='external' edges (no "you" pronoun).
     final verb = feedVerbFor(edge);
     final senderTag = edge.senderZendtag;
     final recipientTag = edge.recipientZendtag;
@@ -226,55 +385,103 @@ class _PublicPostRow extends StatelessWidget {
     final recipientLabel = recipientTag != null && recipientTag.isNotEmpty ? '@$recipientTag' : 'someone';
     final senderInitial = senderTag?.isNotEmpty == true ? senderTag![0].toUpperCase() : '?';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ZendAvatar(radius: 18, photoUrl: edge.senderAvatarUrl, initials: senderInitial),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                    children: [
-                      TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(text: ' $verb '),
-                      TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      // Amount shown inline after the headline only when opted in
-                      if (showAmount)
-                        TextSpan(
-                          text: ' · $amountLabel',
-                          style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
-                        ),
-                    ],
+    return GestureDetector(
+      // Long-press shows the inline emoji picker anchored near this tile
+      onLongPress: () => _showReactionPicker(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
+          borderRadius: BorderRadius.circular(ZendRadii.xl),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ZendAvatar(radius: 18, photoUrl: edge.senderAvatarUrl, initials: senderInitial),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      children: [
+                        TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        TextSpan(text: ' $verb '),
+                        TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        if (showAmount)
+                          TextSpan(
+                            text: ' · $amountLabel',
+                            style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _relativeTime(edge.createdAt),
-                  style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
-                ),
-                if (edge.note?.isNotEmpty == true) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    edge.note!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                    _relativeTime(edge.createdAt),
+                    style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
                   ),
+                  if (edge.note?.isNotEmpty == true) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      edge.note!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                    ),
+                  ],
+                  // ── Reaction pills ──
+                  if (_reactions.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 5,
+                      runSpacing: 5,
+                      children: [
+                        for (final r in _reactions)
+                          GestureDetector(
+                            onTap: () => _toggleReaction(r.emoji),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: r.reactedByMe
+                                    ? zt.accent.withValues(alpha: 0.18)
+                                    : zt.bgPrimary,
+                                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                                border: r.reactedByMe
+                                    ? Border.all(color: zt.accent.withValues(alpha: 0.5))
+                                    : Border.all(color: zt.border),
+                              ),
+                              child: Text(
+                                '${r.emoji} ${r.count}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  // Long-press hint — subtle, only shown when no reactions yet
+                  if (_reactions.isEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Hold to react',
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 10,
+                        color: zt.textSecondary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
