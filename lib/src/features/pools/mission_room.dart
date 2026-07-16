@@ -1266,16 +1266,15 @@ class _InputBarState extends State<_InputBar> {
               ],
             )
           : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Mic button — kept outside bubble since it's a secondary action
+                // Mic button
                 GestureDetector(
                   onLongPressStart: (_) => unawaited(widget.onMicStart()),
                   onLongPressEnd: (_) => unawaited(widget.onMicStop()),
                   child: Container(
                     width: 36,
                     height: 36,
-                    margin: const EdgeInsets.only(bottom: 2),
                     decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
                     child: Icon(SolarIconsBold.microphone, size: 18, color: zt.textSecondary),
                   ),
@@ -1284,13 +1283,14 @@ class _InputBarState extends State<_InputBar> {
                 // Message input bubble with embedded send button
                 Expanded(
                   child: Container(
+                    constraints: const BoxConstraints(minHeight: 44),
                     decoration: BoxDecoration(
                       color: zt.bgSecondary,
-                      borderRadius: BorderRadius.circular(ZendRadii.xl),
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
                     ),
-                    padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
+                    padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: TextField(
@@ -1309,36 +1309,35 @@ class _InputBarState extends State<_InputBar> {
                               hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
                               border: InputBorder.none,
                               counterText: '',
-                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
                             ),
                           ),
                         ),
-                        // Send button embedded inside bubble
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4, left: 4),
-                          child: GestureDetector(
-                            onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: overLimit || _charCount == 0
-                                    ? zt.border
-                                    : zt.accent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: widget.sending
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                                    )
-                                  : Icon(
-                                      SolarIconsBold.plain,
-                                      size: 16,
-                                      color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
-                                    ),
+                        const SizedBox(width: 6),
+                        // Send button — centred vertically in the bubble
+                        GestureDetector(
+                          onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: overLimit || _charCount == 0
+                                  ? zt.border
+                                  : zt.accent,
+                              shape: BoxShape.circle,
                             ),
+                            child: widget.sending
+                                ? Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                                  )
+                                : Icon(
+                                    SolarIconsBold.plain,
+                                    size: 16,
+                                    color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
+                                  ),
                           ),
                         ),
                       ],
