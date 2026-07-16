@@ -390,7 +390,7 @@ class _AmountStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ZendSpacing.xs),
-          PoolProgressBar(progress: pool.progress),
+          PoolProgressBar(progress: pool.progress, style: PoolProgressBarStyle.circle, circleSize: 90, strokeWidth: 8),
           const SizedBox(height: ZendSpacing.xxs),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

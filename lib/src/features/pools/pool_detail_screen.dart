@@ -142,8 +142,8 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   ),
                   const SizedBox(height: ZendSpacing.xs),
 
-                  // Progress bar
-                  PoolProgressBar(progress: _pool.progress),
+                  // Progress circle
+                  PoolProgressBar(progress: _pool.progress, style: PoolProgressBarStyle.circle),
                   const SizedBox(height: ZendSpacing.xl),
 
                   // Participants

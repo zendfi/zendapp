@@ -209,7 +209,13 @@ class _PublicPostRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+    final model = ZendScope.of(context);
+
+    // Amount is shown only when the sender opted in to sharing it (server
+    // sets amount_hidden = false) AND the viewer has "show amounts on public
+    // posts" enabled in their settings. Default: amounts hidden.
+    final showAmount = model.showAmountOnPublicPosts && !edge.amountHidden;
+    final amountLabel = '\$${edge.amountUsdc ?? '0'}';
 
     // Always third-person: "@sender paid @recipient" — feedVerbFor returns
     // a third-person verb for direction=='external' edges (no "you" pronoun).
@@ -242,6 +248,12 @@ class _PublicPostRow extends StatelessWidget {
                       TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                       TextSpan(text: ' $verb '),
                       TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      // Amount shown inline after the headline only when opted in
+                      if (showAmount)
+                        TextSpan(
+                          text: ' · $amountLabel',
+                          style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                        ),
                     ],
                   ),
                 ),
@@ -261,11 +273,6 @@ class _PublicPostRow extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            amountLabel,
-            style: TextStyle(fontFamily: 'DMMono', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
           ),
         ],
       ),

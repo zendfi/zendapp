@@ -118,6 +118,7 @@ void main() async {
   );
 
   await model.hydrateRecentContacts();
+  await model.loadPersistedPreferences();
 
   await DeepLinkHandler.init();
 
