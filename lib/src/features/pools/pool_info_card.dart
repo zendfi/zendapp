@@ -133,14 +133,18 @@ class _AvatarRow extends StatelessWidget {
             Positioned(
               left: i * (_size - _overlap),
               child: Container(
+                width: _size,
+                height: _size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: zt.bgCard, width: 1.5),
                 ),
-                child: ZendAvatar(
-                  radius: _size / 2,
-                  photoUrl: visible[i].avatarUrl,
-                  initials: visible[i].avatarLabel,
+                child: ClipOval(
+                  child: ZendAvatar(
+                    radius: _size / 2,
+                    photoUrl: visible[i].avatarUrl,
+                    initials: visible[i].avatarLabel,
+                  ),
                 ),
               ),
             ),

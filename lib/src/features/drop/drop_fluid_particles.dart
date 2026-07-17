@@ -1,145 +1,167 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Direction of particle flow.
+/// Direction of particle stream.
 enum FluidParticleDirection { up, down }
 
-/// A single fluid particle with independent physics state.
-class _FluidParticle {
-  _FluidParticle({
-    required this.x,           // normalised 0→1 across canvas width
-    required this.startPhase,  // 0→1, when in the loop this particle "spawns"
-    required this.lifetime,    // fraction of the full animation cycle 0→1
-    required this.speed,       // vertical travel as fraction of canvas height
-    required this.sinePhase,   // unique horizontal oscillation phase
-    required this.sineAmp,     // horizontal oscillation amplitude (px)
-    required this.sineFreq,    // oscillation frequency multiplier
-    required this.size,        // radius in logical px
-    required this.brightness,  // 0.7–1.0 for gold shade variation
+/// A single particle in the focused beam stream.
+class _StreamParticle {
+  _StreamParticle({
+    required this.startPhase,  // 0→1: when in the loop this particle spawns
+    required this.lifetime,    // fraction of the animation cycle it lives
+    required this.angle,       // radians from the beam axis — small for focused stream
+    required this.speed,       // travel distance as fraction of canvas height
+    required this.size,        // base radius in logical px (grows with distance)
   });
 
-  final double x;
   final double startPhase;
   final double lifetime;
+  final double angle;
   final double speed;
-  final double sinePhase;
-  final double sineAmp;
-  final double sineFreq;
   final double size;
-  final double brightness;
 
-  /// Computes [x, y, opacity] for this particle at global animation time [t].
-  /// Returns null if the particle is not yet alive.
-  ({double px, double py, double opacity})? evaluate(
+  /// Computes position and opacity at global time [t].
+  /// [focalX], [focalY]: beam origin in canvas coordinates.
+  /// Returns null if not alive this cycle.
+  ({double px, double py, double opacity, double radius})? evaluate(
     double t,
     double canvasW,
     double canvasH,
-    double originY, // the Y to emerge from / fall toward (in canvas coords)
+    double focalX,
+    double focalY,
     FluidParticleDirection dir,
   ) {
-    // Determine where this particle is in its lifetime.
-    // t loops 0→1 continuously (controller repeats).
     final adjustedT = (t - startPhase + 1.0) % 1.0;
-    if (adjustedT > lifetime) return null; // not alive yet this cycle
+    if (adjustedT > lifetime) return null;
+    final localT = adjustedT / lifetime; // 0→1 within particle life
 
-    final localT = adjustedT / lifetime; // 0→1 within this particle's life
+    // Distance traveled along the beam axis.
+    final distance = speed * canvasH * localT;
 
-    // Vertical travel: from originY, moving up (sender) or down (receiver).
-    final travel = speed * canvasH * localT;
-    final py = dir == FluidParticleDirection.up
-        ? originY - travel
-        : originY + travel;
+    // X diverges from focal point with the beam angle.
+    // sin(angle) gives the transverse displacement per unit distance.
+    final dx = sin(angle) * distance;
+    final dy = dir == FluidParticleDirection.up ? -distance : distance;
 
-    // Skip if out of canvas bounds
-    if (py < -4 || py > canvasH + 4) return null;
+    final px = focalX + dx;
+    final py = focalY + dy;
 
-    // Horizontal sinusoidal drift — fluid, organic feel
-    final drift = sineAmp * sin(localT * sineFreq * pi * 2 + sinePhase);
-    final px = x * canvasW + drift;
-
-    // Opacity: ease in (first 15%), hold (15–70%), ease out (70–100%)
-    double opacity;
-    if (localT < 0.15) {
-      opacity = localT / 0.15;
-    } else if (localT < 0.70) {
-      opacity = 1.0;
-    } else {
-      opacity = (1.0 - localT) / 0.30;
+    if (px < -8 || px > canvasW + 8 || py < -8 || py > canvasH + 8) {
+      return null;
     }
 
-    return (px: px, py: py, opacity: opacity.clamp(0.0, 1.0));
+    // Opacity: fast fade-in, hold, soft fade-out.
+    double opacity;
+    if (localT < 0.08) {
+      opacity = localT / 0.08;
+    } else if (localT < 0.75) {
+      opacity = 1.0;
+    } else {
+      opacity = (1.0 - localT) / 0.25;
+    }
+
+    // Radius grows with travel distance — particles appear larger as they
+    // move away from the focal point (depth-of-field feel).
+    final radius = size * (0.4 + localT * 0.8);
+
+    return (
+      px: px,
+      py: py,
+      opacity: opacity.clamp(0.0, 1.0),
+      radius: radius,
+    );
   }
 }
 
-/// Physics-based fluid particle painter.
+/// Renders a focused comet-trail / particle beam streaming from a focal point.
 ///
-/// Renders a continuous upward or downward stream of hundreds of tiny gold
-/// particles emanating from [originFraction] (0=top, 1=bottom) of the canvas.
-/// Each particle has independent speed, oscillation, size and lifetime for
-/// a fluid, organic, bioluminescent feel.
+/// The beam is narrow at the focal origin and fans out gently as particles
+/// travel — matching the Apple Cash / AirDrop visual language in the reference
+/// image. Particles are white/silver, densest near the focal point.
+///
+/// [direction] controls whether the stream flows up (sender) or down (receiver).
+/// [focalXFraction]: 0→1 horizontal position of the beam origin (0.5 = centre).
+/// [focalYFraction]: 0→1 vertical position of the beam origin in the canvas.
 class DropFluidParticlePainter extends CustomPainter {
   DropFluidParticlePainter({
     required this.animation,
     required this.direction,
-    required this.originFraction, // 0→1: fraction from top where particles spawn
-    int count = 120,
-    this.particleColor = const Color(0xFFFFD166),
+    required this.focalXFraction,
+    required this.focalYFraction,
+    int count = 200,
+    this.particleColor = Colors.white,
     this.intensityMultiplier = 1.0,
-  })  : _particles = _buildParticles(count),
+    // Half-angle of the beam in radians — smaller = tighter stream.
+    // 0.18 rad ≈ 10° gives the focused comet-trail look in the reference.
+    double beamHalfAngle = 0.18,
+    // Maximum spread near the beam edges (Gaussian taper).
+    this.gaussianFalloff = 0.6,
+  })  : _particles = _buildParticles(count, beamHalfAngle),
         super(repaint: animation);
 
   final Animation<double> animation;
   final FluidParticleDirection direction;
-  final double originFraction;
+  final double focalXFraction;
+  final double focalYFraction;
   final Color particleColor;
-  final double intensityMultiplier; // 0→1, fades the whole stream
-  final List<_FluidParticle> _particles;
+  final double intensityMultiplier;
+  final double gaussianFalloff;
+  final List<_StreamParticle> _particles;
 
-  static List<_FluidParticle> _buildParticles(int count) {
-    final rng = Random(314159); // deterministic — same particles every build
+  static List<_StreamParticle> _buildParticles(int count, double halfAngle) {
+    final rng = Random(271828); // deterministic seed
     return List.generate(count, (i) {
-      return _FluidParticle(
-        x: rng.nextDouble(),                          // spawn across full width
-        startPhase: rng.nextDouble(),                  // staggered start
-        lifetime: 0.25 + rng.nextDouble() * 0.35,    // 25–60% of cycle
-        speed: 0.15 + rng.nextDouble() * 0.35,       // 15–50% of canvas height
-        sinePhase: rng.nextDouble() * 2 * pi,
-        sineAmp: 6 + rng.nextDouble() * 18,          // 6–24px horizontal wobble
-        sineFreq: 1.0 + rng.nextDouble() * 2.0,      // 1–3 full oscillations
-        size: 1.2 + rng.nextDouble() * 2.8,          // 1.2–4px radius
-        brightness: 0.75 + rng.nextDouble() * 0.25,  // gold shade variation
+      // Gaussian angle distribution — most particles near beam axis (angle ≈ 0).
+      // Use Box-Muller to get a Gaussian sample.
+      final u1 = rng.nextDouble();
+      final u2 = rng.nextDouble();
+      final gaussian = sqrt(-2 * log(max(u1, 1e-10))) * cos(2 * pi * u2);
+      // Scale to half-angle range, with ~68% within ±halfAngle.
+      final angle = (gaussian * halfAngle / 2.0).clamp(-halfAngle * 2, halfAngle * 2);
+
+      return _StreamParticle(
+        startPhase: rng.nextDouble(),
+        lifetime: 0.30 + rng.nextDouble() * 0.35,   // 30–65% of cycle
+        angle: angle,
+        speed: 0.20 + rng.nextDouble() * 0.30,      // 20–50% of canvas height
+        size: 0.8 + rng.nextDouble() * 1.8,         // tiny → small
       );
     });
   }
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (intensityMultiplier <= 0.01) return;
     final t = animation.value;
-    final originY = originFraction * size.height;
+    final focalX = focalXFraction * size.width;
+    final focalY = focalYFraction * size.height;
 
     for (final p in _particles) {
-      final result = p.evaluate(t, size.width, size.height, originY, direction);
+      final result = p.evaluate(t, size.width, size.height, focalX, focalY, direction);
       if (result == null) continue;
 
-      final effectiveOpacity = result.opacity * intensityMultiplier;
+      // Gaussian lateral falloff — particles near the beam axis are brighter.
+      // angle is in [-2*halfAngle, 2*halfAngle], normalize to [-1, 1].
+      final angleFraction = (p.angle / (0.18 * 2)).abs().clamp(0.0, 1.0);
+      final gaussianWeight = exp(-gaussianFalloff * angleFraction * angleFraction * 8);
+
+      final effectiveOpacity =
+          result.opacity * intensityMultiplier * gaussianWeight;
       if (effectiveOpacity <= 0.01) continue;
 
-      // Gold with brightness variation
-      final r = (particleColor.r * p.brightness).clamp(0.0, 1.0);
-      final g = (particleColor.g * p.brightness).clamp(0.0, 1.0);
-      final b = (particleColor.b * p.brightness).clamp(0.0, 1.0);
-      final color = Color.from(
-        alpha: effectiveOpacity,
-        red: r,
-        green: g,
-        blue: b,
-      );
+      // White-silver with slight size/opacity variation by distance.
+      final r = particleColor.r;
+      final g = particleColor.g;
+      final b = particleColor.b;
+      final paint = Paint()
+        ..color = Color.from(
+          alpha: effectiveOpacity.clamp(0.0, 0.95),
+          red: r,
+          green: g,
+          blue: b,
+        );
 
-      canvas.drawCircle(
-        Offset(result.px, result.py),
-        p.size,
-        Paint()..color = color,
-      );
+      canvas.drawCircle(Offset(result.px, result.py), result.radius, paint);
     }
   }
 

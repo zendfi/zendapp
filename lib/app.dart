@@ -63,6 +63,22 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     // Fire receiver haptics + balance notification when a Drop lands
     _dropConfirmedSub = widget.model.dropConfirmedEvents.listen(_onDropConfirmed);
 
+    // Register authentication hook to dispatch pending notification destinations
+    // that were parked before auth completed (covers device OS-lock path).
+    widget.model.onAuthenticated = () {
+      final pendingDest = PendingNotificationService.consume();
+      if (pendingDest == null) return;
+      Future<void>.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        final ctx = _navigatorKey.currentContext;
+        if (ctx == null || widget.model.appLockService.isLocked) {
+          PendingNotificationService.store(pendingDest); // still locked at app level
+          return;
+        }
+        NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+      });
+    };
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final initial = DeepLinkHandler.initialLink;
       if (initial != null) _handleDeepLink(initial);

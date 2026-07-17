@@ -1,22 +1,18 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_tokens.dart';
 import 'drop_fluid_particles.dart';
 
-/// Shows the receiver-side "catch" sheet when a Drop transfer is confirmed.
+const _kDropBackground = Color(0xFF080808);
+
+/// Shows the receiver-side drop confirmation as a full-screen sheet.
 ///
-/// Mirrors the sender's dissolve animation in reverse: gold particles stream
-/// downward from the sender's avatar (at the top) and coalesce into the
-/// amount numeral as it fades in — like the money materialising from the air.
+/// Mirrors the sender's screen in reverse: particles stream downward from the
+/// top (where the sender "is"), the amount fades in as they arrive.
 ///
-/// Paired with [DropProcessingStage] on the sender's device, both animations
-/// feel choreographed: sender → particles rise and dissolve away; receiver →
-/// particles descend and solidify into money.
-///
-/// Auto-dismisses after 5 seconds. Tapping anywhere closes early.
+/// Both screens are black, white particles, same comet-trail physics — they
+/// feel like two halves of the same animation even on different devices.
 Future<void> showDropReceiverSheet({
   required BuildContext context,
   required double amount,
@@ -28,7 +24,7 @@ Future<void> showDropReceiverSheet({
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    useSafeArea: true,
+    useSafeArea: false, // we want full screen including status bar area
     backgroundColor: Colors.transparent,
     isDismissible: true,
     builder: (_) => _DropReceiverSheet(
@@ -59,10 +55,8 @@ class _DropReceiverSheet extends StatefulWidget {
 
 class _DropReceiverSheetState extends State<_DropReceiverSheet>
     with TickerProviderStateMixin {
-  // Particle stream — loops while the sheet is visible.
   late final AnimationController _particleCtrl;
-  // Coalesce — particles slow and amount fades in.
-  late final AnimationController _coalesceCtrl;
+  late final AnimationController _revealCtrl;
   Timer? _autoDismiss;
 
   @override
@@ -72,13 +66,13 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
     _particleCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2400),
     )..repeat();
 
-    // Amount fades in over 2.5s as particles "arrive".
-    _coalesceCtrl = AnimationController(
+    // Amount and labels fade in over 1.8s.
+    _revealCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 1800),
     )..forward();
 
     _autoDismiss = Timer(const Duration(seconds: 6), () {
@@ -97,7 +91,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
   void dispose() {
     _autoDismiss?.cancel();
     _particleCtrl.dispose();
-    _coalesceCtrl.dispose();
+    _revealCtrl.dispose();
     super.dispose();
   }
 
@@ -110,207 +104,193 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
       child: Container(
-        height: MediaQuery.of(context).size.height * 0.65,
-        decoration: const BoxDecoration(
-          color: ZendColors.bgDeep,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-        ),
+        // Full-screen — matches sender's sheet height.
+        height: screenHeight,
+        width: screenWidth,
+        color: _kDropBackground,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final w = constraints.maxWidth;
             final h = constraints.maxHeight;
-            // Amount sits at ~60% from the top of the sheet.
-            const amountFraction = 0.60;
+
+            // Sender avatar at ~12% from top — beam focal point.
+            const avatarFraction = 0.12;
+            // Amount centred at ~52%.
+            const amountFraction = 0.52;
 
             return Stack(
               children: [
-                // ── Fluid particle stream — downward from sender avatar ──
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _coalesceCtrl,
-                    builder: (context, child) {
-                      // Particles fade out as amount coalesces (last 40%).
-                      final t = CurvedAnimation(
-                        parent: _coalesceCtrl,
-                        curve: Curves.easeOut,
-                      ).value;
-                      final intensity = t < 0.6
-                          ? 1.0
-                          : 1.0 - ((t - 0.6) / 0.4) * 0.7; // fade to 30%
-                      return CustomPaint(
-                        painter: DropFluidParticlePainter(
-                          animation: _particleCtrl,
-                          direction: FluidParticleDirection.down,
-                          // Particles stream from just below the sender avatar.
-                          originFraction: 0.12,
-                          count: 140,
-                          intensityMultiplier: intensity.clamp(0.0, 1.0),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // ── Sender avatar — glows at top ──
+                // ── Amount — ghosted, fades in as particles "arrive" ──
                 Positioned(
-                  top: h * 0.06,
-                  left: w / 2 - 28,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Continuous soft glow ring
-                      AnimatedBuilder(
-                        animation: _particleCtrl,
-                        builder: (context, child) {
-                          // Pulsing glow tied to particle cycle
-                          final pulse = 0.5 + 0.5 * sin(_particleCtrl.value * 2 * 3.14159);
-                          return Container(
-                            width: 60 + pulse * 16,
-                            height: 60 + pulse * 16,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFFFFD166)
-                                  .withValues(alpha: 0.06 + pulse * 0.06),
-                            ),
-                          );
-                        },
-                      ),
-                      ZendAvatar(
-                        radius: 26,
-                        photoUrl: widget.senderAvatarUrl,
-                        initials: widget.senderZendtag.isNotEmpty
-                            ? widget.senderZendtag[0].toUpperCase()
-                            : '?',
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── Drag handle ──
-                Positioned(
-                  top: 12,
+                  top: h * amountFraction - 56,
                   left: 0,
                   right: 0,
-                  child: Center(
-                    child: Container(
-                      width: 36, height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  child: AnimatedBuilder(
+                    animation: _revealCtrl,
+                    builder: (context, child) {
+                      final t = CurvedAnimation(
+                        parent: _revealCtrl,
+                        curve: const Interval(0.1, 0.8, curve: Curves.easeOut),
+                      ).value;
+                      return Opacity(
+                        opacity: (t * 0.25).clamp(0.0, 0.25), // ghosted like sender
+                        child: child,
+                      );
+                    },
+                    child: Text(
+                      _amountStr,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 80,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.white,
+                        height: 1.0,
                       ),
                     ),
                   ),
                 ),
 
-                // ── Amount — materialises as particles coalesce ──
-                Positioned(
-                  top: h * amountFraction - 40,
-                  left: 0,
-                  right: 0,
+                // ── Particle stream — flowing downward from sender avatar ──
+                Positioned.fill(
                   child: AnimatedBuilder(
-                    animation: _coalesceCtrl,
+                    animation: _revealCtrl,
                     builder: (context, child) {
-                      // Amount fades in: 0→1 over first 70% of coalesce.
-                      final t = CurvedAnimation(
-                        parent: _coalesceCtrl,
-                        curve: const Interval(0.1, 0.7, curve: Curves.easeOut),
+                      // Slight ramp-up in intensity at start.
+                      final intensity = CurvedAnimation(
+                        parent: _revealCtrl,
+                        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
                       ).value;
-                      // Slight downward settle as it solidifies.
-                      final dy = (1.0 - t) * -16.0;
-                      return Transform.translate(
-                        offset: Offset(0, dy),
-                        child: Opacity(
-                          opacity: t,
-                          child: Text(
-                            '+$_amountStr',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'InstrumentSerif',
-                              fontSize: 56,
-                              fontStyle: FontStyle.italic,
-                              color: Color(0xFFFFD166),
-                              height: 1.0,
-                            ),
-                          ),
+                      return CustomPaint(
+                        painter: DropFluidParticlePainter(
+                          animation: _particleCtrl,
+                          direction: FluidParticleDirection.down,
+                          focalXFraction: 0.5,
+                          focalYFraction: avatarFraction + 0.04,
+                          count: 220,
+                          particleColor: Colors.white,
+                          intensityMultiplier: intensity,
                         ),
                       );
                     },
                   ),
                 ),
 
-                // ── From tag ──
+                // ── Sender avatar — focal point of the beam ──
                 Positioned(
-                  top: h * amountFraction + 28,
+                  top: h * avatarFraction - 26,
+                  left: w / 2 - 26,
+                  child: ZendAvatar(
+                    radius: 26,
+                    photoUrl: widget.senderAvatarUrl,
+                    initials: widget.senderZendtag.isNotEmpty
+                        ? widget.senderZendtag[0].toUpperCase()
+                        : '?',
+                  ),
+                ),
+
+                // ── Sender tag ──
+                Positioned(
+                  top: h * avatarFraction + 30,
                   left: 0,
                   right: 0,
                   child: AnimatedBuilder(
-                    animation: _coalesceCtrl,
+                    animation: _revealCtrl,
                     builder: (context, child) {
-                      final opacity = CurvedAnimation(
-                        parent: _coalesceCtrl,
-                        curve: const Interval(0.35, 0.80, curve: Curves.easeOut),
+                      final t = CurvedAnimation(
+                        parent: _revealCtrl,
+                        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
                       ).value;
-                      return Opacity(
-                        opacity: opacity,
-                        child: Text(
-                          'from @${widget.senderZendtag}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 16,
-                            color: Color(0xCCF0F0F0),
-                          ),
+                      return Opacity(opacity: t, child: child);
+                    },
+                    child: Text(
+                      'from @${widget.senderZendtag}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 13,
+                        color: Color(0x66FFFFFF),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Amount — full-brightness reveal after ghosted phase ──
+                Positioned(
+                  top: h * amountFraction - 56,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedBuilder(
+                    animation: _revealCtrl,
+                    builder: (context, child) {
+                      // Bright amount fades in from 50–100% of reveal.
+                      final t = CurvedAnimation(
+                        parent: _revealCtrl,
+                        curve: const Interval(0.50, 1.0, curve: Curves.easeOut),
+                      ).value;
+                      // Slide up slightly as it appears.
+                      final dy = (1 - t) * 20.0;
+                      return Transform.translate(
+                        offset: Offset(0, dy),
+                        child: Opacity(
+                          opacity: t,
+                          child: child,
                         ),
                       );
                     },
+                    child: Text(
+                      '+$_amountStr',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 80,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
                   ),
                 ),
 
                 // ── Note ──
                 if (widget.note != null && widget.note!.isNotEmpty)
                   Positioned(
-                    top: h * amountFraction + 68,
+                    top: h * amountFraction + 44,
                     left: 32,
                     right: 32,
                     child: AnimatedBuilder(
-                      animation: _coalesceCtrl,
+                      animation: _revealCtrl,
                       builder: (context, child) {
-                        final opacity = CurvedAnimation(
-                          parent: _coalesceCtrl,
-                          curve: const Interval(0.50, 0.90, curve: Curves.easeOut),
+                        final t = CurvedAnimation(
+                          parent: _revealCtrl,
+                          curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
                         ).value;
-                        return Opacity(
-                          opacity: opacity,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.07),
-                              borderRadius: BorderRadius.circular(ZendRadii.pill),
-                            ),
-                            child: Text(
-                              '"${widget.note}"',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 13,
-                                color: Color(0x99F0F0F0),
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        );
+                        return Opacity(opacity: t, child: child);
                       },
+                      child: Text(
+                        '"${widget.note}"',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 14,
+                          color: Color(0x80FFFFFF),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
 
                 // ── Tap hint ──
                 Positioned(
-                  bottom: 24,
+                  bottom: 48,
                   left: 0,
                   right: 0,
                   child: Text(
@@ -319,7 +299,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                     style: TextStyle(
                       fontFamily: 'DMMono',
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.25),
+                      color: Colors.white.withValues(alpha: 0.18),
                     ),
                   ),
                 ),

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import 'drop_fluid_particles.dart';
 
-/// Sender-side Drop processing screen shown while the transfer is being
-/// confirmed on-chain.
+// The pure-black background used on both sender and receiver Drop screens.
+const _kDropBackground = Color(0xFF080808);
+
+/// Sender-side Drop processing screen shown while the transfer is confirmed.
 ///
-/// The amount numeral slowly dissolves into hundreds of upward-flowing gold
-/// particles — fluid, continuous, physics-based. The receiver's avatar glows
-/// faintly at the top of the screen where the particles are heading.
-///
-/// No spinner. No status text. The motion *is* the feedback.
+/// The amount sits large in the background. A focused comet-trail particle
+/// stream rises from the receiver's avatar (top) toward the top of the screen
+/// — as if the money is streaming toward the recipient. Pure black background,
+/// white/silver particles, matching the reference design.
 class DropProcessingStage extends StatefulWidget {
   const DropProcessingStage({
     super.key,
@@ -32,30 +32,26 @@ class DropProcessingStage extends StatefulWidget {
 
 class _DropProcessingStageState extends State<DropProcessingStage>
     with TickerProviderStateMixin {
-  // Particle stream — loops continuously while waiting for on-chain confirm.
   late final AnimationController _particleCtrl;
-  // Amount dissolve — slowly fades the numeral as particles intensify.
-  late final AnimationController _dissolveCtrl;
+  late final AnimationController _fadeCtrl;
 
   @override
   void initState() {
     super.initState();
     _particleCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2400),
     )..repeat();
-
-    // Amount fades from 1.0 → 0.15 over 3 seconds then holds.
-    _dissolveCtrl = AnimationController(
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
   @override
   void dispose() {
     _particleCtrl.dispose();
-    _dissolveCtrl.dispose();
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
@@ -76,147 +72,91 @@ class _DropProcessingStageState extends State<DropProcessingStage>
 
   @override
   Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
+    return Container(
+      color: _kDropBackground,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-        // Amount sits at ~58% from the top of the available area.
-        const amountFraction = 0.58;
+          // Receiver avatar sits at ~14% from top — the "source" of the beam.
+          const avatarFraction = 0.14;
+          // Amount numeral centred at ~52% from top.
+          const amountFraction = 0.52;
 
-        return Stack(
-          children: [
-            // ── Fluid particle stream — upward from amount position ──
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _dissolveCtrl,
-                builder: (context, child) {
-                  // Particles intensify as amount dissolves.
-                  // Intensity: 0→1 over the first 2s, then holds at 1.
-                  final intensity = CurvedAnimation(
-                    parent: _dissolveCtrl,
-                    curve: Curves.easeOut,
-                  ).value;
-                  return CustomPaint(
-                    painter: DropFluidParticlePainter(
-                      animation: _particleCtrl,
-                      direction: FluidParticleDirection.up,
-                      originFraction: amountFraction,
-                      count: 160,
-                      intensityMultiplier: intensity,
+          return Stack(
+            children: [
+              // ── Amount — large, ghosted behind the particle stream ──
+              Positioned(
+                top: h * amountFraction - 56,
+                left: 0,
+                right: 0,
+                child: FadeTransition(
+                  opacity: _fadeCtrl,
+                  child: Text(
+                    _amountStr,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'InstrumentSerif',
+                      fontSize: 80,
+                      fontStyle: FontStyle.italic,
+                      // Ghosted white — particles overlay it
+                      color: Color(0x33FFFFFF),
+                      height: 1.0,
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
 
-            // ── Receiver avatar — glows at top as particles arrive ──
-            Positioned(
-              top: h * 0.06,
-              left: w / 2 - 28,
-              child: AnimatedBuilder(
-                animation: _dissolveCtrl,
-                builder: (context, child) {
-                  final glow = CurvedAnimation(
-                    parent: _dissolveCtrl,
-                    curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-                  ).value;
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Expanding glow ring
-                      if (glow > 0)
-                        Container(
-                          width: 56 + glow * 32,
-                          height: 56 + glow * 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFFFFD166)
-                                .withValues(alpha: glow * 0.08),
-                          ),
-                        ),
-                      Opacity(
-                        opacity: 0.35 + glow * 0.65,
-                        child: ZendAvatar(
-                          radius: 26,
-                          photoUrl: widget.receiver.preview?.avatarUrl,
-                          initials: _receiverInitial,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              // ── Particle stream — flowing upward from receiver avatar ──
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: DropFluidParticlePainter(
+                    animation: _particleCtrl,
+                    direction: FluidParticleDirection.up,
+                    // Focal point is the receiver avatar's position.
+                    focalXFraction: 0.5,
+                    focalYFraction: avatarFraction + 0.04,
+                    count: 220,
+                    particleColor: Colors.white,
+                    intensityMultiplier: 1.0,
+                  ),
+                ),
               ),
-            ),
 
-            // ── Amount numeral — dissolves as particles take over ──
-            Positioned(
-              top: h * amountFraction - 36,
-              left: 0,
-              right: 0,
-              child: AnimatedBuilder(
-                animation: _dissolveCtrl,
-                builder: (context, child) {
-                  // Fade from 1.0 → 0.12 as particles intensify.
-                  final t = CurvedAnimation(
-                    parent: _dissolveCtrl,
-                    curve: Curves.easeIn,
-                  ).value;
-                  final opacity = (1.0 - t * 0.88).clamp(0.12, 1.0);
-                  // Slight upward drift as it dissolves.
-                  final dy = t * -12.0;
-                  return Transform.translate(
-                    offset: Offset(0, dy),
-                    child: Opacity(
-                      opacity: opacity,
-                      child: Text(
-                        _amountStr,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSerif',
-                          fontSize: 52,
-                          fontStyle: FontStyle.italic,
-                          color: zt.textPrimary,
-                          height: 1.0,
-                        ),
-                      ),
+              // ── Receiver avatar — the "source" focal point of the beam ──
+              Positioned(
+                top: h * avatarFraction - 26,
+                left: w / 2 - 26,
+                child: ZendAvatar(
+                  radius: 26,
+                  photoUrl: widget.receiver.preview?.avatarUrl,
+                  initials: _receiverInitial,
+                ),
+              ),
+
+              // ── Receiver tag ──
+              Positioned(
+                top: h * avatarFraction + 30,
+                left: 0,
+                right: 0,
+                child: FadeTransition(
+                  opacity: _fadeCtrl,
+                  child: Text(
+                    '@$_receiverZendtag',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 13,
+                      color: Color(0x66FFFFFF),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
-
-            // ── Receiver tag — fades in below the amount ──
-            Positioned(
-              top: h * amountFraction + 28,
-              left: 0,
-              right: 0,
-              child: AnimatedBuilder(
-                animation: _dissolveCtrl,
-                builder: (context, child) {
-                  final opacity = CurvedAnimation(
-                    parent: _dissolveCtrl,
-                    curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
-                  ).value;
-                  return Opacity(
-                    opacity: opacity,
-                    child: Text(
-                      '→ @$_receiverZendtag',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 14,
-                        color: zt.textSecondary,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }

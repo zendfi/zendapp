@@ -523,6 +523,17 @@ class ZendAppModel extends ChangeNotifier {
 
   bool get hasAnyPoolNewMessage => poolsWithNewMessages.isNotEmpty;
 
+  /// Triggers a rebuild for all listeners. Used externally (e.g. main.dart)
+  /// when state is mutated directly before the auth flow completes.
+  void triggerRebuild() => notifyListeners();
+
+  /// Optional callback fired the moment the user successfully authenticates
+  /// (or re-authenticates). Used by app.dart to dispatch any pending
+  /// notification destination that was parked before authentication completed —
+  /// covers the device-lock → notification tap → app unlock path where
+  /// _onLockStateChanged never fires because isLocked was never set.
+  VoidCallback? onAuthenticated;
+
   // Set true the first time fetchThreadedActivity() runs (i.e. once the
   // Activity tab has been opened this session). Used to gate SSE-driven
   // refreshes of the threaded feed so we don't fetch it before it's ever
@@ -1125,6 +1136,9 @@ class ZendAppModel extends ChangeNotifier {
       notifyListeners();
     };
     unawaited(pushNotificationService.initialize());
+    // Fire the onAuthenticated hook so app.dart can dispatch any pending
+    // notification destination that was parked before authentication.
+    onAuthenticated?.call();
     // Load pools from backend
     unawaited(fetchPools());
     // Load savings snapshot

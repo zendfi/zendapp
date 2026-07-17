@@ -635,6 +635,8 @@ class _PoolsCard extends StatelessWidget {
                   Positioned(
                       left: i * 16.0,
                       child: Container(
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -642,10 +644,12 @@ class _PoolsCard extends StatelessWidget {
                             width: 1.5,
                           ),
                         ),
-                        child: ZendAvatar(
-                          radius: 12,
-                          photoUrl: participants[i].avatarUrl,
-                          initials: participants[i].avatarLabel,
+                        child: ClipOval(
+                          child: ZendAvatar(
+                            radius: 12,
+                            photoUrl: participants[i].avatarUrl,
+                            initials: participants[i].avatarLabel,
+                          ),
                         ),
                       )),
                 if (overflow > 0)

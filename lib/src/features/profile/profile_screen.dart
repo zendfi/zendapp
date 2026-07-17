@@ -749,7 +749,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                             'you needing to do anything else.'
                         : 'Turn on to receive money from nearby Zend users via Drop. '
                             'The sender just opens Drop and you\'ll appear automatically. '
-                            'Your wallet address is never shared.',
+                            'Your don\'t have to manually share your zendtag.',
                     style: TextStyle(
                       fontFamily: 'DMSans',
                       fontSize: 12,

@@ -124,11 +124,16 @@ void main() async {
 
   await DeepLinkHandler.init();
 
+  // Register pool message badge callback early — before auth — so FCM messages
+  // that arrive before authentication completes still mark the pool as unread.
+  PushNotificationService.onPoolMessageReceived = (poolId) {
+    model.poolsWithNewMessages.add(poolId);
+    model.triggerRebuild();
+  };
+
   // Check for a notification tap that launched the app from a killed state
   // (getInitialMessage) — must happen BEFORE runApp so the destination is
   // stored in PendingNotificationService before the widget tree builds.
-  // Calling this here also means it runs before pushNotificationService.initialize()
-  // is called post-auth, avoiding the race where initialize() stores too late.
   await _checkInitialNotificationTap();
 
   runApp(ZendApp(model: model));
