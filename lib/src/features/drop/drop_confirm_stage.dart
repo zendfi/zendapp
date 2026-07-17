@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -91,12 +92,33 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
+    final senderAvatarUrl = model.currentAvatarUrl;
+    final senderInitial = model.currentZendtag?.isNotEmpty == true
+        ? model.currentZendtag![0].toUpperCase()
+        : 'Y';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 16),
+          // Sender → receiver avatars
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ZendAvatar(radius: 22, photoUrl: senderAvatarUrl, initials: senderInitial),
+              const SizedBox(width: 10),
+              Icon(Icons.arrow_forward, size: 18, color: zt.textSecondary),
+              const SizedBox(width: 10),
+              ZendAvatar(
+                radius: 22,
+                photoUrl: widget.receiver.preview?.avatarUrl,
+                initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           Text(
             'Drop $_amountFormatted',
@@ -130,12 +152,6 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
               ),
             ),
           ],
-          const SizedBox(height: 24),
-          ZendAvatar(
-            radius: 32,
-            photoUrl: widget.receiver.preview?.avatarUrl,
-            initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
-          ),
           const SizedBox(height: 24),
           // Timeout indicator
           Text(

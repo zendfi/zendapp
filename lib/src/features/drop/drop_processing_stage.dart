@@ -72,17 +72,17 @@ class _DropProcessingStageState extends State<DropProcessingStage>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: _kDropBackground,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
           final h = constraints.maxHeight;
 
-          // Receiver avatar sits at ~14% from top — the "source" of the beam.
-          const avatarFraction = 0.14;
-          // Amount numeral centred at ~52% from top.
-          const amountFraction = 0.52;
+          // Receiver avatar sits at ~18% from top — gives breathing room from top edge.
+          const avatarFraction = 0.18;
+          // Amount numeral centred at ~54% from top.
+          const amountFraction = 0.54;
 
           return Stack(
             children: [
@@ -114,12 +114,12 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                   painter: DropFluidParticlePainter(
                     animation: _particleCtrl,
                     direction: FluidParticleDirection.up,
-                    // Focal point is the receiver avatar's position.
                     focalXFraction: 0.5,
-                    focalYFraction: avatarFraction + 0.04,
-                    count: 220,
+                    focalYFraction: avatarFraction + 0.03,
+                    count: 300,
                     particleColor: Colors.white,
                     intensityMultiplier: 1.0,
+                    beamHalfAngle: 0.30,
                   ),
                 ),
               ),

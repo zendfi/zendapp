@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -87,6 +89,11 @@ class _DropSuccessStageState extends State<DropSuccessStage>
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
+    final senderAvatarUrl = model.currentAvatarUrl;
+    final senderInitial = model.currentZendtag?.isNotEmpty == true
+        ? model.currentZendtag![0].toUpperCase()
+        : 'Y';
 
     return ScaleTransition(
       scale: CurvedAnimation(parent: _scaleCtrl, curve: Curves.easeOutBack),
@@ -148,6 +155,24 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                   ],
                 ),
               ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Sender → receiver avatars
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ZendAvatar(radius: 20, photoUrl: senderAvatarUrl, initials: senderInitial),
+                const SizedBox(width: 8),
+                Icon(Icons.arrow_forward, size: 16, color: zt.accentBright),
+                const SizedBox(width: 8),
+                ZendAvatar(
+                  radius: 20,
+                  photoUrl: widget.receiver.preview?.avatarUrl,
+                  initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),

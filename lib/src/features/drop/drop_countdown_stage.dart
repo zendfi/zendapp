@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
-import 'drop_particle_painter.dart';
 
 /// Tier 1 (≤$50) confirmation stage.
 ///
@@ -31,20 +31,13 @@ class DropCountdownStage extends StatefulWidget {
 class _DropCountdownStageState extends State<DropCountdownStage>
     with TickerProviderStateMixin {
   late final AnimationController _countdownCtrl;
-  late final AnimationController _burstCtrl;
-  bool _burstFired = false;
 
-  // GlobalKey so we can find the ring's screen position for the burst origin
+  // GlobalKey so we can find the ring's screen position
   final _ringKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-
-    _burstCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
 
     _countdownCtrl = AnimationController(
       vsync: this,
@@ -52,11 +45,8 @@ class _DropCountdownStageState extends State<DropCountdownStage>
     );
 
     _countdownCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed && !_burstFired) {
-        _burstFired = true;
-        _burstCtrl.forward().then((_) {
-          if (mounted) widget.onExecute();
-        });
+      if (status == AnimationStatus.completed) {
+        widget.onExecute();
       }
     });
 
@@ -66,7 +56,6 @@ class _DropCountdownStageState extends State<DropCountdownStage>
   @override
   void dispose() {
     _countdownCtrl.dispose();
-    _burstCtrl.dispose();
     super.dispose();
   }
 
@@ -85,13 +74,31 @@ class _DropCountdownStageState extends State<DropCountdownStage>
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
+    final senderAvatarUrl = model.currentAvatarUrl;
+    final senderInitial = model.currentZendtag?.isNotEmpty == true
+        ? model.currentZendtag![0].toUpperCase()
+        : 'Y';
 
-    return Stack(
-      children: [
-        // Main content
-        Column(
+    return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 16),
+            // Sender → receiver row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ZendAvatar(radius: 20, photoUrl: senderAvatarUrl, initials: senderInitial),
+                const SizedBox(width: 8),
+                Icon(Icons.arrow_forward, size: 16, color: zt.textSecondary),
+                const SizedBox(width: 8),
+                ZendAvatar(
+                  radius: 20,
+                  photoUrl: widget.receiver.preview?.avatarUrl,
+                  initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             Text(
               'Sending $_amountFormatted',
@@ -170,34 +177,6 @@ class _DropCountdownStageState extends State<DropCountdownStage>
             ),
             const SizedBox(height: 16),
           ],
-        ),
-
-        // Gold particle burst — positioned absolutely over the ring
-        AnimatedBuilder(
-          animation: _burstCtrl,
-          builder: (context, child) {
-            if (_burstCtrl.value == 0) return const SizedBox.shrink();
-            // Compute ring center relative to this Stack's top-left corner
-            final stackBox = context.findRenderObject() as RenderBox?;
-            final ringBox = _ringKey.currentContext?.findRenderObject() as RenderBox?;
-            Offset origin = const Offset(0, 0);
-            if (stackBox != null && ringBox != null) {
-              final ringGlobal = ringBox.localToGlobal(
-                Offset(ringBox.size.width / 2, ringBox.size.height / 2),
-              );
-              origin = stackBox.globalToLocal(ringGlobal);
-            }
-            return Positioned.fill(
-              child: CustomPaint(
-                painter: DropParticleBurstPainter(
-                  animation: _burstCtrl,
-                  origin: origin,
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
+        );
   }
 }

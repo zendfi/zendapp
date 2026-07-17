@@ -8,11 +8,12 @@ const _kDropBackground = Color(0xFF080808);
 
 /// Shows the receiver-side drop confirmation as a full-screen sheet.
 ///
-/// Mirrors the sender's screen in reverse: particles stream downward from the
-/// top (where the sender "is"), the amount fades in as they arrive.
+/// Particles stream downward from the sender's avatar at the top.
+/// The amount numeral glows as it materialises — a single crisp text with
+/// a luminous bloom behind it, growing as the particles "arrive".
 ///
-/// Both screens are black, white particles, same comet-trail physics — they
-/// feel like two halves of the same animation even on different devices.
+/// Both sender and receiver screens are pure black with white particles —
+/// two halves of the same choreography.
 Future<void> showDropReceiverSheet({
   required BuildContext context,
   required double amount,
@@ -24,7 +25,7 @@ Future<void> showDropReceiverSheet({
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    useSafeArea: false, // we want full screen including status bar area
+    useSafeArea: false,
     backgroundColor: Colors.transparent,
     isDismissible: true,
     builder: (_) => _DropReceiverSheet(
@@ -57,6 +58,8 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
     with TickerProviderStateMixin {
   late final AnimationController _particleCtrl;
   late final AnimationController _revealCtrl;
+  // Glow pulse — slowly breathing after full reveal.
+  late final AnimationController _glowPulseCtrl;
   Timer? _autoDismiss;
 
   @override
@@ -69,13 +72,18 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
       duration: const Duration(milliseconds: 2400),
     )..repeat();
 
-    // Amount and labels fade in over 1.8s.
     _revealCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2000),
     )..forward();
 
-    _autoDismiss = Timer(const Duration(seconds: 6), () {
+    // After reveal completes, amount glow breathes.
+    _glowPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    )..repeat(reverse: true);
+
+    _autoDismiss = Timer(const Duration(seconds: 7), () {
       if (mounted) Navigator.of(context).pop();
     });
   }
@@ -92,6 +100,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
     _autoDismiss?.cancel();
     _particleCtrl.dispose();
     _revealCtrl.dispose();
+    _glowPulseCtrl.dispose();
     super.dispose();
   }
 
@@ -104,208 +113,211 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenH = MediaQuery.of(context).size.height;
+    final screenW = MediaQuery.of(context).size.width;
 
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
-      child: Container(
-        // Full-screen — matches sender's sheet height.
-        height: screenHeight,
-        width: screenWidth,
+      child: ColoredBox(
         color: _kDropBackground,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
+        child: SizedBox(
+          height: screenH,
+          width: screenW,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              final h = constraints.maxHeight;
 
-            // Sender avatar at ~12% from top — beam focal point.
-            const avatarFraction = 0.12;
-            // Amount centred at ~52%.
-            const amountFraction = 0.52;
+              // Avatar (beam source) at 14% — leaves breathing room from top.
+              const avatarFraction = 0.14;
+              // Amount centred at 54%.
+              const amountFraction = 0.54;
 
-            return Stack(
-              children: [
-                // ── Amount — ghosted, fades in as particles "arrive" ──
-                Positioned(
-                  top: h * amountFraction - 56,
-                  left: 0,
-                  right: 0,
-                  child: AnimatedBuilder(
-                    animation: _revealCtrl,
-                    builder: (context, child) {
-                      final t = CurvedAnimation(
-                        parent: _revealCtrl,
-                        curve: const Interval(0.1, 0.8, curve: Curves.easeOut),
-                      ).value;
-                      return Opacity(
-                        opacity: (t * 0.25).clamp(0.0, 0.25), // ghosted like sender
-                        child: child,
-                      );
-                    },
-                    child: Text(
-                      _amountStr,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 80,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white,
-                        height: 1.0,
-                      ),
+              const amountStyle = TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 88,
+                fontStyle: FontStyle.italic,
+                color: Colors.white,
+                height: 1.0,
+              );
+
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // ── Particle beam — downward from sender avatar ──
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _revealCtrl,
+                      builder: (context, child) {
+                        final intensity = CurvedAnimation(
+                          parent: _revealCtrl,
+                          curve: const Interval(0.0, 0.25, curve: Curves.easeOut),
+                        ).value;
+                        return CustomPaint(
+                          painter: DropFluidParticlePainter(
+                            animation: _particleCtrl,
+                            direction: FluidParticleDirection.down,
+                            focalXFraction: 0.5,
+                            focalYFraction: avatarFraction + 0.03,
+                            count: 300,
+                            particleColor: Colors.white,
+                            intensityMultiplier: intensity,
+                            beamHalfAngle: 0.30,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ),
 
-                // ── Particle stream — flowing downward from sender avatar ──
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _revealCtrl,
-                    builder: (context, child) {
-                      // Slight ramp-up in intensity at start.
-                      final intensity = CurvedAnimation(
-                        parent: _revealCtrl,
-                        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
-                      ).value;
-                      return CustomPaint(
-                        painter: DropFluidParticlePainter(
-                          animation: _particleCtrl,
-                          direction: FluidParticleDirection.down,
-                          focalXFraction: 0.5,
-                          focalYFraction: avatarFraction + 0.04,
-                          count: 220,
-                          particleColor: Colors.white,
-                          intensityMultiplier: intensity,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // ── Sender avatar — focal point of the beam ──
-                Positioned(
-                  top: h * avatarFraction - 26,
-                  left: w / 2 - 26,
-                  child: ZendAvatar(
-                    radius: 26,
-                    photoUrl: widget.senderAvatarUrl,
-                    initials: widget.senderZendtag.isNotEmpty
-                        ? widget.senderZendtag[0].toUpperCase()
-                        : '?',
-                  ),
-                ),
-
-                // ── Sender tag ──
-                Positioned(
-                  top: h * avatarFraction + 30,
-                  left: 0,
-                  right: 0,
-                  child: AnimatedBuilder(
-                    animation: _revealCtrl,
-                    builder: (context, child) {
-                      final t = CurvedAnimation(
-                        parent: _revealCtrl,
-                        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
-                      ).value;
-                      return Opacity(opacity: t, child: child);
-                    },
-                    child: Text(
-                      'from @${widget.senderZendtag}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 13,
-                        color: Color(0x66FFFFFF),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Amount — full-brightness reveal after ghosted phase ──
-                Positioned(
-                  top: h * amountFraction - 56,
-                  left: 0,
-                  right: 0,
-                  child: AnimatedBuilder(
-                    animation: _revealCtrl,
-                    builder: (context, child) {
-                      // Bright amount fades in from 50–100% of reveal.
-                      final t = CurvedAnimation(
-                        parent: _revealCtrl,
-                        curve: const Interval(0.50, 1.0, curve: Curves.easeOut),
-                      ).value;
-                      // Slide up slightly as it appears.
-                      final dy = (1 - t) * 20.0;
-                      return Transform.translate(
-                        offset: Offset(0, dy),
-                        child: Opacity(
-                          opacity: t,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      '+$_amountStr',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'InstrumentSerif',
-                        fontSize: 80,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Note ──
-                if (widget.note != null && widget.note!.isNotEmpty)
+                  // ── Amount glow bloom — blurred version behind crisp text ──
                   Positioned(
-                    top: h * amountFraction + 44,
-                    left: 32,
-                    right: 32,
+                    top: h * amountFraction - 64,
+                    left: 0,
+                    right: 0,
+                    height: 128,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_revealCtrl, _glowPulseCtrl]),
+                      builder: (context, child) {
+                        // Glow ramps in from 40–100% of reveal, then pulses.
+                        final revealT = CurvedAnimation(
+                          parent: _revealCtrl,
+                          curve: const Interval(0.40, 1.0, curve: Curves.easeOut),
+                        ).value;
+                        // Pulse: 0.6→1.0 brightness once revealed.
+                        final pulse = revealT < 1.0
+                            ? 0.0
+                            : (0.6 + _glowPulseCtrl.value * 0.4);
+                        final glowOpacity = (revealT * 0.55 + pulse * 0.2).clamp(0.0, 0.75);
+
+                        return CustomPaint(
+                          painter: DropGlowTextPainter(
+                            text: _amountStr,
+                            style: amountStyle,
+                            glowOpacity: glowOpacity,
+                            glowRadius: 28.0 + _glowPulseCtrl.value * 12.0,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // ── Amount text — crisp, fades in ──
+                  Positioned(
+                    top: h * amountFraction - 56,
+                    left: 0,
+                    right: 0,
                     child: AnimatedBuilder(
                       animation: _revealCtrl,
                       builder: (context, child) {
                         final t = CurvedAnimation(
                           parent: _revealCtrl,
-                          curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
+                          curve: const Interval(0.35, 0.85, curve: Curves.easeOut),
                         ).value;
-                        return Opacity(opacity: t, child: child);
+                        final dy = (1 - t) * 18.0;
+                        return Transform.translate(
+                          offset: Offset(0, dy),
+                          child: Opacity(
+                            opacity: t,
+                            child: child,
+                          ),
+                        );
                       },
                       child: Text(
-                        '"${widget.note}"',
+                        _amountStr,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 14,
-                          color: Color(0x80FFFFFF),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        style: amountStyle,
                       ),
                     ),
                   ),
 
-                // ── Tap hint ──
-                Positioned(
-                  bottom: 48,
-                  left: 0,
-                  right: 0,
-                  child: Text(
-                    'Tap to close',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.18),
+                  // ── Sender avatar — focal point ──
+                  Positioned(
+                    top: h * avatarFraction - 26,
+                    left: w / 2 - 26,
+                    child: ZendAvatar(
+                      radius: 26,
+                      photoUrl: widget.senderAvatarUrl,
+                      initials: widget.senderZendtag.isNotEmpty
+                          ? widget.senderZendtag[0].toUpperCase()
+                          : '?',
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+
+                  // ── From tag ──
+                  Positioned(
+                    top: h * avatarFraction + 30,
+                    left: 0,
+                    right: 0,
+                    child: AnimatedBuilder(
+                      animation: _revealCtrl,
+                      builder: (context, child) {
+                        final t = CurvedAnimation(
+                          parent: _revealCtrl,
+                          curve: const Interval(0.20, 0.65, curve: Curves.easeOut),
+                        ).value;
+                        return Opacity(opacity: t, child: child);
+                      },
+                      child: Text(
+                        'from @${widget.senderZendtag}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 13,
+                          color: Color(0x66FFFFFF),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ── Note ──
+                  if (widget.note != null && widget.note!.isNotEmpty)
+                    Positioned(
+                      top: h * amountFraction + 50,
+                      left: 32,
+                      right: 32,
+                      child: AnimatedBuilder(
+                        animation: _revealCtrl,
+                        builder: (context, child) {
+                          final t = CurvedAnimation(
+                            parent: _revealCtrl,
+                            curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
+                          ).value;
+                          return Opacity(opacity: t, child: child);
+                        },
+                        child: Text(
+                          '"${widget.note}"',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 14,
+                            color: Color(0x80FFFFFF),
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+
+                  // ── Tap hint ──
+                  Positioned(
+                    bottom: 48,
+                    left: 0,
+                    right: 0,
+                    child: Text(
+                      'Tap to close',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
