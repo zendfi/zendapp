@@ -253,6 +253,9 @@ class _MissionRoomState extends State<MissionRoom> {
         setState(() => _upsertMessageLocal(msg));
         _jumpToBottom();
         _sendReadReceipt();
+        // If message is from someone else, badge cleared on next frame —
+        // the room is open so we're reading it immediately.
+        // No badge needed here since the user can see the room.
 
       case WsFrameType.ack:
         final clientId = frame.data['client_id'] as String?;
@@ -1295,7 +1298,7 @@ class _InputBarState extends State<_InputBar> {
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.xs),
-                // Message input bubble with embedded send button
+                // Message input bubble — text field only
                 Expanded(
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 44),
@@ -1303,63 +1306,53 @@ class _InputBarState extends State<_InputBar> {
                       color: zt.bgSecondary,
                       borderRadius: BorderRadius.circular(ZendRadii.pill),
                     ),
-                    padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: widget.controller,
-                            maxLines: 4,
-                            minLines: 1,
-                            maxLength: 280,
-                            textInputAction: TextInputAction.newline,
-                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                            buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
-                              if (!isFocused || !overLimit) return null;
-                              return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Message the group...',
-                              hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
-                              border: InputBorder.none,
-                              counterText: '',
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+                    child: TextField(
+                      controller: widget.controller,
+                      maxLines: 4,
+                      minLines: 1,
+                      maxLength: 280,
+                      textInputAction: TextInputAction.newline,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
+                        if (!isFocused || !overLimit) return null;
+                        return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Message the group...',
+                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                        border: InputBorder.none,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: ZendSpacing.xs),
+                // Send button — outside the bubble, same level as mic
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: GestureDetector(
+                    onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: overLimit || _charCount == 0 ? zt.border : zt.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: widget.sending
+                          ? Padding(
+                              padding: const EdgeInsets.all(9),
+                              child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                            )
+                          : Icon(
+                              SolarIconsBold.plain,
+                              size: 17,
+                              color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        // Send button — bottom-aligned so it stays at the baseline
-                        // as the text field grows (doesn't drift to centre of tall bubble)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: GestureDetector(
-                            onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: overLimit || _charCount == 0
-                                    ? zt.border
-                                    : zt.accent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: widget.sending
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                                    )
-                                  : Icon(
-                                      SolarIconsBold.plain,
-                                      size: 16,
-                                      color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),

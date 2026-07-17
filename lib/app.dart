@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
 import 'src/features/deeplink/deep_link_handler.dart';
-import 'src/features/drop/drop_receiver_overlay.dart';
+import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
 import 'src/features/onboarding/splash_screen.dart';
@@ -110,10 +110,10 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// Fires whenever a Drop transfer is confirmed — handles both sender and receiver.
+  /// Fires whenever a Drop transfer is confirmed — handles the receiver side.
   ///
   /// Sender: already handled by the Drop sheet's _executeTransfer success path.
-  /// Receiver: fires haptics + shows a notification overlay so they feel the money land.
+  /// Receiver: fires haptics + shows a "catch" bottom sheet so they feel the money land.
   void _onDropConfirmed(Map<String, dynamic> data) {
     final role = data['role'] as String?;
     if (role != 'receiver') return;
@@ -123,32 +123,31 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     final senderTag = data['counterparty_zendtag'] as String? ?? '';
     final note = data['note'] as String?;
 
-    // Haptics fire immediately — they work regardless of widget state
-    unawaited(_triggerReceiverHaptics());
-
-    // Overlay needs a valid context — defer to next frame in case this fires
-    // during a navigation transition (ctx may be null mid-push).
+    // Defer to next frame in case this fires during a navigation transition.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final ctx = _navigatorKey.currentContext;
       if (ctx == null) return;
 
-      showDropReceivedOverlay(
+      // Look up the sender's avatar from local contacts/transfer history.
+      // Falls back to initials if not found — always works.
+      String? senderAvatarUrl;
+      try {
+        final model = widget.model;
+        final matches = model.recentContacts.where(
+          (c) => c.tag.toLowerCase() == senderTag.toLowerCase(),
+        );
+        senderAvatarUrl = matches.isEmpty ? null : matches.first.avatarUrl;
+      } catch (_) {}
+
+      showDropReceiverSheet(
         context: ctx,
         amount: amount,
         senderZendtag: senderTag,
+        senderAvatarUrl: senderAvatarUrl,
         note: note,
-        onTap: () {},
       );
     });
-  }
-
-  Future<void> _triggerReceiverHaptics() async {
-    // 3 light taps, 80ms apart — Apple-style: barely there
-    for (int i = 0; i < 3; i++) {
-      await Future.delayed(Duration(milliseconds: i * 80));
-      HapticFeedback.lightImpact();
-    }
   }
 
   /// Fires whenever the app-lock state changes (locked ↔ unlocked).

@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
+import 'drop_fluid_particles.dart';
 
-/// A physics-animated "money in flight" processing stage — shown while the
-/// Drop transfer is being confirmed on-chain. No spinner, no status text —
-/// just a particle of money arcing from the sender's avatar to the receiver's,
-/// repeating until the transfer either succeeds or fails.
+/// Sender-side Drop processing screen shown while the transfer is being
+/// confirmed on-chain.
 ///
-/// The animation intentionally communicates that something real is happening
-/// between two specific people on two specific devices, without the clinical
-/// "Sending $X to @Y…" text of a generic spinner.
+/// The amount numeral slowly dissolves into hundreds of upward-flowing gold
+/// particles — fluid, continuous, physics-based. The receiver's avatar glows
+/// faintly at the top of the screen where the particles are heading.
+///
+/// No spinner. No status text. The motion *is* the feedback.
 class DropProcessingStage extends StatefulWidget {
   const DropProcessingStage({
     super.key,
@@ -30,21 +31,31 @@ class DropProcessingStage extends StatefulWidget {
 }
 
 class _DropProcessingStageState extends State<DropProcessingStage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
+    with TickerProviderStateMixin {
+  // Particle stream — loops continuously while waiting for on-chain confirm.
+  late final AnimationController _particleCtrl;
+  // Amount dissolve — slowly fades the numeral as particles intensify.
+  late final AnimationController _dissolveCtrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _particleCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 2200),
     )..repeat();
+
+    // Amount fades from 1.0 → 0.15 over 3 seconds then holds.
+    _dissolveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..forward();
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _particleCtrl.dispose();
+    _dissolveCtrl.dispose();
     super.dispose();
   }
 
@@ -60,134 +71,152 @@ class _DropProcessingStageState extends State<DropProcessingStage>
       widget.receiver.preview?.zendtag ??
       '?';
 
-  String get _receiverInitial => _receiverZendtag.isNotEmpty
-      ? _receiverZendtag[0].toUpperCase()
-      : '?';
+  String get _receiverInitial =>
+      _receiverZendtag.isNotEmpty ? _receiverZendtag[0].toUpperCase() : '?';
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Spacer(flex: 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        // Amount sits at ~58% from the top of the available area.
+        const amountFraction = 0.58;
 
-        // ── Two avatars with the arc between them ──
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            // Sender on left, receiver on right — horizontal distance between centres
-            const avatarRadius = 36.0;
-            const horizontalPad = 48.0;
-            final senderCx = horizontalPad + avatarRadius;
-            final receiverCx = w - horizontalPad - avatarRadius;
-            const avatarCy = 40.0; // centre Y within the SizedBox
-
-            return SizedBox(
-              height: 120,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // ── Sender avatar (left) ──
-                  Positioned(
-                    left: senderCx - avatarRadius,
-                    top: 0,
-                    child: ZendAvatar(
-                      radius: avatarRadius,
-                      photoUrl: widget.senderAvatarUrl,
-                      initials: widget.senderInitial,
+        return Stack(
+          children: [
+            // ── Fluid particle stream — upward from amount position ──
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _dissolveCtrl,
+                builder: (context, child) {
+                  // Particles intensify as amount dissolves.
+                  // Intensity: 0→1 over the first 2s, then holds at 1.
+                  final intensity = CurvedAnimation(
+                    parent: _dissolveCtrl,
+                    curve: Curves.easeOut,
+                  ).value;
+                  return CustomPaint(
+                    painter: DropFluidParticlePainter(
+                      animation: _particleCtrl,
+                      direction: FluidParticleDirection.up,
+                      originFraction: amountFraction,
+                      count: 160,
+                      intensityMultiplier: intensity,
                     ),
-                  ),
-                  // ── Receiver avatar (right) ──
-                  Positioned(
-                    left: receiverCx - avatarRadius,
-                    top: 0,
-                    child: ZendAvatar(
-                      radius: avatarRadius,
-                      photoUrl: widget.receiver.preview?.avatarUrl,
-                      initials: _receiverInitial,
-                    ),
-                  ),
-                  // ── Animated arc particle ──
-                  AnimatedBuilder(
-                    animation: _ctrl,
-                    builder: (context, _) {
-                      // Ease-in-out along the arc: slow at launch, fast at peak, slow at landing
-                      final t = CurvedAnimation(
-                        parent: _ctrl,
-                        curve: Curves.easeInOut,
-                      ).value;
+                  );
+                },
+              ),
+            ),
 
-                      // Parabolic arc: lerp X linearly, Y follows a parabola
-                      // peaking above the avatars (negative Y = up)
-                      final x = senderCx + (receiverCx - senderCx) * t;
-                      const peakLift = 60.0; // pixels above avatar centres
-                      final y = avatarCy - 4 * peakLift * t * (1 - t);
-
-                      // Particle fades in/out at the endpoints so it feels
-                      // like it emerges from and lands into the avatar.
-                      final opacity = (t < 0.12)
-                          ? t / 0.12
-                          : (t > 0.88)
-                              ? (1.0 - t) / 0.12
-                              : 1.0;
-
-                      return Positioned(
-                        left: x - 13,
-                        top: y - 13,
-                        child: Opacity(
-                          opacity: opacity.clamp(0.0, 1.0),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: zt.accent.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '💸',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
+            // ── Receiver avatar — glows at top as particles arrive ──
+            Positioned(
+              top: h * 0.06,
+              left: w / 2 - 28,
+              child: AnimatedBuilder(
+                animation: _dissolveCtrl,
+                builder: (context, child) {
+                  final glow = CurvedAnimation(
+                    parent: _dissolveCtrl,
+                    curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+                  ).value;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Expanding glow ring
+                      if (glow > 0)
+                        Container(
+                          width: 56 + glow * 32,
+                          height: 56 + glow * 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFFFD166)
+                                .withValues(alpha: glow * 0.08),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      Opacity(
+                        opacity: 0.35 + glow * 0.65,
+                        child: ZendAvatar(
+                          radius: 26,
+                          photoUrl: widget.receiver.preview?.avatarUrl,
+                          initials: _receiverInitial,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
 
-        const SizedBox(height: 28),
+            // ── Amount numeral — dissolves as particles take over ──
+            Positioned(
+              top: h * amountFraction - 36,
+              left: 0,
+              right: 0,
+              child: AnimatedBuilder(
+                animation: _dissolveCtrl,
+                builder: (context, child) {
+                  // Fade from 1.0 → 0.12 as particles intensify.
+                  final t = CurvedAnimation(
+                    parent: _dissolveCtrl,
+                    curve: Curves.easeIn,
+                  ).value;
+                  final opacity = (1.0 - t * 0.88).clamp(0.12, 1.0);
+                  // Slight upward drift as it dissolves.
+                  final dy = t * -12.0;
+                  return Transform.translate(
+                    offset: Offset(0, dy),
+                    child: Opacity(
+                      opacity: opacity,
+                      child: Text(
+                        _amountStr,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'InstrumentSerif',
+                          fontSize: 52,
+                          fontStyle: FontStyle.italic,
+                          color: zt.textPrimary,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
-        // ── Amount ──
-        Text(
-          _amountStr,
-          style: TextStyle(
-            fontFamily: 'InstrumentSerif',
-            fontSize: 40,
-            fontStyle: FontStyle.italic,
-            color: zt.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '@$_receiverZendtag',
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 14,
-            color: zt.textSecondary,
-          ),
-        ),
-
-        const Spacer(flex: 3),
-      ],
+            // ── Receiver tag — fades in below the amount ──
+            Positioned(
+              top: h * amountFraction + 28,
+              left: 0,
+              right: 0,
+              child: AnimatedBuilder(
+                animation: _dissolveCtrl,
+                builder: (context, child) {
+                  final opacity = CurvedAnimation(
+                    parent: _dissolveCtrl,
+                    curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
+                  ).value;
+                  return Opacity(
+                    opacity: opacity,
+                    child: Text(
+                      '→ @$_receiverZendtag',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 14,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

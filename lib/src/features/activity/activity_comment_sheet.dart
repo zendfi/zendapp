@@ -448,7 +448,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Composed input bubble
+                // Composed input bubble — text field only, no embedded buttons
                 Expanded(
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 44),
@@ -456,52 +456,45 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       color: zt.bgSecondary,
                       borderRadius: BorderRadius.circular(ZendRadii.pill),
                     ),
-                    padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _commentController,
-                            maxLength: 280,
-                            maxLines: 4,
-                            minLines: 1,
-                            textInputAction: TextInputAction.newline,
-                            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                            decoration: InputDecoration(
-                              hintText: 'Add a comment…',
-                              hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
-                              border: InputBorder.none,
-                              counterText: '',
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        // Send button — bottom-aligned so it stays at the baseline
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: GestureDetector(
-                            onTap: _postingComment ? null : _postComment,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: _postingComment ? zt.accent.withValues(alpha: 0.5) : zt.accent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: _postingComment
-                                  ? Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                                    )
-                                  : const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+                    child: TextField(
+                      controller: _commentController,
+                      maxLength: 280,
+                      maxLines: 4,
+                      minLines: 1,
+                      textInputAction: TextInputAction.newline,
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Add a comment…',
+                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                        border: InputBorder.none,
+                        counterText: '',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Send button — outside the bubble, pinned to bottom
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: GestureDetector(
+                    onTap: _postingComment ? null : _postComment,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: _postingComment ? zt.accent.withValues(alpha: 0.5) : zt.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: _postingComment
+                          ? Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                            )
+                          : const Icon(SolarIconsBold.plain, size: 17, color: Colors.white),
                     ),
                   ),
                 ),

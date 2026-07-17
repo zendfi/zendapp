@@ -6,7 +6,9 @@ import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_notification.dart';
 import '../../navigation/zend_shell_controller.dart';
+import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
+import '../../services/pending_notification_service.dart';
 import '../activity/activity_screen.dart';
 import '../receive/receive_screen.dart';
 import '../send/qr_payment_sheet.dart';
@@ -44,11 +46,21 @@ class _ZendShellState extends State<ZendShell> {
     });
     // Consume any pending deep link that was stored before the user
     // completed device unlock (PIN screen).
+    // Also consume any pending notification tap destination — this covers the
+    // cold-launch path where isLocked was never true (no state-change event).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingIntent = PendingDeepLinkService.consume();
-      if (pendingIntent == null) return;
-      showQrPaymentSheet(context, intent: pendingIntent);
+      if (pendingIntent != null) {
+        showQrPaymentSheet(context, intent: pendingIntent);
+      }
+      final pendingDest = PendingNotificationService.consume();
+      if (pendingDest != null) {
+        Future<void>.delayed(const Duration(milliseconds: 200), () {
+          if (!mounted) return;
+          NotificationNavigator.dispatch(context, pendingDest, ZendScope.of(context)); // ignore: use_build_context_synchronously
+        });
+      }
     });
   }
 
