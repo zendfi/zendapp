@@ -91,6 +91,8 @@ class _MissionRoomState extends State<MissionRoom> {
   Future<void> _init() async {
     if (!mounted) return;
     final model = ZendScope.of(context);
+    // Clear pool message badge as soon as mission room opens.
+    model.markPoolRead(_pool.id);
 
     // Set up local DB layer
     _repository = PoolMessageRepository(model.localDb);
@@ -896,6 +898,16 @@ class _MissionRoomState extends State<MissionRoom> {
                               }
                               final msgItem = item as _MessageItem;
                               final msg = msgItem.message;
+                              // Only show read receipts on the LAST message in
+                              // a consecutive run of messages from this sender
+                              // (same pattern as iMessage: "Delivered" only once
+                              // at the bottom of a burst, not on every bubble).
+                              final isLastInRun = () {
+                                if (listIdx + 1 >= displayList.length) return true;
+                                final next = displayList[listIdx + 1];
+                                if (next is _DateSeparatorItem) return true;
+                                return (next as _MessageItem).message.senderUserId != msg.senderUserId;
+                              }();
                               return RepaintBoundary(
                                 child: MissionRoomMessage(
                                   key: ValueKey(msg.id),
@@ -905,8 +917,8 @@ class _MissionRoomState extends State<MissionRoom> {
                                   participantCount: _pool.participants.length,
                                   onLongPress: (ctx) => _showReactionPicker(msg, ctx),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
-                                  // Only show read receipt avatars on my own messages.
-                                  readers: msg.senderUserId == currentUserId
+                                  // Read receipts only on the last message in a run.
+                                  readers: (msg.senderUserId == currentUserId && isLastInRun)
                                       ? _readersOf(msg.serverId)
                                       : const {},
                                   player: _playerFor(msg.id),
@@ -1266,17 +1278,20 @@ class _InputBarState extends State<_InputBar> {
               ],
             )
           : Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Mic button
-                GestureDetector(
-                  onLongPressStart: (_) => unawaited(widget.onMicStart()),
-                  onLongPressEnd: (_) => unawaited(widget.onMicStop()),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                    child: Icon(SolarIconsBold.microphone, size: 18, color: zt.textSecondary),
+                // Mic button — pinned to bottom edge, doesn't drift with text growth
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: GestureDetector(
+                    onLongPressStart: (_) => unawaited(widget.onMicStart()),
+                    onLongPressEnd: (_) => unawaited(widget.onMicStop()),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+                      child: Icon(SolarIconsBold.microphone, size: 18, color: zt.textSecondary),
+                    ),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.xs),
@@ -1290,7 +1305,7 @@ class _InputBarState extends State<_InputBar> {
                     ),
                     padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
                           child: TextField(
@@ -1315,29 +1330,33 @@ class _InputBarState extends State<_InputBar> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        // Send button — centred vertically in the bubble
-                        GestureDetector(
-                          onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: overLimit || _charCount == 0
-                                  ? zt.border
-                                  : zt.accent,
-                              shape: BoxShape.circle,
+                        // Send button — bottom-aligned so it stays at the baseline
+                        // as the text field grows (doesn't drift to centre of tall bubble)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: GestureDetector(
+                            onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: overLimit || _charCount == 0
+                                    ? zt.border
+                                    : zt.accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: widget.sending
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                                    )
+                                  : Icon(
+                                      SolarIconsBold.plain,
+                                      size: 16,
+                                      color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
+                                    ),
                             ),
-                            child: widget.sending
-                                ? Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                                  )
-                                : Icon(
-                                    SolarIconsBold.plain,
-                                    size: 16,
-                                    color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
-                                  ),
                           ),
                         ),
                       ],

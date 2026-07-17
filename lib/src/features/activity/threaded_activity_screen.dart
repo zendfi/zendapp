@@ -100,6 +100,82 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     });
   }
 
+  /// Overflow menu — niche header actions tucked behind a single ⋮ icon.
+  void _showOverflowMenu(BuildContext ctx) {
+    final zt = ZendTheme.of(ctx);
+    showModalBottomSheet<void>(
+      context: ctx,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          margin: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Center(
+                  child: Container(
+                    width: 36, height: 4,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                  ),
+                ),
+                _OverflowItem(
+                  icon: SolarIconsBold.earth,
+                  label: 'Public feed',
+                  subtitle: 'Activities your mutuals have shared',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    pushZendSlide(ctx, const PublicFeedScreen());
+                  },
+                ),
+                if (widget.onOpenGraphView != null) ...[
+                  Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
+                  _OverflowItem(
+                    icon: SolarIconsBold.usersGroupTwoRounded,
+                    label: 'Your mutuals',
+                    subtitle: 'Your activity relationship graph',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.onOpenGraphView?.call();
+                    },
+                  ),
+                ],
+                Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
+                _OverflowItem(
+                  icon: SolarIconsBold.magnifier,
+                  label: 'Search all',
+                  subtitle: 'Transactions, requests, pools, users',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    pushZendSlide(ctx, const SearchScreen());
+                  },
+                ),
+                Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
+                _OverflowItem(
+                  icon: _notificationsMuted ? SolarIconsBold.bellOff : SolarIconsBold.bell,
+                  label: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
+                  subtitle: _notificationsMuted ? 'Activity alerts are off' : 'Activity alerts are on',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _toggleNotificationMute();
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _loadMutePreference() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
@@ -246,46 +322,20 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       ),
                     ),
                   ),
-                  // Legacy Ledger view toggle temporarily disabled — not
-                  // surfaced in the header for now. widget.onToggleView is
-                  // still wired through from ActivityScreen's router so
-                  // it's a one-line change to re-enable.
+                  // ── Search / Filter ──
                   IconButton(
-                    onPressed: () => pushZendSlide(context, const PublicFeedScreen()),
-                    icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
-                    tooltip: 'Public feed',
-                  ),
-                  if (widget.onOpenGraphView != null)
-                    IconButton(
-                      onPressed: widget.onOpenGraphView,
-                      icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
-                      tooltip: 'Your mutuals',
-                    ),
-                  // Short-press: toggle inline activity filter.
-                  // Long-press: open full global search (transactions, pools, users).
-                  GestureDetector(
-                    onTap: _toggleFilter,
-                    onLongPress: () => pushZendSlide(context, const SearchScreen()),
-                    child: IconButton(
-                      onPressed: null, // handled by GestureDetector above
-                      icon: Icon(
-                        _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
-                        color: _filterActive ? zt.accent : zt.textSecondary,
-                      ),
-                      tooltip: _filterActive ? 'Clear filter (long-press for full search)' : 'Filter activity (long-press for full search)',
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _toggleNotificationMute,
+                    onPressed: _toggleFilter,
                     icon: Icon(
-                      _notificationsMuted
-                          ? SolarIconsBold.bellOff
-                          : SolarIconsBold.bell,
-                      color: _notificationsMuted
-                          ? zt.textSecondary.withValues(alpha: 0.5)
-                          : zt.textSecondary,
+                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
+                      color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
-                    tooltip: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
+                    tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
+                  ),
+                  // ── Overflow menu (niche actions) ──
+                  IconButton(
+                    onPressed: () => _showOverflowMenu(context),
+                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary),
+                    tooltip: 'More',
                   ),
                 ],
               ),
@@ -1130,6 +1180,64 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Overflow menu item ────────────────────────────────────────────────────────
+
+class _OverflowItem extends StatelessWidget {
+  const _OverflowItem({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: zt.bgPrimary,
+                borderRadius: BorderRadius.circular(ZendRadii.md),
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, size: 18, color: zt.textSecondary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

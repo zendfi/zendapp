@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/zend_state.dart';
 import 'graph_view_screen.dart';
 import 'legacy_activity_list_view.dart';
 import 'threaded_activity_screen.dart';
@@ -45,6 +46,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
   void initState() {
     super.initState();
     _loadViewMode();
+    // Clear the activity unread badge as soon as this screen mounts —
+    // the user is now looking at their activity.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ZendScope.of(context).markActivityRead();
+    });
   }
 
   Future<void> _loadViewMode() async {

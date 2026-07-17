@@ -19,6 +19,7 @@ import 'drop_countdown_stage.dart';
 import 'drop_debug_log.dart';
 import 'drop_disambiguate_stage.dart';
 import 'drop_preview_stage.dart';
+import 'drop_processing_stage.dart';
 import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
 import '../send/send_shared_widgets.dart';
@@ -367,35 +368,9 @@ class _DropSheetState extends State<DropSheet>
   // ── Height fractions ───────────────────────────────────────────────────────
 
   double get _sheetHeightFraction {
-    switch (_stage) {
-      case DropStage.scanning:
-        return 1.0;  // Full screen — the sonar grid needs room to breathe
-      case DropStage.preview:
-      case DropStage.confirmed:
-        return 0.60;
-      case DropStage.disambiguate:
-        return (_candidates.length > 3) ? 0.80 : 0.70;
-      case DropStage.countdown:
-        return 0.60;
-      case DropStage.confirm:
-      case DropStage.biometric:
-        return 0.70;
-      case DropStage.processing:
-        return 0.45;
-      case DropStage.success:
-        return 0.60;
-      case DropStage.error:
-        return 0.55;
-    }
-  }
-
-  // ── Amount formatting ──────────────────────────────────────────────────────
-
-  String get _amountFormatted {
-    if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
-    }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    // All Drop stages run full-screen — the physics/social UX requires space
+    // and partial sheets feel like the app is hiding something.
+    return 1.0;
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -602,12 +577,17 @@ class _DropSheetState extends State<DropSheet>
         );
 
       case DropStage.processing:
-        return SendProcessingStage(
+        final model = ZendScope.of(context);
+        return DropProcessingStage(
           key: const ValueKey('processing'),
-          amountFormatted: _amountFormatted,
-          recipientZendtag: _confirmedReceiver?.gattPayload?.zendtag ??
-              _confirmedReceiver?.preview?.zendtag ??
-              '...',
+          amount: widget.amount,
+          receiver: _confirmedReceiver!,
+          senderAvatarUrl: model.currentAvatarUrl,
+          senderInitial: model.currentZendtag?.isNotEmpty == true
+              ? model.currentZendtag![0].toUpperCase()
+              : (model.currentDisplayName?.isNotEmpty == true
+                  ? model.currentDisplayName![0].toUpperCase()
+                  : 'Y'),
         );
 
       case DropStage.success:

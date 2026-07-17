@@ -609,44 +609,58 @@ class _PoolsCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 118,
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: BoxDecoration(
-            // In dark mode use bgDeep (forest green) — matches the send screen background
-            color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
-            borderRadius: BorderRadius.circular(14)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Pools',
-                style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-            Icon(SolarIconsBold.usersGroupTwoRounded,
-                size: 16, color: zt.textSecondary),
-          ]),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 118,
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            decoration: BoxDecoration(
+                color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
+                borderRadius: BorderRadius.circular(14)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Pools',
+                    style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+                Icon(SolarIconsBold.usersGroupTwoRounded,
+                    size: 16, color: zt.textSecondary),
+              ]),
           const SizedBox(height: 3),
           if (participants.isNotEmpty)
             SizedBox(
-              width: (displayedCount * 16 + 6) + (overflow > 0 ? 20 : 0),
-              height: 22,
+              width: (displayedCount * 18 + 4) + (overflow > 0 ? 22 : 0),
+              height: 24,
               child: Stack(children: [
                 for (var i = 0; i < displayedCount; i++)
                   Positioned(
                       left: i * 16.0,
-                      child: _PoolAvatar(
-                          label: participants[i].avatarLabel)),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ZendAvatar(
+                          radius: 12,
+                          photoUrl: participants[i].avatarUrl,
+                          initials: participants[i].avatarLabel,
+                        ),
+                      )),
                 if (overflow > 0)
                   Positioned(
                     left: displayedCount * 16.0 + 4,
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: 24,
+                      height: 24,
                       decoration: BoxDecoration(
                           color: zt.bgSecondary,
                           shape: BoxShape.circle),
                       alignment: Alignment.center,
                       child: Text('+$overflow',
                           style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9,
                               color: zt.textSecondary)),
                     ),
                   ),
@@ -661,27 +675,23 @@ class _PoolsCard extends StatelessWidget {
                   color: zt.textPrimary)),
         ]),
       ),
-    );
-  }
-}
-
-class _PoolAvatar extends StatelessWidget {
-  const _PoolAvatar({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: const BoxDecoration(
-          color: Color(0xFF122018), shape: BoxShape.circle),
-      alignment: Alignment.center,
-      child: Text(label,
-          style: const TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 10,
-              color: ZendColors.textOnDeep)),
+          // New-message dot — top-right corner, only when there are pool messages
+          if (model.hasAnyPoolNewMessage)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: ZendColors.destructive,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: zt.bgPrimary, width: 1.5),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

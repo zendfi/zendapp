@@ -162,7 +162,11 @@ class PoolListDrawer extends StatelessWidget {
         items.add(
           Padding(
             padding: const EdgeInsets.only(bottom: ZendSpacing.sm),
-            child: PoolInfoCard(pool: pool, onTap: () => _navigateToPool(context, pool)),
+            child: PoolInfoCard(
+              pool: pool,
+              onTap: () => _navigateToPool(context, pool),
+              hasNewMessage: ZendScope.of(context).poolsWithNewMessages.contains(pool.id),
+            ),
           ),
         );
       }

@@ -432,17 +432,20 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
             ),
             padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + bottomInset),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Current user's avatar
-                ZendAvatar(
-                  radius: 16,
-                  photoUrl: model.currentAvatarUrl,
-                  initials: model.currentZendtag?.isNotEmpty == true
-                      ? model.currentZendtag![0].toUpperCase()
-                      : (model.currentDisplayName?.isNotEmpty == true
-                          ? model.currentDisplayName![0].toUpperCase()
-                          : 'Y'),
+                // Current user's avatar — pinned to bottom
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: ZendAvatar(
+                    radius: 16,
+                    photoUrl: model.currentAvatarUrl,
+                    initials: model.currentZendtag?.isNotEmpty == true
+                        ? model.currentZendtag![0].toUpperCase()
+                        : (model.currentDisplayName?.isNotEmpty == true
+                            ? model.currentDisplayName![0].toUpperCase()
+                            : 'Y'),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 // Composed input bubble
@@ -455,7 +458,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                     ),
                     padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
                           child: TextField(
@@ -476,23 +479,26 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        // Send button — centred vertically in the bubble
-                        GestureDetector(
-                          onTap: _postingComment ? null : _postComment,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: _postingComment ? zt.accent.withValues(alpha: 0.5) : zt.accent,
-                              shape: BoxShape.circle,
+                        // Send button — bottom-aligned so it stays at the baseline
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: GestureDetector(
+                            onTap: _postingComment ? null : _postComment,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: _postingComment ? zt.accent.withValues(alpha: 0.5) : zt.accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: _postingComment
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
+                                    )
+                                  : const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
                             ),
-                            child: _postingComment
-                                ? Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                                  )
-                                : const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
                           ),
                         ),
                       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import 'contribute_sheet.dart';
 import 'manage_sheet.dart';
@@ -143,7 +144,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   const SizedBox(height: ZendSpacing.xs),
 
                   // Progress circle
-                  PoolProgressBar(progress: _pool.progress, style: PoolProgressBarStyle.circle),
+                  PoolProgressBar(progress: _pool.progress, style: PoolProgressBarStyle.circle, circleSize: 140, strokeWidth: 10),
                   const SizedBox(height: ZendSpacing.xl),
 
                   // Participants
@@ -280,18 +281,10 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
       padding: const EdgeInsets.only(bottom: ZendSpacing.sm),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 11,
-            backgroundColor: zt.bgCard,
-            child: Text(
-              p.avatarLabel,
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: zt.textPrimary,
-              ),
-            ),
+          ZendAvatar(
+            radius: 14,
+            photoUrl: p.avatarUrl,
+            initials: p.avatarLabel,
           ),
           const SizedBox(width: ZendSpacing.xs),
           Expanded(

@@ -66,6 +66,12 @@ class _ZendShellState extends State<ZendShell> {
     setState(() {
       _tabIndex = index;
     });
+    // Clear activity badge when user actively switches to the Activity tab.
+    if (index == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ZendScope.of(context).markActivityRead();
+      });
+    }
   }
 
   void _dismissBanner(ZendAppModel model) {
@@ -223,28 +229,25 @@ class _ZendShellState extends State<ZendShell> {
       bottomNavigationBar: ZendBottomBar(
         currentIndex: _tabIndex,
         onChanged: _setTab,
+        activityBadgeCount: model.activityUnreadCount,
       ),
     );
   }
 }
 
 class ZendBottomBar extends StatelessWidget {
-  const ZendBottomBar({super.key, required this.currentIndex, required this.onChanged});
+  const ZendBottomBar({super.key, required this.currentIndex, required this.onChanged, this.activityBadgeCount = 0});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
+  final int activityBadgeCount;
 
   @override
   Widget build(BuildContext context) {
-    // On the send tab (index 1), the screen background is forest green (bgDeep).
-    // Match the nav bar to it so there's no jarring color break at the bottom.
     final onSendTab = currentIndex == 1;
     final bgColor = onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D);
     final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
 
-    // Use SafeArea-driven height so the bar sits above the system nav gesture
-    // area on all devices — both gesture-nav and 3-button-nav, with or without
-    // the system nav bar visible.
     return ColoredBox(
       color: bgColor,
       child: Column(
@@ -275,6 +278,7 @@ class ZendBottomBar extends StatelessWidget {
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
                     onDeepBg: onSendTab,
+                    badgeCount: activityBadgeCount,
                   ),
                 ],
               ),
@@ -287,20 +291,19 @@ class ZendBottomBar extends StatelessWidget {
 }
 
 class _BottomNavIcon extends StatelessWidget {
-  const _BottomNavIcon({required this.icon, required this.active, required this.onTap, required this.onDeepBg});
+  const _BottomNavIcon({required this.icon, required this.active, required this.onTap, required this.onDeepBg, this.badgeCount = 0});
 
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
-  /// Whether this icon sits on the forest-green bgDeep background (send tab).
   final bool onDeepBg;
+  /// Unread count to display as a badge. 0 = no badge.
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = onDeepBg ? ZendColors.accentPop : ZendColors.accentPop;
-    final inactiveColor = onDeepBg
-        ? const Color(0x66F0F0F0)
-        : const Color(0x66F0F0F0);
+    final activeColor = ZendColors.accentPop;
+    final inactiveColor = const Color(0x66F0F0F0);
 
     return GestureDetector(
       onTap: onTap,
@@ -310,8 +313,45 @@ class _BottomNavIcon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: active ? activeColor : inactiveColor, size: 26),
-            const SizedBox(height: 5),
+            // Icon with optional badge overlay
+            SizedBox(
+              width: 34,
+              height: 34,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: Icon(icon, color: active ? activeColor : inactiveColor, size: 26),
+                  ),
+                  if (badgeCount > 0 && !active)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: ZendColors.destructive,
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          border: Border.all(color: const Color(0xFF0D0D0D), width: 1.5),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          badgeCount > 99 ? '99+' : '$badgeCount',
+                          style: const TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 3),
             AnimatedOpacity(
               opacity: active ? 1 : 0,
               duration: const Duration(milliseconds: 160),

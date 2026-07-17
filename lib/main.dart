@@ -7,8 +7,10 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'src/core/zend_state.dart';
 import 'src/data/local/app_database.dart';
+import 'src/models/notification_destination.dart';
 import 'src/services/api_client.dart';
 import 'src/features/deeplink/deep_link_handler.dart';
+import 'src/services/pending_notification_service.dart';
 import 'src/services/app_lock_service.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/push_notification_service.dart';
@@ -122,5 +124,29 @@ void main() async {
 
   await DeepLinkHandler.init();
 
+  // Check for a notification tap that launched the app from a killed state
+  // (getInitialMessage) — must happen BEFORE runApp so the destination is
+  // stored in PendingNotificationService before the widget tree builds.
+  // Calling this here also means it runs before pushNotificationService.initialize()
+  // is called post-auth, avoiding the race where initialize() stores too late.
+  await _checkInitialNotificationTap();
+
   runApp(ZendApp(model: model));
+}
+
+/// Checks Firebase's `getInitialMessage` for a notification tap that cold-launched
+/// the app, and parks the parsed destination in [PendingNotificationService].
+/// Called before `runApp` so the destination is available immediately when the
+/// widget tree builds — avoiding the race between `initialize()` (post-auth) and
+/// `app.dart`'s `initState` postFrameCallback.
+Future<void> _checkInitialNotificationTap() async {
+  try {
+    final message = await FirebaseMessaging.instance.getInitialMessage();
+    if (message != null) {
+      final destination = NotificationDestination.fromData(message.data);
+      PendingNotificationService.store(destination);
+    }
+  } catch (_) {
+    // Non-fatal — notification tap simply won't deep-link if this fails.
+  }
 }

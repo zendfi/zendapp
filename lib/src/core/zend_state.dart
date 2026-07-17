@@ -253,18 +253,12 @@ class ZendAppModel extends ChangeNotifier {
 
     switch (event.type) {
       case SseEventType.transferUpdate:
-        // A transfer happened — refresh balance, legacy history, and the
-        // Threaded_Activity_View feed. fetchThreadedActivity() was
-        // previously only called from ThreadedActivityScreen.initState(),
-        // which doesn't re-run on tab switches (IndexedStack keeps the
-        // widget alive) — so real-time transfer updates never reached the
-        // Activity tab's threaded feed without a full app restart. This is
-        // a no-op if the Activity tab hasn't been opened yet this session.
+        // A transfer happened — badge the Activity tab and refresh data.
+        activityUnreadCount++;
         unawaited(fetchBalance());
         unawaited(fetchHistory());
         if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
       case SseEventType.transferFailed:
-        // A pending transfer failed — refresh history so status is accurate
         unawaited(fetchHistory());
         if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
       case SseEventType.balanceUpdate:
@@ -337,9 +331,7 @@ class ZendAppModel extends ChangeNotifier {
         pendingPaymentRequest = notification;
         notifyListeners();
       case SseEventType.activityEdgeReaction:
-        // Someone reacted to an Activity_Edge this user is a party on —
-        // surface as an in-app banner (ThreadedActivityScreen listens for
-        // this via pendingActivityReaction), mirroring pendingPaymentRequest.
+        activityUnreadCount++;
         pendingActivityReaction = ActivityReactionNotification(
           edgeKind: event.data['edge_kind'] as String? ?? '',
           edgeId: event.data['edge_id'] as String? ?? '',
@@ -348,7 +340,7 @@ class ZendAppModel extends ChangeNotifier {
         );
         notifyListeners();
       case SseEventType.activityEdgeComment:
-        // Someone commented on an Activity_Edge this user is a party on.
+        activityUnreadCount++;
         pendingActivityComment = ActivityCommentNotification(
           edgeKind: event.data['edge_kind'] as String? ?? '',
           edgeId: event.data['edge_id'] as String? ?? '',
@@ -502,6 +494,34 @@ class ZendAppModel extends ChangeNotifier {
   /// outstanding next cursor. When false, per-counterparty edge counts
   /// derived from the local list are lower bounds, not exact totals.
   bool get threadedActivityHasMore => _threadedActivityNextCursor != null;
+
+  // ── Unread/badge counts ────────────────────────────────────────────────────
+  // Lightweight counters for UI badges — not persisted, reset when the user
+  // navigates to the relevant screen.
+
+  /// Number of new activity events (transfers, reactions, comments) since the
+  /// user last viewed the Activity tab. Incremented by SSE events, cleared
+  /// when the Activity tab is opened.
+  int activityUnreadCount = 0;
+
+  /// Pool IDs that have received at least one new message since the user last
+  /// opened that pool's mission room.
+  final Set<String> poolsWithNewMessages = {};
+
+  void markActivityRead() {
+    if (activityUnreadCount != 0) {
+      activityUnreadCount = 0;
+      notifyListeners();
+    }
+  }
+
+  void markPoolRead(String poolId) {
+    if (poolsWithNewMessages.remove(poolId)) {
+      notifyListeners();
+    }
+  }
+
+  bool get hasAnyPoolNewMessage => poolsWithNewMessages.isNotEmpty;
 
   // Set true the first time fetchThreadedActivity() runs (i.e. once the
   // Activity tab has been opened this session). Used to gate SSE-driven
@@ -1098,7 +1118,12 @@ class ZendAppModel extends ChangeNotifier {
     // Start the inactivity lock timer now that the user is authenticated
     appLockService.startTimer();
     // Initialize push notifications now that the user is authenticated
-    // and we have a valid session token to register the FCM token with
+    // and we have a valid session token to register the FCM token with.
+    // Also wire pool message badge tracking.
+    PushNotificationService.onPoolMessageReceived = (poolId) {
+      poolsWithNewMessages.add(poolId);
+      notifyListeners();
+    };
     unawaited(pushNotificationService.initialize());
     // Load pools from backend
     unawaited(fetchPools());

@@ -40,25 +40,9 @@ class PushNotificationService {
     _listenForTokenRefresh();
     _listenForForegroundMessages();
     _listenForBackgroundNotificationTaps();
-    // Handle taps on notifications that launched the app from a terminated
-    // (killed) state. getInitialMessage() returns the FCM message that caused
-    // the cold launch, if any — null otherwise.
-    await _handleTerminatedStateTap();
-  }
-
-  /// Checks if the app was cold-launched by tapping a push notification while
-  /// it was fully killed. Must be called after Firebase.initializeApp().
-  Future<void> _handleTerminatedStateTap() async {
-    try {
-      final message = await FirebaseMessaging.instance.getInitialMessage();
-      if (message != null) {
-        _handleNotificationData(message.data);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('PushNotifications: getInitialMessage error: $e');
-      }
-    }
+    // Note: getInitialMessage (terminated-state tap) is handled in main.dart
+    // before runApp — not here — to avoid the race between post-auth
+    // initialize() and app.dart's initState postFrameCallback.
   }
 
   void dispose() {
@@ -140,6 +124,10 @@ class PushNotificationService {
     });
   }
 
+  /// Called when a new pool message notification arrives (foreground or tap).
+  /// Registered by [ZendAppModel] to mark the pool as having unread messages.
+  static void Function(String poolId)? onPoolMessageReceived;
+
   void _handleNotificationData(Map<String, dynamic> data) {
     final type = data['type'] as String? ?? '';
 
@@ -167,6 +155,14 @@ class PushNotificationService {
     // app.dart consumes this after unlock/authentication.
     final destination = NotificationDestination.fromData(data);
     PendingNotificationService.store(destination);
+
+    // Pool message badge — mark pool as having new messages
+    if (type == 'pool_message') {
+      final poolId = data['pool_id'] as String?;
+      if (poolId != null) {
+        onPoolMessageReceived?.call(poolId);
+      }
+    }
   }
 
   void _listenForForegroundMessages() {
