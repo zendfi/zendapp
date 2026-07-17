@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../firebase_options.dart';
+import '../models/notification_destination.dart';
 import '../models/payment_request_notification.dart';
 import 'api_client.dart';
+import 'pending_notification_service.dart';
 
 class PushNotificationService {
   final ApiClient _apiClient;
@@ -38,6 +40,25 @@ class PushNotificationService {
     _listenForTokenRefresh();
     _listenForForegroundMessages();
     _listenForBackgroundNotificationTaps();
+    // Handle taps on notifications that launched the app from a terminated
+    // (killed) state. getInitialMessage() returns the FCM message that caused
+    // the cold launch, if any — null otherwise.
+    await _handleTerminatedStateTap();
+  }
+
+  /// Checks if the app was cold-launched by tapping a push notification while
+  /// it was fully killed. Must be called after Firebase.initializeApp().
+  Future<void> _handleTerminatedStateTap() async {
+    try {
+      final message = await FirebaseMessaging.instance.getInitialMessage();
+      if (message != null) {
+        _handleNotificationData(message.data);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PushNotifications: getInitialMessage error: $e');
+      }
+    }
   }
 
   void dispose() {
@@ -121,6 +142,10 @@ class PushNotificationService {
 
   void _handleNotificationData(Map<String, dynamic> data) {
     final type = data['type'] as String? ?? '';
+
+    // Legacy: payment_request keeps its own static field because app.dart's
+    // existing _handlePaymentRequestNotification path uses it directly — we
+    // keep it working while also storing the typed destination below.
     if (type == 'payment_request') {
       try {
         final notification = PaymentRequestNotification.fromJson(data);
@@ -128,9 +153,20 @@ class PushNotificationService {
           pendingPaymentRequestFromNotification = notification;
         }
       } catch (_) {}
-    } else if (type == 'drop_confirmed') {
+      // payment_request is handled by the existing path — don't also store
+      // a NotifActivityFeed destination that would duplicate the navigation.
+      return;
+    }
+
+    // drop_confirmed keeps its own field for the haptics/overlay path.
+    if (type == 'drop_confirmed') {
       pendingDropConfirmedFromNotification = data;
     }
+
+    // Parse and store a typed navigation destination for all types.
+    // app.dart consumes this after unlock/authentication.
+    final destination = NotificationDestination.fromData(data);
+    PendingNotificationService.store(destination);
   }
 
   void _listenForForegroundMessages() {

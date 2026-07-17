@@ -16,7 +16,9 @@ import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
 import 'src/features/onboarding/pin_migration_screen.dart';
 import 'src/models/qr_payment_intent.dart';
+import 'src/navigation/notification_navigator.dart';
 import 'src/services/pending_deep_link_service.dart';
+import 'src/services/pending_notification_service.dart';
 import 'src/features/send/qr_payment_sheet.dart';
 import 'src/features/send/dev_payment_modal_sheet.dart';
 import 'src/features/pairing/pairing_approval_sheet.dart';
@@ -70,15 +72,28 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         _handlePaymentRequestNotification(pending);
       }
 
-      // Only consume the pending deep link here if we can actually act on it
-      // right now (authenticated + unlocked). Otherwise leave it stored so
-      // ZendShell.initState() or _onLockStateChanged() can pick it up later.
+      // Consume any notification tap that arrived at cold-launch
+      // (getInitialMessage was already stored by PushNotificationService.initialize()).
+      final pendingDest = PendingNotificationService.consume();
+      if (pendingDest != null) {
+        Future<void>.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          final ctx = _navigatorKey.currentContext;
+          if (ctx == null) return;
+          if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+            PendingNotificationService.store(pendingDest); // park until unlocked
+            return;
+          }
+          NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+        });
+      }
+
       if (PendingDeepLinkService.hasPending) {
         final ctx = _navigatorKey.currentContext;
         if (ctx != null && widget.model.isAuthenticated && !widget.model.appLockService.isLocked) {
           final pendingIntent = PendingDeepLinkService.consume();
           if (pendingIntent != null) {
-            showQrPaymentSheet(ctx, intent: pendingIntent);
+            showQrPaymentSheet(ctx, intent: pendingIntent); // ignore: use_build_context_synchronously
           }
         }
       }
@@ -137,23 +152,33 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   }
 
   /// Fires whenever the app-lock state changes (locked ↔ unlocked).
-  /// Consumes any pending deep link intent the moment the app is unlocked.
+  /// Consumes any pending deep link or notification destination the moment
+  /// the app is unlocked.
   void _onLockStateChanged() {
-    if (widget.model.appLockService.isLocked) return; // just locked — nothing to do
+    if (widget.model.appLockService.isLocked) return;
     if (!widget.model.isAuthenticated) return;
 
+    // Deep-link intent (payment request URL)
     final pendingIntent = PendingDeepLinkService.consume();
-    if (pendingIntent == null) return;
+    if (pendingIntent != null) {
+      Future<void>.delayed(const Duration(milliseconds: 250), () {
+        if (!mounted) return;
+        final navigator = _navigatorKey.currentState;
+        if (navigator == null) return;
+        showQrPaymentSheetFromNavigator(navigator, intent: pendingIntent);
+      });
+    }
 
-    // Small delay to let the lock overlay finish its fade-out animation
-    // before presenting the payment sheet on top.
-    // Use NavigatorState (not BuildContext) to avoid use_build_context_synchronously.
-    Future<void>.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted) return;
-      final navigator = _navigatorKey.currentState;
-      if (navigator == null) return;
-      showQrPaymentSheetFromNavigator(navigator, intent: pendingIntent);
-    });
+    // Notification tap destination (any type)
+    final pendingDest = PendingNotificationService.consume();
+    if (pendingDest != null) {
+      Future<void>.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        final ctx = _navigatorKey.currentContext;
+        if (ctx == null) return;
+        NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+      });
+    }
   }
 
   void _handlePaymentRequestNotification(dynamic notification) {
@@ -327,6 +352,22 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
             return;
           }
           _handlePaymentRequestNotification(pending);
+        });
+      }
+
+      // Consume any other notification destination that arrived while backgrounded.
+      final pendingDest = PendingNotificationService.consume();
+      if (pendingDest != null) {
+        Future<void>.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          if (!model.isAuthenticated || model.appLockService.isLocked) {
+            PendingNotificationService.store(pendingDest);
+            return;
+          }
+          final ctx = _navigatorKey.currentContext;
+          if (ctx != null) {
+            NotificationNavigator.dispatch(ctx, pendingDest, model); // ignore: use_build_context_synchronously
+          }
         });
       }
     } else if (state == AppLifecycleState.paused ||

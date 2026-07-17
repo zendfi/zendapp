@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_notification.dart';
+import '../../navigation/zend_shell_controller.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../activity/activity_screen.dart';
 import '../receive/receive_screen.dart';
@@ -37,9 +38,12 @@ class _ZendShellState extends State<ZendShell> {
   @override
   void initState() {
     super.initState();
+    // Register this shell with the controller so notification taps can switch tabs.
+    ZendShellController.activate((index) {
+      if (mounted) setState(() => _tabIndex = index);
+    });
     // Consume any pending deep link that was stored before the user
-    // completed device unlock (PIN screen). The shell is the first
-    // authenticated screen, so this is the right place to pick it up.
+    // completed device unlock (PIN screen).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingIntent = PendingDeepLinkService.consume();
@@ -50,6 +54,7 @@ class _ZendShellState extends State<ZendShell> {
 
   @override
   void dispose() {
+    ZendShellController.deactivate();
     _bannerTimer?.cancel();
     _reactionBannerTimer?.cancel();
     _commentBannerTimer?.cancel();
