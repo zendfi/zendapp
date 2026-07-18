@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../design/zend_tokens.dart';
 import '../features/pools/pool.dart';
@@ -588,10 +587,6 @@ class ZendAppModel extends ChangeNotifier {
   String username = 'blessed';
   bool balanceHidden = false;
   bool isDarkMode = false;
-  /// Whether the user has opted in to showing amounts on public feed posts.
-  /// Default false — amounts are hidden from public viewers unless the user
-  /// explicitly enables this.
-  bool showAmountOnPublicPosts = false;
   /// True once the user has explicitly toggled dark/light mode.
   /// False = follow system theme.
   bool hasExplicitTheme = false;
@@ -701,20 +696,10 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Toggles whether amounts are shown on public feed posts and persists
-  /// the preference so it survives app restarts.
-  Future<void> toggleShowAmountOnPublicPosts() async {
-    showAmountOnPublicPosts = !showAmountOnPublicPosts;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('show_amount_on_public_posts', showAmountOnPublicPosts);
-  }
-
   /// Loads persisted user preferences. Call once after model initialisation.
   Future<void> loadPersistedPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    showAmountOnPublicPosts = prefs.getBool('show_amount_on_public_posts') ?? false;
-    notifyListeners();
+    // Currently no persisted preferences beyond those loaded at session restore.
+    // SharedPreferences slot retained for future additions.
   }
 
   void setUsername(String value) {

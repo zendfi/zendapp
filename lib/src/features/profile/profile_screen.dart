@@ -171,20 +171,6 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    _SectionLabel('Privacy'),
-                    const SizedBox(height: 8),
-                    _SettingsGroup(
-                      tiles: [
-                        _ProfileToggleTile(
-                          icon: SolarIconsBold.eye,
-                          label: 'Show amounts on public posts',
-                          subtitle: 'Include the payment amount when your activities are visible to your network',
-                          value: model.showAmountOnPublicPosts,
-                          onChanged: (_) => unawaited(model.toggleShowAmountOnPublicPosts()),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
                     _SectionLabel('Security'),
                     const SizedBox(height: 8),
                     _SettingsGroup(
@@ -351,12 +337,10 @@ class _ProfileToggleTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
-    this.subtitle,
   });
 
   final IconData icon;
   final String label;
-  final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -370,20 +354,9 @@ class _ProfileToggleTile extends StatelessWidget {
           Icon(icon, size: 20, color: zt.textSecondary),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary, height: 1.3),
-                  ),
-              ],
+            child: Text(
+              label,
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
             ),
           ),
           Switch.adaptive(

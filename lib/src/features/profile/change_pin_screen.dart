@@ -73,9 +73,9 @@ class _ChangePinScreenState extends State<ChangePinScreen>
   String get _subtitle {
     switch (_phase) {
       case _ChangePinPhase.current:
-        return 'Enter your existing 4-digit PIN';
+        return 'Enter your existing 6-digit PIN';
       case _ChangePinPhase.newPin:
-        return 'Choose a new 4-digit PIN';
+        return 'Choose a new 6-digit PIN';
       case _ChangePinPhase.confirm:
         return 'Re-enter your new PIN to confirm';
     }
@@ -95,11 +95,11 @@ class _ChangePinScreenState extends State<ChangePinScreen>
         return;
       }
 
-      if (_digits.length >= 4) return;
+      if (_digits.length >= 6) return;
       _digits += value;
     });
 
-    if (_digits.length == 4) {
+    if (_digits.length == 6) {
       _onPinComplete(_digits);
     }
   }
@@ -333,7 +333,7 @@ class _PinDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(6, (index) {
         final filled = index < filledCount;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),

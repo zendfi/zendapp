@@ -372,9 +372,8 @@ class _PublicPostRowState extends State<_PublicPostRow> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final model = ZendScope.of(context);
 
-    final showAmount = model.showAmountOnPublicPosts && !widget.edge.amountHidden;
+    final showAmount = !widget.edge.amountHidden && widget.edge.amountUsdc != null;
     final amountLabel = '\$${widget.edge.amountUsdc ?? '0'}';
     final edge = widget.edge;
 

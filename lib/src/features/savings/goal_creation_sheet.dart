@@ -89,10 +89,10 @@ class _GoalCreationSheetState extends State<GoalCreationSheet> {
         }
         return;
       }
-      if (_pinDigits.length >= 4) return;
+      if (_pinDigits.length >= 6) return;
       _pinDigits += key;
     });
-    if (_pinDigits.length == 4) {
+    if (_pinDigits.length == 6) {
       _submitGoal();
     }
   }
@@ -793,7 +793,7 @@ class _ConfirmStage extends StatelessWidget {
           // ── PIN dots ──────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
+            children: List.generate(6, (i) {
               final filled = i < pinDigits.length;
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
