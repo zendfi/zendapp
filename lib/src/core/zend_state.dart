@@ -260,10 +260,10 @@ class ZendAppModel extends ChangeNotifier {
         _patchTransferStatus(event.data);
         unawaited(fetchBalance());
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
       case SseEventType.transferFailed:
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
       case SseEventType.balanceUpdate:
         // Direct balance update from server — re-fetch for accuracy
         // (empty usdc_balance means "please re-fetch")
@@ -281,7 +281,7 @@ class ZendAppModel extends ChangeNotifier {
         // Server told us we missed events — do a full refresh
         unawaited(fetchBalance());
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
+        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
       case SseEventType.poolContribution:
         // Update the cached pool's gathered amount
         final poolId = event.data['pool_id'] as String?;
@@ -602,14 +602,26 @@ class ZendAppModel extends ChangeNotifier {
   /// Fetches the first page of the visibility-filtered Activity_Edge feed.
   /// Called by `ThreadedActivityScreen.initState()`, mirroring exactly how
   /// `ActivityScreen.initState()` calls `fetchHistory()`.
-  Future<void> fetchThreadedActivity() async {
+  ///
+  /// On SSE-triggered refreshes, merges new edges into the existing list
+  /// rather than replacing it — prevents already-loaded pages from disappearing
+  /// when a transfer event fires mid-session.
+  Future<void> fetchThreadedActivity({bool mergeWithExisting = false}) async {
     _threadedActivityEverLoaded = true;
     threadedActivityLoading = true;
     lastThreadedActivityError = null;
     notifyListeners();
     try {
       final response = await activityDataService.getActivityEdges(limit: 50);
-      threadedActivityEdges = response.edges;
+      if (mergeWithExisting && threadedActivityEdges.isNotEmpty) {
+        // Merge: keep existing edges that are older than the first new edge,
+        // and prepend/update with the freshly fetched page.
+        final newIds = response.edges.map((e) => e.edgeId).toSet();
+        final kept = threadedActivityEdges.where((e) => !newIds.contains(e.edgeId)).toList();
+        threadedActivityEdges = [...response.edges, ...kept];
+      } else {
+        threadedActivityEdges = response.edges;
+      }
       _threadedActivityNextCursor = response.nextCursor;
     } catch (e) {
       lastThreadedActivityError = e.toString();

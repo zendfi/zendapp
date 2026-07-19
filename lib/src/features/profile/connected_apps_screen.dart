@@ -12,84 +12,90 @@ class ConnectedAppsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(title: 'Connected apps'),
-              const SizedBox(height: 18),
-              Expanded(
-                child: Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ProfileHeader(title: 'Connected apps'),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        SolarIconsBold.menuDotsSquare,
-                        size: 48,
-                        color: zt.textSecondary,
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: zt.bgSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          SolarIconsBold.link,
+                          size: 28,
+                          color: zt.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No apps connected yet',
+                        'No apps connected',
                         style: TextStyle(
                           fontFamily: 'DMSans',
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        'Third-party apps you authorise will\nappear here.',
+                        'Third-party apps you authorise will appear here.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'DMSans',
                           fontSize: 13,
                           color: zt.textSecondary,
+                          height: 1.4,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.title});
-
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.title});
   final String title;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'InstrumentSerif',
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: zt.textPrimary,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 24,
+                color: zt.textPrimary,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 40),
-      ],
+        ],
+      ),
     );
   }
 }

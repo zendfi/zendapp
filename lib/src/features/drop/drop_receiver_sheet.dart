@@ -156,12 +156,12 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
               const avatarFraction = 0.13;
               const amountFraction = 0.51;
 
-              // Span the particle canvas from above the avatar to below the text.
-              final widgetTop = h * avatarFraction - 44.0;
-              final widgetBottom = h * amountFraction + 80.0;
-              final widgetHeight = widgetBottom - widgetTop;
-              final avatarCanvasY = (h * avatarFraction - widgetTop) / widgetHeight;
-              final textCanvasY = (h * amountFraction - widgetTop) / widgetHeight;
+              // Widget covers the amount text area. Avatar is above — focalY
+              // can be negative; the painter clips at -3× canvas height.
+              const widgetHeight = 160.0;
+              final widgetTop = h * amountFraction - 80.0;
+              final avatarScreenY = h * avatarFraction;
+              final focalYFraction = (avatarScreenY - widgetTop) / widgetHeight;
 
               return Stack(
                 clipBehavior: Clip.none,
@@ -178,8 +178,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                       direction: DissolveDirection.reform,
                       controller: _reformCtrl,
                       focalXFraction: 0.5,
-                      focalYFraction: avatarCanvasY,
-                      textYFraction: textCanvasY,
+                      focalYFraction: focalYFraction,
                       height: widgetHeight,
                       samplingDensity: 0.28,
                       maxParticles: 2000,
@@ -188,10 +187,10 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
                   // ── Glow bloom — brightens after text solidifies ──
                   Positioned(
-                    top: h * amountFraction - 70,
+                    top: widgetTop,
                     left: 0,
                     right: 0,
-                    height: 140,
+                    height: widgetHeight,
                     child: AnimatedBuilder(
                       animation: Listenable.merge([_reformCtrl, _glowCtrl]),
                       builder: (context, child) {

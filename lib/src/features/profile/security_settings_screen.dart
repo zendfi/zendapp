@@ -108,23 +108,29 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
+        final bottomInset = MediaQuery.of(context).viewPadding.bottom;
         return Container(
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
           decoration: BoxDecoration(
-            color: zt.bgPrimary,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
           ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: zt.border,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
               ),
-              const SizedBox(height: 24),
               Row(
                 children: [
                   Container(
@@ -151,20 +157,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               const SizedBox(height: 14),
               _BiometricStep(number: 3, text: 'Tap "Use biometrics" that appears below the keypad after successful PIN entry.', zt: zt),
               const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: zt.accent,
-                    foregroundColor: ZendColors.textOnDeep,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Got it', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
+              PrimaryButton(
+                label: 'Got it',
+                onPressed: () => Navigator.of(context).pop(),
               ),
+              const SizedBox(height: 4),
             ],
           ),
         );
@@ -227,7 +224,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     'Security',
                     style: TextStyle(
                       fontFamily: 'InstrumentSerif',
-                      fontSize: 22,
+                      fontSize: 24,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -474,8 +471,7 @@ class _AmountInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: zt.border),
+        borderRadius: BorderRadius.circular(ZendRadii.xl),
       ),
       child: Row(
         children: [
@@ -551,14 +547,16 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontFamily: 'DMSans',
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.1,
-        color: zt.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'DMSans',
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: zt.textSecondary,
+        ),
       ),
     );
   }
@@ -571,20 +569,20 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    for (var i = 0; i < tiles.length; i++) {
-      children.add(tiles[i]);
-      if (i < tiles.length - 1) {
-        children.add(Divider(height: 1, color: zt.border));
-      }
-    }
-    return Container(
-      decoration: BoxDecoration(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      child: ColoredBox(
         color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: zt.border),
+        child: Column(
+          children: [
+            for (var i = 0; i < tiles.length; i++) ...[
+              tiles[i],
+              if (i < tiles.length - 1)
+                Divider(height: 1, thickness: 1, color: zt.border, indent: 48),
+            ],
+          ],
+        ),
       ),
-      child: Column(children: children),
     );
   }
 }
@@ -602,28 +600,30 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: zt.textSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: zt.textPrimary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: zt.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
                 ),
               ),
-            ),
-            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
-          ],
+              Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
+            ],
+          ),
         ),
       ),
     );
@@ -681,8 +681,8 @@ class _ToggleTile extends StatelessWidget {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: ZendColors.accentBright,
-            activeTrackColor: ZendColors.accentBright.withValues(alpha: 0.4),
+            activeThumbColor: zt.accentBright,
+            activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
           ),
         ],
       ),

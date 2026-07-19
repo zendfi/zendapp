@@ -208,30 +208,32 @@ class _AmountStage extends StatelessWidget {
                   : zt.textSecondary,
             ),
           ),
-          if (insufficientBalance)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Amount exceeds your balance',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 11,
-                  color: ZendColors.destructive,
-                ),
-              ),
-            ),
-          if (belowMinimum)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Minimum withdrawal is \$5.00',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 11,
-                  color: ZendColors.destructive,
-                ),
-              ),
-            ),
+          // Fixed-height status row — never shifts the layout regardless of
+          // whether an error is shown or not.
+          SizedBox(
+            height: 20,
+            child: insufficientBalance
+                ? Text(
+                    'Amount exceeds your balance',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: ZendColors.destructive,
+                    ),
+                  )
+                : belowMinimum
+                    ? Text(
+                        'Minimum withdrawal is \$5.00',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 11,
+                          color: ZendColors.destructive,
+                        ),
+                      )
+                    : null,
+          ),
           const Spacer(),
 
           // ── Amount display ──────────────────────────────────────────

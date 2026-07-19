@@ -86,8 +86,8 @@ class DropDissolvePainter extends CustomPainter {
     /// Fraction of canvas height where the focal point is.
     required this.focalYFraction,
     required this.focalXFraction,
-    /// Fraction of canvas height where the text is centred (default 0.54).
-    this.textYFraction = 0.54,
+    /// Fraction of canvas height where the text is centred (default 0.5 = centred).
+    this.textYFraction = 0.5,
     this.particleColor = Colors.white,
   }) : super(repaint: animation);
 

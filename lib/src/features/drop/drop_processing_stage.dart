@@ -84,29 +84,27 @@ class _DropProcessingStageState extends State<DropProcessingStage>
           final w = constraints.maxWidth;
           final h = constraints.maxHeight;
 
-          // Receiver avatar fraction — beam target at top.
+          // Avatar sits at avatarFraction of the screen height.
           const avatarFraction = 0.16;
-          // Text dissolve zone centred at ~52%.
+          // Amount text centred at amountFraction of the screen height.
           const amountFraction = 0.52;
 
-          // The particle widget spans from just above the avatar down through
-          // the amount text — so the focal point is within its canvas.
-          // widgetTop = avatar top edge with a little headroom
-          final widgetTop = h * avatarFraction - 44.0;
-          // widgetBottom = bottom of the amount text area
-          final widgetBottom = h * amountFraction + 80.0;
-          final widgetHeight = widgetBottom - widgetTop;
+          // The DropTextDissolve widget is positioned so it covers the amount
+          // text area. The focal point (avatar) is ABOVE the widget — that's
+          // fine: the painter allows particles to travel off the top edge with
+          // a generous clip guard (py < -canvasHeight * 3).
+          const widgetHeight = 160.0;
+          final widgetTop = h * amountFraction - 80.0;
 
-          // Avatar Y within the widget canvas (normalised 0→1)
-          final avatarCanvasY = (h * avatarFraction - widgetTop) / widgetHeight;
-          // Amount text centre Y within the widget canvas (normalised 0→1)
-          // The painter places text at size.height * textYFraction of its own canvas.
-          final textCanvasY = (h * amountFraction - widgetTop) / widgetHeight;
+          // focalYFraction: avatar Y in canvas-relative coordinates.
+          // Can be negative — the painter handles it.
+          final avatarScreenY = h * avatarFraction;
+          final focalYFraction = (avatarScreenY - widgetTop) / widgetHeight;
 
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // ── Particle canvas covering avatar → amount zone ──────────────
+              // ── Particle canvas ────────────────────────────────────────────
               Positioned(
                 top: widgetTop,
                 left: 0,
@@ -118,15 +116,15 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                   direction: DissolveDirection.dissolve,
                   controller: _dissolveCtrl,
                   focalXFraction: 0.5,
-                  focalYFraction: avatarCanvasY,
-                  textYFraction: textCanvasY,
+                  focalYFraction: focalYFraction,
+                  // textYFraction: text is centred in the widget (0.5)
                   height: widgetHeight,
                   samplingDensity: 0.28,
                   maxParticles: 2000,
                 ),
               ),
 
-              // ── Receiver avatar — focal point particles stream toward ──────
+              // ── Receiver avatar ────────────────────────────────────────────
               Positioned(
                 top: h * avatarFraction - 28,
                 left: w / 2 - 28,
@@ -137,7 +135,7 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                 ),
               ),
 
-              // ── Receiver tag ──────────────────────────────────────────────
+              // ── Receiver tag ───────────────────────────────────────────────
               Positioned(
                 top: h * avatarFraction + 34,
                 left: 0,

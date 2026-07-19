@@ -12,84 +12,90 @@ class ConnectedBanksScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(title: 'Connected banks'),
-              const SizedBox(height: 18),
-              Expanded(
-                child: Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ProfileHeader(title: 'Connected banks'),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        SolarIconsBold.banknote,
-                        size: 48,
-                        color: zt.textSecondary,
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: zt.bgSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          SolarIconsBold.banknote,
+                          size: 30,
+                          color: zt.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No banks connected yet',
+                        'No banks connected',
                         style: TextStyle(
                           fontFamily: 'DMSans',
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        'Bank accounts you use for sending will\nappear here automatically.',
+                        'Bank accounts you use for withdrawals will appear here automatically.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'DMSans',
                           fontSize: 13,
                           color: zt.textSecondary,
+                          height: 1.4,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.title});
-
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.title});
   final String title;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'InstrumentSerif',
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: zt.textPrimary,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 24,
+                color: zt.textPrimary,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 40),
-      ],
+        ],
+      ),
     );
   }
 }

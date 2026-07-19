@@ -101,46 +101,66 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
     final zendtag = model.currentZendtag ?? model.username;
 
     return Scaffold(
-      backgroundColor: zt.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header with left-aligned title + inline Save action
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
+              child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
-                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       'Customise page',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 24,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
-                  SizedBox(
-                    width: 64,
-                    child: _successMessage != null
-                        ? Center(child: Text(_successMessage!, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.positive, fontWeight: FontWeight.w600)))
-                        : TextButton(
-                            onPressed: _saving ? null : _save,
-                            child: _saving
-                                ? ZendLoader(size: 16, strokeWidth: 2, color: zt.accent)
-                                : Text('Save', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: zt.accent)),
-                          ),
-                  ),
+                  if (_successMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        _successMessage!,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: zt.positive,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else
+                    TextButton(
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? ZendLoader(size: 16, strokeWidth: 2, color: zt.accent)
+                          : Text(
+                              'Save',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontWeight: FontWeight.w600,
+                                color: zt.accent,
+                              ),
+                            ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (_loading)
-                Expanded(child: Center(child: ZendLoader()))
-              else
-                Expanded(
-                  child: ZendScrollPage(
+            ),
+            const SizedBox(height: 4),
+            if (_loading)
+              Expanded(child: Center(child: ZendLoader()))
+            else
+              Expanded(
+                child: ZendScrollPage(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -235,7 +255,6 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -291,9 +310,17 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-Widget _sectionLabel(String label, ZendTheme zt) => Text(
-  label.toUpperCase(),
-  style: TextStyle(fontFamily: 'DMSans', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.1, color: zt.textSecondary),
+Widget _sectionLabel(String label, ZendTheme zt) => Padding(
+  padding: const EdgeInsets.only(left: 4),
+  child: Text(
+    label,
+    style: TextStyle(
+      fontFamily: 'DMSans',
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: zt.textSecondary,
+    ),
+  ),
 );
 
 class _Card extends StatelessWidget {
@@ -305,7 +332,10 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+      decoration: BoxDecoration(
+        color: zt.bgSecondary,
+        borderRadius: BorderRadius.circular(ZendRadii.xl),
+      ),
       child: child,
     );
   }

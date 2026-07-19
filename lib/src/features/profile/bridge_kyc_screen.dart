@@ -99,28 +99,28 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: zt.bgPrimary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ScreenHeader(
-                title: 'Identity verification',
-                trailing: _loading
-                    ? null
-                    : IconButton(
-                        icon: Icon(SolarIconsBold.refresh, color: zt.textSecondary, size: 20),
-                        onPressed: _loadStatus,
-                      ),
-              ),
-              const SizedBox(height: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ScreenHeader(
+              title: 'Identity verification',
+              trailing: _loading
+                  ? null
+                  : IconButton(
+                      icon: Icon(SolarIconsBold.refresh, color: zt.textSecondary, size: 20),
+                      onPressed: _loadStatus,
+                    ),
+            ),
+            const SizedBox(height: 8),
               if (_loading)
                 Expanded(child: Center(child: ZendLoader()))
               else
                 Expanded(
-                  child: ZendScrollPage(
+                  child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: ZendScrollPage(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -129,7 +129,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
 
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+                          decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
                           child: const _InfoSection(),
                         ),
                         const SizedBox(height: 20),
@@ -182,10 +182,10 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -198,13 +198,27 @@ class _ScreenHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Row(
-      children: [
-        IconButton(onPressed: () => Navigator.of(context).pop(), icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary)),
-        const SizedBox(width: 4),
-        Expanded(child: Text(title, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary))),
-        SizedBox(width: 48, child: trailing),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 24,
+                color: zt.textPrimary,
+              ),
+            ),
+          ),
+          if (trailing != null) trailing! else const SizedBox(width: 48),
+        ],
+      ),
     );
   }
 }
@@ -224,7 +238,7 @@ class _StatusCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: zt.bgCard, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+      decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
