@@ -185,7 +185,7 @@ class DropDissolvePainter extends CustomPainter {
         )
         ..strokeWidth = cfg.pointSize
         ..strokeCap = ui.StrokeCap.round
-        ..style = ui.PaintingStyle.fill;
+        ..style = ui.PaintingStyle.stroke;
 
       if (cfg.blurSigma > 0.1) {
         paint.maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, cfg.blurSigma);

@@ -26,10 +26,6 @@ class PushNotificationService {
   /// Consumed once by the app after session restore.
   static PaymentRequestNotification? pendingPaymentRequestFromNotification;
 
-  /// Pending drop confirmation from a push notification (background/terminated).
-  /// Consumed by the app on resume to trigger haptics + overlay.
-  static Map<String, dynamic>? pendingDropConfirmedFromNotification;
-
   PushNotificationService({required ApiClient apiClient})
       : _apiClient = apiClient;
 
@@ -146,10 +142,13 @@ class PushNotificationService {
       return;
     }
 
-    // drop_confirmed keeps its own field for the haptics/overlay path.
-    if (type == 'drop_confirmed') {
-      pendingDropConfirmedFromNotification = data;
-    }
+    // drop_confirmed: do NOT store in pendingDropConfirmedFromNotification.
+    // The receiver sheet is shown exclusively via the SSE dropConfirmed event
+    // (which fires through ZendAppModel._dropConfirmedController). Using the
+    // push notification as a second trigger causes the sheet to appear twice
+    // because the reconciler sends both an SSE event AND a push ~45s apart.
+    // The SSE path already has dedup via _shownDropTransferIds in app.dart;
+    // the push path just navigates to the activity feed (handled below).
 
     // Parse and store a typed navigation destination for all types.
     // app.dart consumes this after unlock/authentication.
@@ -238,13 +237,6 @@ class PushNotificationService {
   static PaymentRequestNotification? consumePendingPaymentRequest() {
     final pending = pendingPaymentRequestFromNotification;
     pendingPaymentRequestFromNotification = null;
-    return pending;
-  }
-
-  /// Consume and return the pending drop confirmation from a background push.
-  static Map<String, dynamic>? consumePendingDropConfirmed() {
-    final pending = pendingDropConfirmedFromNotification;
-    pendingDropConfirmedFromNotification = null;
     return pending;
   }
 }

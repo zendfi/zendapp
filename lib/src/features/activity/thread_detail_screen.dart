@@ -178,33 +178,40 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
         preset: preset,
       );
       if (mounted) {
-        // Optimistically update local state: flip tier and, if the user
-        // chose amount-hidden, set amountHidden so the card reflects it.
+        final updatedEdge = ActivityEdge(
+          edgeId: edge.edgeId,
+          edgeKind: edge.edgeKind,
+          counterparty: edge.counterparty,
+          amountUsdc: edge.amountUsdc,
+          amountHidden: preset == 'share_activity_amount_hidden' ? true : edge.amountHidden,
+          direction: edge.direction,
+          effectiveTier: VisibilityTier.sharedNetwork,
+          isDirectParticipant: edge.isDirectParticipant,
+          note: edge.note,
+          createdAt: edge.createdAt,
+          transactionSignature: edge.transactionSignature,
+          status: edge.status,
+          senderZendtag: edge.senderZendtag,
+          senderDisplayName: edge.senderDisplayName,
+          senderAvatarUrl: edge.senderAvatarUrl,
+          recipientZendtag: edge.recipientZendtag,
+          recipientDisplayName: edge.recipientDisplayName,
+          recipientAvatarUrl: edge.recipientAvatarUrl,
+        );
+
+        // Update local state so the current screen reflects the change immediately.
         setState(() {
           final idx = _edges.indexWhere((e) => e.edgeId == edge.edgeId);
-          if (idx != -1) {
-            _edges[idx] = ActivityEdge(
-              edgeId: edge.edgeId,
-              edgeKind: edge.edgeKind,
-              counterparty: edge.counterparty,
-              amountUsdc: edge.amountUsdc,
-              amountHidden: preset == 'share_activity_amount_hidden' ? true : edge.amountHidden,
-              direction: edge.direction,
-              effectiveTier: VisibilityTier.sharedNetwork,
-              isDirectParticipant: edge.isDirectParticipant,
-              note: edge.note,
-              createdAt: edge.createdAt,
-              transactionSignature: edge.transactionSignature,
-              status: edge.status,
-              senderZendtag: edge.senderZendtag,
-              senderDisplayName: edge.senderDisplayName,
-              senderAvatarUrl: edge.senderAvatarUrl,
-              recipientZendtag: edge.recipientZendtag,
-              recipientDisplayName: edge.recipientDisplayName,
-              recipientAvatarUrl: edge.recipientAvatarUrl,
-            );
-          }
+          if (idx != -1) _edges[idx] = updatedEdge;
         });
+
+        // Also update the model's edge list so re-entering this thread
+        // (via _openThread) sees the updated tier rather than the stale one.
+        final modelIdx = model.threadedActivityEdges.indexWhere((e) => e.edgeId == edge.edgeId);
+        if (modelIdx != -1) {
+          model.threadedActivityEdges[modelIdx] = updatedEdge;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

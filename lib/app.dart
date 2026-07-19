@@ -354,20 +354,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         model.appLockService.startTimer();
       }
 
-      // Handle pending drop confirmed push notification (arrived while backgrounded)
-      final pendingDrop = PushNotificationService.consumePendingDropConfirmed();
-      if (pendingDrop != null) {
-        Future<void>.delayed(const Duration(milliseconds: 300), () {
-          if (!mounted || !model.isAuthenticated) return;
-          // Apply the same transfer_id dedup as _onDropConfirmed — the reconciler
-          // fires both a second SSE and a second FCM push ~45s after the initial
-          // drop; without this guard the push path bypasses the SSE dedup and
-          // shows the sheet twice.
-          final tId = pendingDrop['transfer_id'] as String?;
-          if (tId != null && _shownDropTransferIds.contains(tId)) return;
-          model.handleDropConfirmedFromPush(pendingDrop);
-        });
-      }
+      // Note: drop_confirmed push notifications no longer use pendingDropConfirmedFromNotification.
+      // The receiver sheet is shown exclusively via the SSE dropConfirmed event path,
+      // which has dedup via _shownDropTransferIds. See push_notification_service.dart.
 
       // Consume any pending payment request notification that arrived while
       // the app was in the background. The notification tap sets the static
