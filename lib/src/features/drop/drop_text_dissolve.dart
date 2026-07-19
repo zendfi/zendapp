@@ -39,6 +39,7 @@ class DropTextDissolve extends StatefulWidget {
     required this.focalYFraction,
     this.width = double.infinity,
     this.height = 120,
+    this.textYFraction = 0.54,
     this.samplingDensity = 0.28,
     this.maxParticles = 2000,
     this.pixelRatio = 2.5,
@@ -59,6 +60,9 @@ class DropTextDissolve extends StatefulWidget {
 
   final double width;
   final double height;
+  /// Fraction 0→1 of the canvas height where the text centre is drawn.
+  /// Default 0.54. Override when the widget canvas is taller than the text zone.
+  final double textYFraction;
   final double samplingDensity;
   final int maxParticles;
   final double pixelRatio;
@@ -151,6 +155,7 @@ class _DropTextDissolveState extends State<DropTextDissolve> {
                     result: result,
                     focalXFraction: widget.focalXFraction,
                     focalYFraction: widget.focalYFraction,
+                    textYFraction: widget.textYFraction,
                     particleColor: widget.particleColor,
                   ),
                 ),

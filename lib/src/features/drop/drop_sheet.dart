@@ -78,6 +78,9 @@ class _DropSheetState extends State<DropSheet>
   DiscoveredReceiver? _confirmedReceiver;
   List<DiscoveredReceiver> _candidates = []; // for disambiguation
   String? _errorMessage;
+  // Nonces that have already been used or rejected by the server — prevent
+  // re-sending the same nonce if the BLE scan still returns the stale beacon.
+  final Set<String> _exhaustedNonces = {};
 
   // RSSI gap threshold: if top device is this many dBm stronger than second,
   // auto-select without showing the disambiguation list.
@@ -263,6 +266,14 @@ class _DropSheetState extends State<DropSheet>
   void _onReceiverConfirmed(DiscoveredReceiver receiver) {
     _previewTimeoutTimer?.cancel();
     _previewTimeoutTimer = null;
+    final nonce = receiver.gattPayload?.nonce;
+    // If this nonce was already rejected/consumed, skip and keep scanning.
+    if (nonce != null && _exhaustedNonces.contains(nonce)) {
+      DropDebugLog.i.add('SHEET',
+          'Skipping stale/consumed nonce ${nonce.substring(0, 8)}… — waiting for fresh beacon',
+          level: DropLogLevel.warn);
+      return;
+    }
     final tag = receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
     DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
     setState(() => _confirmedReceiver = receiver);
@@ -320,6 +331,9 @@ class _DropSheetState extends State<DropSheet>
       if (!mounted) return;
       unawaited(model.fetchBalance());
       unawaited(model.fetchHistory());
+      // Mark the nonce exhausted so re-scans don't re-submit it.
+      final usedNonce = _confirmedReceiver?.gattPayload?.nonce;
+      if (usedNonce != null) _exhaustedNonces.add(usedNonce);
       // Resume discoverability after successful send
       unawaited(model.dropDiscoverabilityService.resume());
 
@@ -332,6 +346,28 @@ class _DropSheetState extends State<DropSheet>
       if (!mounted) return;
       // Resume discoverability on failure so receiver can still be found
       unawaited(ZendScope.of(context).dropDiscoverabilityService.resume());
+
+      // Nonce-specific errors: the beacon is stale or already used.
+      // Mark it exhausted and silently return to scanning — no error state,
+      // just wait for the receiver's BLE service to broadcast a fresh nonce.
+      if (e.errorCode == 'NONCE_ALREADY_USED' ||
+          e.errorCode == 'NONCE_SUPERSEDED' ||
+          e.errorCode == 'INVALID_NONCE') {
+        final staleNonce = _confirmedReceiver?.gattPayload?.nonce;
+        if (staleNonce != null) _exhaustedNonces.add(staleNonce);
+        DropDebugLog.i.add('XFER',
+            'Nonce ${staleNonce?.substring(0, 8) ?? '?'}… is ${e.errorCode} — returning to scan for fresh beacon',
+            level: DropLogLevel.warn);
+        setState(() {
+          _confirmedReceiver = null;
+          _candidates = [];
+        });
+        _bleScannerService.stopScan();
+        _bleScannerService.startScan();
+        _goTo(DropStage.scanning);
+        return;
+      }
+
       setState(() => _errorMessage = e.userMessage);
       _goTo(DropStage.error);
     } catch (e) {

@@ -43,6 +43,10 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
   // Track when the app went to background so we know if SSE likely died.
   DateTime? _pausedAt;
+  // Dedup guard: transfer IDs for which we've already shown the receiver sheet.
+  // Prevents the reconciler's second dropConfirmed SSE (~45s later) from
+  // showing a duplicate sheet for the same transfer.
+  final Set<String> _shownDropTransferIds = {};
 
   @override
   void initState() {
@@ -133,6 +137,21 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   void _onDropConfirmed(Map<String, dynamic> data) {
     final role = data['role'] as String?;
     if (role != 'receiver') return;
+
+    // Dedup by transfer_id — the reconciler fires a second dropConfirmed SSE
+    // ~45s after the initial one when it confirms the tx on-chain. Without
+    // this guard, the receiver sheet appears twice.
+    final transferId = data['transfer_id'] as String?;
+    if (transferId != null) {
+      if (_shownDropTransferIds.contains(transferId)) {
+        return;
+      }
+      _shownDropTransferIds.add(transferId);
+      // Keep the set from growing unbounded — cap at 20 entries.
+      if (_shownDropTransferIds.length > 20) {
+        _shownDropTransferIds.remove(_shownDropTransferIds.first);
+      }
+    }
 
     final amountStr = data['amount_usdc'] as String? ?? '0';
     final amount = double.tryParse(amountStr) ?? 0.0;

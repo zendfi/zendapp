@@ -89,33 +89,44 @@ class _DropProcessingStageState extends State<DropProcessingStage>
           // Text dissolve zone centred at ~52%.
           const amountFraction = 0.52;
 
+          // The particle widget spans from just above the avatar down through
+          // the amount text — so the focal point is within its canvas.
+          // widgetTop = avatar top edge with a little headroom
+          final widgetTop = h * avatarFraction - 44.0;
+          // widgetBottom = bottom of the amount text area
+          final widgetBottom = h * amountFraction + 80.0;
+          final widgetHeight = widgetBottom - widgetTop;
+
+          // Avatar Y within the widget canvas (normalised 0→1)
+          final avatarCanvasY = (h * avatarFraction - widgetTop) / widgetHeight;
+          // Amount text centre Y within the widget canvas (normalised 0→1)
+          // The painter places text at size.height * textYFraction of its own canvas.
+          final textCanvasY = (h * amountFraction - widgetTop) / widgetHeight;
+
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // ── Text dissolve — amount letterforms dissolving into particles ──
-              // The widget handles its own particle CustomPainter; the focalY
-              // maps the avatar's screen position so particles stream toward it.
+              // ── Particle canvas covering avatar → amount zone ──────────────
               Positioned(
-                top: h * amountFraction - 70,
+                top: widgetTop,
                 left: 0,
                 right: 0,
+                height: widgetHeight,
                 child: DropTextDissolve(
                   text: _amountStr,
                   style: _kAmountStyle,
                   direction: DissolveDirection.dissolve,
                   controller: _dissolveCtrl,
                   focalXFraction: 0.5,
-                  // focalYFraction is relative to the full canvas, so translate
-                  // from avatar position in the parent to a fraction of the
-                  // widget's own canvas height.
-                  focalYFraction: (avatarFraction * h + 40) / h,
-                  height: 140,
+                  focalYFraction: avatarCanvasY,
+                  textYFraction: textCanvasY,
+                  height: widgetHeight,
                   samplingDensity: 0.28,
                   maxParticles: 2000,
                 ),
               ),
 
-              // ── Receiver avatar — focal point particles stream toward ──
+              // ── Receiver avatar — focal point particles stream toward ──────
               Positioned(
                 top: h * avatarFraction - 28,
                 left: w / 2 - 28,
@@ -126,7 +137,7 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                 ),
               ),
 
-              // ── Receiver tag ──
+              // ── Receiver tag ──────────────────────────────────────────────
               Positioned(
                 top: h * avatarFraction + 34,
                 left: 0,

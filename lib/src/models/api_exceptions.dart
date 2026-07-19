@@ -45,6 +45,10 @@ class ApiException extends ZendException {
         return "You've sent too many transfers recently. Please wait and try again.";
       case 'BACKUP_NOT_FOUND':
         return 'No wallet backup found. Setting up a new wallet.';
+      case 'NONCE_ALREADY_USED':
+      case 'NONCE_SUPERSEDED':
+      case 'INVALID_NONCE':
+        return 'Beacon expired. Scanning for a fresh connection…';
       default:
         return 'Something went wrong. Please try again.';
     }

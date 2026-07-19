@@ -84,9 +84,10 @@ class DropDissolvePainter extends CustomPainter {
     required this.states,
     required this.result,
     /// Fraction of canvas height where the focal point is.
-    /// Sender: avatar at top (~0.18). Receiver: avatar at top (~0.14).
     required this.focalYFraction,
     required this.focalXFraction,
+    /// Fraction of canvas height where the text is centred (default 0.54).
+    this.textYFraction = 0.54,
     this.particleColor = Colors.white,
   }) : super(repaint: animation);
 
@@ -96,6 +97,7 @@ class DropDissolvePainter extends CustomPainter {
   final TextSampleResult result;
   final double focalXFraction;
   final double focalYFraction;
+  final double textYFraction;
   final Color particleColor;
 
   // Pre-allocated point buffers — keyed by tier index.
@@ -128,7 +130,7 @@ class DropDissolvePainter extends CustomPainter {
 
       // Text origin in canvas space.
       final textX = fX + (p.position.dx - 0.5) * result.textSize.width;
-      final textY = (size.height * 0.54) + (p.position.dy - 0.5) * result.textSize.height;
+      final textY = (size.height * textYFraction) + (p.position.dy - 0.5) * result.textSize.height;
 
       // Target: a point within a cone toward the focal Y position.
       // Normal direction gives initial peel direction.
@@ -157,7 +159,7 @@ class DropDissolvePainter extends CustomPainter {
         py = textY - sin(coneAngle) * revDist;
       }
 
-      if (px < -12 || px > size.width + 12 || py < -12 || py > size.height + 12) {
+      if (px < -40 || px > size.width + 40 || py < -size.height * 3 || py > size.height + 40) {
         continue;
       }
 
@@ -195,5 +197,7 @@ class DropDissolvePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(DropDissolvePainter old) =>
-      old.animation.value != animation.value;
+      old.animation.value != animation.value ||
+      old.textYFraction != textYFraction ||
+      old.focalYFraction != focalYFraction;
 }
