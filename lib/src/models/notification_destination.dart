@@ -57,6 +57,10 @@ sealed class NotificationDestination {
         // Activities were shared — show the public feed
         return const NotifPublicFeed();
 
+      case 'activity_shared_by_mutual':
+        // A mutual shared an activity — show the public feed
+        return const NotifPublicFeed();
+
       // ── Pools ──────────────────────────────────────────────────────────────
       case 'pool_message':
         final poolId = data['pool_id'] as String?;

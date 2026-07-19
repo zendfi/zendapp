@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../design/zend_tokens.dart';
 import '../features/pools/pool.dart';
@@ -254,6 +255,9 @@ class ZendAppModel extends ChangeNotifier {
       case SseEventType.transferUpdate:
         // A transfer happened — badge the Activity tab and refresh data.
         activityUnreadCount++;
+        // Immediately patch any matching pending entry to 'confirmed' so open
+        // receipt sheets update live without waiting for fetchHistory() to complete.
+        _patchTransferStatus(event.data);
         unawaited(fetchBalance());
         unawaited(fetchHistory());
         if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity());
@@ -387,6 +391,61 @@ class ZendAppModel extends ChangeNotifier {
       default:
         break;
     }
+  }
+
+  /// Immediately patches a pending [TransferHistoryEntry] in [recentTransactions]
+  /// to 'confirmed' when a `transfer_update` SSE event arrives.
+  ///
+  /// The SSE payload carries `transfer_id` — we use it to find the matching
+  /// entry and flip its status without waiting for the full fetchHistory() round-
+  /// trip. This means open receipt sheets see "Confirmed" the moment the on-chain
+  /// reconciler fires, rather than ~30–45s later when the history refetch lands.
+  void _patchTransferStatus(Map<String, dynamic> data) {
+    final transferId = data['transfer_id'] as String?;
+    if (transferId == null || transferId.isEmpty) return;
+
+    final idx = recentTransactions.indexWhere(
+      (tx) => tx.entry?.id == transferId,
+    );
+    if (idx == -1) return;
+
+    final existing = recentTransactions[idx];
+    if (existing.entry == null) return;
+    // Only upgrade — never downgrade a confirmed entry back to pending.
+    if (existing.entry!.status == 'confirmed') return;
+
+    // Rebuild with updated status, keeping everything else identical.
+    final updated = ZendTransaction(
+      name: existing.name,
+      note: existing.note,
+      amount: existing.amount,
+      time: existing.time,
+      avatarLabel: existing.avatarLabel,
+      amountColor: existing.amountColor,
+      entry: TransferHistoryEntry(
+        id: existing.entry!.id,
+        senderZendtag: existing.entry!.senderZendtag,
+        recipientZendtag: existing.entry!.recipientZendtag,
+        amountUsdc: existing.entry!.amountUsdc,
+        transactionSignature: existing.entry!.transactionSignature,
+        note: existing.entry!.note,
+        status: 'confirmed',
+        createdAt: existing.entry!.createdAt,
+        senderAvatarUrl: existing.entry!.senderAvatarUrl,
+        recipientAvatarUrl: existing.entry!.recipientAvatarUrl,
+        senderDisplayName: existing.entry!.senderDisplayName,
+        recipientDisplayName: existing.entry!.recipientDisplayName,
+        emailRecipientHint: existing.entry!.emailRecipientHint,
+      ),
+      bankOrder: existing.bankOrder,
+      avatarUrl: existing.avatarUrl,
+      countryCode: existing.countryCode,
+      isPending: false,
+      createdAt: existing.createdAt,
+    );
+
+    recentTransactions[idx] = updated;
+    notifyListeners();
   }
 
   void _startFallbackPolling() {
@@ -587,6 +646,9 @@ class ZendAppModel extends ChangeNotifier {
   String username = 'blessed';
   bool balanceHidden = false;
   bool isDarkMode = false;
+  /// Whether this user's mutual connections are notified when they make
+  /// an activity public. Default true — the social signal is intentional.
+  bool notifyMutualsOnShare = true;
   /// True once the user has explicitly toggled dark/light mode.
   /// False = follow system theme.
   bool hasExplicitTheme = false;
@@ -698,8 +760,23 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Loads persisted user preferences. Call once after model initialisation.
   Future<void> loadPersistedPreferences() async {
-    // Currently no persisted preferences beyond those loaded at session restore.
-    // SharedPreferences slot retained for future additions.
+    final prefs = await SharedPreferences.getInstance();
+    notifyMutualsOnShare = prefs.getBool('notify_mutuals_on_share') ?? true;
+    notifyListeners();
+  }
+
+  /// Toggles whether mutuals are notified when the user makes an activity public.
+  /// Persists locally AND syncs the preference to the server so the backend
+  /// respects it server-side (the server also checks this flag before sending).
+  Future<void> toggleNotifyMutualsOnShare() async {
+    notifyMutualsOnShare = !notifyMutualsOnShare;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notify_mutuals_on_share', notifyMutualsOnShare);
+    // Sync to server — fire-and-forget, non-fatal
+    walletService.apiClient
+        .updateVisibilitySettings(notifyMutualsOnShare: notifyMutualsOnShare)
+        .ignore();
   }
 
   void setUsername(String value) {

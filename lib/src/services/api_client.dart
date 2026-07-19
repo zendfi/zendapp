@@ -797,6 +797,21 @@ class ApiClient {
     }
   }
 
+  /// Syncs user visibility preferences to the server.
+  /// Currently only `notifyMutualsOnShare` — extend as needed.
+  Future<void> updateVisibilitySettings({bool? notifyMutualsOnShare}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (notifyMutualsOnShare != null) {
+        body['notify_mutuals_on_share'] = notifyMutualsOnShare;
+      }
+      if (body.isEmpty) return;
+      await _dio.patch('/api/zend/visibility/settings', data: body);
+    } on DioException catch (_) {
+      // Non-fatal — local preference is already saved; server will sync on next launch.
+    }
+  }
+
   /// Read access follows the edge's normal authorization (direct
   /// participant or Shared_Network_Viewer).
   Future<List<EdgeComment>> getEdgeComments(String edgeKind, String edgeId) async {

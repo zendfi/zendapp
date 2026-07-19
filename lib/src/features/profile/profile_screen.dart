@@ -169,6 +169,20 @@ class ProfileScreen extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
+                    // ── Activity sharing ───────────────────────────────────
+                    _SectionLabel('Activity'),
+                    const SizedBox(height: 8),
+                    _TileGroup(tiles: [
+                      _ToggleTile(
+                        icon: SolarIconsBold.bell,
+                        label: 'Notify network when I share',
+                        value: model.notifyMutualsOnShare,
+                        onChanged: (_) => unawaited(model.toggleNotifyMutualsOnShare()),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 24),
+
                     // ── Security ───────────────────────────────────────────
                     _SectionLabel('Security'),
                     const SizedBox(height: 8),
