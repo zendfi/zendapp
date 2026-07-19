@@ -80,7 +80,12 @@ class _DropTextDissolveState extends State<DropTextDissolve> {
   @override
   void initState() {
     super.initState();
-    _sample();
+    // Defer sampling to post-frame — avoids racing with AnimatedSwitcher's
+    // transition compositing, which can cause picture.toImage() to return a
+    // 0×0 image and produce zero particles.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _sample();
+    });
   }
 
   @override
