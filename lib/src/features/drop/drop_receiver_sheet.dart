@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/zend_avatar.dart';
-import 'drop_text_dissolve.dart';
+import 'drop_glow_effect.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -66,11 +66,9 @@ class _DropReceiverSheet extends StatefulWidget {
 
 class _DropReceiverSheetState extends State<_DropReceiverSheet>
     with TickerProviderStateMixin {
-  /// Reform animation — runs from 0→1 once: particles converge into text.
-  late final AnimationController _reformCtrl;
-  /// Glow pulse — breathes after reform completes.
-  late final AnimationController _glowCtrl;
-  /// Label fade — "from @sender" and note slide in.
+  /// Single controller drives the full glow-reform effect.
+  late final AnimationController _effectCtrl;
+  /// Label fade — "from @sender" and note appear after text solidifies.
   late final AnimationController _labelCtrl;
 
   Timer? _autoDismiss;
@@ -80,35 +78,22 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
     super.initState();
     _triggerHaptics();
 
-    // Reform runs over 3s — long enough to feel satisfying.
-    _reformCtrl = AnimationController(
+    _effectCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: const Duration(milliseconds: 3600),
     )..forward();
-
-    _glowCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2600),
-    );
 
     _labelCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
 
-    // Start glow breathing after reform settles (~2.2s).
-    _reformCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        _glowCtrl.repeat(reverse: true);
-      }
-    });
-
-    // Labels fade in halfway through the reform.
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    // Labels fade in when the text has mostly materialised (~60% through).
+    Future.delayed(const Duration(milliseconds: 2160), () {
       if (mounted) _labelCtrl.forward();
     });
 
-    _autoDismiss = Timer(const Duration(seconds: 8), () {
+    _autoDismiss = Timer(const Duration(seconds: 9), () {
       if (mounted) Navigator.of(context).pop();
     });
   }
@@ -123,8 +108,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
   @override
   void dispose() {
     _autoDismiss?.cancel();
-    _reformCtrl.dispose();
-    _glowCtrl.dispose();
+    _effectCtrl.dispose();
     _labelCtrl.dispose();
     super.dispose();
   }
@@ -155,63 +139,28 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
               const avatarFraction = 0.13;
               const amountFraction = 0.51;
-
-              // Widget covers the amount text area. Avatar is above — focalY
-              // can be negative; the painter clips at -3× canvas height.
               const widgetHeight = 160.0;
               final widgetTop = h * amountFraction - 80.0;
-              final avatarScreenY = h * avatarFraction;
-              final focalYFraction = (avatarScreenY - widgetTop) / widgetHeight;
 
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ── Text reform — particles descend and lock into amount ──
+                  // ── Glow reform effect ──────────────────────────────────
                   Positioned(
                     top: widgetTop,
                     left: 0,
                     right: 0,
                     height: widgetHeight,
-                    child: DropTextDissolve(
+                    child: DropGlowEffect(
                       text: _amountStr,
                       style: _kAmountStyle,
-                      direction: DissolveDirection.reform,
-                      controller: _reformCtrl,
-                      focalXFraction: 0.5,
-                      focalYFraction: focalYFraction,
+                      direction: DropGlowDirection.reform,
+                      controller: _effectCtrl,
                       height: widgetHeight,
-                      samplingDensity: 0.28,
-                      maxParticles: 2000,
                     ),
                   ),
 
-                  // ── Glow bloom — brightens after text solidifies ──
-                  Positioned(
-                    top: widgetTop,
-                    left: 0,
-                    right: 0,
-                    height: widgetHeight,
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([_reformCtrl, _glowCtrl]),
-                      builder: (context, child) {
-                        final settled = CurvedAnimation(
-                          parent: _reformCtrl,
-                          curve: const Interval(0.70, 1.0, curve: Curves.easeOut),
-                        ).value;
-                        final pulse = settled * (0.7 + _glowCtrl.value * 0.3);
-                        return CustomPaint(
-                          painter: _GlowTextPainter(
-                            text: _amountStr,
-                            style: _kAmountStyle,
-                            opacity: pulse * 0.5,
-                            blurRadius: 24.0 + _glowCtrl.value * 12.0,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // ── Sender avatar — focal source ──
+                  // ── Sender avatar ───────────────────────────────────────
                   Positioned(
                     top: h * avatarFraction - 28,
                     left: w / 2 - 28,
@@ -292,42 +241,4 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
       ),
     );
   }
-}
-
-/// Simple glow behind the solidified amount — blurred duplicate text.
-class _GlowTextPainter extends CustomPainter {
-  const _GlowTextPainter({
-    required this.text,
-    required this.style,
-    required this.opacity,
-    required this.blurRadius,
-  });
-
-  final String text;
-  final TextStyle style;
-  final double opacity;
-  final double blurRadius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (opacity <= 0.01) return;
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: style.copyWith(
-          foreground: Paint()
-            ..color = Colors.white.withValues(alpha: opacity)
-            ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurRadius),
-        ),
-      ),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    );
-    painter.layout(maxWidth: size.width);
-    painter.paint(canvas, Offset(0, (size.height - painter.height) / 2));
-  }
-
-  @override
-  bool shouldRepaint(_GlowTextPainter old) =>
-      old.opacity != opacity || old.blurRadius != blurRadius;
 }
