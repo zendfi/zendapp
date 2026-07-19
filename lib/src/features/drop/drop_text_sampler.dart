@@ -67,9 +67,14 @@ Future<TextSampleResult> sampleTextParticles(
   int maxParticles = 2200,
 }) async {
   // ── 1. Measure the text at logical size ──────────────────────────────────
+  // TextAlign.left avoids the TextAlign.center + ParagraphConstraints(∞) bug:
+  // centering with an infinite constraint positions glyphs at (∞ - lineW) / 2
+  // which produces off-canvas or NaN X offsets when painting, resulting in
+  // an all-transparent bitmap and zero sampled particles.
+  // Alignment is irrelevant for single-line text — we only need maxIntrinsicWidth.
   final pb = ui.ParagraphBuilder(
     ui.ParagraphStyle(
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.left,
       fontFamily: style.fontFamily,
       fontSize: style.fontSize,
       fontStyle: style.fontStyle,
@@ -88,8 +93,8 @@ Future<TextSampleResult> sampleTextParticles(
     )..addText(text);
 
   final para = pb.build();
+  // Layout at maxIntrinsicWidth so glyphs are fully within the bitmap bounds.
   para.layout(const ui.ParagraphConstraints(width: double.infinity));
-
   final textW = para.maxIntrinsicWidth.ceil();
   final textH = para.height.ceil();
   if (textW <= 0 || textH <= 0) {
@@ -100,6 +105,10 @@ Future<TextSampleResult> sampleTextParticles(
   }
 
   // ── 2. Render at high resolution ─────────────────────────────────────────
+  // Re-layout at the exact measured width so glyph positions are finite and
+  // within the bitmap bounds when we call canvas.drawParagraph.
+  para.layout(ui.ParagraphConstraints(width: textW.toDouble()));
+
   final imgW = (textW * pixelRatio).ceil();
   final imgH = (textH * pixelRatio).ceil();
 

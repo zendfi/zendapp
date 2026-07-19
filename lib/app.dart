@@ -138,15 +138,19 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     final role = data['role'] as String?;
     if (role != 'receiver') return;
 
-    // Dedup by transfer_id — the reconciler fires a second dropConfirmed SSE
+    // Dedup by transfer_id or tx_hash — the reconciler fires a second dropConfirmed SSE
     // ~45s after the initial one when it confirms the tx on-chain. Without
     // this guard, the receiver sheet appears twice.
+    // Note: transfer_id is not in the SSE payload (it's FCM-only), so we fall
+    // back to tx_hash which is always present in the SSE DropConfirmed event.
     final transferId = data['transfer_id'] as String?;
-    if (transferId != null) {
-      if (_shownDropTransferIds.contains(transferId)) {
+    final txHash = data['tx_hash'] as String?;
+    final dedupKey = transferId ?? txHash;
+    if (dedupKey != null) {
+      if (_shownDropTransferIds.contains(dedupKey)) {
         return;
       }
-      _shownDropTransferIds.add(transferId);
+      _shownDropTransferIds.add(dedupKey);
       // Keep the set from growing unbounded — cap at 20 entries.
       if (_shownDropTransferIds.length > 20) {
         _shownDropTransferIds.remove(_shownDropTransferIds.first);
