@@ -359,7 +359,12 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       if (pendingDrop != null) {
         Future<void>.delayed(const Duration(milliseconds: 300), () {
           if (!mounted || !model.isAuthenticated) return;
-          // Feed it through the same SSE handler so balance updates correctly
+          // Apply the same transfer_id dedup as _onDropConfirmed — the reconciler
+          // fires both a second SSE and a second FCM push ~45s after the initial
+          // drop; without this guard the push path bypasses the SSE dedup and
+          // shows the sheet twice.
+          final tId = pendingDrop['transfer_id'] as String?;
+          if (tId != null && _shownDropTransferIds.contains(tId)) return;
           model.handleDropConfirmedFromPush(pendingDrop);
         });
       }

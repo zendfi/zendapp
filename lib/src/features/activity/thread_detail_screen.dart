@@ -227,73 +227,77 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     }
   }
 
-  /// Shows a two-option sheet so the user can choose whether to share
-  /// the activity with or without the amount.
   void _showMakePublicSheet(ActivityEdge edge) {
-    final zt = ZendTheme.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: zt.bgElevated,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 32, height: 4,
-                decoration: BoxDecoration(
-                  color: zt.border,
-                  borderRadius: BorderRadius.circular(2),
+      useRootNavigator: false,
+      builder: (sheetCtx) {
+        final zt = ZendTheme.of(sheetCtx);
+        final bottomInset = MediaQuery.of(sheetCtx).viewPadding.bottom;
+        return Container(
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: zt.border,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Share this activity',
-              style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontSize: 20,
-                color: zt.textPrimary,
+              Text(
+                'Share this activity',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 20,
+                  color: zt.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Choose what your shared network can see.',
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 13,
-                color: zt.textSecondary,
+              const SizedBox(height: 4),
+              Text(
+                'Choose what your network sees.',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13,
+                  color: zt.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _ShareOption(
-              icon: SolarIconsBold.shareCircle,
-              title: 'Share with amount',
-              subtitle: 'Mutuals can see who you paid and how much',
-              onTap: () {
-                Navigator.pop(context);
-                _makePublic(edge, preset: 'share_activity_full');
-              },
-            ),
-            const SizedBox(height: 10),
-            _ShareOption(
-              icon: SolarIconsBold.eyeClosed,
-              title: 'Share (amount hidden)',
-              subtitle: 'Mutuals can see who you paid, but not the amount',
-              onTap: () {
-                Navigator.pop(context);
-                _makePublic(edge, preset: 'share_activity_amount_hidden');
-              },
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 16),
+              _ShareOption(
+                icon: SolarIconsBold.shareCircle,
+                title: 'Share with amount',
+                subtitle: 'Mutuals can see who you paid and how much',
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _makePublic(edge, preset: 'share_activity_full');
+                },
+              ),
+              const SizedBox(height: 8),
+              _ShareOption(
+                icon: SolarIconsBold.eyeClosed,
+                title: 'Share (amount hidden)',
+                subtitle: 'Mutuals can see who you paid, not the amount',
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _makePublic(edge, preset: 'share_activity_amount_hidden');
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -645,7 +649,8 @@ class _FeedPost extends StatelessWidget {
 
 
 /// A tappable option row used in the "Share this activity" bottom sheet.
-class _ShareOption extends StatelessWidget {
+/// Styled to match the reaction picker sheet and the rest of the activity screen.
+class _ShareOption extends StatefulWidget {
   const _ShareOption({
     required this.icon,
     required this.title,
@@ -659,47 +664,67 @@ class _ShareOption extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_ShareOption> createState() => _ShareOptionState();
+}
+
+class _ShareOptionState extends State<_ShareOption> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: zt.bgSecondary,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: zt.accent),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: zt.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 12,
-                      color: zt.textSecondary,
-                    ),
-                  ),
-                ],
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: zt.bgPrimary,
+            borderRadius: BorderRadius.circular(ZendRadii.lg),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: zt.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ZendRadii.md),
+                ),
+                child: Icon(widget.icon, size: 18, color: zt.accent),
               ),
-            ),
-            Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      widget.subtitle,
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

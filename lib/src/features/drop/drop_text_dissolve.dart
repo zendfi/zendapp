@@ -143,7 +143,7 @@ class _DropTextDissolveState extends State<DropTextDissolve> {
               : (t * 1.3 - 0.3).clamp(0.0, 1.0);
 
           return Stack(
-            alignment: Alignment.center,
+            alignment: Alignment.topCenter,
             children: [
               // Particle layer — fills the widget bounds.
               Positioned.fill(
@@ -160,13 +160,19 @@ class _DropTextDissolveState extends State<DropTextDissolve> {
                   ),
                 ),
               ),
-              // Text layer — fades out (dissolve) or in (reform).
-              Opacity(
-                opacity: textOpacity,
-                child: Text(
-                  widget.text,
-                  style: widget.style,
-                  textAlign: TextAlign.center,
+              // Text layer — positioned at textYFraction of the canvas height,
+              // centred horizontally, vertically centred on that fraction point.
+              Positioned(
+                left: 0,
+                right: 0,
+                top: widget.height * widget.textYFraction - 60,
+                child: Opacity(
+                  opacity: textOpacity,
+                  child: Text(
+                    widget.text,
+                    style: widget.style,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ],
