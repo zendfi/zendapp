@@ -64,7 +64,10 @@ List<ParticleState> buildParticleStates(TextSampleResult result, Random rng) {
   final all = [...result.near, ...result.mid, ...result.far, ...result.halo];
   return all.map((p) => ParticleState(
     particle: p,
-    speed: 0.15 + rng.nextDouble() * 0.40,
+    // speed is now a fraction of the actual focal distance (not canvas height).
+    // 0.85–1.30: most particles arrive near the focal point; some overshoot
+    // slightly for a natural, non-mechanical look.
+    speed: 0.85 + rng.nextDouble() * 0.45,
     phase: rng.nextDouble(),
     lateralJitter: 4.0 + rng.nextDouble() * 14.0,
     jitterFreq: 1.0 + rng.nextDouble() * 2.5,
@@ -132,6 +135,14 @@ class DropDissolvePainter extends CustomPainter {
       final textX = fX + (p.position.dx - 0.5) * result.textSize.width;
       final textY = (size.height * textYFraction) + (p.position.dy - 0.5) * result.textSize.height;
 
+      // Actual Euclidean distance from this particle's text origin to the
+      // focal point (avatar). fY is negative for the sender (avatar above
+      // the 160px widget), so this correctly captures the full ~640px travel
+      // distance rather than being constrained to the local canvas height.
+      final focalDx = textX - fX;
+      final focalDy = textY - fY;
+      final focalDistance = sqrt(focalDx * focalDx + focalDy * focalDy);
+
       // Target: a point within a cone toward the focal Y position.
       // Normal direction gives initial peel direction.
       final coneAngle = atan2(textY - fY, textX - fX);
@@ -140,7 +151,10 @@ class DropDissolvePainter extends CustomPainter {
       final normalAngle = atan2(p.edgeNormal.dy, p.edgeNormal.dx);
       final finalAngle = coneAngle * (1 - normalInfluence) + normalAngle * normalInfluence;
 
-      final dist = state.speed * size.height * easedT;
+      // Distance scales with the real focal distance so particles travel
+      // all the way to the avatar rather than drifting ~88px and stopping.
+      // speed is 0.85–1.30 so most particles reach or slightly overshoot focal.
+      final dist = focalDistance * state.speed * easedT;
       final lateral = state.lateralJitter *
           sin(localT * state.jitterFreq * 2 * pi + state.jitterPhase);
 
@@ -154,12 +168,15 @@ class DropDissolvePainter extends CustomPainter {
         // Reversed: start at focal, arrive at text.
         final revT = 1.0 - localT;
         final revEased = revT * revT * (3 - 2 * revT);
-        final revDist = state.speed * size.height * revEased;
+        final revDist = focalDistance * state.speed * revEased;
         px = textX - cos(coneAngle) * revDist + lateral * (1 - localT);
         py = textY - sin(coneAngle) * revDist;
       }
 
-      if (px < -40 || px > size.width + 40 || py < -size.height * 3 || py > size.height + 40) {
+      // Cull bounds — minY scales with the focal point so particles that
+      // travel above the canvas (toward the avatar) are not clipped.
+      final minY = min(fY, 0.0) - 40;
+      if (px < -40 || px > size.width + 40 || py < minY || py > size.height + 40) {
         continue;
       }
 
