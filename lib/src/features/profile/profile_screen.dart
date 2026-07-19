@@ -32,7 +32,7 @@ class ProfileScreen extends StatelessWidget {
     final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
         ? model.currentDisplayName!
         : (model.username.isNotEmpty ? model.username : 'Zend User');
-    final linkHandle = model.username.isNotEmpty ? '@${model.username}' : 'user';
+    final zendtag = model.username.isNotEmpty ? '@${model.username}' : '';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -40,7 +40,7 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Back button ──
+            // ── Header ────────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
               child: Row(
@@ -49,187 +49,188 @@ class ProfileScreen extends StatelessWidget {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
+                  Expanded(
+                    child: Text(
+                      'Profile',
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 24,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            // ── User card ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: ZendColors.bgDeep,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    _AvatarUploadButton(
-                      displayName: displayName,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              fontFamily: 'InstrumentSerif',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: ZendColors.textOnDeep,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'zdfi.me/$linkHandle',
-                            style: const TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 12,
-                              color: Color(0x80F0F0F0),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => pushZendSlide(context, const AccountInformationScreen()),
-                      style: TextButton.styleFrom(
-                        foregroundColor: ZendColors.accentPop,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      child: const Text(
-                        'Edit',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ── Scrollable settings ──
+            // ── Content ───────────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // ── Identity card ──────────────────────────────────────
+                    Material(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.xl),
+                      child: InkWell(
+                        onTap: () => pushZendSlide(context, const AccountInformationScreen()),
+                        borderRadius: BorderRadius.circular(ZendRadii.xl),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              _AvatarUploadButton(displayName: displayName),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName,
+                                      style: TextStyle(
+                                        fontFamily: 'DMSans',
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: zt.textPrimary,
+                                      ),
+                                    ),
+                                    if (zendtag.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        zendtag,
+                                        style: TextStyle(
+                                          fontFamily: 'DMMono',
+                                          fontSize: 12,
+                                          color: zt.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Icon(SolarIconsBold.altArrowRight,
+                                  size: 18, color: zt.textSecondary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Account ────────────────────────────────────────────
                     _SectionLabel('Account'),
                     const SizedBox(height: 8),
-                    _SettingsGroup(
-                      tiles: [
-                        _ProfileTile(
-                          icon: SolarIconsBold.userCircle,
-                          label: 'Account information',
-                          onTap: () => pushZendSlide(context, const AccountInformationScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.banknote,
-                          label: 'Connected banks',
-                          onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.link,
-                          label: 'Connected apps',
-                          onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.palette,
-                          label: 'Customise payment page',
-                          onTap: () => pushZendSlide(context, const CustomisePageScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.bill,
-                          label: 'Payment requests',
-                          onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                    _TileGroup(tiles: [
+                      _Tile(
+                        icon: SolarIconsBold.banknote,
+                        label: 'Connected banks',
+                        onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
+                      ),
+                      _Tile(
+                        icon: SolarIconsBold.link,
+                        label: 'Connected apps',
+                        onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
+                      ),
+                      _Tile(
+                        icon: SolarIconsBold.palette,
+                        label: 'Customise payment page',
+                        onTap: () => pushZendSlide(context, const CustomisePageScreen()),
+                      ),
+                      _Tile(
+                        icon: SolarIconsBold.bill,
+                        label: 'Payment requests',
+                        onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 24),
+
+                    // ── Drop ───────────────────────────────────────────────
                     _SectionLabel('Drop'),
                     const SizedBox(height: 8),
                     _DropDiscoverabilityTile(),
-                    const SizedBox(height: 20),
+
+                    const SizedBox(height: 24),
+
+                    // ── Appearance ─────────────────────────────────────────
                     _SectionLabel('Appearance'),
                     const SizedBox(height: 8),
-                    _SettingsGroup(
-                      tiles: [
-                        _ProfileToggleTile(
-                          icon: SolarIconsBold.moon,
-                          label: 'Dark mode',
-                          value: model.isDarkMode,
-                          onChanged: (_) => model.toggleDarkMode(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                    _TileGroup(tiles: [
+                      _ToggleTile(
+                        icon: SolarIconsBold.moon,
+                        label: 'Dark mode',
+                        value: model.isDarkMode,
+                        onChanged: (_) => model.toggleDarkMode(),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 24),
+
+                    // ── Security ───────────────────────────────────────────
                     _SectionLabel('Security'),
                     const SizedBox(height: 8),
-                    _SettingsGroup(
-                      tiles: [
-                        _ProfileTile(
-                          icon: SolarIconsBold.shieldCheck,
-                          label: 'Security settings',
-                          onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.lockPassword,
-                          label: 'Change PIN',
-                          onTap: () => pushZendSlide(context, const ChangePinScreen()),
-                        ),
-                        _ProfileTile(
-                          icon: SolarIconsBold.shieldUser,
-                          label: 'Identity verification',
-                          onTap: () => pushZendSlide(context, const BridgeKycScreen()),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                    _TileGroup(tiles: [
+                      _Tile(
+                        icon: SolarIconsBold.shieldCheck,
+                        label: 'Security settings',
+                        onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
+                      ),
+                      _Tile(
+                        icon: SolarIconsBold.lockPassword,
+                        label: 'Change PIN',
+                        onTap: () => pushZendSlide(context, const ChangePinScreen()),
+                      ),
+                      _Tile(
+                        icon: SolarIconsBold.shieldUser,
+                        label: 'Identity verification',
+                        onTap: () => pushZendSlide(context, const BridgeKycScreen()),
+                      ),
+                    ]),
+
+                    const SizedBox(height: 24),
+
+                    // ── Support ────────────────────────────────────────────
                     _SectionLabel('Support'),
                     const SizedBox(height: 8),
-                    _SettingsGroup(
-                      tiles: [
-                        _ProfileTile(
-                          icon: SolarIconsBold.userSpeak,
-                          label: 'Contact support',
-                          onTap: () => pushZendSlide(context, const ContactSupportScreen()),
-                        ),
-                      ],
-                    ),
+                    _TileGroup(tiles: [
+                      _Tile(
+                        icon: SolarIconsBold.userSpeak,
+                        label: 'Contact support',
+                        onTap: () => pushZendSlide(context, const ContactSupportScreen()),
+                      ),
+                    ]),
+
                     const SizedBox(height: 32),
-                    GestureDetector(
-                      onTap: () => _confirmLogout(context),
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: ZendColors.destructive.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(ZendRadii.lg),
-                          border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.18)),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(SolarIconsBold.logout, size: 18, color: ZendColors.destructive),
-                            SizedBox(width: 8),
-                            Text(
-                              'Log out',
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: ZendColors.destructive,
+
+                    // ── Log out ────────────────────────────────────────────
+                    Material(
+                      color: ZendColors.destructive.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(ZendRadii.xl),
+                      child: InkWell(
+                        onTap: () => _confirmLogout(context),
+                        borderRadius: BorderRadius.circular(ZendRadii.xl),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(SolarIconsBold.logout,
+                                  size: 18, color: ZendColors.destructive),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Log out',
+                                style: TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: ZendColors.destructive,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -244,6 +245,8 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
+// ── Section label ─────────────────────────────────────────────────────────────
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.label);
   final String label;
@@ -251,46 +254,57 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontFamily: 'DMSans',
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.1,
-        color: zt.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'DMSans',
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: zt.textSecondary,
+        ),
       ),
     );
   }
 }
 
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.tiles});
+// ── Tile group (card with dividers, no border) ────────────────────────────────
+
+class _TileGroup extends StatelessWidget {
+  const _TileGroup({required this.tiles});
   final List<Widget> tiles;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final children = <Widget>[];
-    for (var i = 0; i < tiles.length; i++) {
-      children.add(tiles[i]);
-      if (i < tiles.length - 1) {
-        children.add(Divider(height: 1, color: zt.border));
-      }
-    }
-    return Container(
-      decoration: BoxDecoration(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      child: ColoredBox(
         color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: zt.border),
+        child: Column(
+          children: [
+            for (var i = 0; i < tiles.length; i++) ...[
+              tiles[i],
+              if (i < tiles.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: zt.border,
+                  indent: 48,
+                ),
+            ],
+          ],
+        ),
       ),
-      child: Column(children: children),
     );
   }
 }
 
-class _ProfileTile extends StatelessWidget {
-  const _ProfileTile({
+// ── Standard nav tile ─────────────────────────────────────────────────────────
+
+class _Tile extends StatelessWidget {
+  const _Tile({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -303,36 +317,40 @@ class _ProfileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: zt.textSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'DMSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: zt.textPrimary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: zt.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
                 ),
               ),
-            ),
-            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
-          ],
+              Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ProfileToggleTile extends StatelessWidget {
-  const _ProfileToggleTile({
+// ── Toggle tile ───────────────────────────────────────────────────────────────
+
+class _ToggleTile extends StatelessWidget {
+  const _ToggleTile({
     required this.icon,
     required this.label,
     required this.value,
@@ -356,14 +374,19 @@ class _ProfileToggleTile extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: zt.textPrimary,
+              ),
             ),
           ),
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: ZendColors.accentBright,
-            activeTrackColor: ZendColors.accentBright.withValues(alpha: 0.4),
+            activeThumbColor: zt.accentBright,
+            activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
           ),
         ],
       ),
@@ -395,42 +418,53 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final zt = ZendTheme.of(ctx);
+        final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
         return Container(
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
           decoration: BoxDecoration(
-            color: zt.bgCard,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
           ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: zt.border,
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: zt.border,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-              _SheetOption(
+              Text(
+                'Profile photo',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 18,
+                  color: zt.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _PickerRow(
                 icon: SolarIconsBold.camera,
                 label: 'Take photo',
                 onTap: () => Navigator.pop(ctx, 'camera'),
-                zt: zt,
               ),
-              _SheetOption(
+              _PickerRow(
                 icon: SolarIconsBold.galleryAdd,
                 label: 'Choose from library',
                 onTap: () => Navigator.pop(ctx, 'gallery'),
-                zt: zt,
               ),
               if (hasPhoto)
-                _SheetOption(
+                _PickerRow(
                   icon: SolarIconsBold.trashBinMinimalistic,
                   label: 'Remove photo',
                   onTap: () => Navigator.pop(ctx, 'remove'),
-                  zt: zt,
                   destructive: true,
                 ),
             ],
@@ -446,10 +480,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       try {
         final oldUrl = model.currentAvatarUrl;
         await model.walletService.apiClient.deleteAvatar();
-        // Evict the old image from the disk cache so it doesn't reappear
-        if (oldUrl != null) {
-          await CachedNetworkImage.evictFromCache(oldUrl);
-        }
+        if (oldUrl != null) await CachedNetworkImage.evictFromCache(oldUrl);
         model.setAvatarUrl(null);
       } catch (_) {
         if (mounted) {
@@ -463,10 +494,8 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       return;
     }
 
-    final source =
-        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
+    final source = choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final picked = await ImagePicker().pickImage(
       source: source,
       maxWidth: 1024,
       maxHeight: 1024,
@@ -478,10 +507,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     try {
       final oldUrl = model.currentAvatarUrl;
       final url = await model.walletService.apiClient.uploadAvatar(File(picked.path));
-      // Evict the old cached image so the new one loads fresh
-      if (oldUrl != null) {
-        await CachedNetworkImage.evictFromCache(oldUrl);
-      }
+      if (oldUrl != null) await CachedNetworkImage.evictFromCache(oldUrl);
       model.setAvatarUrl(url);
     } catch (_) {
       if (mounted) {
@@ -502,12 +528,11 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       child: Stack(
         children: [
           ZendAvatar(
-            radius: 32,
+            radius: 28,
             photoUrl: model.currentAvatarUrl,
             initials: widget.displayName.isNotEmpty
                 ? widget.displayName[0].toUpperCase()
                 : null,
-            backgroundColor: const Color(0x332D6A4F),
           ),
           if (_uploading)
             Positioned.fill(
@@ -517,11 +542,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: ZendLoader(
-                    size: 20,
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                  child: ZendLoader(size: 18, strokeWidth: 2, color: Colors.white),
                 ),
               ),
             )
@@ -530,13 +551,13 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               right: 0,
               bottom: 0,
               child: Container(
-                width: 18,
-                height: 18,
-                decoration: const BoxDecoration(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
                   color: ZendColors.accentBright,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(SolarIconsBold.pen2, size: 10, color: Colors.white),
+                child: const Icon(SolarIconsBold.pen2, size: 9, color: Colors.white),
               ),
             ),
         ],
@@ -545,95 +566,142 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
   }
 }
 
-class _SheetOption extends StatelessWidget {
-  const _SheetOption({
+// ── Photo picker row ──────────────────────────────────────────────────────────
+
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({
     required this.icon,
     required this.label,
     required this.onTap,
-    required this.zt,
     this.destructive = false,
   });
+
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final ZendTheme zt;
   final bool destructive;
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final color = destructive ? ZendColors.destructive : zt.textPrimary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: color),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'DMSans',
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: color,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZendRadii.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-Future<void> _confirmLogout(BuildContext context) async {  final shouldLogout = await showDialog<bool>(
+// ── Logout confirmation (bottom sheet, not AlertDialog) ───────────────────────
+
+Future<void> _confirmLogout(BuildContext context) async {
+  final confirmed = await showModalBottomSheet<bool>(
     context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Log out?'),
-        content: const Text('You will need to sign in again to access your account.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Log out'),
-          ),
-        ],
+    useRootNavigator: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final zt = ZendTheme.of(ctx);
+      final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
+      return Container(
+        margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
+          borderRadius: BorderRadius.circular(ZendRadii.xxl),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
+              ),
+            ),
+            Text(
+              'Log out?',
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 22,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "You'll need to sign in again to access your account.",
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 14,
+                color: zt.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(
+              label: 'Log out',
+              backgroundColor: ZendColors.destructive,
+              onPressed: () => Navigator.pop(ctx, true),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(foregroundColor: zt.textSecondary),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 15),
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
       );
     },
   );
 
-  if (shouldLogout != true) return;
-  if (!context.mounted) return;
+  if (confirmed != true || !context.mounted) return;
 
   final model = ZendScope.of(context);
-
-  // Stop Drop discoverability before clearing session
   await model.dropDiscoverabilityService.pause();
-
   try {
     await model.authService.logout();
     model.resetState();
   } catch (_) {
-    // Best-effort logout — still navigate away
     model.resetState();
   }
-
   if (!context.mounted) return;
   pushAndRemoveUntilZendSlide(context, const WelcomeScreen(), rootNavigator: true);
 }
 
-
-
 // ── Drop Discoverability Tile ─────────────────────────────────────────────────
 
-/// A self-contained settings tile that manages the "Be Discoverable" toggle
-/// for Drop. Uses ListenableBuilder to rebuild only when the service state changes,
-/// avoiding unnecessary full-screen rebuilds.
 class _DropDiscoverabilityTile extends StatelessWidget {
   const _DropDiscoverabilityTile();
 
@@ -649,149 +717,136 @@ class _DropDiscoverabilityTile extends StatelessWidget {
         final isOn = service.isDiscoverable;
         final isLoading = service.isLoading;
 
-        return Container(
-          decoration: BoxDecoration(
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(ZendRadii.xl),
+          child: ColoredBox(
             color: zt.bgSecondary,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isOn
-                  ? ZendColors.accentBright.withValues(alpha: 0.35)
-                  : zt.border,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Animated indicator dot
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOn
-                            ? ZendColors.accentBright
-                            : zt.textSecondary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      SolarIconsBold.bluetoothWave,
-                      size: 20,
-                      color: isOn ? ZendColors.accentBright : zt.textSecondary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Be Discoverable',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: zt.textPrimary,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Toggle row ──────────────────────────────────────────
+                  Row(
+                    children: [
+                      // Live indicator dot
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isOn
+                              ? zt.accentBright
+                              : zt.textSecondary.withValues(alpha: 0.35),
                         ),
                       ),
-                    ),
-                    if (isLoading)
-                      ZendLoader(
+                      const SizedBox(width: 10),
+                      Icon(
+                        SolarIconsBold.bluetoothWave,
                         size: 20,
-                        strokeWidth: 2,
-                        color: ZendColors.accentBright,
-                      )
-                    else
-                      Switch.adaptive(
-                        value: isOn,
-                        onChanged: (_) => service.toggle(),
-                        activeThumbColor: ZendColors.accentBright,
-                        activeTrackColor:
-                            ZendColors.accentBright.withValues(alpha: 0.4),
+                        color: isOn ? zt.accentBright : zt.textSecondary,
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 18),
-                  child: Text(
-                    isOn
-                        ? 'Your device is broadcasting a secure Bluetooth signal. '
-                            'Nearby Zend users can send you money via Drop without '
-                            'you needing to do anything else.'
-                        : 'Turn on to receive money from nearby Zend users via Drop. '
-                            'The sender just opens Drop and you\'ll appear automatically. '
-                            'Your don\'t have to manually share your zendtag.',
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 12,
-                      color: zt.textSecondary,
-                      height: 1.4,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Be Discoverable',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: zt.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (isLoading)
+                        ZendLoader(size: 20, strokeWidth: 2, color: zt.accentBright)
+                      else
+                        Switch.adaptive(
+                          value: isOn,
+                          onChanged: (_) => service.toggle(),
+                          activeThumbColor: zt.accentBright,
+                          activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
+                        ),
+                    ],
+                  ),
+
+                  // ── Description ─────────────────────────────────────────
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 17),
+                    child: Text(
+                      isOn
+                          ? 'Broadcasting a secure Bluetooth signal. Nearby Zend users can send you money via Drop automatically.'
+                          : 'Let nearby Zend users send you money via Drop — no sharing your zendtag needed.',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                   ),
-                ),
-                // ── Error banner (e.g. Android 15 FGS blocked) ──
-                if (!isOn && !isLoading && service.lastError != null) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 18),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF5252).withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFFF5252).withValues(alpha: 0.35),
-                        ),
-                      ),
+
+                  // ── "Broadcasting as" label ─────────────────────────────
+                  if (isOn && service.currentPayload != null) ...[
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 17),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(SolarIconsBold.infoCircle,
-                              size: 14, color: Color(0xFFFF5252)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              service.lastError!,
-                              style: const TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 11,
-                                color: Color(0xFFFF5252),
-                                height: 1.4,
-                              ),
+                          Icon(SolarIconsBold.recordCircle,
+                              size: 10, color: zt.accentBright),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Broadcasting as @${service.currentPayload!.zendtag}',
+                            style: TextStyle(
+                              fontFamily: 'DMMono',
+                              fontSize: 11,
+                              color: zt.accentBright,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-                if (isOn && service.currentPayload != null) ...[
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 18),
-                    child: Row(
-                      children: [
-                        Icon(
-                          SolarIconsBold.recordCircle,
-                          size: 10,
-                          color: ZendColors.accentBright,
+                  ],
+
+                  // ── Error banner ────────────────────────────────────────
+                  if (!isOn && !isLoading && service.lastError != null) ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 17),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: ZendColors.destructive.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(ZendRadii.md),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Broadcasting as @${service.currentPayload!.zendtag}',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 11,
-                            color: ZendColors.accentBright,
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(SolarIconsBold.infoCircle,
+                                size: 14, color: ZendColors.destructive),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                service.lastError!,
+                                style: const TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 11,
+                                  color: ZendColors.destructive,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
