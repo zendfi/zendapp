@@ -599,13 +599,16 @@ class ZendAppModel extends ChangeNotifier {
   // refreshRequired cases.
   bool _threadedActivityEverLoaded = false;
 
-  /// Fetches the first page of the visibility-filtered Activity_Edge feed.
-  /// Called by `ThreadedActivityScreen.initState()`, mirroring exactly how
-  /// `ActivityScreen.initState()` calls `fetchHistory()`.
+  /// Fetches ALL pages of the visibility-filtered Activity_Edge feed and
+  /// accumulates them into [threadedActivityEdges].
   ///
-  /// On SSE-triggered refreshes, merges new edges into the existing list
-  /// rather than replacing it — prevents already-loaded pages from disappearing
-  /// when a transfer event fires mid-session.
+  /// Called by `ThreadedActivityScreen.initState()`. Fetches page 1 (50
+  /// edges), notifies listeners so the UI renders immediately, then
+  /// auto-fetches subsequent pages in the background until exhausted.
+  ///
+  /// On SSE-triggered refreshes, merges the new first page into the
+  /// existing list rather than replacing it — prevents already-loaded
+  /// pages from disappearing when a transfer event fires mid-session.
   Future<void> fetchThreadedActivity({bool mergeWithExisting = false}) async {
     _threadedActivityEverLoaded = true;
     threadedActivityLoading = true;
@@ -614,8 +617,7 @@ class ZendAppModel extends ChangeNotifier {
     try {
       final response = await activityDataService.getActivityEdges(limit: 50);
       if (mergeWithExisting && threadedActivityEdges.isNotEmpty) {
-        // Merge: keep existing edges that are older than the first new edge,
-        // and prepend/update with the freshly fetched page.
+        // Merge: keep existing edges not in the new first page, prepend new ones.
         final newIds = response.edges.map((e) => e.edgeId).toSet();
         final kept = threadedActivityEdges.where((e) => !newIds.contains(e.edgeId)).toList();
         threadedActivityEdges = [...response.edges, ...kept];
@@ -623,10 +625,44 @@ class ZendAppModel extends ChangeNotifier {
         threadedActivityEdges = response.edges;
       }
       _threadedActivityNextCursor = response.nextCursor;
+
+      // Immediately show the first page, then auto-load all remaining pages
+      // in the background so the thread list is complete without requiring
+      // the user to scroll to the bottom.
+      threadedActivityLoading = false;
+      notifyListeners();
+
+      if (_threadedActivityNextCursor != null) {
+        unawaited(_loadRemainingActivityPages());
+      }
     } catch (e) {
       lastThreadedActivityError = e.toString();
-    } finally {
       threadedActivityLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Sequentially fetches all remaining pages after the first and appends
+  /// them to [threadedActivityEdges]. Fires a single [notifyListeners] at
+  /// the end to avoid per-page rebuilds.
+  Future<void> _loadRemainingActivityPages() async {
+    try {
+      while (_threadedActivityNextCursor != null) {
+        final response = await activityDataService.getActivityEdges(
+          cursor: _threadedActivityNextCursor,
+          limit: 50,
+        );
+        // Deduplicate — guard against concurrent fetches adding the same edges.
+        final existingIds = threadedActivityEdges.map((e) => e.edgeId).toSet();
+        final deduped = response.edges.where((e) => !existingIds.contains(e.edgeId)).toList();
+        if (deduped.isNotEmpty) {
+          threadedActivityEdges = [...threadedActivityEdges, ...deduped];
+        }
+        _threadedActivityNextCursor = response.nextCursor;
+      }
+    } catch (_) {
+      // Non-fatal — the user can still pull-to-refresh to retry.
+    } finally {
       notifyListeners();
     }
   }
