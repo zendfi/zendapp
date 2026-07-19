@@ -786,9 +786,12 @@ class ApiClient {
     }
   }
 
-  Future<void> makeEdgePublic(String edgeKind, String edgeId) async {
+  Future<void> makeEdgePublic(String edgeKind, String edgeId, {String preset = 'share_activity_full'}) async {
     try {
-      await _dio.post('/api/zend/activity/edges/$edgeKind/$edgeId/make-public');
+      await _dio.post(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/make-public',
+        data: {'preset': preset},
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }

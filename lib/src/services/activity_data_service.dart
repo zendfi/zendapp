@@ -53,8 +53,8 @@ class ActivityDataService {
     return _apiClient.removeEdgeReaction(edgeKind, edgeId, emoji);
   }
 
-  Future<void> makeEdgePublic(String edgeKind, String edgeId) {
-    return _apiClient.makeEdgePublic(edgeKind, edgeId);
+  Future<void> makeEdgePublic(String edgeKind, String edgeId, {String preset = 'share_activity_full'}) {
+    return _apiClient.makeEdgePublic(edgeKind, edgeId, preset: preset);
   }
 
   Future<List<EdgeComment>> getEdgeComments(String edgeKind, String edgeId) {

@@ -168,12 +168,18 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     );
   }
 
-  Future<void> _makePublic(ActivityEdge edge) async {
+  Future<void> _makePublic(ActivityEdge edge, {required String preset}) async {
     final model = ZendScope.of(context);
     setState(() => _reactionsLoading.add(edge.edgeId));
     try {
-      await model.activityDataService.makeEdgePublic(_edgeKindStr(edge.edgeKind), edge.edgeId);
+      await model.activityDataService.makeEdgePublic(
+        _edgeKindStr(edge.edgeKind),
+        edge.edgeId,
+        preset: preset,
+      );
       if (mounted) {
+        // Optimistically update local state: flip tier and, if the user
+        // chose amount-hidden, set amountHidden so the card reflects it.
         setState(() {
           final idx = _edges.indexWhere((e) => e.edgeId == edge.edgeId);
           if (idx != -1) {
@@ -182,7 +188,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               edgeKind: edge.edgeKind,
               counterparty: edge.counterparty,
               amountUsdc: edge.amountUsdc,
-              amountHidden: edge.amountHidden,
+              amountHidden: preset == 'share_activity_amount_hidden' ? true : edge.amountHidden,
               direction: edge.direction,
               effectiveTier: VisibilityTier.sharedNetwork,
               isDirectParticipant: edge.isDirectParticipant,
@@ -200,7 +206,14 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
           }
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Now visible to your shared network', style: TextStyle(fontFamily: 'DMSans'))),
+          SnackBar(
+            content: Text(
+              preset == 'share_activity_amount_hidden'
+                  ? 'Now visible to your network (amount hidden)'
+                  : 'Now visible to your network',
+              style: const TextStyle(fontFamily: 'DMSans'),
+            ),
+          ),
         );
       }
     } catch (_) {
@@ -212,6 +225,76 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     } finally {
       if (mounted) setState(() => _reactionsLoading.remove(edge.edgeId));
     }
+  }
+
+  /// Shows a two-option sheet so the user can choose whether to share
+  /// the activity with or without the amount.
+  void _showMakePublicSheet(ActivityEdge edge) {
+    final zt = ZendTheme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: zt.bgElevated,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 32, height: 4,
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Share this activity',
+              style: TextStyle(
+                fontFamily: 'InstrumentSerif',
+                fontSize: 20,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Choose what your shared network can see.',
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _ShareOption(
+              icon: SolarIconsBold.shareCircle,
+              title: 'Share with amount',
+              subtitle: 'Mutuals can see who you paid and how much',
+              onTap: () {
+                Navigator.pop(context);
+                _makePublic(edge, preset: 'share_activity_full');
+              },
+            ),
+            const SizedBox(height: 10),
+            _ShareOption(
+              icon: SolarIconsBold.eyeClosed,
+              title: 'Share (amount hidden)',
+              subtitle: 'Mutuals can see who you paid, but not the amount',
+              onTap: () {
+                Navigator.pop(context);
+                _makePublic(edge, preset: 'share_activity_amount_hidden');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Tapping a feed post now opens the Twitter-style comment sheet
@@ -312,7 +395,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                     onReactionTap: (emoji) => _toggleReaction(edge, emoji),
                     onAddReaction: () => _showReactionPicker(edge),
                     onMakePublic: edge.isDirectParticipant && edge.effectiveTier == VisibilityTier.private
-                        ? () => _makePublic(edge)
+                        ? () => _showMakePublicSheet(edge)
                         : null,
                   );
                 },
@@ -560,3 +643,65 @@ class _FeedPost extends StatelessWidget {
   }
 }
 
+
+/// A tappable option row used in the "Share this activity" bottom sheet.
+class _ShareOption extends StatelessWidget {
+  const _ShareOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: zt.accent),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'DMSans',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
