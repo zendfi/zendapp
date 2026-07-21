@@ -53,9 +53,9 @@ class DmMessageBubble extends StatelessWidget {
     return VibeMessageBubble(
       emoji: vd.stickerSlug.isNotEmpty ? vd.stickerSlug : '✨',
       amountUsdc: double.tryParse(vd.amountUsdc) ?? 0.0,
-      senderLabel: message.senderZendtag ?? '',
       isMine: isMe,
       createdAt: message.createdAt,
+      isDelivering: message.localStatus == DmLocalStatus.sending,
     );
   }
 }

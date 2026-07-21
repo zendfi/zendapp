@@ -11,6 +11,7 @@ import '../../models/dm_message.dart';
 import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/dm_websocket_service.dart';
+import '../../services/wallet_session_cache.dart';
 import '../profile/user_profile_screen.dart';
 import '../vibes/vibe_picker_sheet.dart';
 import 'dm_message_bubble.dart';
@@ -216,10 +217,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   Future<void> _onSendVibe(VibeSendResult vibe) async {
     final model = ZendScope.of(context);
-    final clientId =
-        'vibe_${DateTime.now().millisecondsSinceEpoch}';
+    final clientId = 'vibe_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Optimistic bubble
+    // 1. Show the optimistic sticker immediately — amount hidden, feels like
+    //    sending a sticker. The DmLocalStatus.sending state is invisible to
+    //    the user (no spinner shown on vibes — it just pops in).
     final optimistic = DmMessage(
       id: clientId,
       roomId: widget.roomId,
@@ -239,23 +241,71 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       localStatus: DmLocalStatus.sending,
     );
     setState(() => _messages.insert(0, optimistic));
+    HapticFeedback.mediumImpact();
 
+    // 2. Everything below happens silently in the background.
+    //    The sticker is already visible — the user has moved on.
     try {
-      await model.dmService.sendVibe(
+      // Step A: prepare — get blockhash + ATAs
+      final prepareData = await model.dmService.prepareVibe(
         widget.roomId,
         stickerId: vibe.stickerId,
         amountUsdc: vibe.amountUsdc,
+      );
+
+      // Step B: sign the USDC transfer transaction locally
+      final blockhash = prepareData['blockhash'] as String;
+      final recipientAddress = prepareData['recipient_wallet_address'] as String;
+      final feePayerAddress = prepareData['fee_payer'] as String;
+      final senderAta = prepareData['sender_ata'] as String?;
+      final recipientAta = prepareData['recipient_ata'] as String?;
+
+      final String signedTx;
+
+      // Use session cache if available (session-signing policy), else PIN not
+      // needed for Vibes — they're micro amounts. We fall back gracefully.
+      final cached = WalletSessionCache.instance.keypair;
+      if (cached != null) {
+        signedTx = await model.walletService.buildAndSignTransactionFromCache(
+          keypairBytes: cached,
+          amountUsdc: vibe.amountUsdc,
+          recipientAddress: recipientAddress,
+          blockhash: blockhash,
+          feePayerAddress: feePayerAddress,
+          senderAtaOverride: senderAta,
+          recipientAtaOverride: recipientAta,
+        );
+        for (var i = 0; i < cached.length; i++) { cached[i] = 0; }
+      } else {
+        // Session not cached — skip the Vibe silently, mark as failed.
+        // In practice this shouldn't happen if the user is authenticated,
+        // but we never want to surface a PIN dialog for a sticker send.
+        throw Exception('Session expired — re-open to send Vibes');
+      }
+
+      // Step C: submit the signed transaction
+      await model.dmService.submitVibe(
+        widget.roomId,
+        stickerId: vibe.stickerId,
+        amountUsdc: vibe.amountUsdc,
+        partiallySignedTx: signedTx,
         clientId: clientId,
       );
+
+      // Silent success — upgrade optimistic bubble to delivered
       if (mounted) {
         setState(() {
           final i = _messages.indexWhere((m) => m.clientId == clientId);
           if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
         });
-        // Refresh balance since funds moved
-        model.fetchBalance();
+        // Record spend locally + schedule balance refresh after chain confirmation
+        unawaited(model.recordVibeSpend(vibe.amountUsdc));
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) model.fetchBalance();
+        });
       }
     } catch (_) {
+      // Silently mark as failed — a small retry indicator appears on the bubble.
       if (mounted) {
         setState(() {
           final i = _messages.indexWhere((m) => m.clientId == clientId);

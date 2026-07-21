@@ -13,6 +13,8 @@ import '../../models/pool_message_local.dart';
 import '../../services/outbox_queue.dart';
 import '../../services/pool_websocket_service.dart';
 import '../../services/sse_service.dart';
+import '../../services/wallet_session_cache.dart';
+import '../vibes/vibe_picker_sheet.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -597,6 +599,83 @@ class _MissionRoomState extends State<MissionRoom> {
     setState(() => _sending = false);
   }
 
+  Future<void> _onSendVibe(VibeSendResult vibe) async {
+    final model = ZendScope.of(context);
+    final clientId = 'vibe_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Show optimistic message immediately
+    final optimistic = PoolMessageLocal(
+      id: clientId,
+      poolId: _pool.id,
+      clientId: clientId,
+      senderZendtag: model.currentZendtag,
+      senderUserId: model.currentUserId,
+      senderAvatarUrl: model.currentAvatarUrl,
+      messageType: 'vibe',
+      content: '{"sticker_slug":"${vibe.stickerEmoji}","sticker_name":"${vibe.stickerLabel}",'
+          '"amount_usdc":"${vibe.amountUsdc}","sticker_id":"${vibe.stickerId}"}',
+      localStatus: LocalStatus.sending,
+      createdAt: DateTime.now(),
+    );
+    await _repository.upsertMessage(optimistic);
+    setState(() => _messages.add(optimistic));
+    _jumpToBottom();
+
+    // Background: prepare → sign → submit
+    try {
+      final prepareData = await model.walletService.apiClient.preparePoolVibe(
+        poolId: _pool.id,
+        stickerId: vibe.stickerId,
+        amountUsdc: vibe.amountUsdc,
+      );
+
+      final cached = WalletSessionCache.instance.keypair;
+      if (cached == null) throw Exception('Session expired');
+
+      final signedTx = await model.walletService.buildAndSignTransactionFromCache(
+        keypairBytes: cached,
+        amountUsdc: vibe.amountUsdc,
+        recipientAddress: prepareData['recipient_wallet_address'] as String,
+        blockhash: prepareData['blockhash'] as String,
+        feePayerAddress: prepareData['fee_payer'] as String,
+        senderAtaOverride: prepareData['sender_ata'] as String?,
+        recipientAtaOverride: prepareData['recipient_ata'] as String?,
+      );
+      for (var i = 0; i < cached.length; i++) { cached[i] = 0; }
+
+      await model.walletService.apiClient.submitPoolVibe(
+        poolId: _pool.id,
+        stickerId: vibe.stickerId,
+        amountUsdc: vibe.amountUsdc,
+        partiallySignedTx: signedTx,
+        clientId: clientId,
+      );
+
+      unawaited(model.recordVibeSpend(vibe.amountUsdc));
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) model.fetchBalance();
+      });
+
+      final delivered = optimistic.copyWith(localStatus: LocalStatus.delivered);
+      await _repository.upsertMessage(delivered);
+      if (mounted) {
+        setState(() {
+          final i = _messages.indexWhere((m) => m.clientId == clientId);
+          if (i != -1) _messages[i] = delivered;
+        });
+      }
+    } catch (_) {
+      final failed = optimistic.copyWith(localStatus: LocalStatus.failed);
+      await _repository.upsertMessage(failed);
+      if (mounted) {
+        setState(() {
+          final i = _messages.indexWhere((m) => m.clientId == clientId);
+          if (i != -1) _messages[i] = failed;
+        });
+      }
+    }
+  }
+
   // ── Reactions ────────────────────────────────────────────────────────────────
 
   void _showReactionPicker(PoolMessageLocal message, BuildContext messageContext) {
@@ -972,6 +1051,8 @@ class _MissionRoomState extends State<MissionRoom> {
             onMicStart: _startRecording,
             onMicStop: _stopRecording,
             onTyping: (isTyping) => _wsService.sendTyping(isTyping),
+            poolId: _pool.id,
+            onSendVibe: _onSendVibe,
           ),
       ],
     );
@@ -1192,6 +1273,8 @@ class _InputBar extends StatefulWidget {
     required this.onMicStart,
     required this.onMicStop,
     required this.onTyping,
+    this.onSendVibe,
+    this.poolId,
   });
 
   final TextEditingController controller;
@@ -1202,6 +1285,8 @@ class _InputBar extends StatefulWidget {
   final Future<void> Function() onMicStart;
   final Future<void> Function() onMicStop;
   final void Function(bool) onTyping;
+  final Future<void> Function(VibeSendResult)? onSendVibe;
+  final String? poolId;
 
   @override
   State<_InputBar> createState() => _InputBarState();
@@ -1283,6 +1368,30 @@ class _InputBarState extends State<_InputBar> {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                // Vibe button — shown when onSendVibe is wired
+                if (widget.onSendVibe != null && widget.poolId != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: GestureDetector(
+                      onTap: () async {
+                        final result = await showVibePickerSheet(
+                          context,
+                          roomId: widget.poolId!,
+                        );
+                        if (result != null && mounted) {
+                          await widget.onSendVibe!(result);
+                        }
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+                        child: Icon(SolarIconsBold.gift, size: 18, color: zt.textSecondary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: ZendSpacing.xs),
+                ],
                 // Mic button — pinned to bottom edge, doesn't drift with text growth
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),

@@ -158,18 +158,31 @@ class _VibePickerSheetState extends State<_VibePickerSheet> {
                   child: Icon(SolarIconsBold.gift, size: 16, color: zt.accent),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Send a Vibe',
-                  style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: zt.textPrimary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Send a Vibe',
+                      style: TextStyle(
+                        fontFamily: 'DMSans',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Amount hidden until they tap ✨',
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 10,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
                 const Spacer(),
                 Text(
-                  '\$0.01 – \$5.00',
+                  '\$0.01 – \$5',
                   style: TextStyle(
                     fontFamily: 'DMMono',
                     fontSize: 11,

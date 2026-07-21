@@ -253,6 +253,50 @@ class ZendAppModel extends ChangeNotifier {
     }
   }
 
+  // ── Vibe daily spend tracking ─────────────────────────────────────────────
+  //
+  // Tracked locally in SharedPreferences for instant balance checks before
+  // even hitting the network. The server enforces the hard $25 cap via Redis.
+
+  double _vibeSpentToday = 0.0;
+  String _vibeSpentDate = '';
+
+  double get vibeSpentToday => _vibeSpentToday;
+
+  Future<void> _loadVibeSpend() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = _todayString();
+    final savedDate = prefs.getString('vibe_spent_date') ?? '';
+    if (savedDate == today) {
+      _vibeSpentToday = prefs.getDouble('vibe_spent_today') ?? 0.0;
+    } else {
+      // New day — reset
+      _vibeSpentToday = 0.0;
+    }
+    _vibeSpentDate = today;
+  }
+
+  Future<void> recordVibeSpend(double amount) async {
+    final today = _todayString();
+    if (_vibeSpentDate != today) {
+      _vibeSpentToday = 0.0;
+      _vibeSpentDate = today;
+    }
+    _vibeSpentToday += amount;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('vibe_spent_today', _vibeSpentToday);
+    await prefs.setString('vibe_spent_date', today);
+    notifyListeners();
+  }
+
+  static String _todayString() {
+    final now = DateTime.now().toUtc();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Whether a Vibe of [amount] USDC is within today's daily limit ($25).
+  bool canSendVibe(double amount) => (_vibeSpentToday + amount) <= 25.0;
+
   /// Recovery service — manages National ID recovery packet creation/decryption.
   /// Injected lazily after wallet service is ready.
   RecoveryService? _recoveryService;
@@ -289,6 +333,9 @@ class ZendAppModel extends ChangeNotifier {
     }
     _stopAll();
     _sseConnected = false;
+
+    // Load vibe daily spend from local store on first start
+    unawaited(_loadVibeSpend());
 
     // Start SSE
     sseService.start();

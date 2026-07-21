@@ -92,30 +92,31 @@ class DmService {
     }
   }
 
-  /// Sends a Vibe (sticker + micro-payment) in a DM room.
-  /// Returns the resulting DM message.
-  Future<DmMessage> sendVibe(
+  /// Step 1: gets blockhash + ATA addresses for client-side signing.
+  Future<Map<String, dynamic>> prepareVibe(
     String roomId, {
     required String stickerId,
     required double amountUsdc,
+  }) =>
+      _apiClient.prepareVibe(
+        roomId: roomId,
+        stickerId: stickerId,
+        amountUsdc: amountUsdc,
+      );
+
+  /// Step 2: submits the client-signed transaction to complete the Vibe.
+  Future<Map<String, dynamic>> submitVibe(
+    String roomId, {
+    required String stickerId,
+    required double amountUsdc,
+    required String partiallySignedTx,
     required String clientId,
-  }) async {
-    final response = await _apiClient.sendVibe(
-      roomId: roomId,
-      stickerId: stickerId,
-      amountUsdc: amountUsdc,
-      clientId: clientId,
-    );
-    return DmMessage.fromJson({
-      'id': response['id'] as String? ?? clientId,
-      'room_id': roomId,
-      'sender_user_id': '',
-      'message_type': 'vibe',
-      'sticker_id': stickerId,
-      'amount_usdc': amountUsdc.toString(),
-      'client_id': clientId,
-      'created_at': response['created_at'] as String? ??
-          DateTime.now().toIso8601String(),
-    });
-  }
+  }) =>
+      _apiClient.submitVibe(
+        roomId: roomId,
+        stickerId: stickerId,
+        amountUsdc: amountUsdc,
+        partiallySignedTx: partiallySignedTx,
+        clientId: clientId,
+      );
 }

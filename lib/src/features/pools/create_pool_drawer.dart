@@ -60,6 +60,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
   final List<PoolParticipant> _participants = [];
   DateTime? _deadline;
+  bool _allowOpenContributions = false;
 
   String? _nameError;
   String? _amountError;
@@ -261,6 +262,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
         targetAmountUsdc: _targetAmount,
         deadline: _deadline,
         participants: participantPayload,
+        allowOpenContributions: _allowOpenContributions,
       );
 
       // Add to local cache
@@ -563,6 +565,55 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 const SizedBox(height: ZendSpacing.xxs),
                 Text(_deadlineError!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
               ],
+
+              const SizedBox(height: ZendSpacing.md),
+
+              // Allow open contributions toggle
+              Material(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.lg),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(ZendRadii.lg),
+                  onTap: () => setState(() => _allowOpenContributions = !_allowOpenContributions),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Allow anyone to contribute via link',
+                                style: TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: zt.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Share a link so anyone can chip in',
+                                style: TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 12,
+                                  color: zt.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: _allowOpenContributions,
+                          onChanged: (v) => setState(() => _allowOpenContributions = v),
+                          activeThumbColor: zt.accent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: ZendSpacing.xxl),
               const Spacer(),

@@ -877,11 +877,102 @@ class ApiClient {
     }
   }
 
+  /// Step 1 of the Vibe send: returns blockhash + ATAs so the client can sign.
+  Future<Map<String, dynamic>> prepareVibe({
+    required String roomId,
+    required String stickerId,
+    required double amountUsdc,
+  }) async {    try {
+      final response = await _dio.post(
+        '/api/zend/dm/$roomId/vibes/prepare',
+        data: {'sticker_id': stickerId, 'amount_usdc': amountUsdc},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Step 2 of the Vibe send: submits the signed transaction.
+  Future<Map<String, dynamic>> submitVibe({
+    required String roomId,
+    required String stickerId,
+    required double amountUsdc,
+    required String partiallySignedTx,
+    required String clientId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/dm/$roomId/vibes',
+        data: {
+          'sticker_id': stickerId,
+          'amount_usdc': amountUsdc,
+          'partially_signed_tx': partiallySignedTx,
+          'client_id': clientId,
+        },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Fetches active payment streaks for the current user.
   Future<List<dynamic>> getStreaks() async {
     try {
       final response = await _dio.get('/api/zend/streaks');
       return (response.data['streaks'] as List<dynamic>?) ?? [];
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Step 1: Pool Vibe prepare — returns blockhash + ATAs.
+  Future<Map<String, dynamic>> preparePoolVibe({
+    required String poolId,
+    required String stickerId,
+    required double amountUsdc,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/vibes/prepare',
+        data: {'sticker_id': stickerId, 'amount_usdc': amountUsdc},
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Step 2: Pool Vibe submit — broadcasts signed transaction.
+  Future<Map<String, dynamic>> submitPoolVibe({
+    required String poolId,
+    required String stickerId,
+    required double amountUsdc,
+    required String partiallySignedTx,
+    required String clientId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/pools/$poolId/vibes',
+        data: {
+          'sticker_id': stickerId,
+          'amount_usdc': amountUsdc,
+          'partially_signed_tx': partiallySignedTx,
+          'client_id': clientId,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 90), sendTimeout: const Duration(seconds: 30)),
+      );
+      return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -991,6 +1082,7 @@ class ApiClient {
     required double targetAmountUsdc,
     DateTime? deadline,
     required List<Map<String, dynamic>> participants,
+    bool allowOpenContributions = false,
   }) async {
     try {
       final response = await _dio.post(
@@ -1000,6 +1092,7 @@ class ApiClient {
           'target_amount_usdc': targetAmountUsdc,
           'deadline': deadline?.toUtc().toIso8601String(),
           'participants': participants,
+          'allow_open_contributions': allowOpenContributions,
         }..removeWhere((_, v) => v == null),
       );
       return Pool.fromJson(response.data as Map<String, dynamic>);
