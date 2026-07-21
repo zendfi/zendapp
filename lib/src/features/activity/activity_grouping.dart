@@ -17,27 +17,34 @@ import '../../models/activity_edge.dart';
 // tech/crypto baggage. "dropped" is reserved for the Drop (Bluetooth
 // proximity) feature and deliberately excluded here so it keeps its
 // meaning as a distinct signal.
-const _verbs = ['paid', 'sent', 'floated', 'spotted', 'covered'];
+const _verbs = ['paid'];
 
 // Third-person verbs for external (public feed) edges where neither party
 // is the viewer — same safe base set, no "you" pronoun needed.
-const _externalVerbs = ['paid', 'sent', 'floated', 'spotted', 'covered'];
+const _externalVerbs = ['paid'];
 
 /// Returns the base verb for [edge] (e.g. "paid").
+/// Special-cases Vibe transfers (note == 'vibe') with their own verb.
 /// Caller appends " you" for incoming edges via [incomingLabel]:
-///   outgoing: "You paid @omooba"
-///   incoming: "@omooba paid you"
+///   outgoing: "You sent a Vibe to @omooba"
+///   incoming: "@omooba sent you a Vibe"
 /// Deterministic per edge — same phrase on every rebuild, variety across
 /// different threads/counterparties.
 String feedVerbFor(ActivityEdge edge) {
+  // Vibe transfers get their own distinct verb regardless of direction
+  if (edge.note == 'vibe') {
+    if (edge.direction == 'external') return 'sent a Vibe to';
+    return edge.isOutgoing ? 'sent a Vibe to' : 'sent you a Vibe';
+  }
+
   final pool = edge.direction == 'external' ? _externalVerbs : _verbs;
   final index = edge.edgeId.hashCode.abs() % pool.length;
   final verb = pool[index];
-  // For incoming and external edges the caller reads the raw verb;
-  // the " you" suffix is added in the rendering layer so both the thread
-  // tile and the thread detail screen share one clean helper.
   return edge.isOutgoing || edge.direction == 'external' ? verb : '$verb you';
 }
+
+/// Whether [edge] is a Vibe transfer (sticker-based micro-payment).
+bool isVibeEdge(ActivityEdge edge) => edge.note == 'vibe';
 
 /// One grouped thread of [ActivityEdge]s sharing the same counterparty
 /// (a Zend user or a Pool), per design.md's `CounterpartyThread` sketch.

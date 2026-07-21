@@ -1164,7 +1164,9 @@ class ZendAppModel extends ChangeNotifier {
 
         return ZendTransaction(
           name: displayName,
-          note: entry.note ?? '',
+          note: entry.note == 'vibe'
+              ? (isSent ? '✨ Sent a Vibe' : '✨ Received a Vibe')
+              : (entry.note ?? ''),
           amount: '$sign\$$amt',
           time: _formatTimestamp(entry.createdAt),
           avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',

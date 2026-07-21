@@ -931,10 +931,11 @@ class _UserThreadTile extends StatelessWidget {
     final isOutgoing = mostRecent.isOutgoing;
     final amountLabel = mostRecent.amountHidden ? 'Hidden' : '\$${mostRecent.amountUsdc ?? '0'}';
 
-    // Venmo-style feed sentence with word variety: "You paid/sent/zapped
-    // @omooba" / "@omooba paid/sent/zapped you" — deterministic per edge
-    // (feedVerbFor) so the same edge never flickers between phrasings on
-    // rebuild, while different threads get visual variety.
+    // Vibe transfers and pool contributions get their own distinct headline
+    final isVibe = isVibeEdge(mostRecent);
+    final isPoolContrib = mostRecent.edgeKind == ActivityEdgeKind.poolContribution;
+
+    // Venmo-style feed sentence with word variety
     final verb = feedVerbFor(mostRecent);
     final actionSpan = isOutgoing ? 'You $verb ' : '';
     final subjectSpan = counterparty.displayLabel;
@@ -962,23 +963,55 @@ class _UserThreadTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sentence headline, feed-style.
-                    RichText(
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
-                        children: [
-                          if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
-                          TextSpan(
-                            text: subjectSpan,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
-                        ],
+                    // Sentence headline — Vibe and pool contributions get
+                    // contextual phrasing; regular transfers use the
+                    // social verb variety (paid / sent / floated / …).
+                    if (isVibe)
+                      RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
+                          children: [
+                            if (isOutgoing) const TextSpan(text: 'You sent a Vibe ✨ to '),
+                            if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
+                            TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      )
+                    else if (isPoolContrib)
+                      RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
+                          children: [
+                            if (isOutgoing) const TextSpan(text: 'You chipped into '),
+                            if (!isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if (!isOutgoing) const TextSpan(text: ' chipped into a pool'),
+                            if (isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      )
+                    else
+                      RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
+                          children: [
+                            if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
+                            TextSpan(
+                              text: subjectSpan,
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (mostRecent.note?.isNotEmpty == true) ...[
+                    // Note — suppress for vibes (note is just the literal
+                    // word 'vibe', not user-authored content)
+                    if (mostRecent.note?.isNotEmpty == true && !isVibe) ...[
                       const SizedBox(height: 3),
                       Text(
                         mostRecent.note!,
@@ -1016,25 +1049,25 @@ class _UserThreadTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Amount as a secondary pill, not a dominant serif figure —
-              // the sentence above carries the primary "story", the amount
-              // is supporting detail.
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                ),
-                child: Text(
-                  '${isOutgoing ? '-' : '+'}$amountLabel',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: isOutgoing ? zt.textSecondary : ZendColors.positive,
+              // Amount pill — hidden for Vibes (amount is revealed via the
+              // tap-to-reveal mechanic in DM, not shown in the feed tile)
+              if (!isVibe)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
+                  child: Text(
+                    '${isOutgoing ? '-' : '+'}$amountLabel',
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: isOutgoing ? zt.textSecondary : ZendColors.positive,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1071,7 +1104,6 @@ class _PoolThreadTile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final counterparty = thread.counterparty;
     final label = counterparty.poolName ?? 'Pool';
-    final mostRecent = thread.mostRecentEdge;
 
     return Material(
       color: zt.bgSecondary,
@@ -1100,20 +1132,22 @@ class _PoolThreadTile extends StatelessWidget {
                       text: TextSpan(
                         style: TextStyle(fontFamily: 'DMSans', fontSize: 14.5, color: zt.textPrimary),
                         children: [
-                          const TextSpan(text: 'You chipped into '),
+                          const TextSpan(text: 'You contributed to '),
                           TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      mostRecent.note?.isNotEmpty == true ? mostRecent.note! : 'A group pool',
+                      thread.edges.length == 1
+                          ? 'One contribution · \$${thread.runningTotal.toStringAsFixed(2)}'
+                          : '${thread.edges.length} contributions · \$${thread.runningTotal.toStringAsFixed(2)} total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        color: mostRecent.note?.isNotEmpty == true ? zt.textPrimary.withValues(alpha: 0.85) : zt.textSecondary,
+                        fontFamily: 'DMMono',
+                        fontSize: 12,
+                        color: zt.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1127,8 +1161,8 @@ class _PoolThreadTile extends StatelessWidget {
                           ),
                           child: Text(
                             thread.countIsExact
-                                ? '${thread.edges.length} contribution${thread.edges.length == 1 ? '' : 's'}'
-                                : '${thread.edges.length}+ contributions',
+                                ? '${thread.edges.length} chip-in${thread.edges.length == 1 ? '' : 's'}'
+                                : '${thread.edges.length}+ chip-ins',
                             style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
                           ),
                         ),

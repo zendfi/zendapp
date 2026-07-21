@@ -389,6 +389,8 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     final showAmount = !widget.edge.amountHidden && widget.edge.amountUsdc != null;
     final amountLabel = '\$${widget.edge.amountUsdc ?? '0'}';
     final edge = widget.edge;
+    final isVibe = isVibeEdge(edge);
+    final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
 
     final verb = feedVerbFor(edge);
     final senderTag = edge.senderZendtag;
@@ -415,27 +417,56 @@ class _PublicPostRowState extends State<_PublicPostRow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                      children: [
-                        TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        TextSpan(text: ' $verb '),
-                        TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        if (showAmount)
-                          TextSpan(
-                            text: ' · $amountLabel',
-                            style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
-                          ),
-                      ],
+                  // Headline — special phrasing for Vibes and pool contributions
+                  if (isVibe)
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        children: [
+                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          const TextSpan(text: ' sent a Vibe ✨ to '),
+                          TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    )
+                  else if (isPoolContrib)
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        children: [
+                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          const TextSpan(text: ' contributed to a pool'),
+                          if (showAmount)
+                            TextSpan(
+                              text: ' · $amountLabel',
+                              style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        children: [
+                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(text: ' $verb '),
+                          TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          if (showAmount)
+                            TextSpan(
+                              text: ' · $amountLabel',
+                              style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 2),
                   Text(
                     _relativeTime(edge.createdAt),
                     style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
                   ),
-                  if (edge.note?.isNotEmpty == true) ...[
+                  // Note — suppress 'vibe' system tag
+                  if (edge.note?.isNotEmpty == true && !isVibe) ...[
                     const SizedBox(height: 4),
                     Text(
                       edge.note!,

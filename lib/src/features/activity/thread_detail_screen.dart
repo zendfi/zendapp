@@ -316,8 +316,23 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   /// sheet's own "Receipt" header button (see `_openReceipt`).
   void _openActivity(ActivityEdge edge) {
     final isOutgoing = edge.isOutgoing;
-    final verb = feedVerbFor(edge);
-    final headline = isOutgoing ? 'You $verb ${widget.counterparty.displayLabel}' : '${widget.counterparty.displayLabel} $verb you';
+    final isVibe = isVibeEdge(edge);
+    final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
+    final String headline;
+    if (isVibe) {
+      headline = isOutgoing
+          ? 'You sent a Vibe ✨ to ${widget.counterparty.displayLabel}'
+          : '✨ Vibe from ${widget.counterparty.displayLabel}';
+    } else if (isPoolContrib) {
+      headline = isOutgoing
+          ? 'You contributed to ${widget.counterparty.displayLabel}'
+          : '${widget.counterparty.displayLabel} contributed';
+    } else {
+      final verb = feedVerbFor(edge);
+      headline = isOutgoing
+          ? 'You $verb ${widget.counterparty.displayLabel}'
+          : '${widget.counterparty.displayLabel} $verb you';
+    }
     final model = ZendScope.of(context);
     final selfAvatarUrl = model.currentAvatarUrl;
     final selfInitial = model.currentZendtag?.isNotEmpty == true
@@ -517,6 +532,8 @@ class _FeedPost extends StatelessWidget {
     final model = ZendScope.of(context);
     final isOutgoing = edge.isOutgoing;
     final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+    final isVibe = isVibeEdge(edge);
+    final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
     final verb = feedVerbFor(edge);
     final actionSpan = isOutgoing ? 'You $verb ' : '';
     final trailingSpan = isOutgoing ? '' : ' $verb';
@@ -551,19 +568,44 @@ class _FeedPost extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          RichText(
-                            text: TextSpan(
-                              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
-                              children: [
-                                if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
-                                TextSpan(
-                                  text: counterparty.displayLabel,
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
-                              ],
+                          // Headline — Vibes and pool contributions get
+                          // their own phrasing, not "paid"
+                          if (isVibe)
+                            RichText(
+                              text: TextSpan(
+                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                children: [
+                                  if (isOutgoing) const TextSpan(text: '✨ Vibe sent to '),
+                                  if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
+                                  TextSpan(text: counterparty.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                            )
+                          else if (isPoolContrib)
+                            RichText(
+                              text: TextSpan(
+                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                children: [
+                                  if (isOutgoing) const TextSpan(text: 'You contributed to '),
+                                  TextSpan(text: counterparty.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  if (!isOutgoing) const TextSpan(text: ' contributed'),
+                                ],
+                              ),
+                            )
+                          else
+                            RichText(
+                              text: TextSpan(
+                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                children: [
+                                  if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
+                                  TextSpan(
+                                    text: counterparty.displayLabel,
+                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
+                                ],
+                              ),
                             ),
-                          ),
                           Text(
                             _relativeTime(edge.createdAt),
                             style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
@@ -571,25 +613,28 @@ class _FeedPost extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                      ),
-                      child: Text(
-                        '${isOutgoing ? '-' : '+'}$amountLabel',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isOutgoing ? zt.textSecondary : ZendColors.positive,
+                    // Amount pill — hidden for Vibes (reveal is in DM bubble)
+                    if (!isVibe)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                        ),
+                        child: Text(
+                          '${isOutgoing ? '-' : '+'}$amountLabel',
+                          style: TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isOutgoing ? zt.textSecondary : ZendColors.positive,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
-                if (edge.note?.isNotEmpty == true) ...[
+                // Note — suppress for Vibes (note is the system tag 'vibe')
+                if (edge.note?.isNotEmpty == true && !isVibe) ...[
                   const SizedBox(height: 8),
                   Text(
                     edge.note!,
