@@ -7,8 +7,8 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_models.dart';
-import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
+import '../../navigation/zend_shell_controller.dart';
 import '../dm/dm_thread_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../../models/qr_payment_intent.dart';
@@ -145,31 +145,38 @@ class _ProfileContent extends StatelessWidget {
 
   void _openDm(BuildContext context, PublicUserProfile profile) {
     final model = ZendScope.of(context);
-    // Use server-side room creation — open thread screen directly,
-    // the server will upsert the room on first message.
-    final myId = model.currentUserId ?? '';
-    if (myId.isEmpty || profile.userId.isEmpty) return;
-    final ids = [myId, profile.userId]..sort();
-    final roomId = ids.join();
-    // Trigger a room list fetch to get the actual room_id from server,
-    // but navigate immediately with an approximation for the UI.
-    model.dmService.listThreads().ignore();
+    if (model.currentUserId == null || profile.userId.isEmpty) return;
+
+    // Check cache first for instant navigation
     final existing = model.dmService.cachedThreads
         .where((t) => t.counterparty.userId == profile.userId)
         .firstOrNull;
-    final actualRoomId = existing?.roomId ?? roomId;
-    pushZendSlide(
-      context,
-      DmThreadScreen(
-        roomId: actualRoomId,
-        counterparty: DmCounterparty(
-          userId: profile.userId,
-          zendtag: profile.zendtag,
-          displayName: profile.displayName,
-          avatarUrl: profile.avatarUrl,
+
+    if (existing != null) {
+      pushZendSlide(
+        context,
+        DmThreadScreen(roomId: existing.roomId, counterparty: existing.counterparty),
+      );
+      return;
+    }
+
+    // No cached thread — get the server-canonical room_id (creates the room
+    // if it doesn't exist yet). Show a brief loading indicator via async nav.
+    model.dmService.getOrCreateRoom(profile.userId).then((result) {
+      if (!context.mounted) return;
+      pushZendSlide(
+        context, // ignore: use_build_context_synchronously
+        DmThreadScreen(
+          roomId: result.roomId,
+          counterparty: result.counterparty,
         ),
-      ),
-    );
+      );
+    }).catchError((_) {
+      // Fallback: switch to Messages tab — user can find/start the thread there
+      if (context.mounted) {
+        ZendShellController.instance?.switchToTab(3);
+      }
+    });
   }
 
   @override

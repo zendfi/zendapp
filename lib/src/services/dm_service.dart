@@ -33,6 +33,22 @@ class DmService {
     return result;
   }
 
+  /// Gets or creates a DM room with the given user and returns the canonical
+  /// room_id from the server. This is the single source of truth — never
+  /// compute room_id client-side.
+  Future<({String roomId, DmCounterparty counterparty})> getOrCreateRoom(
+    String otherUserId,
+  ) async {
+    final response = await _apiClient.dio.get(
+      '/api/zend/dm/with/$otherUserId',
+    );
+    final roomId = response.data['room_id'] as String;
+    final cp = DmCounterparty.fromJson(
+      response.data['counterparty'] as Map<String, dynamic>,
+    );
+    return (roomId: roomId, counterparty: cp);
+  }
+
   /// Fetches paginated message history for a room.
   Future<DmMessagesResult> getMessages(
     String roomId, {

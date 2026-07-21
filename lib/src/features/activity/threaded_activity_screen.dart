@@ -899,27 +899,19 @@ class _UserThreadTile extends StatelessWidget {
       return;
     }
 
-    // No cached thread — try loading threads once then navigate
+    // No cached thread — use the server to get/create the room.
+    // counterparty.id is their user_id from the activity edge.
     try {
-      final threads = await model.dmService.listThreads();
+      final result = await model.dmService.getOrCreateRoom(counterparty.id);
       if (!context.mounted) return;
-      final found = threads.where((t) =>
-          t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase())
-          .firstOrNull;
-      if (found != null) {
-        pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
-          roomId: found.roomId,
-          counterparty: found.counterparty,
-        ));
-        return;
-      }
+      pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
+        roomId: result.roomId,
+        counterparty: result.counterparty,
+      ));
     } catch (_) {
-      // Fall through to Messages tab
-    }
-
-    // Still no thread — switch to the Messages tab so user can compose
-    if (context.mounted) {
-      ZendShellController.instance?.switchToTab(3);
+      if (context.mounted) {
+        ZendShellController.instance?.switchToTab(3);
+      }
     }
   }
 
