@@ -68,6 +68,16 @@ class DeepLinkHandler {
         }
       }
 
+      // https://zdfi.me/pool/{short_code} — Pool discovery deep link.
+      if (uri.host == 'zdfi.me' &&
+          uri.pathSegments.length == 2 &&
+          uri.pathSegments[0] == 'pool') {
+        final code = uri.pathSegments[1];
+        if (code.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', poolShortCode: code);
+        }
+      }
+
       // https://zdfi.me/@john_o
       // https://zdfi.me/@john_o/abc123
       if (uri.host == 'zdfi.me' && uri.pathSegments.isNotEmpty) {
@@ -123,18 +133,24 @@ class DeepLinkPayload {
   /// are not meaningful — check this field first.
   final String? cliPairingCode;
 
+  /// Non-null only for `zdfi.me/pool/{code}` links — pool discovery deep link.
+  final String? poolShortCode;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
     this.amountUsdc,
     this.note,
     this.cliPairingCode,
+    this.poolShortCode,
   });
 
   bool get isCliPairing => cliPairingCode != null;
+  bool get isPoolLink => poolShortCode != null;
 
   @override
   String toString() =>
       'DeepLinkPayload(zendtag: $zendtag, requestId: $requestId, '
-      'amountUsdc: $amountUsdc, note: $note, cliPairingCode: $cliPairingCode)';
+      'amountUsdc: $amountUsdc, note: $note, cliPairingCode: $cliPairingCode, '
+      'poolShortCode: $poolShortCode)';
 }

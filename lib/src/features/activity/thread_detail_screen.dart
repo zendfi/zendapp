@@ -5,6 +5,8 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import '../../navigation/zend_routes.dart';
+import '../profile/user_profile_screen.dart';
 import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
@@ -368,7 +370,17 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
                   ),
-                  ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
+                  GestureDetector(
+                    onTap: () => pushZendSlide(
+                      context,
+                      UserProfileScreen(
+                        zendtag: widget.counterparty.zendtag,
+                        knownDisplayName: widget.counterparty.displayLabel,
+                        knownAvatarUrl: widget.counterparty.avatarUrl,
+                      ),
+                    ),
+                    child: ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -379,10 +391,16 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                           widget.counterparty.displayLabel,
                           style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                         ),
-                        Text(
-                          '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together',
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
-                        ),
+                        Builder(builder: (ctx) {
+                          final streak = ZendScope.of(ctx).activeStreaks[widget.counterparty.id];
+                          final activityLabel = '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together';
+                          return Text(
+                            streak != null && streak.isActive
+                                ? '🔥 ${streak.streakWeeks}w streak · $activityLabel'
+                                : activityLabel,
+                            style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                          );
+                        }),
                       ],
                     ),
                   ),

@@ -665,3 +665,63 @@ class DevRequestStatus {
     );
   }
 }
+
+class MutualContext {
+  const MutualContext({
+    required this.transactionCount,
+    required this.totalUsdc,
+    required this.lastTransactionAt,
+  });
+
+  final int transactionCount;
+  final String totalUsdc;
+  final DateTime lastTransactionAt;
+
+  factory MutualContext.fromJson(Map<String, dynamic> json) {
+    return MutualContext(
+      transactionCount: json['transaction_count'] as int? ?? 0,
+      totalUsdc: json['total_usdc'] as String? ?? '0.00',
+      lastTransactionAt: DateTime.tryParse(
+            json['last_transaction_at'] as String? ?? '',
+          ) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+/// Social profile returned by GET /api/zend/users/:zendtag/profile.
+/// Distinct from [UserProfileResponse] which is the wallet/auth profile.
+class PublicUserProfile {
+  const PublicUserProfile({
+    required this.userId,
+    required this.zendtag,
+    required this.displayName,
+    this.avatarUrl,
+    this.bio,
+    this.mutualContext,
+    this.publicActivityCount = 0,
+  });
+
+  final String userId;
+  final String zendtag;
+  final String displayName;
+  final String? avatarUrl;
+  final String? bio;
+  final MutualContext? mutualContext;
+  final int publicActivityCount;
+
+  String get initialLetter => zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
+
+  factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
+    final mcJson = json['mutual_context'] as Map<String, dynamic>?;
+    return PublicUserProfile(
+      userId: json['user_id'] as String? ?? '',
+      zendtag: json['zendtag'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String?,
+      bio: json['bio'] as String?,
+      mutualContext: mcJson != null ? MutualContext.fromJson(mcJson) : null,
+      publicActivityCount: json['public_activity_count'] as int? ?? 0,
+    );
+  }
+}

@@ -43,6 +43,10 @@ class PoolWebSocketService {
   /// Callback that returns the current JWT, or `null` if unauthenticated.
   final Future<String?> Function() getToken;
 
+  /// Optional override for the WebSocket path.
+  /// When set, overrides the default `/api/zend/pools/$poolId/ws`.
+  final String? pathOverride;
+
   final ValueNotifier<WsConnectionState> connectionState =
       ValueNotifier(WsConnectionState.disconnected);
 
@@ -68,6 +72,7 @@ class PoolWebSocketService {
     required this.poolId,
     required this.baseWsUrl,
     required this.getToken,
+    this.pathOverride,
   });
 
   int get consecutiveFailures => _consecutiveFailures;
@@ -95,7 +100,7 @@ class PoolWebSocketService {
         scheme: baseWsUrl.startsWith('wss') ? 'wss' : 'ws',
         host: Uri.parse(baseWsUrl).host,
         port: Uri.parse(baseWsUrl).port,
-        path: '/api/zend/pools/$poolId/ws',
+        path: pathOverride ?? '/api/zend/pools/$poolId/ws',
         queryParameters: {'token': token},
       );
       _channel = WebSocketChannel.connect(uri);

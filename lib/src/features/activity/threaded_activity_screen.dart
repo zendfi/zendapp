@@ -9,6 +9,8 @@ import '../../models/activity_edge.dart';
 import '../../models/email_intent.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
+import '../dm/dm_thread_screen.dart';
+import '../../navigation/zend_shell_controller.dart';
 import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
@@ -790,6 +792,137 @@ class _UserThreadTile extends StatelessWidget {
     return '${dt.month}/${dt.day}';
   }
 
+  void _showContextMenu(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final counterparty = thread.counterparty;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
+        return Container(
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: zt.border,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: zt.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                  ),
+                  child: Icon(SolarIconsBold.chatLine, size: 18, color: zt.accent),
+                ),
+                title: Text(
+                  'Message @${counterparty.displayLabel}',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  'Open DM thread',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openDm(context, counterparty);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: zt.bgPrimary,
+                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                  ),
+                  child: Icon(SolarIconsBold.transferHorizontal, size: 18, color: zt.textSecondary),
+                ),
+                title: Text(
+                  'View activity',
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onTap();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openDm(BuildContext context, ActivityCounterparty counterparty) async {
+    final model = ZendScope.of(context);
+    final zendtag = counterparty.displayLabel.replaceFirst('@', '');
+
+    // Prefer cached thread matching by zendtag
+    final cached = model.dmService.cachedThreads
+        .where((t) => t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase())
+        .firstOrNull;
+
+    if (cached != null) {
+      pushZendSlide(context, DmThreadScreen(
+        roomId: cached.roomId,
+        counterparty: cached.counterparty,
+      ));
+      return;
+    }
+
+    // No cached thread — try loading threads once then navigate
+    try {
+      final threads = await model.dmService.listThreads();
+      if (!context.mounted) return;
+      final found = threads.where((t) =>
+          t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase())
+          .firstOrNull;
+      if (found != null) {
+        pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
+          roomId: found.roomId,
+          counterparty: found.counterparty,
+        ));
+        return;
+      }
+    } catch (_) {
+      // Fall through to Messages tab
+    }
+
+    // Still no thread — switch to the Messages tab so user can compose
+    if (context.mounted) {
+      ZendShellController.instance?.switchToTab(3);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -812,6 +945,7 @@ class _UserThreadTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(ZendRadii.xl),
       child: InkWell(
         onTap: onTap,
+        onLongPress: () => _showContextMenu(context),
         borderRadius: BorderRadius.circular(ZendRadii.xl),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

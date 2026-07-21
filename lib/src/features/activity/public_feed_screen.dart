@@ -4,6 +4,8 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import '../../navigation/zend_routes.dart';
+import '../profile/user_profile_screen.dart';
 import 'activity_grouping.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -36,6 +38,13 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
     super.initState();
     _filterController.addListener(() {
       setState(() => _filterQuery = _filterController.text.toLowerCase().trim());
+    });
+    // Fetch suggestions lazily on first open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final model = ZendScope.of(context);
+      if (model.suggestedConnections.isEmpty) {
+        model.fetchSuggestedConnections();
+      }
     });
   }
 
@@ -158,6 +167,10 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
 
             Divider(color: zt.border, height: 1),
 
+            // ── "People you might know" strip ──
+            if (!_filterActive && model.suggestedConnections.isNotEmpty)
+              _SuggestionsStrip(suggestions: model.suggestedConnections),
+
             // ── Feed ──
             Expanded(
               child: publicEdges.isEmpty
@@ -176,7 +189,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: publicEdges.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final edge = publicEdges[i];
                         return _PublicPostRow(
@@ -482,6 +495,98 @@ class _PublicPostRowState extends State<_PublicPostRow> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── "People you might know" horizontal strip ──────────────────────────────────
+
+class _SuggestionsStrip extends StatelessWidget {
+  const _SuggestionsStrip({required this.suggestions});
+  final List<Map<String, dynamic>> suggestions;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            'People you might know',
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: zt.textPrimary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 96,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: suggestions.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              final s = suggestions[i];
+              final zendtag = s['zendtag'] as String? ?? '';
+              final avatarUrl = s['avatar_url'] as String?;
+              final mutual = s['mutual_count'] as int? ?? 0;
+              final initial =
+                  zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
+
+              return GestureDetector(
+                onTap: () => pushZendSlide(
+                  context,
+                  UserProfileScreen(zendtag: zendtag),
+                ),
+                child: SizedBox(
+                  width: 72,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ZendAvatar(
+                        radius: 22,
+                        photoUrl: avatarUrl,
+                        initials: initial,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '@$zendtag',
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 9.5,
+                          color: zt.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      if (mutual > 0)
+                        Text(
+                          '$mutual mutual',
+                          style: TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 9,
+                            color: zt.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Divider(color: zt.border, height: 1),
+      ],
     );
   }
 }

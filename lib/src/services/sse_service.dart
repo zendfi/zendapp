@@ -25,6 +25,13 @@ enum SseEventType {
   activityEdgeReaction,
   // Req: notify the other party on an Activity_Edge when a comment is added.
   activityEdgeComment,
+  // ── DM ──
+  dmMessage,
+  dmTyping,
+  dmRead,
+  // ── Streaks ──
+  streakMilestone,
+  streakBreak,
   unknown,
 }
 
@@ -50,6 +57,11 @@ class SseEvent {
       'drop_confirmed' => SseEventType.dropConfirmed,
       'activity_edge_reaction' => SseEventType.activityEdgeReaction,
       'activity_edge_comment' => SseEventType.activityEdgeComment,
+      'dm_message' => SseEventType.dmMessage,
+      'dm_typing' => SseEventType.dmTyping,
+      'dm_read' => SseEventType.dmRead,
+      'streak_milestone' => SseEventType.streakMilestone,
+      'streak_break' => SseEventType.streakBreak,
       _ => SseEventType.unknown,
     };
 

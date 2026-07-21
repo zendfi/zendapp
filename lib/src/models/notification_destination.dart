@@ -61,6 +61,19 @@ sealed class NotificationDestination {
         // A mutual shared an activity — show the public feed
         return const NotifPublicFeed();
 
+      // ── Direct messages ────────────────────────────────────────────────────
+      case 'dm_message':
+        final roomId = data['room_id'] as String?;
+        if (roomId != null) {
+          return NotifDmThread(roomId: roomId);
+        }
+        return const NotifHomeFeed();
+
+      // ── Streaks ────────────────────────────────────────────────────────────
+      case 'streak_milestone':
+      case 'streak_break':
+        return const NotifActivityFeed();
+
       // ── Pools ──────────────────────────────────────────────────────────────
       case 'pool_message':
         final poolId = data['pool_id'] as String?;
@@ -134,4 +147,10 @@ final class NotifHomeFeed extends NotificationDestination {
 /// Navigate to the Savings screen.
 final class NotifSavings extends NotificationDestination {
   const NotifSavings();
+}
+
+/// Navigate to a specific DM thread.
+final class NotifDmThread extends NotificationDestination {
+  const NotifDmThread({required this.roomId});
+  final String roomId;
 }

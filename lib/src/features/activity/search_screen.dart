@@ -8,8 +8,10 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
+import '../../navigation/zend_routes.dart';
 import '../pools/pool.dart';
 import '../pools/pool_detail_screen.dart';
+import '../profile/user_profile_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -209,10 +211,12 @@ class _SearchScreenState extends State<SearchScreen> {
                                       avatarUrl: u['avatar_url'] as String?,
                                       onTap: () {
                                         Navigator.of(context).pop();
-                                        showQrPaymentSheet(
+                                        pushZendSlide(
                                           context,
-                                          intent: QrPaymentIntent(
+                                          UserProfileScreen(
                                             zendtag: u['zendtag'] as String? ?? '',
+                                            knownDisplayName: u['display_name'] as String?,
+                                            knownAvatarUrl: u['avatar_url'] as String?,
                                           ),
                                         );
                                       },

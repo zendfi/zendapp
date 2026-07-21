@@ -36,6 +36,8 @@ import '../models/payment_request_notification.dart';
 import '../models/payment_request_item.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
+import '../models/streak_info.dart';
+import '../services/dm_service.dart';
 
 const Map<String, String> _localeGreetings = {
   'yo': 'Ẹ káàbọ̀',
@@ -128,6 +130,19 @@ class ActivityCommentNotification {
   final String body;
 }
 
+class StreakNotification {
+  const StreakNotification({
+    required this.counterpartyZendtag,
+    required this.weeks,
+    required this.isMilestone,
+  });
+
+  final String counterpartyZendtag;
+  final int weeks;
+  /// true = milestone reached, false = streak broken
+  final bool isMilestone;
+}
+
 class ZendAppModel extends ChangeNotifier {
   ZendAppModel({
     required this.authService,
@@ -143,7 +158,8 @@ class ZendAppModel extends ChangeNotifier {
     required this.pocketService,
     required this.localDb,
     EmailIntentService? emailIntentService,
-  }) : _emailIntentService = emailIntentService;
+  })  : _emailIntentService = emailIntentService,
+        dmService = DmService(apiClient: walletService.apiClient);
 
   final AuthService authService;
   final WalletService walletService;
@@ -184,6 +200,58 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Signing policy service — controls session vs PIN-per-payment behaviour.
   final SigningPolicyService signingPolicyService = SigningPolicyService();
+
+  /// DM service — HTTP client for the DM thread and message endpoints.
+  final DmService dmService;
+
+  /// Total unread DM message count across all threads.
+  int dmUnreadTotal = 0;
+
+  void setDmUnreadTotal(int count) {
+    if (dmUnreadTotal != count) {
+      dmUnreadTotal = count;
+      notifyListeners();
+    }
+  }
+
+  /// Last DM SSE data for in-app banner display.
+  Map<String, dynamic>? lastDmBannerData;
+
+  void clearLastDmBannerData() {
+    lastDmBannerData = null;
+    // No notify needed — shell already consumed it
+  }
+
+  /// Active payment streaks keyed by counterparty user_id.
+  Map<String, StreakInfo> activeStreaks = {};
+
+  Future<void> fetchStreaks() async {
+    try {
+      final results = await walletService.apiClient.getStreaks();
+      final map = <String, StreakInfo>{};
+      for (final r in results.cast<Map<String, dynamic>>()) {
+        final s = StreakInfo.fromJson(r);
+        if (s.isActive) map[s.counterpartyUserId] = s;
+      }
+      activeStreaks = map;
+      notifyListeners();
+    } catch (_) {
+      // Non-fatal
+    }
+  }
+
+  /// Suggested second-degree connections for the "People you might know" strip.
+  List<Map<String, dynamic>> suggestedConnections = [];
+
+  Future<void> fetchSuggestedConnections() async {
+    try {
+      final results = await walletService.apiClient.getSuggestedConnections();
+      suggestedConnections = results.cast<Map<String, dynamic>>();
+      notifyListeners();
+    } catch (_) {
+      // Non-fatal
+    }
+  }
 
   /// Recovery service — manages National ID recovery packet creation/decryption.
   /// Injected lazily after wallet service is ready.
@@ -389,8 +457,51 @@ class ZendAppModel extends ChangeNotifier {
           }
         });
       default:
+        _handleDmSseEvent(event);
         break;
     }
+  }
+
+  // ── DM / Streak SSE handlers (injected below main switch via extension) ──
+  void _handleDmSseEvent(SseEvent event) {
+    switch (event.type) {
+      case SseEventType.dmMessage:
+        dmUnreadTotal++;
+        lastDmBannerData = event.data;
+        notifyListeners();
+      case SseEventType.streakMilestone:
+        final cpTag = event.data['counterparty_zendtag'] as String? ?? '';
+        final weeks = event.data['weeks'] as int? ?? 0;
+        // Update activeStreaks if we have the userId
+        // (will be refreshed properly on next fetchStreaks)
+        unawaited(fetchStreaks());
+        // Banner will be shown by app.dart SSE listener
+        pendingStreakMilestone = StreakNotification(
+          counterpartyZendtag: cpTag,
+          weeks: weeks,
+          isMilestone: true,
+        );
+        notifyListeners();
+      case SseEventType.streakBreak:
+        final cpTag = event.data['counterparty_zendtag'] as String? ?? '';
+        final finalWeeks = event.data['final_weeks'] as int? ?? 0;
+        unawaited(fetchStreaks());
+        pendingStreakMilestone = StreakNotification(
+          counterpartyZendtag: cpTag,
+          weeks: finalWeeks,
+          isMilestone: false,
+        );
+        notifyListeners();
+      default:
+        break;
+    }
+  }
+
+  StreakNotification? pendingStreakMilestone;
+
+  void clearPendingStreakMilestone() {
+    pendingStreakMilestone = null;
+    notifyListeners();
   }
 
   /// Immediately patches a pending [TransferHistoryEntry] in [recentTransactions]

@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import '../core/zend_state.dart';
 import '../features/activity/activity_comment_sheet.dart';
 import '../features/activity/public_feed_screen.dart';
+import '../features/dm/dm_thread_screen.dart';
 import '../features/pools/pool_detail_screen.dart';
 import '../features/pools/mission_room_sheet.dart';
 import '../features/savings/savings_screen.dart';
 import '../models/activity_edge.dart';
+import '../models/dm_thread.dart';
 import '../models/notification_destination.dart';
 import 'zend_routes.dart';
 import 'zend_shell_controller.dart';
@@ -104,6 +106,28 @@ class NotificationNavigator {
         await Future<void>.delayed(const Duration(milliseconds: 350));
         if (!context.mounted) return;
         pushZendSlide(context, const SavingsScreen(), rootNavigator: true);
+
+      // ── DM thread ────────────────────────────────────────────────────────────
+      case NotifDmThread(:final roomId):
+        ZendShellController.instance?.switchToTab(3);
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (!context.mounted) return;
+        // Try to find the counterparty from the loaded thread list
+        final thread = model.dmService.cachedThreads
+            .firstWhere((t) => t.roomId == roomId, orElse: () =>
+                DmThread(
+                  roomId: roomId,
+                  counterparty: const DmCounterparty(
+                    userId: '', zendtag: '', displayName: 'Message'),
+                  unreadCount: 0,
+                  lastMessageAt: DateTime.now(),
+                ));
+        if (!context.mounted) return;
+        pushZendSlide(
+          context,
+          DmThreadScreen(roomId: roomId, counterparty: thread.counterparty),
+          rootNavigator: true,
+        );
     }
   }
 

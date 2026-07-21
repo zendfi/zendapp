@@ -106,6 +106,8 @@ class Pool {
     this.gathered = 0.0,
     this.status = PoolStatus.active,
     this.completedAt,
+    this.shortCode,
+    this.allowOpenContributions = false,
   });
 
   final String id;
@@ -119,6 +121,12 @@ class Pool {
   double gathered;
   PoolStatus status;
   DateTime? completedAt;
+
+  /// URL-safe short code for sharing (e.g. `zdfi.me/pool/abc123`).
+  final String? shortCode;
+
+  /// Whether anyone with the share link can contribute (not just invited participants).
+  final bool allowOpenContributions;
 
   /// Progress ratio clamped to [0.0, 1.0].
   double get progress =>
@@ -154,6 +162,8 @@ class Pool {
       completedAt: json['completed_at'] != null
           ? DateTime.tryParse(json['completed_at'] as String)
           : null,
+      shortCode: json['short_code'] as String?,
+      allowOpenContributions: json['allow_open_contributions'] as bool? ?? false,
     );
   }
 
@@ -169,6 +179,8 @@ class Pool {
         'created_at': createdAt.toIso8601String(),
         'deadline': deadline?.toIso8601String(),
         'completed_at': completedAt?.toIso8601String(),
+        'short_code': shortCode,
+        'allow_open_contributions': allowOpenContributions,
       };
 }
 

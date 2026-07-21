@@ -15,6 +15,8 @@ import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
 import 'src/features/onboarding/pin_migration_screen.dart';
+import 'src/features/pools/pool_detail_screen.dart';
+import 'src/features/profile/user_profile_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/navigation/notification_navigator.dart';
 import 'src/services/pending_deep_link_service.dart';
@@ -240,12 +242,18 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _handlePoolDeepLink(BuildContext context, String shortCode) async {
+    try {
+      final pool = await widget.model.walletService.apiClient.getPoolByShortCode(shortCode);
+      if (!mounted) return;
+      pushZendSlide(context, PoolDetailScreen(pool: pool)); // ignore: use_build_context_synchronously
+    } catch (_) {
+      // Pool not found or network error — silently fail.
+    }
+  }
+
   void _handleDeepLink(DeepLinkPayload payload) {
-    // "Pay with Zend" CLI device pairing — zdfi.me/cli-auth/{code}. Routed
-    // directly to the approval sheet; no QrPaymentIntent involved, and no
-    // pending-deep-link storage since pairing approval requires the user
-    // to already be authenticated and unlocked (it's a sensitive
-    // account-access grant, not a payment).
+    // "Pay with Zend" CLI device pairing — zdfi.me/cli-auth/{code}.
     if (payload.isCliPairing) {
       if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
         return;
@@ -254,6 +262,35 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       if (context == null) return;
       showPairingApprovalSheet(context, pairingCode: payload.cliPairingCode!);
       return;
+    }
+
+    // Pool discovery deep link — zdfi.me/pool/{short_code}
+    if (payload.isPoolLink) {
+      if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      if (context == null) return;
+      _handlePoolDeepLink(context, payload.poolShortCode!);
+      return;
+    }
+
+    // User profile deep link — zdfi.me/@username opens UserProfileScreen
+    // instead of QrPaymentSheet when the app is authenticated and the link
+    // is a plain user link (no amount or request ID).
+    if (payload.amountUsdc == null &&
+        payload.requestId == null &&
+        !payload.isCliPairing &&
+        widget.model.isAuthenticated &&
+        !widget.model.appLockService.isLocked) {
+      final context = _navigatorKey.currentContext;
+      if (context != null) {
+        pushZendSlide(
+          context,
+          UserProfileScreen(zendtag: payload.zendtag),
+        );
+        return;
+      }
     }
 
     final intent = QrPaymentIntent(

@@ -16,6 +16,9 @@ import '../send/send_flow_sheet.dart';
 import '../send/send_screen.dart';
 import '../send/withdraw_sheet.dart';
 import '../money/home_screen.dart';
+import '../dm/dm_list_screen.dart';
+import '../dm/dm_thread_screen.dart';
+import '../../navigation/zend_routes.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 class ZendShell extends StatefulWidget {
@@ -36,6 +39,10 @@ class _ZendShellState extends State<ZendShell> {
   String? _lastReactionBannerKey;
   Timer? _commentBannerTimer;
   String? _lastCommentBannerKey;
+  // DM banner
+  Map<String, dynamic>? _pendingDmBanner;
+  Timer? _dmBannerTimer;
+  String? _lastDmBannerKey;
 
   @override
   void initState() {
@@ -70,6 +77,7 @@ class _ZendShellState extends State<ZendShell> {
     _bannerTimer?.cancel();
     _reactionBannerTimer?.cancel();
     _commentBannerTimer?.cancel();
+    _dmBannerTimer?.cancel();
     super.dispose();
   }
 
@@ -82,6 +90,12 @@ class _ZendShellState extends State<ZendShell> {
     if (index == 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ZendScope.of(context).markActivityRead();
+      });
+    }
+    // Clear DM badge when switching to Messages tab
+    if (index == 3) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
       });
     }
   }
@@ -133,6 +147,22 @@ class _ZendShellState extends State<ZendShell> {
     final model = ZendScope.of(context);
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
+
+    // DM banner logic — show when dmUnreadTotal increases and we're not on DM tab
+    // The SSE data is carried via model.lastDmBannerData
+    if (model.lastDmBannerData != null) {
+      final data = model.lastDmBannerData!;
+      final key = data['room_id'] as String? ?? '';
+      if (key != _lastDmBannerKey && _tabIndex != 3) {
+        _lastDmBannerKey = key;
+        _pendingDmBanner = data;
+        model.clearLastDmBannerData();
+        _dmBannerTimer?.cancel();
+        _dmBannerTimer = Timer(const Duration(seconds: 6), () {
+          if (mounted) setState(() => _pendingDmBanner = null);
+        });
+      }
+    }
 
     // Start auto-dismiss timer when a new notification arrives
     if (pending != null) {
@@ -187,6 +217,7 @@ class _ZendShellState extends State<ZendShell> {
         onOpenRecipients: (amount) => _openRecipientSheet(context, amount),
       ),
       const ActivityScreen(),
+      const DmListScreen(),
     ];
 
     return Scaffold(
@@ -236,23 +267,61 @@ class _ZendShellState extends State<ZendShell> {
                 onDismiss: () => _dismissCommentBanner(model),
               ),
             ),
+          // DM banner — shown when a new message arrives and the DM tab isn't active
+          if (_pendingDmBanner != null && _tabIndex != 3)
+            Positioned(
+              top: (pending != null ? 78 : 0) +
+                  (pendingReaction != null ? 78 : 0) +
+                  (pendingComment != null ? 78 : 0),
+              left: 0,
+              right: 0,
+              child: _DmMessageBanner(
+                key: ValueKey(_lastDmBannerKey),
+                senderZendtag: _pendingDmBanner!['sender_zendtag'] as String? ?? '',
+                preview: _pendingDmBanner!['preview'] as String? ?? '',
+                onTap: () {
+                  final roomId = _pendingDmBanner!['room_id'] as String? ?? '';
+                  _dmBannerTimer?.cancel();
+                  setState(() => _pendingDmBanner = null);
+                  _setTab(3);
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    if (!mounted) return;
+                    final thread = model.dmService.cachedThreads
+                        .where((t) => t.roomId == roomId)
+                        .firstOrNull;
+                    if (thread != null) {
+                      pushZendSlide(
+                        context, // ignore: use_build_context_synchronously
+                        DmThreadScreen(roomId: roomId, counterparty: thread.counterparty),
+                      );
+                    }
+                  });
+                },
+                onDismiss: () {
+                  _dmBannerTimer?.cancel();
+                  setState(() => _pendingDmBanner = null);
+                },
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: ZendBottomBar(
         currentIndex: _tabIndex,
         onChanged: _setTab,
         activityBadgeCount: model.activityUnreadCount,
+        dmBadgeCount: model.dmUnreadTotal,
       ),
     );
   }
 }
 
 class ZendBottomBar extends StatelessWidget {
-  const ZendBottomBar({super.key, required this.currentIndex, required this.onChanged, this.activityBadgeCount = 0});
+  const ZendBottomBar({super.key, required this.currentIndex, required this.onChanged, this.activityBadgeCount = 0, this.dmBadgeCount = 0});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
   final int activityBadgeCount;
+  final int dmBadgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +360,13 @@ class ZendBottomBar extends StatelessWidget {
                     onTap: () => onChanged(2),
                     onDeepBg: onSendTab,
                     badgeCount: activityBadgeCount,
+                  ),
+                  _BottomNavIcon(
+                    icon: SolarIconsBold.chatLine,
+                    active: currentIndex == 3,
+                    onTap: () => onChanged(3),
+                    onDeepBg: onSendTab,
+                    badgeCount: dmBadgeCount,
                   ),
                 ],
               ),
@@ -720,6 +796,123 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                     child: const Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── In-app DM message banner ─────────────────────────────────────────────────
+
+class _DmMessageBanner extends StatefulWidget {
+  // ignore: use_super_parameters
+  const _DmMessageBanner({
+    Key? key,
+    required this.senderZendtag,
+    required this.preview,
+    required this.onTap,
+    required this.onDismiss,
+  }) : super(key: key);
+
+  final String senderZendtag;
+  final String preview;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_DmMessageBanner> createState() => _DmMessageBannerState();
+}
+
+class _DmMessageBannerState extends State<_DmMessageBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF252525),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF2A2A2A)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0x1A4ADE80), shape: BoxShape.circle),
+                      child: const Icon(SolarIconsBold.chatDots,
+                          size: 18, color: ZendColors.accentPop),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '@${widget.senderZendtag}',
+                            style: const TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFF0F0F0)),
+                          ),
+                          if (widget.preview.isNotEmpty)
+                            Text(
+                              widget.preview,
+                              style: const TextStyle(
+                                  fontFamily: 'DMSans',
+                                  fontSize: 11,
+                                  color: Color(0x99F0F0F0)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: widget.onDismiss,
+                      child: const Icon(SolarIconsBold.closeCircle,
+                          size: 16, color: Color(0x66F0F0F0)),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

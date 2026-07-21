@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
@@ -68,9 +69,26 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
             // ── Back button ──────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
-              child: IconButton(
-                icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
-                onPressed: () => Navigator.of(context).pop(),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Spacer(),
+                  // Share link — only when pool has a short code
+                  if (_pool.shortCode != null)
+                    IconButton(
+                      icon: Icon(SolarIconsBold.share, color: zt.textSecondary),
+                      tooltip: 'Share pool link',
+                      onPressed: () {
+                        Share.share(
+                          'Join my Zend pool: https://zdfi.me/pool/${_pool.shortCode}',
+                          subject: _pool.name,
+                        );
+                      },
+                    ),
+                ],
               ),
             ),
 
@@ -181,86 +199,121 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
             // ── Action buttons ───────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Contribute — non-creator, active pool only
-                  if (isActive && !isCreator) ...[
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () =>
-                            showContributeSheet(context, pool: _pool),
+                  // Open contribution row — shown when link contributions are on
+                  if (isActive && _pool.allowOpenContributions && _pool.shortCode != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Share.share(
+                            'Contribute to "${_pool.name}": https://zdfi.me/pool/${_pool.shortCode}',
+                            subject: _pool.name,
+                          );
+                        },
+                        icon: const Icon(SolarIconsBold.link, size: 16),
+                        label: const Text(
+                          'Share contribution link',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: zt.textPrimary,
+                          foregroundColor: zt.textSecondary,
                           side: BorderSide(color: zt.border),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(ZendRadii.lg),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text(
-                          'Contribute',
-                          style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
-                    const SizedBox(width: ZendSpacing.sm),
-                  ],
+                  Row(
+                    children: [
+                      // Contribute — non-creator, active pool only
+                      if (isActive && !isCreator) ...[
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                showContributeSheet(context, pool: _pool),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: zt.textPrimary,
+                              side: BorderSide(color: zt.border),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(ZendRadii.lg),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Contribute',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: ZendSpacing.sm),
+                      ],
 
-                  // Manage — creator, active pool only
-                  if (isActive && isCreator) ...[
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            showManageSheet(context, pool: _pool),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: zt.accent,
-                          foregroundColor: ZendColors.textOnDeep,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(ZendRadii.lg),
+                      // Manage — creator, active pool only
+                      if (isActive && isCreator) ...[
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () =>
+                                showManageSheet(context, pool: _pool),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: zt.accent,
+                              foregroundColor: ZendColors.textOnDeep,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(ZendRadii.lg),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Manage',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: const Text(
-                          'Manage',
-                          style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: ZendSpacing.sm),
-                  ],
+                        const SizedBox(width: ZendSpacing.sm),
+                      ],
 
-                  // Message — always visible for all members
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          showMissionRoomSheet(context, pool: _pool),
-                      icon: const Icon(SolarIconsBold.chatDots, size: 16),
-                      label: const Text(
-                        'Message',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      // Message — always visible for all members
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              showMissionRoomSheet(context, pool: _pool),
+                          icon: const Icon(SolarIconsBold.chatDots, size: 16),
+                          label: const Text(
+                            'Message',
+                            style: TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: zt.accentBright,
+                            side: BorderSide(color: zt.accentBright),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(ZendRadii.lg),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: zt.accentBright,
-                        side: BorderSide(color: zt.accentBright),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(ZendRadii.lg),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),

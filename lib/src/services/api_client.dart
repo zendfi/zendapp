@@ -20,6 +20,12 @@ class ApiClient {
 
   static const _tokenKey = 'zend_session_token';
 
+  /// Exposes the underlying Dio instance for services that need direct access.
+  Dio get dio => _dio;
+
+  /// Returns the current session token, or null if not authenticated.
+  Future<String?> getToken() => _secureStorage.read(key: _tokenKey);
+
   ApiClient({
     required String baseUrl,
     required FlutterSecureStorage secureStorage,
@@ -797,6 +803,100 @@ class ApiClient {
     }
   }
 
+  /// Fetches a user's public social profile.
+  Future<PublicUserProfile> getUserProfile(String zendtag) async {
+    try {
+      final tag = zendtag.startsWith('@') ? zendtag.substring(1) : zendtag;
+      final response = await _dio.get('/api/zend/users/$tag/profile');
+      return PublicUserProfile.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Lists all DM threads for the current user.
+  Future<Map<String, dynamic>> getDmThreads() async {
+    try {
+      final response = await _dio.get('/api/zend/dm');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Fetches messages for a DM room.
+  Future<Map<String, dynamic>> getDmMessages(
+    String roomId, {
+    String? cursor,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/dm/$roomId/messages',
+        queryParameters: {
+          if (cursor != null) 'cursor': cursor, // ignore: use_null_aware_elements
+          'limit': limit,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Fetches the Vibe sticker catalog.
+  Future<List<dynamic>> getVibeStickers() async {
+    try {
+      final response = await _dio.get('/api/zend/vibes/stickers');
+      return (response.data['stickers'] as List<dynamic>?) ?? [];
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Sends a Vibe (sticker + micro-payment) in a DM room.
+  Future<Map<String, dynamic>> sendVibe({
+    required String roomId,
+    required String stickerId,
+    required double amountUsdc,
+    required String clientId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/dm/$roomId/vibes',
+        data: {
+          'sticker_id': stickerId,
+          'amount_usdc': amountUsdc,
+          'client_id': clientId,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Fetches active payment streaks for the current user.
+  Future<List<dynamic>> getStreaks() async {
+    try {
+      final response = await _dio.get('/api/zend/streaks');
+      return (response.data['streaks'] as List<dynamic>?) ?? [];
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Fetches suggested second-degree connections.
+  Future<List<dynamic>> getSuggestedConnections() async {
+    try {
+      final response = await _dio.get('/api/zend/social/suggested-connections');
+      return (response.data['suggestions'] as List<dynamic>?) ?? [];
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Syncs user visibility preferences to the server.
   /// Currently only `notifyMutualsOnShare` — extend as needed.
   Future<void> updateVisibilitySettings({bool? notifyMutualsOnShare}) async {
@@ -930,6 +1030,16 @@ class ApiClient {
   Future<Pool> getPool(String poolId) async {
     try {
       final response = await _dio.get('/api/zend/pools/$poolId');
+      return Pool.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Looks up a pool by its share short code (zdfi.me/pool/{code}).
+  Future<Pool> getPoolByShortCode(String shortCode) async {
+    try {
+      final response = await _dio.get('/api/zend/pools/by-code/$shortCode');
       return Pool.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
