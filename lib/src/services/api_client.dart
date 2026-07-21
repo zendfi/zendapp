@@ -1132,7 +1132,7 @@ class ApiClient {
   /// Looks up a pool by its share short code (zdfi.me/pool/{code}).
   Future<Pool> getPoolByShortCode(String shortCode) async {
     try {
-      final response = await _dio.get('/api/zend/pools/by-code/$shortCode');
+      final response = await _dio.get('/api/zend/pools/by-short-code/$shortCode');
       return Pool.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
