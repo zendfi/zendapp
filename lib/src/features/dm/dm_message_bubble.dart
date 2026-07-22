@@ -180,7 +180,9 @@ class _StatusIcon extends StatelessWidget {
   }
 }
 
-/// Payment bubble — clean, minimal card for payment messages.
+/// Payment bubble — blends into the conversation like a special message,
+/// not an alien card. Uses the same bubble shape as text, but with a
+/// distinct accent treatment showing the amount.
 class DmPaymentBubble extends StatelessWidget {
   const DmPaymentBubble({
     super.key,
@@ -197,100 +199,98 @@ class DmPaymentBubble extends StatelessWidget {
     final pd = message.paymentData;
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
-    final isSent = isMe;
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
+    final isSent = isMe;
 
-    return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: isSent ? 60 : 12,
-          right: isSent ? 12 : 60,
-          top: 4,
-          bottom: 4,
-        ),
-        child: Container(
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.68),
-          decoration: BoxDecoration(
-            color: isSent
-                ? zt.accent.withValues(alpha: 0.1)
-                : zt.bgSecondary,
-            borderRadius: BorderRadius.circular(ZendRadii.xl),
-            border: Border.all(
+    // Same alignment and sizing as text bubbles
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: Radius.circular(isSent ? 18 : 4),
+      bottomRight: Radius.circular(isSent ? 4 : 18),
+    );
+
+    return Row(
+      mainAxisAlignment: isSent ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (!isSent) const SizedBox(width: 8),
+        Flexible(
+          child: Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.70),
+            decoration: BoxDecoration(
+              // Sent: subtle green tint on the user's accent. Received: surface.
               color: isSent
-                  ? zt.accent.withValues(alpha: 0.3)
-                  : zt.border.withValues(alpha: 0.6),
-              width: 1,
+                  ? ZendColors.positive.withValues(alpha: 0.12)
+                  : zt.bgSecondary,
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: isSent
+                    ? ZendColors.positive.withValues(alpha: 0.35)
+                    : zt.border.withValues(alpha: 0.5),
+                width: 1,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Direction label
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isSent
-                        ? SolarIconsBold.squareArrowRightUp
-                        : SolarIconsBold.squareArrowLeftDown,
-                    size: 13,
-                    color: isSent ? zt.textSecondary : ZendColors.positive,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isSent ? 'Sent' : 'Received',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: isSent ? zt.textSecondary : ZendColors.positive,
-                      fontWeight: FontWeight.w600,
+            padding: const EdgeInsets.fromLTRB(13, 10, 13, 8),
+            child: Column(
+              crossAxisAlignment: isSent ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Compact direction chip
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSent ? SolarIconsBold.squareArrowRightUp : SolarIconsBold.squareArrowLeftDown,
+                      size: 11,
+                      color: isSent ? ZendColors.positive : zt.accent,
                     ),
+                    const SizedBox(width: 3),
+                    Text(
+                      isSent ? 'sent' : 'received',
+                      style: TextStyle(
+                        fontFamily: 'DMMono',
+                        fontSize: 10,
+                        color: isSent ? ZendColors.positive : zt.accent,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Amount — large and immediate
+                Text(
+                  amountFormatted,
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSerif',
+                    fontSize: 26,
+                    fontStyle: FontStyle.italic,
+                    color: zt.textPrimary,
+                    height: 1.05,
+                  ),
+                ),
+                // Note — only if not a system tag
+                if (note != null && note.isNotEmpty && note != 'vibe') ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    note,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
-              const SizedBox(height: 6),
-              // Amount
-              Text(
-                amountFormatted,
-                style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 28,
-                  fontStyle: FontStyle.italic,
-                  color: zt.textPrimary,
-                  height: 1.1,
-                ),
-              ),
-              // Note
-              if (note != null && note.isNotEmpty && note != 'vibe') ...[
                 const SizedBox(height: 4),
                 Text(
-                  note,
-                  style: TextStyle(
-                    fontFamily: 'DMSans',
-                    fontSize: 12,
-                    color: zt.textSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  _formatTime(message.createdAt),
+                  style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6)),
                 ),
               ],
-              // Timestamp
-              const SizedBox(height: 6),
-              Text(
-                _formatTime(message.createdAt),
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 10,
-                  color: zt.textSecondary.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        if (isSent) const SizedBox(width: 8),
+      ],
     );
   }
 }

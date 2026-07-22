@@ -48,6 +48,7 @@ class _DmInputBarState extends State<DmInputBar>
 
   // Panel state
   _PanelMode _mode = _PanelMode.none;
+  _PanelMode _prevMode = _PanelMode.none; // used to determine slide direction
   late final AnimationController _panelCtrl;
   late final Animation<double> _panelAnim;
 
@@ -58,6 +59,13 @@ class _DmInputBarState extends State<DmInputBar>
   List<VibeSticker> _stickers = [];
   bool _stickersLoading = true;
   VibeSticker? _selectedSticker;
+
+  void _setMode(_PanelMode next) {
+    setState(() {
+      _prevMode = _mode;
+      _mode = next;
+    });
+  }
 
   bool get _panelOpen => _mode != _PanelMode.none;
 
@@ -115,13 +123,13 @@ class _DmInputBarState extends State<DmInputBar>
 
   void _openActions() {
     _focusNode.unfocus();
-    setState(() => _mode = _PanelMode.actions);
+    _setMode(_PanelMode.actions);
     _panelCtrl.forward();
   }
 
   void _closePanel() {
     _panelCtrl.reverse().then((_) {
-      if (mounted) setState(() => _mode = _PanelMode.none);
+      if (mounted) _setMode(_PanelMode.none);
     });
   }
 
@@ -134,7 +142,7 @@ class _DmInputBarState extends State<DmInputBar>
   }
 
   void _enterVibeFlow() {
-    setState(() => _mode = _PanelMode.vibeAmount);
+    _setMode(_PanelMode.vibeAmount);
     if (_stickersLoading) _loadStickers();
   }
 
@@ -162,15 +170,13 @@ class _DmInputBarState extends State<DmInputBar>
   void _confirmVibeAmount() {
     final a = _resolvedAmount;
     if (a < 0.01 || a > 5.0) return;
-    setState(() {
-      _vibeAmount = a;
-      _mode = _PanelMode.vibeSticker;
-    });
+    _vibeAmount = a;
+    _setMode(_PanelMode.vibeSticker);
   }
 
   void _confirmVibeSticker() {
     if (_selectedSticker == null) return;
-    setState(() => _mode = _PanelMode.vibePreview);
+    _setMode(_PanelMode.vibePreview);
   }
 
   void _sendVibe() {
@@ -319,16 +325,32 @@ class _DmInputBarState extends State<DmInputBar>
             color: zt.bgSecondary,
             child: SafeArea(
               top: false,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(begin: const Offset(0.04, 0), end: Offset.zero).animate(anim),
-                    child: child,
+              child: ClipRect(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  transitionBuilder: (child, anim) {
+                    // Slide right→left when going forward (deeper into Vibe flow),
+                    // left→right when going back.
+                    final isForward = _mode.index >= _prevMode.index;
+                    final beginOffset = Offset(isForward ? 1.0 : -1.0, 0);
+                    final endOffset = Offset.zero;
+                    // Outgoing slides the opposite direction
+                    final isIncoming = child.key == ValueKey(_mode);
+                    final slideBegin = isIncoming ? beginOffset : Offset(-beginOffset.dx, 0);
+                    return SlideTransition(
+                      position: Tween<Offset>(begin: slideBegin, end: endOffset)
+                          .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+                      child: child,
+                    );
+                  },
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    children: [
+                      ...previousChildren,
+                      ?currentChild,
+                    ],
                   ),
+                  child: KeyedSubtree(key: ValueKey(_mode), child: _buildPanelContent(zt)),
                 ),
-                child: _buildPanelContent(zt),
               ),
             ),
           ),
@@ -388,7 +410,7 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               GestureDetector(
-                onTap: () => setState(() => _mode = _PanelMode.actions),
+                onTap: () => _setMode(_PanelMode.actions),
                 child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20),
               ),
               const SizedBox(width: 8),
@@ -459,7 +481,7 @@ class _DmInputBarState extends State<DmInputBar>
         children: [
           Row(
             children: [
-              GestureDetector(onTap: () => setState(() => _mode = _PanelMode.vibeAmount),
+              GestureDetector(onTap: () => _setMode(_PanelMode.vibeAmount),
                 child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
               Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
@@ -509,7 +531,7 @@ class _DmInputBarState extends State<DmInputBar>
         children: [
           Row(
             children: [
-              GestureDetector(onTap: () => setState(() => _mode = _PanelMode.vibeSticker),
+              GestureDetector(onTap: () => _setMode(_PanelMode.vibeSticker),
                 child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
               Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),

@@ -6,6 +6,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
+import '../dm/dm_thread_screen.dart';
 import '../profile/user_profile_screen.dart';
 import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
@@ -418,6 +419,20 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                         }),
                       ],
                     ),
+                  ),
+                  // ── Chat icon ──────────────────────────────────────────
+                  IconButton(
+                    onPressed: () async {
+                      final model = ZendScope.of(context);
+                      final result = await model.dmService.getOrCreateRoom(widget.counterparty.id);
+                      if (!context.mounted) return;
+                      pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
+                        roomId: result.roomId,
+                        counterparty: result.counterparty,
+                      ));
+                    },
+                    icon: Icon(SolarIconsBold.chatLine, color: zt.textSecondary, size: 22),
+                    tooltip: 'Open chat',
                   ),
                 ],
               ),

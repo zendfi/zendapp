@@ -45,6 +45,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   Timer? _typingClearTimer;
   String? _nextCursor;
   bool _loadingMore = false;
+  bool _showScrollToBottom = false;
 
   final _scrollController = ScrollController();
 
@@ -52,6 +53,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Seed with cached messages immediately — no spinner for known rooms
+    final model = ZendScope.of(context);
+    final cached = model.dmService.getCachedMessages(widget.roomId);
+    if (cached.isNotEmpty) {
+      _messages.addAll(cached);
+      _loading = false;
+    }
     _initWs();
     _loadMessages();
     _scrollController.addListener(_onScroll);
@@ -114,6 +122,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   Future<void> _loadMessages({bool more = false}) async {
     if (more && (_loadingMore || _nextCursor == null)) return;
+    // Only show the full-screen spinner if we have nothing to display yet
     if (!more) setState(() => _loading = _messages.isEmpty);
     if (more) setState(() => _loadingMore = true);
 
@@ -128,9 +137,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (more) {
           _messages.addAll(result.messages);
         } else {
+          // Merge: keep any optimistic messages (local-only) and replace the rest
+          final localOnly = _messages.where((m) => m.id.startsWith('local-')).toList();
           _messages
             ..clear()
-            ..addAll(result.messages);
+            ..addAll(result.messages)
+            ..insertAll(0, localOnly);
         }
         _nextCursor = result.nextCursor;
         _loading = false;
@@ -155,6 +167,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (_scrollController.position.pixels >
         _scrollController.position.maxScrollExtent - 200) {
       _loadMessages(more: true);
+    }
+    // Show scroll-to-bottom button when scrolled up more than 200px
+    final shouldShow = _scrollController.position.pixels > 200;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = shouldShow);
     }
   }
 
@@ -208,6 +225,72 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     });
   }
 
+  Widget _buildScrollToBottomButton(ZendTheme zt) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      bottom: _showScrollToBottom ? 8 : -48,
+      right: 12,
+      child: AnimatedOpacity(
+        opacity: _showScrollToBottom ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 180),
+        child: GestureDetector(
+          onTap: () => _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          ),
+          child: Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              shape: BoxShape.circle,
+              border: Border.all(color: zt.border),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
+            ),
+            child: Icon(SolarIconsBold.altArrowDown, size: 18, color: zt.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMessageReactions(BuildContext ctx, DmMessage msg) {
+    // Quick emoji reactions on long press — same 12 curated emojis as activity feed
+    const emojis = ['🔥', '❤️', '😂', '👏', '🙏', '😭', '💸', '✅', '👑', '🚀', '💯', '👀'];
+    final zt = ZendTheme.of(ctx);
+    final overlay = Overlay.of(ctx);
+    late OverlayEntry entry;
+    entry = OverlayEntry(builder: (overlayCtx) => Stack(children: [
+      Positioned.fill(child: GestureDetector(onTap: () => entry.remove(), behavior: HitTestBehavior.opaque, child: const ColoredBox(color: Colors.transparent))),
+      Positioned(
+        bottom: 80, left: 16, right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: zt.bgElevated,
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: emojis.take(8).map((e) => GestureDetector(
+                onTap: () { entry.remove(); HapticFeedback.selectionClick(); },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(e, style: const TextStyle(fontSize: 24, decoration: TextDecoration.none)),
+                ),
+              )).toList(),
+            ),
+          ),
+        ),
+      ),
+    ]));
+    overlay.insert(entry);
+  }
+
   void _onRetry(String clientId) {
     final idx = _messages.indexWhere((m) => m.clientId == clientId);
     if (idx == -1) return;
@@ -230,113 +313,125 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setModalState) {
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-          final bottomPad = MediaQuery.of(ctx).viewPadding.bottom;
-          return AnimatedPadding(
-            duration: const Duration(milliseconds: 200),
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: Container(
-              margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + (bottomInset > 0 ? 0 : bottomPad)),
-              decoration: BoxDecoration(
-                color: zt.bgSecondary,
-                borderRadius: BorderRadius.circular(ZendRadii.xxl),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36, height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                    ),
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.92),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 14),
+                Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)))),
+                const SizedBox(height: 16),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Request from', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                        ],
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Request from @${widget.counterparty.zendtag}',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'They\'ll see a Pay button in the chat',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  // Amount field
-                  Container(
-                    decoration: BoxDecoration(
-                      color: zt.bgPrimary,
-                      borderRadius: BorderRadius.circular(ZendRadii.lg),
-                      border: Border.all(color: errorMsg != null ? ZendColors.destructive : zt.border),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Text('\$', style: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textSecondary)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: TextField(
-                            controller: amountCtrl,
-                            autofocus: true,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textPrimary),
-                            decoration: InputDecoration(
-                              hintText: '0.00',
-                              hintStyle: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textSecondary.withValues(alpha: 0.4)),
-                              border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 20),
+                // Amount display — large like QR sheet
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () {},
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('\$', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 32, color: zt.textSecondary, fontStyle: FontStyle.italic)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: TextField(
+                                controller: amountCtrl,
+                                autofocus: true,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 48, fontStyle: FontStyle.italic, color: zt.textPrimary, height: 1),
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 48, fontStyle: FontStyle.italic, color: zt.textSecondary.withValues(alpha: 0.4)),
+                                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                                ),
+                                onChanged: (_) => setModalState(() => errorMsg = null),
+                              ),
                             ),
-                            onChanged: (_) => setModalState(() => errorMsg = null),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      if (errorMsg != null)
+                        Text(errorMsg!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
+                    ],
                   ),
-                  if (errorMsg != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(errorMsg!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 11, color: ZendColors.destructive)),
-                    ),
-                  const SizedBox(height: 10),
-                  // Optional note
-                  TextField(
+                ),
+                const SizedBox(height: 12),
+                // Note field
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TextField(
                     controller: noteCtrl,
                     style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
                     decoration: InputDecoration(
-                      hintText: 'Add a note (optional)',
+                      hintText: 'Add a note…',
                       hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
-                      filled: true,
-                      fillColor: zt.bgPrimary,
+                      filled: true, fillColor: zt.bgPrimary,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  ElevatedButton(
-                    onPressed: () {
-                      final parsed = double.tryParse(amountCtrl.text.trim());
-                      if (parsed == null || parsed < 0.01) {
-                        setModalState(() => errorMsg = 'Enter a valid amount');
-                        return;
-                      }
-                      Navigator.pop(ctx);
-                      _sendPaymentRequest(parsed, noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                SizedBox(height: 16 + (bottomInset > 0 ? 0 : MediaQuery.of(ctx).viewPadding.bottom)),
+                // Confirm button
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset > 0 ? bottomInset : 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final parsed = double.tryParse(amountCtrl.text.trim());
+                        if (parsed == null || parsed < 0.01) {
+                          setModalState(() => errorMsg = 'Enter a valid amount');
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        _sendPaymentRequest(parsed, noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Send request', style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700)),
                     ),
-                    child: const Text('Send request', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700)),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         });
@@ -416,88 +511,50 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 
-  void _showChatMenu(BuildContext context, ZendTheme zt, DmCounterparty cp) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
-        return Container(
-          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
-          decoration: BoxDecoration(
-            color: zt.bgSecondary,
-            borderRadius: BorderRadius.circular(ZendRadii.xxl),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                ),
-              ),
-              _ChatMenuTile(
-                zt: zt,
-                icon: SolarIconsBold.user,
-                label: 'View contact',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
-                },
-              ),
-              _ChatMenuTile(
-                zt: zt,
-                icon: SolarIconsBold.magnifier,
-                label: 'Search in chat',
-                subtitle: 'Coming soon',
-                onTap: () => Navigator.pop(ctx),
-                disabled: true,
-              ),
-              _ChatMenuTile(
-                zt: zt,
-                icon: SolarIconsBold.clockCircle,
-                label: 'Disappearing messages',
-                subtitle: 'Coming soon',
-                onTap: () => Navigator.pop(ctx),
-                disabled: true,
-              ),
-              _ChatMenuTile(
-                zt: zt,
-                icon: SolarIconsBold.trashBinMinimalistic,
-                label: 'Clear chat',
-                subtitle: 'Remove all messages locally',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _messages.clear());
-                },
-              ),
-              _ChatMenuTile(
-                zt: zt,
-                icon: SolarIconsBold.userBlock,
-                label: 'Block @${cp.zendtag}',
-                isDestructive: true,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  // Block is a future feature — show info for now
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Block feature coming soon',
-                        style: const TextStyle(fontFamily: 'DMSans'),
-                      ),
-                      backgroundColor: zt.bgSecondary,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
+  PopupMenuItem<_ChatMenuAction> _popupItem(
+    BuildContext ctx,
+    ZendTheme zt,
+    _ChatMenuAction action,
+    IconData icon,
+    String label, {
+    bool disabled = false,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? ZendColors.destructive : zt.textPrimary;
+    return PopupMenuItem<_ChatMenuAction>(
+      value: action,
+      enabled: !disabled,
+      child: Opacity(
+        opacity: disabled ? 0.4 : 1.0,
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
     );
+  }
+
+  void _handleMenuAction(BuildContext context, ZendTheme zt, DmCounterparty cp, _ChatMenuAction action) {
+    switch (action) {
+      case _ChatMenuAction.viewContact:
+        pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
+      case _ChatMenuAction.searchInChat:
+        break; // coming soon
+      case _ChatMenuAction.disappearing:
+        break; // coming soon
+      case _ChatMenuAction.clearChat:
+        setState(() => _messages.clear());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
+        );
+      case _ChatMenuAction.block:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
+        );
+    }
   }
 
   Future<void> _onSendVibe(VibeSendResult vibe) async {
@@ -639,69 +696,39 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           children: [
             // ── AppBar ────────────────────────────────────────────────────
             Container(
-              height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft,
-                        color: zt.textPrimary),
+                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 26),
                   ),
                   GestureDetector(
-                    onTap: () => pushZendSlide(
-                      context,
-                      UserProfileScreen(zendtag: cp.zendtag),
-                    ),
-                    child: ZendAvatar(
-                      radius: 18,
-                      photoUrl: cp.avatarUrl,
-                      initials: cp.initialLetter,
-                    ),
+                    onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
+                    child: ZendAvatar(radius: 20, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => pushZendSlide(
-                        context,
-                        UserProfileScreen(zendtag: cp.zendtag),
-                      ),
+                      onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            cp.displayName.trim().isEmpty
-                                ? '@${cp.zendtag}'
-                                : cp.displayName,
-                            style: TextStyle(
-                              fontFamily: 'DMSans',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: zt.textPrimary,
-                            ),
+                            cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
+                            style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                           ),
                           Row(
                             children: [
-                              Text(
-                                '@${cp.zendtag}',
-                                style: TextStyle(
-                                  fontFamily: 'DMMono',
-                                  fontSize: 11,
-                                  color: zt.textSecondary,
-                                ),
-                              ),
+                              Text('@${cp.zendtag}', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
                               Builder(builder: (ctx) {
                                 final streak = model.activeStreaks[cp.userId];
-                                if (streak == null || !streak.isActive) {
-                                  return const SizedBox.shrink();
-                                }
+                                if (streak == null || !streak.isActive) return const SizedBox.shrink();
                                 return Padding(
                                   padding: const EdgeInsets.only(left: 6),
-                                  child: Text(
-                                    '🔥 ${streak.streakWeeks}w',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
+                                  child: Text('🔥 ${streak.streakWeeks}w', style: const TextStyle(fontSize: 11)),
                                 );
                               }),
                             ],
@@ -710,77 +737,107 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       ),
                     ),
                   ),
-                  // ── Menu button ───────────────────────────────────────
-                  IconButton(
-                    onPressed: () => _showChatMenu(context, zt, cp),
-                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: 20),
-                    tooltip: 'Chat options',
+                  // ── Overflow menu ─────────────────────────────────────
+                  PopupMenuButton<_ChatMenuAction>(
+                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: 24),
+                    color: zt.bgSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xl)),
+                    elevation: 4,
+                    onSelected: (action) => _handleMenuAction(context, zt, cp, action),
+                    itemBuilder: (ctx) => [
+                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, SolarIconsBold.user, 'View contact'),
+                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, SolarIconsBold.magnifier, 'Search in chat', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, SolarIconsBold.clockCircle, 'Disappearing messages', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, SolarIconsBold.trashBinMinimalistic, 'Clear chat'),
+                      const PopupMenuDivider(),
+                      _popupItem(ctx, zt, _ChatMenuAction.block, SolarIconsBold.userBlock, 'Block @${cp.zendtag}', isDestructive: true),
+                    ],
                   ),
                 ],
               ),
             ),
             Divider(height: 1, color: zt.border),
 
-            // ── Messages ──────────────────────────────────────────────────
+            // ── Messages + scroll-to-bottom ───────────────────────────────
             Expanded(
-              child: _loading
-                  ? const Center(child: ZendLoader(size: 24))
-                  : ListView.builder(
-                      controller: _scrollController,
-                      reverse: true,
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                      itemCount: _messages.length +
-                          (_theyAreTyping ? 1 : 0) +
-                          (_loadingMore ? 1 : 0),
-                      itemBuilder: (ctx, i) {
-                        // Load more spinner
-                        if (_loadingMore &&
-                            i == _messages.length + (_theyAreTyping ? 1 : 0)) {
-                          return const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Center(child: ZendLoader(size: 18)),
-                          );
-                        }
-                        // Typing indicator at top (reversed = visually bottom)
-                        if (_theyAreTyping && i == 0) {
-                          return _TypingIndicator(avatarUrl: cp.avatarUrl, initial: cp.initialLetter);
-                        }
-                        final msgIdx = _theyAreTyping ? i - 1 : i;
-                        final msg = _messages[msgIdx];
-                        final isMe = msg.senderUserId == model.currentUserId;
-                        final isCont = _isContinuation(msgIdx);
+              child: Stack(
+                children: [
+                  _loading
+                      ? const Center(child: ZendLoader(size: 24))
+                      : ListView.builder(
+                          controller: _scrollController,
+                          reverse: true,
+                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                          itemCount: _messages.length +
+                              (_theyAreTyping ? 1 : 0) +
+                              (_loadingMore ? 1 : 0),
+                          itemBuilder: (ctx, i) {
+                            if (_loadingMore &&
+                                i == _messages.length + (_theyAreTyping ? 1 : 0)) {
+                              return const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Center(child: ZendLoader(size: 18)),
+                              );
+                            }
+                            if (_theyAreTyping && i == 0) {
+                              return _TypingIndicator(avatarUrl: cp.avatarUrl, initial: cp.initialLetter);
+                            }
+                            final msgIdx = _theyAreTyping ? i - 1 : i;
+                            final msg = _messages[msgIdx];
+                            final isMe = msg.senderUserId == model.currentUserId;
+                            final isCont = _isContinuation(msgIdx);
+                            // Show avatar only on the last message of each incoming group
+                            // (in reversed list, first occurrence = visually bottom of group)
+                            final isGroupEnd = !isMe && !isCont;
 
-                        // Date separator: show when day changes between messages
-                        // (list is reversed, so msgIdx+1 is the older message)
-                        Widget? separator;
-                        final isLastInList = msgIdx == _messages.length - 1;
-                        if (!isLastInList) {
-                          final older = _messages[msgIdx + 1];
-                          final msgDay = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
-                          final olderDay = DateTime(older.createdAt.year, older.createdAt.month, older.createdAt.day);
-                          if (msgDay != olderDay) {
-                            separator = _DateSeparator(date: olderDay);
-                          }
-                        }
+                            Widget? separator;
+                            final isLastInList = msgIdx == _messages.length - 1;
+                            if (!isLastInList) {
+                              final older = _messages[msgIdx + 1];
+                              final msgDay = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+                              final olderDay = DateTime(older.createdAt.year, older.createdAt.month, older.createdAt.day);
+                              if (msgDay != olderDay) {
+                                separator = _DateSeparator(date: olderDay);
+                              }
+                            }
 
-                        final bubble = DmMessageBubble(
-                          message: msg,
-                          isMe: isMe,
-                          isContinuation: isCont,
-                          onRetry: msg.localStatus == DmLocalStatus.failed
-                              ? () => _onRetry(msg.clientId ?? '')
-                              : null,
-                          onPayRequest: _onPayRequest,
-                        );
+                            final bubble = Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                // Avatar slot — only shown on group-end for incoming
+                                if (!isMe) SizedBox(
+                                  width: 32,
+                                  child: isGroupEnd
+                                      ? ZendAvatar(radius: 13, photoUrl: cp.avatarUrl, initials: cp.initialLetter)
+                                      : null,
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onLongPress: () => _showMessageReactions(ctx, msg),
+                                    child: DmMessageBubble(
+                                      message: msg,
+                                      isMe: isMe,
+                                      isContinuation: isCont,
+                                      onRetry: msg.localStatus == DmLocalStatus.failed
+                                          ? () => _onRetry(msg.clientId ?? '')
+                                          : null,
+                                      onPayRequest: _onPayRequest,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
 
-                        if (separator != null) {
-                          return Column(
-                            children: [bubble, separator],
-                          );
-                        }
-                        return bubble;
-                      },
-                    ),
+                            if (separator != null) {
+                              return Column(children: [bubble, separator]);
+                            }
+                            return bubble;
+                          },
+                        ),
+                  // ── Scroll-to-bottom button ─────────────────────────────
+                  _buildScrollToBottomButton(zt),
+                ],
+              ),
             ),
 
             // ── Input ─────────────────────────────────────────────────────
@@ -798,6 +855,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 }
+
+// ── Chat menu ─────────────────────────────────────────────────────────────────
+
+enum _ChatMenuAction { viewContact, searchInChat, disappearing, clearChat, block }
 
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator({required this.avatarUrl, required this.initial});
@@ -876,65 +937,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Chat menu tile ─────────────────────────────────────────────────────────────
-
-class _ChatMenuTile extends StatelessWidget {
-  const _ChatMenuTile({
-    required this.zt,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.subtitle,
-    this.isDestructive = false,
-    this.disabled = false,
-  });
-
-  final ZendTheme zt;
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final VoidCallback onTap;
-  final bool isDestructive;
-  final bool disabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isDestructive ? ZendColors.destructive : zt.textPrimary;
-    return Opacity(
-      opacity: disabled ? 0.4 : 1.0,
-      child: ListTile(
-        onTap: disabled ? null : onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        leading: Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: isDestructive
-                ? ZendColors.destructive.withValues(alpha: 0.1)
-                : zt.bgPrimary,
-            borderRadius: BorderRadius.circular(ZendRadii.md),
-          ),
-          child: Icon(icon, size: 18, color: color),
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle!,
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
-              )
-            : null,
       ),
     );
   }

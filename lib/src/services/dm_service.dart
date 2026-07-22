@@ -21,6 +21,25 @@ class DmService {
   /// navigator to look up counterparty info without an extra network call.
   List<DmThread> cachedThreads = [];
 
+  /// Per-room message cache — seeded into the screen immediately on open
+  /// so there's never a spinner for rooms the user has visited before.
+  final Map<String, List<DmMessage>> _messageCache = {};
+
+  /// Returns cached messages for a room, or empty list if not yet loaded.
+  List<DmMessage> getCachedMessages(String roomId) =>
+      List.unmodifiable(_messageCache[roomId] ?? const []);
+
+  /// Updates the message cache for a room.
+  void _updateMessageCache(String roomId, List<DmMessage> messages) {
+    _messageCache[roomId] = List.of(messages);
+  }
+
+  /// Clears the cache (e.g. on sign-out).
+  void clearCaches() {
+    cachedThreads = [];
+    _messageCache.clear();
+  }
+
   /// Lists all DM threads for the current user, sorted by recency.
   Future<List<DmThread>> listThreads() async {
     final response = await _apiClient.dio.get('/api/zend/dm');
@@ -66,6 +85,10 @@ class DmService {
         .cast<Map<String, dynamic>>()
         .map(DmMessage.fromJson)
         .toList();
+    // Populate cache for first page (no cursor = fresh load)
+    if (cursor == null) {
+      _updateMessageCache(roomId, messages);
+    }
     return DmMessagesResult(
       messages: messages,
       nextCursor: response.data['next_cursor'] as String?,
