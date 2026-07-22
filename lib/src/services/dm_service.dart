@@ -108,6 +108,44 @@ class DmService {
     }
   }
 
+  /// Sends a payment request message into a DM room.
+  /// The request renders as a tappable bubble; the recipient taps it to pay.
+  Future<DmMessage> sendPaymentRequest(
+    String roomId, {
+    required double amountUsdc,
+    required String requesterZendtag,
+    String? note,
+    required String clientId,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/api/zend/dm/$roomId/messages',
+      data: {
+        'message_type': 'payment_request',
+        'metadata': {
+          'amount_usdc': amountUsdc.toStringAsFixed(6),
+          'requester_zendtag': requesterZendtag,
+          if (note != null && note.isNotEmpty) 'note': note,
+          'status': 'pending',
+        },
+        'client_id': clientId,
+      },
+    );
+    return DmMessage(
+      id: response.data['id'] as String? ?? clientId,
+      roomId: roomId,
+      senderUserId: '',
+      type: DmMessageType.paymentRequest,
+      paymentRequestData: DmPaymentRequestData(
+        amountUsdc: amountUsdc.toStringAsFixed(6),
+        requesterZendtag: requesterZendtag,
+        note: note,
+        status: 'pending',
+      ),
+      clientId: clientId,
+      createdAt: DateTime.tryParse(response.data['created_at'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+
   /// Step 1: gets blockhash + ATA addresses for client-side signing.
   Future<Map<String, dynamic>> prepareVibe(
     String roomId, {

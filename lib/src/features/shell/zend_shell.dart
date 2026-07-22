@@ -89,11 +89,9 @@ class _ZendShellState extends State<ZendShell> {
     setState(() {
       _tabIndex = index;
     });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeInOutCubic,
-    );
+    // Jump instantly — no slide animation for tab-bar taps.
+    // Slide animation only fires when the user physically swipes the PageView.
+    _pageController.jumpToPage(index);
     // Clear activity badge when user actively switches to the Activity tab.
     if (index == 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

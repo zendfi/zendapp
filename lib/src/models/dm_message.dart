@@ -46,6 +46,32 @@ const _kSlugToEmoji = {
   'wave': '👋',
 };
 
+/// Data for a payment request sent inside a DM thread.
+class DmPaymentRequestData {
+  const DmPaymentRequestData({
+    required this.amountUsdc,
+    required this.requesterZendtag,
+    this.note,
+    required this.status,
+  });
+
+  final String amountUsdc;
+  final String requesterZendtag;
+  final String? note;
+  /// 'pending' | 'paid' | 'cancelled'
+  final String status;
+
+  bool get isPending => status == 'pending';
+
+  factory DmPaymentRequestData.fromJson(Map<String, dynamic> json) =>
+      DmPaymentRequestData(
+        amountUsdc: json['amount_usdc'] as String? ?? '0',
+        requesterZendtag: json['requester_zendtag'] as String? ?? '',
+        note: json['note'] as String?,
+        status: json['status'] as String? ?? 'pending',
+      );
+}
+
 class DmVibeData {
   const DmVibeData({
     required this.stickerId,
@@ -96,6 +122,7 @@ class DmMessage {
     this.content,
     this.paymentData,
     this.vibeData,
+    this.paymentRequestData,
     this.clientId,
     required this.createdAt,
     this.localStatus = DmLocalStatus.delivered,
@@ -110,6 +137,7 @@ class DmMessage {
   final String? content;
   final DmPaymentData? paymentData;
   final DmVibeData? vibeData;
+  final DmPaymentRequestData? paymentRequestData;
   final String? clientId;
   final DateTime createdAt;
   DmLocalStatus localStatus;
@@ -129,10 +157,13 @@ class DmMessage {
 
     DmPaymentData? paymentData;
     DmVibeData? vibeData;
+    DmPaymentRequestData? paymentRequestData;
     if (type == DmMessageType.payment && meta.isNotEmpty) {
       paymentData = DmPaymentData.fromJson(meta);
     } else if (type == DmMessageType.vibe && meta.isNotEmpty) {
       vibeData = DmVibeData.fromJson(meta);
+    } else if (type == DmMessageType.paymentRequest && meta.isNotEmpty) {
+      paymentRequestData = DmPaymentRequestData.fromJson(meta);
     }
 
     return DmMessage(
@@ -145,6 +176,7 @@ class DmMessage {
       content: json['content'] as String?,
       paymentData: paymentData,
       vibeData: vibeData,
+      paymentRequestData: paymentRequestData,
       clientId: json['client_id'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
     );

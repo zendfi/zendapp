@@ -218,10 +218,193 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   void _onRequestPayment() {
-    // Show QR payment sheet with counterparty prefilled so they can pay you
+    _showRequestAmountSheet();
+  }
+
+  void _showRequestAmountSheet() {
+    final zt = ZendTheme.of(context);
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    String? errorMsg;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setModalState) {
+          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+          final bottomPad = MediaQuery.of(ctx).viewPadding.bottom;
+          return AnimatedPadding(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: Container(
+              margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + (bottomInset > 0 ? 0 : bottomPad)),
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.xxl),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                    ),
+                  ),
+                  Text(
+                    'Request from @${widget.counterparty.zendtag}',
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'They\'ll see a Pay button in the chat',
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  // Amount field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: zt.bgPrimary,
+                      borderRadius: BorderRadius.circular(ZendRadii.lg),
+                      border: Border.all(color: errorMsg != null ? ZendColors.destructive : zt.border),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Text('\$', style: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textSecondary)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: TextField(
+                            controller: amountCtrl,
+                            autofocus: true,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textPrimary),
+                            decoration: InputDecoration(
+                              hintText: '0.00',
+                              hintStyle: TextStyle(fontFamily: 'DMMono', fontSize: 22, color: zt.textSecondary.withValues(alpha: 0.4)),
+                              border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (_) => setModalState(() => errorMsg = null),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (errorMsg != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(errorMsg!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 11, color: ZendColors.destructive)),
+                    ),
+                  const SizedBox(height: 10),
+                  // Optional note
+                  TextField(
+                    controller: noteCtrl,
+                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Add a note (optional)',
+                      hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
+                      filled: true,
+                      fillColor: zt.bgPrimary,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton(
+                    onPressed: () {
+                      final parsed = double.tryParse(amountCtrl.text.trim());
+                      if (parsed == null || parsed < 0.01) {
+                        setModalState(() => errorMsg = 'Enter a valid amount');
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      _sendPaymentRequest(parsed, noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Send request', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    ).then((_) {
+      amountCtrl.dispose();
+      noteCtrl.dispose();
+    });
+  }
+
+  void _sendPaymentRequest(double amount, String? note) {
+    final model = ZendScope.of(context);
+    final clientId = 'req_${DateTime.now().millisecondsSinceEpoch}';
+    final myZendtag = model.currentZendtag ?? '';
+
+    // Optimistic message
+    final optimistic = DmMessage(
+      id: 'local-$clientId',
+      roomId: widget.roomId,
+      senderUserId: model.currentUserId ?? '',
+      senderZendtag: myZendtag,
+      type: DmMessageType.paymentRequest,
+      paymentRequestData: DmPaymentRequestData(
+        amountUsdc: amount.toStringAsFixed(6),
+        requesterZendtag: myZendtag,
+        note: note,
+        status: 'pending',
+      ),
+      clientId: clientId,
+      createdAt: DateTime.now(),
+      localStatus: DmLocalStatus.sending,
+    );
+    setState(() => _messages.insert(0, optimistic));
+    HapticFeedback.lightImpact();
+
+    // Send to server
+    model.dmService.sendPaymentRequest(
+      widget.roomId,
+      amountUsdc: amount,
+      requesterZendtag: myZendtag,
+      note: note,
+      clientId: clientId,
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          final i = _messages.indexWhere((m) => m.clientId == clientId);
+          if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+        });
+      }
+    }).catchError((_) {
+      if (mounted) {
+        setState(() {
+          final i = _messages.indexWhere((m) => m.clientId == clientId);
+          if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
+        });
+      }
+    });
+  }
+
+  void _onPayRequest(DmPaymentRequestData rd) {
+    // Recipient taps Pay → open QR payment sheet pre-filled with amount
+    final amount = double.tryParse(rd.amountUsdc) ?? 0.0;
     showQrPaymentSheet(
       context,
-      intent: QrPaymentIntent(zendtag: widget.counterparty.zendtag),
+      intent: QrPaymentIntent(
+        zendtag: rd.requesterZendtag,
+        amountUsdc: amount,
+      ),
     );
   }
 
@@ -545,12 +728,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   : ListView.builder(
                       controller: _scrollController,
                       reverse: true,
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                       itemCount: _messages.length +
                           (_theyAreTyping ? 1 : 0) +
                           (_loadingMore ? 1 : 0),
                       itemBuilder: (ctx, i) {
-                        // Load more spinner at bottom of reversed list
+                        // Load more spinner
                         if (_loadingMore &&
                             i == _messages.length + (_theyAreTyping ? 1 : 0)) {
                           return const Padding(
@@ -558,23 +741,44 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             child: Center(child: ZendLoader(size: 18)),
                           );
                         }
-                        // Typing indicator at top of reversed list (index 0)
+                        // Typing indicator at top (reversed = visually bottom)
                         if (_theyAreTyping && i == 0) {
-                          return _TypingIndicator(
-                              avatarUrl: cp.avatarUrl,
-                              initial: cp.initialLetter);
+                          return _TypingIndicator(avatarUrl: cp.avatarUrl, initial: cp.initialLetter);
                         }
                         final msgIdx = _theyAreTyping ? i - 1 : i;
                         final msg = _messages[msgIdx];
-                        return DmMessageBubble(
+                        final isMe = msg.senderUserId == model.currentUserId;
+                        final isCont = _isContinuation(msgIdx);
+
+                        // Date separator: show when day changes between messages
+                        // (list is reversed, so msgIdx+1 is the older message)
+                        Widget? separator;
+                        final isLastInList = msgIdx == _messages.length - 1;
+                        if (!isLastInList) {
+                          final older = _messages[msgIdx + 1];
+                          final msgDay = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+                          final olderDay = DateTime(older.createdAt.year, older.createdAt.month, older.createdAt.day);
+                          if (msgDay != olderDay) {
+                            separator = _DateSeparator(date: olderDay);
+                          }
+                        }
+
+                        final bubble = DmMessageBubble(
                           message: msg,
-                          isMe: msg.senderUserId ==
-                              model.currentUserId,
-                          isContinuation: _isContinuation(msgIdx),
+                          isMe: isMe,
+                          isContinuation: isCont,
                           onRetry: msg.localStatus == DmLocalStatus.failed
                               ? () => _onRetry(msg.clientId ?? '')
                               : null,
+                          onPayRequest: _onPayRequest,
                         );
+
+                        if (separator != null) {
+                          return Column(
+                            children: [bubble, separator],
+                          );
+                        }
+                        return bubble;
                       },
                     ),
             ),
@@ -731,6 +935,50 @@ class _ChatMenuTile extends StatelessWidget {
                 style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
               )
             : null,
+      ),
+    );
+  }
+}
+
+// ── Date separator ─────────────────────────────────────────────────────────────
+
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.date});
+  final DateTime date;
+
+  String _label() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final d = DateTime(date.year, date.month, date.day);
+    if (d == today) return 'Today';
+    if (d == yesterday) return 'Yesterday';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (date.year == now.year) return '${months[date.month - 1]} ${date.day}';
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: zt.border.withValues(alpha: 0.5))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              _label(),
+              style: TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 11,
+                color: zt.textSecondary.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: zt.border.withValues(alpha: 0.5))),
+        ],
       ),
     );
   }

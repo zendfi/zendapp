@@ -5,11 +5,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 
-/// Renders a single DM message — text, payment bubble, or Vibe.
-///
-/// Always uses iMessage-style layout (DM threads are always 2 people):
-/// - Mine (isMe): right-aligned, accent bubble
-/// - Theirs (!isMe): left-aligned, bgSecondary bubble
+/// Renders a single DM message — text, payment bubble, Vibe, or payment request.
 class DmMessageBubble extends StatelessWidget {
   const DmMessageBubble({
     super.key,
@@ -17,12 +13,15 @@ class DmMessageBubble extends StatelessWidget {
     required this.isMe,
     this.isContinuation = false,
     this.onRetry,
+    this.onPayRequest,
   });
 
   final DmMessage message;
   final bool isMe;
   final bool isContinuation;
   final VoidCallback? onRetry;
+  /// Called when the recipient taps "Pay" on a payment request bubble.
+  final void Function(DmPaymentRequestData)? onPayRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +31,15 @@ class DmMessageBubble extends StatelessWidget {
         bottom: 2,
       ),
       child: switch (message.type) {
-        DmMessageType.payment => DmPaymentBubble(
-            message: message, isMe: isMe),
+        DmMessageType.payment => DmPaymentBubble(message: message, isMe: isMe),
         DmMessageType.vibe => _buildVibeBubble(),
+        DmMessageType.paymentRequest => DmPaymentRequestBubble(
+            message: message,
+            isMe: isMe,
+            onPay: message.paymentRequestData != null && !isMe
+                ? () => onPayRequest?.call(message.paymentRequestData!)
+                : null,
+          ),
         _ => _TextBubble(
             message: message,
             isMe: isMe,
@@ -281,6 +286,139 @@ class DmPaymentBubble extends StatelessWidget {
                   fontSize: 10,
                   color: zt.textSecondary.withValues(alpha: 0.6),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Payment request bubble — sent by requester, shows "Pay" CTA to recipient.
+class DmPaymentRequestBubble extends StatelessWidget {
+  const DmPaymentRequestBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    this.onPay,
+  });
+
+  final DmMessage message;
+  final bool isMe;
+  final VoidCallback? onPay;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final rd = message.paymentRequestData;
+    final amountStr = rd?.amountUsdc ?? '0.00';
+    final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
+    final isPending = rd?.isPending ?? true;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: isMe ? 60 : 12,
+          right: isMe ? 12 : 60,
+          top: 4,
+          bottom: 4,
+        ),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6C63FF).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(ZendRadii.xl),
+            border: Border.all(
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Label
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(SolarIconsBold.squareArrowRightDown, size: 13, color: Color(0xFF6C63FF)),
+                  const SizedBox(width: 4),
+                  Text(
+                    isMe ? 'You requested' : 'Payment request',
+                    style: const TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: Color(0xFF6C63FF),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Amount
+              Text(
+                amountFormatted,
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 28,
+                  fontStyle: FontStyle.italic,
+                  color: zt.textPrimary,
+                  height: 1.1,
+                ),
+              ),
+              if (rd?.note != null && rd!.note!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  rd.note!,
+                  style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              const SizedBox(height: 10),
+              // Pay button (only for recipient on pending requests)
+              if (!isMe && isPending && onPay != null)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onPay,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(
+                      'Pay $amountFormatted',
+                      style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                )
+              else if (isMe && isPending)
+                Text(
+                  'Waiting for payment…',
+                  style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                )
+              else if (!isPending)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Paid',
+                      style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 6),
+              Text(
+                _formatTime(message.createdAt),
+                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6)),
               ),
             ],
           ),
