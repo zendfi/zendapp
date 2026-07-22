@@ -233,6 +233,90 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 
+  void _showChatMenu(BuildContext context, ZendTheme zt, DmCounterparty cp) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
+        return Container(
+          margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                ),
+              ),
+              _ChatMenuTile(
+                zt: zt,
+                icon: SolarIconsBold.user,
+                label: 'View contact',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
+                },
+              ),
+              _ChatMenuTile(
+                zt: zt,
+                icon: SolarIconsBold.magnifier,
+                label: 'Search in chat',
+                subtitle: 'Coming soon',
+                onTap: () => Navigator.pop(ctx),
+                disabled: true,
+              ),
+              _ChatMenuTile(
+                zt: zt,
+                icon: SolarIconsBold.clockCircle,
+                label: 'Disappearing messages',
+                subtitle: 'Coming soon',
+                onTap: () => Navigator.pop(ctx),
+                disabled: true,
+              ),
+              _ChatMenuTile(
+                zt: zt,
+                icon: SolarIconsBold.trashBinMinimalistic,
+                label: 'Clear chat',
+                subtitle: 'Remove all messages locally',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _messages.clear());
+                },
+              ),
+              _ChatMenuTile(
+                zt: zt,
+                icon: SolarIconsBold.userBlock,
+                label: 'Block @${cp.zendtag}',
+                isDestructive: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // Block is a future feature — show info for now
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Block feature coming soon',
+                        style: const TextStyle(fontFamily: 'DMSans'),
+                      ),
+                      backgroundColor: zt.bgSecondary,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _onSendVibe(VibeSendResult vibe) async {
     final model = ZendScope.of(context);
     final clientId = 'vibe_${DateTime.now().millisecondsSinceEpoch}';
@@ -443,6 +527,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       ),
                     ),
                   ),
+                  // ── Menu button ───────────────────────────────────────
+                  IconButton(
+                    onPressed: () => _showChatMenu(context, zt, cp),
+                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: 20),
+                    tooltip: 'Chat options',
+                  ),
                 ],
               ),
             ),
@@ -582,6 +672,65 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Chat menu tile ─────────────────────────────────────────────────────────────
+
+class _ChatMenuTile extends StatelessWidget {
+  const _ChatMenuTile({
+    required this.zt,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.subtitle,
+    this.isDestructive = false,
+    this.disabled = false,
+  });
+
+  final ZendTheme zt;
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive ? ZendColors.destructive : zt.textPrimary;
+    return Opacity(
+      opacity: disabled ? 0.4 : 1.0,
+      child: ListTile(
+        onTap: disabled ? null : onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        leading: Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: isDestructive
+                ? ZendColors.destructive.withValues(alpha: 0.1)
+                : zt.bgPrimary,
+            borderRadius: BorderRadius.circular(ZendRadii.md),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'DMSans',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle!,
+                style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+              )
+            : null,
       ),
     );
   }

@@ -233,11 +233,10 @@ class _ZendShellState extends State<ZendShell> {
         children: [
           PageView(
             controller: _pageController,
-            // Disable physics on the Send tab (index 1) — it has
-            // its own horizontal scroll for the amount keypad.
-            physics: _tabIndex == 1
-                ? const NeverScrollableScrollPhysics()
-                : const ClampingScrollPhysics(),
+            // Use clamping so pages don't bounce past the edges.
+            // The Send screen uses a tap-based amount input, not a
+            // horizontal scroll, so swiping all tabs works cleanly.
+            physics: const ClampingScrollPhysics(),
             onPageChanged: (i) {
               if (i != _tabIndex) {
                 setState(() => _tabIndex = i);
