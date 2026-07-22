@@ -29,6 +29,23 @@ class DmPaymentData {
   }
 }
 
+/// Slug→emoji fallback map — used when the server metadata doesn't include
+/// an explicit `sticker_emoji` field (older messages).
+const _kSlugToEmoji = {
+  'fire': '🔥',
+  'heart': '❤️',
+  'money': '💸',
+  'clap': '👏',
+  'star': '⭐',
+  'rocket': '🚀',
+  'crown': '👑',
+  'gift': '🎁',
+  'party': '🎉',
+  'highfive': '🙏',
+  'laugh': '😂',
+  'wave': '👋',
+};
+
 class DmVibeData {
   const DmVibeData({
     required this.stickerId,
@@ -36,6 +53,7 @@ class DmVibeData {
     required this.stickerName,
     required this.amountUsdc,
     required this.transferId,
+    this.stickerEmoji,
   });
 
   final String stickerId;
@@ -43,6 +61,17 @@ class DmVibeData {
   final String stickerName;
   final String amountUsdc;
   final String transferId;
+  /// The actual emoji character. Derived from stickerSlug if not explicitly set.
+  final String? stickerEmoji;
+
+  /// Returns the best available emoji for display.
+  String get displayEmoji {
+    if (stickerEmoji != null && stickerEmoji!.isNotEmpty) return stickerEmoji!;
+    // If stickerSlug is already an emoji (contains non-ASCII), use it directly
+    if (stickerSlug.runes.any((r) => r > 127)) return stickerSlug;
+    // Map slug → emoji
+    return _kSlugToEmoji[stickerSlug.toLowerCase()] ?? '✨';
+  }
 
   factory DmVibeData.fromJson(Map<String, dynamic> json) {
     return DmVibeData(
@@ -51,6 +80,7 @@ class DmVibeData {
       stickerName: json['sticker_name'] as String? ?? '',
       amountUsdc: json['amount_usdc'] as String? ?? '0',
       transferId: json['transfer_id'] as String? ?? '',
+      stickerEmoji: json['sticker_emoji'] as String?,
     );
   }
 }

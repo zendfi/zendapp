@@ -31,6 +31,7 @@ class ZendShell extends StatefulWidget {
 class _ZendShellState extends State<ZendShell> {
   // Start on the Send tab (index 1) — the primary action in Zend.
   int _tabIndex = 1;
+  late final PageController _pageController;
   Timer? _bannerTimer;
   // Tracks the last notification ID so re-arrival of a new request
   // forces the banner widget to rebuild and replay the slide-in animation.
@@ -47,6 +48,7 @@ class _ZendShellState extends State<ZendShell> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _tabIndex, keepPage: true);
     // Register this shell with the controller so notification taps can switch tabs.
     ZendShellController.activate((index) {
       if (mounted) setState(() => _tabIndex = index);
@@ -74,6 +76,7 @@ class _ZendShellState extends State<ZendShell> {
   @override
   void dispose() {
     ZendShellController.deactivate();
+    _pageController.dispose();
     _bannerTimer?.cancel();
     _reactionBannerTimer?.cancel();
     _commentBannerTimer?.cancel();
@@ -86,6 +89,11 @@ class _ZendShellState extends State<ZendShell> {
     setState(() {
       _tabIndex = index;
     });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOutCubic,
+    );
     // Clear activity badge when user actively switches to the Activity tab.
     if (index == 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -223,8 +231,28 @@ class _ZendShellState extends State<ZendShell> {
     return Scaffold(
       body: Stack(
         children: [
-          IndexedStack(
-            index: _tabIndex,
+          PageView(
+            controller: _pageController,
+            // Disable physics on the Send tab (index 1) — it has
+            // its own horizontal scroll for the amount keypad.
+            physics: _tabIndex == 1
+                ? const NeverScrollableScrollPhysics()
+                : const ClampingScrollPhysics(),
+            onPageChanged: (i) {
+              if (i != _tabIndex) {
+                setState(() => _tabIndex = i);
+                if (i == 2) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) ZendScope.of(context).markActivityRead();
+                  });
+                }
+                if (i == 3) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
+                  });
+                }
+              }
+            },
             children: pages,
           ),
           // In-app payment request banner

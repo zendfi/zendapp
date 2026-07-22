@@ -9,6 +9,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../activity/transaction_receipt_sheet.dart';
+import '../activity/search_screen.dart';
 import '../pools/pool_list_drawer.dart';
 import '../profile/profile_screen.dart';
 import '../savings/pocket_screen.dart';
@@ -227,6 +228,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             );
                           },
+                        ),
+                        // Search button — opens the global search screen
+                        GestureDetector(
+                          onTap: () => pushZendSlide(context, const SearchScreen()),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0x1AFFFFFF),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              SolarIconsBold.magnifier,
+                              size: 18,
+                              color: ZendColors.textOnDeep,
+                            ),
+                          ),
                         ),
                         GestureDetector(
                           onTap: () => pushZendSlide(context, const ProfileScreen()),

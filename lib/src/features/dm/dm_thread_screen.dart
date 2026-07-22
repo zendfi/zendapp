@@ -12,7 +12,9 @@ import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/dm_websocket_service.dart';
 import '../../services/wallet_session_cache.dart';
+import '../../models/qr_payment_intent.dart';
 import '../profile/user_profile_screen.dart';
+import '../send/qr_payment_sheet.dart';
 import '../vibes/vibe_picker_sheet.dart';
 import 'dm_message_bubble.dart';
 import 'dm_input_bar.dart';
@@ -213,6 +215,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (msg.content == null) return;
     setState(() => _messages[idx].localStatus = DmLocalStatus.sending);
     _ws.sendMessage(clientId, msg.content!);
+  }
+
+  void _onRequestPayment() {
+    // Show QR payment sheet with counterparty prefilled so they can pay you
+    showQrPaymentSheet(
+      context,
+      intent: QrPaymentIntent(zendtag: widget.counterparty.zendtag),
+    );
+  }
+
+  void _onPayRecipient() {
+    // Pay this counterparty directly
+    showQrPaymentSheet(
+      context,
+      intent: QrPaymentIntent(zendtag: widget.counterparty.zendtag),
+    );
   }
 
   Future<void> _onSendVibe(VibeSendResult vibe) async {
@@ -477,6 +495,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               onTyping: (v) => _ws.sendTyping(v),
               roomId: widget.roomId,
               onSendVibe: _onSendVibe,
+              onRequestPayment: _onRequestPayment,
+              onPayRecipient: _onPayRecipient,
             ),
           ],
         ),

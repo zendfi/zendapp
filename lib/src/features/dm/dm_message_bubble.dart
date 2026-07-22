@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+  import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 import '../../design/zend_tokens.dart';
@@ -51,7 +51,7 @@ class DmMessageBubble extends StatelessWidget {
       return DmPaymentBubble(message: message, isMe: isMe);
     }
     return VibeMessageBubble(
-      emoji: vd.stickerSlug.isNotEmpty ? vd.stickerSlug : '✨',
+      emoji: vd.displayEmoji,
       amountUsdc: double.tryParse(vd.amountUsdc) ?? 0.0,
       isMine: isMe,
       createdAt: message.createdAt,
@@ -175,7 +175,7 @@ class _StatusIcon extends StatelessWidget {
   }
 }
 
-/// Payment and Vibe bubble — used for `payment` and `vibe` message types.
+/// Payment bubble — clean, minimal card for payment messages.
 class DmPaymentBubble extends StatelessWidget {
   const DmPaymentBubble({
     super.key,
@@ -192,88 +192,100 @@ class DmPaymentBubble extends StatelessWidget {
     final pd = message.paymentData;
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
-    final isSent = pd?.direction == 'sent' || isMe;
+    final isSent = isMe;
+    final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
 
-    return Row(
-      mainAxisAlignment:
-          isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: [
-        if (!isMe) const SizedBox(width: 8),
-        Flexible(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.72,
-            ),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: zt.accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(ZendRadii.xl),
-              border: Border.all(
-                color: zt.accent.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      isSent
-                          ? SolarIconsBold.squareArrowRightUp
-                          : SolarIconsBold.squareArrowLeftDown,
-                      size: 16,
-                      color: isSent ? zt.textSecondary : ZendColors.positive,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isSent ? 'Sent' : 'Received',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 11,
-                        color: zt.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$$amountStr',
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 24,
-                    fontStyle: FontStyle.italic,
-                    color: zt.textPrimary,
-                  ),
-                ),
-                if (note != null && note.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    note,
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: zt.textSecondary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 6),
-                Text(
-                  _formatTime(message.createdAt),
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 10,
-                    color: zt.textSecondary,
-                  ),
-                ),
-              ],
+    return Align(
+      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: isSent ? 60 : 12,
+          right: isSent ? 12 : 60,
+          top: 4,
+          bottom: 4,
+        ),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.68),
+          decoration: BoxDecoration(
+            color: isSent
+                ? zt.accent.withValues(alpha: 0.1)
+                : zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xl),
+            border: Border.all(
+              color: isSent
+                  ? zt.accent.withValues(alpha: 0.3)
+                  : zt.border.withValues(alpha: 0.6),
+              width: 1,
             ),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Direction label
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSent
+                        ? SolarIconsBold.squareArrowRightUp
+                        : SolarIconsBold.squareArrowLeftDown,
+                    size: 13,
+                    color: isSent ? zt.textSecondary : ZendColors.positive,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSent ? 'Sent' : 'Received',
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: isSent ? zt.textSecondary : ZendColors.positive,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Amount
+              Text(
+                amountFormatted,
+                style: TextStyle(
+                  fontFamily: 'InstrumentSerif',
+                  fontSize: 28,
+                  fontStyle: FontStyle.italic,
+                  color: zt.textPrimary,
+                  height: 1.1,
+                ),
+              ),
+              // Note
+              if (note != null && note.isNotEmpty && note != 'vibe') ...[
+                const SizedBox(height: 4),
+                Text(
+                  note,
+                  style: TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              // Timestamp
+              const SizedBox(height: 6),
+              Text(
+                _formatTime(message.createdAt),
+                style: TextStyle(
+                  fontFamily: 'DMMono',
+                  fontSize: 10,
+                  color: zt.textSecondary.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
         ),
-        if (isMe) const SizedBox(width: 8),
-      ],
+      ),
     );
   }
 }
