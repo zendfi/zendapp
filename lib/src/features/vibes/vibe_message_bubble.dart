@@ -102,13 +102,30 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
 
   void _onTap() {
     if (_revealed || widget.isMine) return;
-    setState(() { _exploding = true; _revealed = true; });
+    setState(() { _revealed = true; _exploding = true; });
     _shimmerCtrl.stop();
-
-    // Progressive haptic crescendo
     _fireProgressiveHaptics();
 
+    // Show explosion as a true full-screen overlay — no layout offset issues.
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(builder: (ctx) {
+      final zt = ZendTheme.of(context);
+      return _FullScreenExplosionOverlay(
+        emoji: widget.emoji,
+        amountUsdc: widget.amountUsdc,
+        explodeCtrl: _explodeCtrl,
+        explode: _explode,
+        bgFade: _bgFade,
+        emojiScale: _emojiScale,
+        amountFade: _amountFade,
+        zt: zt,
+      );
+    });
+    overlay.insert(entry);
+
     _explodeCtrl.forward().then((_) {
+      entry.remove();
       if (mounted) setState(() => _exploding = false);
     });
   }
@@ -132,10 +149,10 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final screenSize = MediaQuery.of(context).size;
 
     Widget body;
-    if (!_revealed && !_exploding) {
+    if (!_revealed || _exploding) {
+      // Show hidden state during explosion too — revealed state shows after
       body = _HiddenVibe(
         emoji: widget.emoji,
         isMine: widget.isMine,
@@ -144,19 +161,6 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
         createdAt: widget.createdAt,
         onTap: _onTap,
         zt: zt,
-      );
-    } else if (_exploding) {
-      body = _ExplodingVibe(
-        emoji: widget.emoji,
-        amountUsdc: widget.amountUsdc,
-        isMine: widget.isMine,
-        explode: _explode,
-        bgFade: _bgFade,
-        emojiScale: _emojiScale,
-        amountFade: _amountFade,
-        screenSize: screenSize,
-        zt: zt,
-        createdAt: widget.createdAt,
       );
     } else {
       body = _RevealedVibe(
@@ -326,131 +330,96 @@ class _HiddenVibe extends StatelessWidget {
   }
 }
 
-// ── Exploding state: full-screen takeover ────────────────────────────────────
+// ── Full-screen explosion overlay (uses Overlay so it's truly centered) ──────
 
-class _ExplodingVibe extends StatelessWidget {
-  const _ExplodingVibe({
+class _FullScreenExplosionOverlay extends StatelessWidget {
+  const _FullScreenExplosionOverlay({
     required this.emoji,
     required this.amountUsdc,
-    required this.isMine,
+    required this.explodeCtrl,
     required this.explode,
     required this.bgFade,
     required this.emojiScale,
     required this.amountFade,
-    required this.screenSize,
     required this.zt,
-    this.createdAt,
   });
 
   final String emoji;
   final double amountUsdc;
-  final bool isMine;
+  final AnimationController explodeCtrl;
   final Animation<double> explode;
   final Animation<double> bgFade;
   final Animation<double> emojiScale;
   final Animation<double> amountFade;
-  final Size screenSize;
   final ZendTheme zt;
-  final DateTime? createdAt;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 90,
-      child: AnimatedBuilder(
-        animation: explode,
-        builder: (ctx, _) {
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Full-screen overlay — positioned relative to screen
-              Positioned(
-                left: isMine ? -(screenSize.width - 98) : -8,
-                right: isMine ? -8 : -(screenSize.width - 98),
-                top: -(screenSize.height * 0.4),
-                bottom: -(screenSize.height * 0.4),
-                child: IgnorePointer(
-                  child: Stack(
-                    children: [
-                      // Screen dim
-                      Positioned.fill(
-                        child: ColoredBox(
-                          color: Colors.black.withValues(alpha: bgFade.value),
+    return AnimatedBuilder(
+      animation: explodeCtrl,
+      builder: (ctx, _) => IgnorePointer(
+        child: Stack(
+          children: [
+            // Full screen dim
+            Positioned.fill(
+              child: ColoredBox(color: Colors.black.withValues(alpha: bgFade.value)),
+            ),
+            // Particle canvas — centered on screen
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ExplosionPainter(
+                  progress: explode.value,
+                  emoji: emoji,
+                  accentColor: zt.accent,
+                ),
+              ),
+            ),
+            // Central emoji
+            Center(
+              child: Transform.scale(
+                scale: emojiScale.value,
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 80, decoration: TextDecoration.none),
+                ),
+              ),
+            ),
+            // Amount pill
+            Center(
+              child: Transform.translate(
+                offset: const Offset(0, 70),
+                child: Opacity(
+                  opacity: amountFade.value.clamp(0.0, 1.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: zt.accent.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          spreadRadius: 2,
                         ),
+                      ],
+                    ),
+                    child: Text(
+                      '\$${amountUsdc.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 32,
+                        fontStyle: FontStyle.italic,
+                        color: zt.bgPrimary,
+                        height: 1.0,
+                        decoration: TextDecoration.none,
                       ),
-                      // Particle explosion
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: _ExplosionPainter(
-                            progress: explode.value,
-                            emoji: emoji,
-                            accentColor: zt.accent,
-                          ),
-                        ),
-                      ),
-                      // Central emoji burst
-                      Center(
-                        child: Transform.scale(
-                          scale: emojiScale.value,
-                          child: Text(emoji, style: const TextStyle(fontSize: 80, decoration: TextDecoration.none)),
-                        ),
-                      ),
-                      // Amount reveal
-                      Center(
-                        child: Transform.translate(
-                          offset: const Offset(0, 70),
-                          child: Opacity(
-                            opacity: amountFade.value.clamp(0.0, 1.0),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: zt.accent.withValues(alpha: 0.4),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                '\$${amountUsdc.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontFamily: 'InstrumentSerif',
-                                  fontSize: 32,
-                                  fontStyle: FontStyle.italic,
-                                  color: zt.bgPrimary,
-                                  height: 1.0,
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-              // The bubble itself (stays in place during explosion)
-              Container(
-                width: 90,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 36, decoration: TextDecoration.none)),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }

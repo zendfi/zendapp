@@ -211,6 +211,24 @@ class PoolWebSocketService {
     }));
   }
 
+  /// Sends an emoji reaction to a specific message.
+  void sendReaction(String messageId, String emoji) {
+    _send(jsonEncode({
+      'type': 'reaction',
+      'message_id': messageId,
+      'emoji': emoji,
+    }));
+  }
+
+  /// Removes an emoji reaction from a specific message.
+  void sendReactionRemoved(String messageId, String emoji) {
+    _send(jsonEncode({
+      'type': 'reaction_removed',
+      'message_id': messageId,
+      'emoji': emoji,
+    }));
+  }
+
   void _send(String data) {
     if (connectionState.value == WsConnectionState.connected &&
         _channel != null) {

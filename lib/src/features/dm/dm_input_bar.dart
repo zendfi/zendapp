@@ -48,7 +48,6 @@ class _DmInputBarState extends State<DmInputBar>
 
   // Panel state
   _PanelMode _mode = _PanelMode.none;
-  _PanelMode _prevMode = _PanelMode.none; // used to determine slide direction
   late final AnimationController _panelCtrl;
   late final Animation<double> _panelAnim;
 
@@ -62,7 +61,6 @@ class _DmInputBarState extends State<DmInputBar>
 
   void _setMode(_PanelMode next) {
     setState(() {
-      _prevMode = _mode;
       _mode = next;
     });
   }
@@ -393,22 +391,9 @@ class _DmInputBarState extends State<DmInputBar>
               top: false,
               child: ClipRect(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 240),
-                  transitionBuilder: (child, anim) {
-                    // Slide right→left when going forward (deeper into Vibe flow),
-                    // left→right when going back.
-                    final isForward = _mode.index >= _prevMode.index;
-                    final beginOffset = Offset(isForward ? 1.0 : -1.0, 0);
-                    final endOffset = Offset.zero;
-                    // Outgoing slides the opposite direction
-                    final isIncoming = child.key == ValueKey(_mode);
-                    final slideBegin = isIncoming ? beginOffset : Offset(-beginOffset.dx, 0);
-                    return SlideTransition(
-                      position: Tween<Offset>(begin: slideBegin, end: endOffset)
-                          .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-                      child: child,
-                    );
-                  },
+                  duration: const Duration(milliseconds: 140),
+                  // Plain fade — no slide between Vibe creation steps.
+                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
                   layoutBuilder: (currentChild, previousChildren) => Stack(
                     children: [
                       ...previousChildren,

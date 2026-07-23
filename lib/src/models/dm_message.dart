@@ -1,3 +1,25 @@
+/// A single emoji reaction on a DM message — tracks count and whether the
+/// current user has reacted with this emoji.
+class DmReaction {
+  final String emoji;
+  final int count;
+  final bool reactedByMe;
+
+  const DmReaction({required this.emoji, required this.count, required this.reactedByMe});
+
+  factory DmReaction.fromJson(Map<String, dynamic> json) => DmReaction(
+    emoji: json['emoji'] as String,
+    count: (json['count'] as num?)?.toInt() ?? 1,
+    reactedByMe: json['reacted_by_me'] as bool? ?? false,
+  );
+
+  DmReaction copyWith({int? count, bool? reactedByMe}) => DmReaction(
+    emoji: emoji,
+    count: count ?? this.count,
+    reactedByMe: reactedByMe ?? this.reactedByMe,
+  );
+}
+
 enum DmMessageType { text, payment, vibe, paymentRequest }
 
 enum DmLocalStatus { sending, delivered, failed }
@@ -126,6 +148,9 @@ class DmMessage {
     this.clientId,
     required this.createdAt,
     this.localStatus = DmLocalStatus.delivered,
+    this.reactions = const [],
+    this.replyToContent,
+    this.replyToSenderZendtag,
   });
 
   final String id;
@@ -141,6 +166,11 @@ class DmMessage {
   final String? clientId;
   final DateTime createdAt;
   DmLocalStatus localStatus;
+  /// Live emoji reactions — updated optimistically and via WS frames.
+  List<DmReaction> reactions;
+  /// If this message is a reply, the quoted snippet of the parent message.
+  final String? replyToContent;
+  final String? replyToSenderZendtag;
 
   bool get isMe => false; // caller sets based on currentUserId
 
@@ -179,6 +209,12 @@ class DmMessage {
       paymentRequestData: paymentRequestData,
       clientId: json['client_id'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      reactions: (json['reactions'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(DmReaction.fromJson)
+          .toList(),
+      replyToContent: json['reply_to_content'] as String?,
+      replyToSenderZendtag: json['reply_to_sender_zendtag'] as String?,
     );
   }
 

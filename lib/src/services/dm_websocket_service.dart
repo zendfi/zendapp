@@ -44,4 +44,10 @@ class DmWebSocketService {
   void sendTyping(bool isTyping) => _ws.sendTyping(isTyping);
 
   void sendRead(String lastReadMessageId) => _ws.sendRead(lastReadMessageId);
+
+  void sendReaction(String messageId, String emoji) =>
+      _ws.sendReaction(messageId, emoji);
+
+  void sendReactionRemoved(String messageId, String emoji) =>
+      _ws.sendReactionRemoved(messageId, emoji);
 }
