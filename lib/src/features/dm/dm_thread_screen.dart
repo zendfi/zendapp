@@ -255,32 +255,54 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 
-  void _showMessageReactions(BuildContext ctx, DmMessage msg) {
-    // Quick emoji reactions on long press — same 12 curated emojis as activity feed
+  void _showMessageReactions(BuildContext ctx, DmMessage msg, Offset globalPos) {
     const emojis = ['🔥', '❤️', '😂', '👏', '🙏', '😭', '💸', '✅', '👑', '🚀', '💯', '👀'];
-    final zt = ZendTheme.of(ctx);
-    final overlay = Overlay.of(ctx);
+    final zt = ZendTheme.of(context);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final overlay = Overlay.of(context);
     late OverlayEntry entry;
+
+    // Position the tray just above or below the tap point
+    final trayHeight = 56.0;
+    final trayWidth = screenWidth - 32;
+    double top = globalPos.dy - trayHeight - 12;
+    if (top < 80) top = globalPos.dy + 20; // flip below if near top
+    top = top.clamp(80.0, screenHeight - trayHeight - 80);
+
     entry = OverlayEntry(builder: (overlayCtx) => Stack(children: [
-      Positioned.fill(child: GestureDetector(onTap: () => entry.remove(), behavior: HitTestBehavior.opaque, child: const ColoredBox(color: Colors.transparent))),
+      Positioned.fill(child: GestureDetector(
+        onTap: () => entry.remove(),
+        behavior: HitTestBehavior.opaque,
+        child: const ColoredBox(color: Color(0x22000000)),
+      )),
       Positioned(
-        bottom: 80, left: 16, right: 16,
+        top: top,
+        left: 16,
+        width: trayWidth,
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: zt.bgElevated,
               borderRadius: BorderRadius.circular(ZendRadii.pill),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4))],
+              boxShadow: [BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: emojis.take(8).map((e) => GestureDetector(
-                onTap: () { entry.remove(); HapticFeedback.selectionClick(); },
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  entry.remove();
+                },
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(e, style: const TextStyle(fontSize: 24, decoration: TextDecoration.none)),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Text(e, style: const TextStyle(fontSize: 26, decoration: TextDecoration.none)),
                 ),
               )).toList(),
             ),
@@ -683,6 +705,25 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     return current.createdAt.difference(next.createdAt).inSeconds.abs() < 60;
   }
 
+  /// Whether the message at [index] is the FIRST (topmost) in its sender run.
+  /// In the reversed list, the message before (index - 1) is newer.
+  bool _isFirstInGroup(int index) {
+    if (index == 0) return true; // newest message = always starts a group visually
+    final current = _messages[index];
+    final newer = _messages[index - 1];
+    if (current.senderUserId != newer.senderUserId) return true;
+    return current.createdAt.difference(newer.createdAt).inSeconds.abs() >= 60;
+  }
+
+  /// Whether the message at [index] is the LAST (bottommost) in its sender run — gets the tail.
+  bool _isLastInGroup(int index) {
+    if (index >= _messages.length - 1) return true;
+    final current = _messages[index];
+    final older = _messages[index + 1];
+    if (current.senderUserId != older.senderUserId) return true;
+    return current.createdAt.difference(older.createdAt).inSeconds.abs() >= 60;
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -742,7 +783,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: 24),
                     color: zt.bgSecondary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xl)),
-                    elevation: 4,
+                    elevation: 1,
+                    shadowColor: Colors.black.withValues(alpha: 0.08),
+                    popUpAnimationStyle: AnimationStyle.noAnimation,
                     onSelected: (action) => _handleMenuAction(context, zt, cp, action),
                     itemBuilder: (ctx) => [
                       _popupItem(ctx, zt, _ChatMenuAction.viewContact, SolarIconsBold.user, 'View contact'),
@@ -786,9 +829,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             final msg = _messages[msgIdx];
                             final isMe = msg.senderUserId == model.currentUserId;
                             final isCont = _isContinuation(msgIdx);
-                            // Show avatar only on the last message of each incoming group
-                            // (in reversed list, first occurrence = visually bottom of group)
-                            final isGroupEnd = !isMe && !isCont;
+                            final isFirst = _isFirstInGroup(msgIdx);
+                            final isLast = _isLastInGroup(msgIdx);
+                            final isGroupEnd = !isMe && isLast;
 
                             Widget? separator;
                             final isLastInList = msgIdx == _messages.length - 1;
@@ -812,17 +855,17 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                       : null,
                                 ),
                                 Expanded(
-                                  child: GestureDetector(
-                                    onLongPress: () => _showMessageReactions(ctx, msg),
-                                    child: DmMessageBubble(
-                                      message: msg,
-                                      isMe: isMe,
-                                      isContinuation: isCont,
-                                      onRetry: msg.localStatus == DmLocalStatus.failed
-                                          ? () => _onRetry(msg.clientId ?? '')
-                                          : null,
-                                      onPayRequest: _onPayRequest,
-                                    ),
+                                  child: DmMessageBubble(
+                                    message: msg,
+                                    isMe: isMe,
+                                    isContinuation: isCont,
+                                    isFirst: isFirst,
+                                    isLast: isLast,
+                                    onRetry: msg.localStatus == DmLocalStatus.failed
+                                        ? () => _onRetry(msg.clientId ?? '')
+                                        : null,
+                                    onPayRequest: _onPayRequest,
+                                    onLongPress: _showMessageReactions,
                                   ),
                                 ),
                               ],
