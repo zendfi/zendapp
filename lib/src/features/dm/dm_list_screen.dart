@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
@@ -198,7 +198,7 @@ class _DmListScreenState extends State<DmListScreen> {
             // ── Thread list ──
             Expanded(
               child: _loading
-                  ? const Center(child: ZendLoader(size: 24))
+                  ? const DmListSkeleton()
                   : displayThreads.isEmpty
                       ? _searchQuery.isNotEmpty
                           ? Center(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -46,6 +47,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   String? _nextCursor;
   bool _loadingMore = false;
   bool _showScrollToBottom = false;
+  bool _showTimestamps = false;      // revealed by left-edge swipe
+  DmMessage? _replyingTo;           // the message being replied to
 
   final _scrollController = ScrollController();
 
@@ -803,10 +806,23 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
             // ── Messages + scroll-to-bottom ───────────────────────────────
             Expanded(
-              child: Stack(
+              child: GestureDetector(
+                // Swipe left from right edge → reveal timestamps (iMessage style)
+                onHorizontalDragUpdate: (details) {
+                  if (details.delta.dx < -3) {
+                    if (!_showTimestamps) setState(() => _showTimestamps = true);
+                  }
+                },
+                onHorizontalDragEnd: (_) {
+                  if (_showTimestamps) setState(() => _showTimestamps = false);
+                },
+                onHorizontalDragCancel: () {
+                  if (_showTimestamps) setState(() => _showTimestamps = false);
+                },
+                child: Stack(
                 children: [
                   _loading
-                      ? const Center(child: ZendLoader(size: 24))
+                      ? const DmThreadSkeleton()
                       : ListView.builder(
                           controller: _scrollController,
                           reverse: true,
@@ -861,6 +877,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                     isContinuation: isCont,
                                     isFirst: isFirst,
                                     isLast: isLast,
+                                    showTimestamp: _showTimestamps,
+                                    onReply: (m) => setState(() => _replyingTo = m),
                                     onRetry: msg.localStatus == DmLocalStatus.failed
                                         ? () => _onRetry(msg.clientId ?? '')
                                         : null,
@@ -880,12 +898,30 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   // ── Scroll-to-bottom button ─────────────────────────────
                   _buildScrollToBottomButton(zt),
                 ],
+              ),  // close Stack
+              ),  // close GestureDetector child
+            ),  // close Expanded
+
+            // Reply strip - shown when user swipes right on a message
+            if (_replyingTo != null)
+              _ReplyStrip(
+                message: _replyingTo!,
+                currentUserId: model.currentUserId ?? '',
+                onCancel: () => setState(() => _replyingTo = null),
               ),
-            ),
 
             // ── Input ─────────────────────────────────────────────────────
             DmInputBar(
-              onSend: _onSend,
+              onSend: (text) {
+                // If replying, prepend a quote marker — simple inline quote
+                if (_replyingTo != null) {
+                  final quoted = _replyingTo!;
+                  setState(() => _replyingTo = null);
+                  _onSend('↩ ${quoted.content ?? ''}\n$text');
+                } else {
+                  _onSend(text);
+                }
+              },
               onTyping: (v) => _ws.sendTyping(v),
               roomId: widget.roomId,
               onSendVibe: _onSendVibe,
@@ -902,6 +938,70 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 // ── Chat menu ─────────────────────────────────────────────────────────────────
 
 enum _ChatMenuAction { viewContact, searchInChat, disappearing, clearChat, block }
+
+// ── Reply strip ───────────────────────────────────────────────────────────────
+
+class _ReplyStrip extends StatelessWidget {
+  const _ReplyStrip({
+    required this.message,
+    required this.currentUserId,
+    required this.onCancel,
+  });
+
+  final DmMessage message;
+  final String currentUserId;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final isMe = message.senderUserId == currentUserId;
+    final preview = switch (message.type) {
+      DmMessageType.payment => '💸 Payment',
+      DmMessageType.vibe => '✨ Vibe',
+      DmMessageType.paymentRequest => '↙ Payment request',
+      _ => message.content ?? '',
+    };
+    final previewShort = preview.length > 50 ? '${preview.substring(0, 50)}…' : preview;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      color: zt.bgSecondary,
+      child: Row(
+        children: [
+          // Accent bar
+          Container(width: 3, height: 32, decoration: BoxDecoration(color: zt.accent, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isMe ? 'Replying to yourself' : 'Replying to @${message.senderZendtag ?? '…'}',
+                  style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  previewShort,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onCancel,
+            icon: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator({required this.avatarUrl, required this.initial});

@@ -65,24 +65,22 @@ class DmMessageBubble extends StatefulWidget {
     this.onRetry,
     this.onPayRequest,
     this.onLongPress,
+    this.onReply,
+    this.showTimestamp = false,
   });
 
   final DmMessage message;
   final bool isMe;
-
-  /// True if this is NOT the first in a run (i.e. same sender, short gap above).
-  /// When true the top inner corner is compressed.
   final bool isContinuation;
-
-  /// True if this is the first bubble in a consecutive run (topmost).
   final bool isFirst;
-
-  /// True if this is the last bubble in a consecutive run (gets the tail).
   final bool isLast;
-
   final VoidCallback? onRetry;
   final void Function(DmPaymentRequestData)? onPayRequest;
   final void Function(BuildContext, DmMessage, Offset)? onLongPress;
+  /// Called when the user swipes right to reply to this message.
+  final void Function(DmMessage)? onReply;
+  /// When true, the exact timestamp is shown (revealed by left-edge swipe).
+  final bool showTimestamp;
 
   @override
   State<DmMessageBubble> createState() => _DmMessageBubbleState();
@@ -93,20 +91,49 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   late final AnimationController _arrivalCtrl;
   late final Animation<double> _scaleAnim;
   bool _pressed = false;
+  double _swipeDx = 0.0;   // tracks swipe-right offset for reply gesture
+  bool _replyTriggered = false;
+  OverlayEntry? _heartOverlay;
+
+  void _showHeartPop(BuildContext ctx) {
+    _heartOverlay?.remove();
+    final renderBox = ctx.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+    final center = Offset(offset.dx + size.width / 2, offset.dy + size.height / 2);
+    final overlay = Overlay.of(ctx);
+    late OverlayEntry entry;
+    entry = OverlayEntry(builder: (_) => _HeartPopup(
+      position: center,
+      onDone: () { entry.remove(); _heartOverlay = null; },
+    ));
+    _heartOverlay = entry;
+    overlay.insert(entry);
+  }
 
   @override
   void initState() {
     super.initState();
     _arrivalCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: const Duration(milliseconds: 420),
     );
 
-    // Spring-like bounce: overshoot then settle
+    // Spring bounce on arrival — fast approach with slight overshoot
     _scaleAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.05).chain(CurveTween(curve: Curves.easeOut)), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.05, end: 0.97).chain(CurveTween(curve: Curves.easeInOut)), weight: 25),
-      TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 25),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.82, end: 1.06)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 55),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.06, end: 0.97)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 25),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.97, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 20),
     ]).animate(_arrivalCtrl);
 
     // Animate only on fresh (sending) messages
@@ -120,6 +147,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   @override
   void dispose() {
     _arrivalCtrl.dispose();
+    _heartOverlay?.remove();
     super.dispose();
   }
 
@@ -143,8 +171,13 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           onRetry: widget.onRetry),
     };
 
-    // Press feedback + long-press → reactions
+    // Press feedback + double-tap heart + long-press → full reactions
     child = GestureDetector(
+      onDoubleTap: () {
+        HapticFeedback.lightImpact();
+        // Double-tap drops an instant heart — pop then fade out
+        _showHeartPop(context);
+      },
       onLongPressStart: (details) {
         HapticFeedback.mediumImpact();
         widget.onLongPress?.call(context, widget.message, details.globalPosition);
@@ -152,6 +185,28 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => Future.delayed(const Duration(milliseconds: 80), () { if (mounted) setState(() => _pressed = false); }),
       onTapCancel: () => setState(() => _pressed = false),
+      // Swipe right → reply
+      onHorizontalDragUpdate: (details) {
+        if (details.delta.dx > 0 && widget.onReply != null) {
+          setState(() {
+            _swipeDx = (_swipeDx + details.delta.dx).clamp(0.0, 72.0);
+          });
+          if (_swipeDx >= 56 && !_replyTriggered) {
+            _replyTriggered = true;
+            HapticFeedback.lightImpact();
+          }
+        }
+      },
+      onHorizontalDragEnd: (_) {
+        if (_replyTriggered) {
+          widget.onReply?.call(widget.message);
+        }
+        setState(() {
+          _swipeDx = 0.0;
+          _replyTriggered = false;
+        });
+      },
+      onHorizontalDragCancel: () => setState(() { _swipeDx = 0.0; _replyTriggered = false; }),
       child: AnimatedScale(
         scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 80),
@@ -159,6 +214,63 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         child: child,
       ),
     );
+
+    // Swipe-right offset transform — pulls bubble right with spring-back
+    if (_swipeDx > 0) {
+      child = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Reply icon revealed behind the bubble
+          Positioned(
+            left: widget.isMe ? null : 0,
+            right: widget.isMe ? 0 : null,
+            top: 0, bottom: 0,
+            child: Opacity(
+              opacity: (_swipeDx / 56.0).clamp(0.0, 1.0),
+              child: Center(
+                child: Icon(
+                  SolarIconsBold.altArrowLeft,
+                  size: 18,
+                  color: _replyTriggered
+                      ? ZendTheme.of(context).accent
+                      : ZendTheme.of(context).textSecondary,
+                ),
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: Offset(_swipeDx, 0),
+            child: child,
+          ),
+        ],
+      );
+    }
+
+    // Timestamp reveal — shown when parent sets showTimestamp = true
+    if (widget.showTimestamp) {
+      child = Row(
+        mainAxisAlignment: widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (widget.isMe)
+            Padding(
+              padding: const EdgeInsets.only(right: 8, bottom: 2),
+              child: Text(
+                _exactTime(widget.message.createdAt),
+                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
+              ),
+            ),
+          Flexible(child: child),
+          if (!widget.isMe)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 2),
+              child: Text(
+                _exactTime(widget.message.createdAt),
+                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
+              ),
+            ),
+        ],
+      );
+    }
 
     // Arrival bounce
     child = AnimatedBuilder(
@@ -463,6 +575,13 @@ class DmPaymentRequestBubble extends StatelessWidget {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/// Exact HH:MM timestamp for the "swipe left to reveal" feature.
+String _exactTime(DateTime dt) {
+  final h = dt.hour.toString().padLeft(2, '0');
+  final m = dt.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
 String _formatTime(DateTime dt) {
   final now = DateTime.now();
   final diff = now.difference(dt);
@@ -477,4 +596,71 @@ String _formatTime(DateTime dt) {
 String _weekday(int w) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return days[(w - 1).clamp(0, 6)];
+}
+
+// ── Heart popup — double-tap reaction ────────────────────────────────────────
+
+class _HeartPopup extends StatefulWidget {
+  const _HeartPopup({required this.position, required this.onDone});
+  final Offset position;
+  final VoidCallback onDone;
+
+  @override
+  State<_HeartPopup> createState() => _HeartPopupState();
+}
+
+class _HeartPopupState extends State<_HeartPopup>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+  late final Animation<double> _rise;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3).chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 20),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 30),
+    ]).animate(_ctrl);
+    _opacity = TweenSequence([
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 40),
+    ]).animate(_ctrl);
+    _rise = Tween<double>(begin: 0, end: -40)
+        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.4, 1.0, curve: Curves.easeOut)));
+
+    _ctrl.forward().then((_) => widget.onDone());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: widget.position.dx - 24,
+      top: widget.position.dy - 24,
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (ctx, _) => Transform.translate(
+            offset: Offset(0, _rise.value),
+            child: Opacity(
+              opacity: _opacity.value.clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: _scale.value,
+                child: const Text('❤️', style: TextStyle(fontSize: 42, decoration: TextDecoration.none)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
