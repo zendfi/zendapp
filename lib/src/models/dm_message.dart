@@ -208,13 +208,15 @@ class DmMessage {
       vibeData: vibeData,
       paymentRequestData: paymentRequestData,
       clientId: json['client_id'] as String?,
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now()).toLocal(),
       reactions: (json['reactions'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>()
           .map(DmReaction.fromJson)
           .toList(),
-      replyToContent: json['reply_to_content'] as String?,
-      replyToSenderZendtag: json['reply_to_sender_zendtag'] as String?,
+      replyToContent: json['reply_to_content'] as String?
+          ?? meta['reply_to_content'] as String?,
+      replyToSenderZendtag: json['reply_to_sender_zendtag'] as String?
+          ?? meta['reply_to_sender_zendtag'] as String?,
     );
   }
 

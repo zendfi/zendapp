@@ -40,6 +40,11 @@ class DmService {
     _messageCache.clear();
   }
 
+  /// Clears the cached messages for a single room (e.g. after "Clear chat").
+  void clearRoomCache(String roomId) {
+    _messageCache.remove(roomId);
+  }
+
   /// Lists all DM threads for the current user, sorted by recency.
   Future<List<DmThread>> listThreads() async {
     final response = await _apiClient.dio.get('/api/zend/dm');
@@ -111,17 +116,29 @@ class DmService {
   }
 
   /// Sends a text message via HTTP (WebSocket fallback path).
+  /// [replyToContent] and [replyToSenderZendtag] are optional reply metadata
+  /// stored in the message's JSON metadata so they survive server round-trips.
   Future<DmMessage> sendMessage(
     String roomId,
     String content,
-    String clientId,
-  ) async {
+    String clientId, {
+    String? replyToContent,
+    String? replyToSenderZendtag,
+  }) async {
+    final data = <String, dynamic>{
+      'content': content,
+      'client_id': clientId,
+    };
+    if (replyToContent != null || replyToSenderZendtag != null) {
+      data['metadata'] = {
+        'reply_to_content': replyToContent,
+        'reply_to_sender_zendtag': replyToSenderZendtag,
+      };
+    }
     final response = await _apiClient.dio.post(
       '/api/zend/dm/$roomId/messages',
-      data: {'content': content, 'client_id': clientId},
+      data: data,
     );
-    // Server returns minimal data — we return our own optimistic message
-    // since the local message is already in the UI.
     return DmMessage.fromJson({
       'id': response.data['id'] as String? ?? clientId,
       'room_id': roomId,
@@ -131,6 +148,8 @@ class DmService {
       'client_id': clientId,
       'created_at': response.data['created_at'] as String? ??
           DateTime.now().toIso8601String(),
+      'reply_to_content': replyToContent,
+      'reply_to_sender_zendtag': replyToSenderZendtag,
     });
   }
 

@@ -18,7 +18,6 @@ import 'connected_apps_screen.dart';
 import 'security_settings_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
-import 'customise_page_screen.dart';
 import '../request/payment_requests_screen.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -133,11 +132,6 @@ class ProfileScreen extends StatelessWidget {
                         icon: SolarIconsBold.link,
                         label: 'Connected apps',
                         onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
-                      ),
-                      _Tile(
-                        icon: SolarIconsBold.palette,
-                        label: 'Customise payment page',
-                        onTap: () => pushZendSlide(context, const CustomisePageScreen()),
                       ),
                       _Tile(
                         icon: SolarIconsBold.bill,

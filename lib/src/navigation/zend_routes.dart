@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Zend navigation route — spring-physics slide transition.
+/// Zend navigation route — fast slide-in transition.
 ///
-/// Incoming screen: slides in from right with a spring-like overshoot.
-/// Background screen: scales down slightly and dims, like iOS/Spring animations.
-/// This gives the "breathing" feel — screens feel alive, not mechanical.
+/// Incoming screen slides in from the right. No background scale/fade —
+/// compositing a Transform.scale + FadeTransition on the outgoing screen
+/// every frame is expensive, especially with BackdropFilter surfaces present.
+/// A clean slide is faster on all devices and still reads as directional.
 PageRoute<T> zendRoute<T>({required Widget page}) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) => page,
-    // 280ms feels instant but still gives visual context — 420ms was too slow.
-    transitionDuration: const Duration(milliseconds: 280),
-    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: const Duration(milliseconds: 260),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      // Incoming: clean easeOut slide — no overshoot (spring overshoot
-      // adds extra frames that feel laggy on mid-range devices).
       final slideIn = Tween<Offset>(
         begin: const Offset(1.0, 0.0),
         end: Offset.zero,
@@ -22,20 +20,7 @@ PageRoute<T> zendRoute<T>({required Widget page}) {
         curve: Curves.easeOutCubic,
       ));
 
-      // Background: subtle scale + dim — keep it light so compositing is fast.
-      final bgScale = Tween<double>(begin: 1.0, end: 0.97)
-          .animate(CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic));
-      final bgFade = Tween<double>(begin: 1.0, end: 0.75)
-          .animate(CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic));
-
-      return AnimatedBuilder(
-        animation: secondaryAnimation,
-        builder: (ctx, outgoing) => Transform.scale(
-          scale: bgScale.value,
-          child: FadeTransition(opacity: bgFade, child: outgoing),
-        ),
-        child: SlideTransition(position: slideIn, child: child),
-      );
+      return SlideTransition(position: slideIn, child: child);
     },
   );
 }

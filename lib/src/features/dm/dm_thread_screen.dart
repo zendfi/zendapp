@@ -318,7 +318,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       final idx = _messages.indexWhere((m) => m.clientId == clientId);
       if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
-        model.dmService.sendMessage(widget.roomId, text, clientId).then((_) {
+        model.dmService.sendMessage(
+          widget.roomId, text, clientId,
+          replyToContent: quoteContent,
+          replyToSenderZendtag: quotedMsg.senderZendtag,
+        ).then((_) {
           if (mounted) {
             setState(() {
               final i = _messages.indexWhere((m) => m.clientId == clientId);
@@ -798,6 +802,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         break; // coming soon
       case _ChatMenuAction.clearChat:
         setState(() => _messages.clear());
+        ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
         );
@@ -1052,7 +1057,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       : ListView.builder(
                           controller: _scrollController,
                           reverse: true,
-                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                           itemCount: _messages.length +
                               (_theyAreTyping ? 1 : 0) +
                               (_loadingMore ? 1 : 0),
