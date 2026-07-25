@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
 import '../../data/local/pool_message_repository.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
@@ -938,9 +940,7 @@ class _MissionRoomState extends State<MissionRoom> {
         // ── Message list ──
         Expanded(
           child: _loading
-              ? Center(
-                  child: ZendLoader(color: ZendTheme.of(context).accentBright),
-                )
+              ? const MissionRoomSkeleton()
               : _messages.isEmpty
                   ? Center(
                       child: Text(
@@ -1345,10 +1345,13 @@ class _InputBarState extends State<_InputBar> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final zt = ZendTheme.of(context);
 
-    return Container(
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
       decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        border: Border(top: BorderSide(color: zt.border)),
+        color: zt.bgPrimary.withValues(alpha: 0.82),
+        border: Border(top: BorderSide(color: zt.border.withValues(alpha: 0.35), width: 0.5)),
       ),
       padding: EdgeInsets.fromLTRB(ZendSpacing.md, 10, ZendSpacing.md, 12 + bottomInset),
       child: widget.isRecording
@@ -1414,6 +1417,12 @@ class _InputBarState extends State<_InputBar> {
                     decoration: BoxDecoration(
                       color: zt.bgSecondary,
                       borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.55),
+                          width: 0.5,
+                        ),
+                      ),
                     ),
                     padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
                     child: TextField(
@@ -1467,6 +1476,8 @@ class _InputBarState extends State<_InputBar> {
                 ),
               ],
             ),
+        ),
+        ),
     );
   }
 }

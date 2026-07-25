@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
@@ -268,7 +269,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
               child: RefreshIndicator(
                 onRefresh: () => model.fetchHistory(),
                 child: model.historyLoading && model.recentTransactions.isEmpty
-                    ? Center(child: ZendLoader(size: 24))
+                    ? const ActivityFeedSkeleton()
                     : items.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),

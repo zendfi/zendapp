@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
@@ -200,10 +200,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             if (_remoteUsers.isNotEmpty || _loadingUsers) ...[
                               _SectionHeader(label: 'Users', zt: zt),
                               if (_loadingUsers && _remoteUsers.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Center(child: ZendLoader(size: 18)),
-                                )
+                                const SearchUsersSkeleton()
                               else
                                 ..._remoteUsers.map((u) => _UserTile(
                                       zendtag: u['zendtag'] as String? ?? '',

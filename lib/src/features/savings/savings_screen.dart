@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/savings_models.dart';
@@ -144,9 +145,7 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: ZendLoader(color: ZendColors.accentBright),
-    );
+    return const SavingsSkeleton();
   }
 }
 

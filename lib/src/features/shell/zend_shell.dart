@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -226,14 +227,19 @@ class _ZendShellState extends State<ZendShell> {
       const DmListScreen(),
     ];
 
+    // Wrap each page in AutomaticKeepAlive so the PageView keeps all tabs
+    // alive — prevents full rebuilds when switching between tabs.
+    final keepAlivePages = pages
+        .map((p) => _KeepAlive(child: p))
+        .toList();
+
     return Scaffold(
       body: Stack(
         children: [
           PageView(
             controller: _pageController,
-            // Use clamping so pages don't bounce past the edges.
-            // The Send screen uses a tap-based amount input, not a
-            // horizontal scroll, so swiping all tabs works cleanly.
+            // Keep all pages alive so switching tabs doesn't rebuild heavy
+            // screens (activity feed, DM list) from scratch on every tap.
             physics: const ClampingScrollPhysics(),
             onPageChanged: (i) {
               if (i != _tabIndex) {
@@ -250,7 +256,7 @@ class _ZendShellState extends State<ZendShell> {
                 }
               }
             },
-            children: pages,
+            children: keepAlivePages,
           ),
           // In-app payment request banner
           if (pending != null)
@@ -351,11 +357,15 @@ class ZendBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSendTab = currentIndex == 1;
-    final bgColor = onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D);
     final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
 
-    return ColoredBox(
-      color: bgColor,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: ColoredBox(
+      color: onSendTab
+          ? ZendColors.bgDeep.withValues(alpha: 0.82)
+          : const Color(0xFF0D0D0D).withValues(alpha: 0.76),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -399,6 +409,8 @@ class ZendBottomBar extends StatelessWidget {
           ),
         ],
       ),
+        ),  // close ColoredBox
+        ),  // close ClipRect
     );
   }
 }
@@ -536,21 +548,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Material(
             color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                // Banner uses elevated dark surface — neutral, not green
-                color: const Color(0xFF252525),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF2A2A2A)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x60000000),
-                    blurRadius: 16,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
+            child: _GlassBannerBox(
               child: Row(
                 children: [
                   // Icon
@@ -689,14 +687,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Material(
             color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF252525),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF2A2A2A)),
-                boxShadow: const [BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4))],
-              ),
+            child: _GlassBannerBox(
               child: Row(
                 children: [
                   Container(
@@ -777,14 +768,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Material(
             color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF252525),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF2A2A2A)),
-                boxShadow: const [BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4))],
-              ),
+            child: _GlassBannerBox(
               child: Row(
                 children: [
                   Container(
@@ -884,16 +868,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
             onTap: widget.onTap,
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF252525),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF2A2A2A)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x60000000), blurRadius: 16, offset: Offset(0, 4)),
-                  ],
-                ),
+              child: _GlassBannerBox(
                 child: Row(
                   children: [
                     Container(
@@ -944,5 +919,70 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
         ),
       ),
     );
+  }
+}
+
+// ── Shared glass banner container ────────────────────────────────────────────
+//
+// All four in-app notification banners use this wrapper so they share
+// identical frosted-glass treatment: real BackdropFilter blur, semi-opaque
+// elevated surface, and a hairline white bevel on top.
+
+class _GlassBannerBox extends StatelessWidget {
+  const _GlassBannerBox({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF252525).withValues(alpha: 0.80),
+            borderRadius: BorderRadius.circular(14),
+            border: Border(
+              top:    BorderSide(color: Colors.white.withValues(alpha: 0.07), width: 0.5),
+              left:   BorderSide(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
+              right:  BorderSide(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
+              bottom: BorderSide(color: Colors.black.withValues(alpha: 0.15), width: 0.5),
+            ),
+            boxShadow: const [
+              BoxShadow(color: Color(0x40000000), blurRadius: 12, offset: Offset(0, 4)),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Keep-alive wrapper ────────────────────────────────────────────────────────
+//
+// Wrapping each PageView child in this widget tells Flutter to keep the page
+// in the widget tree even when it's not the active tab. Without this, every
+// tab switch tears down and rebuilds the entire screen — which is the root
+// cause of the lag when switching between Activity, Home, and Messages tabs.
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // required by AutomaticKeepAliveClientMixin
+    return widget.child;
   }
 }

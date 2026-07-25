@@ -565,12 +565,17 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                 decoration: BoxDecoration(
                   color: const Color(0x1AF0F0F0),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
-                  border: Border.all(
-                    color: fill > 0
-                        ? ZendColors.accentBright.withValues(alpha: 0.6)
-                        : const Color(0x26F0F0F0),
-                    width: fill > 0 ? 1.5 : 1.0,
-                  ),
+                  border: fill > 0
+                      ? Border.all(
+                          color: ZendColors.accentBright.withValues(alpha: 0.6),
+                          width: 1.5,
+                        )
+                      : const Border(
+                          top:    BorderSide(color: Color(0x2EF0F0F0), width: 0.5),
+                          left:   BorderSide(color: Color(0x18F0F0F0), width: 0.5),
+                          right:  BorderSide(color: Color(0x18F0F0F0), width: 0.5),
+                          bottom: BorderSide(color: Color(0x08000000), width: 0.5),
+                        ),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -645,7 +650,12 @@ class _GlassPill extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0x1AF0F0F0),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: Border.all(color: const Color(0x26F0F0F0)),
+          border: const Border(
+            top:    BorderSide(color: Color(0x2EF0F0F0), width: 0.5),
+            left:   BorderSide(color: Color(0x18F0F0F0), width: 0.5),
+            right:  BorderSide(color: Color(0x18F0F0F0), width: 0.5),
+            bottom: BorderSide(color: Color(0x08000000), width: 0.5),
+          ),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -703,7 +713,12 @@ class _IconPill extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0x1AF0F0F0),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0x26F0F0F0)),
+          border: Border(
+            top:    BorderSide(color: const Color(0x2EF0F0F0), width: 0.5),
+            left:   BorderSide(color: const Color(0x18F0F0F0), width: 0.5),
+            right:  BorderSide(color: const Color(0x18F0F0F0), width: 0.5),
+            bottom: BorderSide(color: const Color(0x08000000), width: 0.5),
+          ),
         ),
         child: Icon(icon, color: const Color(0x99F0F0F0), size: 20),
       ),

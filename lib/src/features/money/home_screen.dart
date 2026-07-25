@@ -569,43 +569,51 @@ class _SavingsCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => pushZendSlide(context, const PocketScreen()),
-      child: Container(
-        height: 118,
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: BoxDecoration(
-          // In dark mode use bgDeep (forest green) — matches the send screen background
-          color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Stack(children: [
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-              Icon(SolarIconsBold.walletMoney, size: 16, color: zt.textSecondary),
-            ]),
-            const SizedBox(height: 3),
-            Text(
-              apyStr,
-              style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontSize: 50,
-                height: 0.92,
-                color: zt.textPrimary,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            height: 118,
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            decoration: BoxDecoration(
+              color: (zt.isDark ? ZendColors.bgDeep : zt.bgCard).withValues(alpha: zt.isDark ? 0.82 : 0.78),
+              borderRadius: BorderRadius.circular(14),
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.50), width: 0.5),
               ),
             ),
-            const Spacer(),
-            model.savingsLoading
-                ? ZendLoader(size: 14, strokeWidth: 1.5, color: zt.textSecondary)
-                : Text(
-                    balanceStr,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 12,
-                      color: zt.textSecondary,
-                    ),
+            child: Stack(children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+                  Icon(SolarIconsBold.walletMoney, size: 16, color: zt.textSecondary),
+                ]),
+                const SizedBox(height: 3),
+                Text(
+                  apyStr,
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSerif',
+                    fontSize: 50,
+                    height: 0.92,
+                    color: zt.textPrimary,
                   ),
-          ]),
-        ]),
+                ),
+                const Spacer(),
+                model.savingsLoading
+                    ? ZendLoader(size: 14, strokeWidth: 1.5, color: zt.textSecondary)
+                    : Text(
+                        balanceStr,
+                        style: TextStyle(
+                          fontFamily: 'DMMono',
+                          fontSize: 12,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+              ]),
+            ]),
+          ),
+        ),
       ),
     );
   }
@@ -625,79 +633,102 @@ class _PoolsCard extends StatelessWidget {
     final participants = model.recentPoolParticipants;
     final displayedCount = participants.length > 2 ? 2 : participants.length;
     final overflow = participants.length - displayedCount;
+    final cardBg = (zt.isDark ? ZendColors.bgDeep : zt.bgCard)
+        .withValues(alpha: zt.isDark ? 0.82 : 0.78);
 
     return GestureDetector(
       onTap: onTap,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
-            height: 118,
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-            decoration: BoxDecoration(
-                color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
-                borderRadius: BorderRadius.circular(14)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Pools',
-                    style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-                Icon(SolarIconsBold.usersGroupTwoRounded,
-                    size: 16, color: zt.textSecondary),
-              ]),
-          const SizedBox(height: 3),
-          if (participants.isNotEmpty)
-            SizedBox(
-              width: (displayedCount * 18 + 4) + (overflow > 0 ? 22 : 0),
-              height: 24,
-              child: Stack(children: [
-                for (var i = 0; i < displayedCount; i++)
-                  Positioned(
-                      left: i * 16.0,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: zt.isDark ? ZendColors.bgDeep : zt.bgCard,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: ZendAvatar(
-                            radius: 12,
-                            photoUrl: participants[i].avatarUrl,
-                            initials: participants[i].avatarLabel,
-                          ),
-                        ),
-                      )),
-                if (overflow > 0)
-                  Positioned(
-                    left: displayedCount * 16.0 + 4,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                          color: zt.bgSecondary,
-                          shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: Text('+$overflow',
-                          style: TextStyle(
-                              fontSize: 9,
-                              color: zt.textSecondary)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                height: 118,
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border(
+                    top: BorderSide(
+                      color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.50),
+                      width: 0.5,
                     ),
                   ),
-              ]),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Pools', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
+                        Icon(SolarIconsBold.usersGroupTwoRounded, size: 16, color: zt.textSecondary),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    if (participants.isNotEmpty)
+                      SizedBox(
+                        width: (displayedCount * 18 + 4) + (overflow > 0 ? 22 : 0),
+                        height: 24,
+                        child: Stack(
+                          children: [
+                            for (var i = 0; i < displayedCount; i++)
+                              Positioned(
+                                left: i * 16.0,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: cardBg, width: 1.5),
+                                  ),
+                                  child: ClipOval(
+                                    child: ZendAvatar(
+                                      radius: 12,
+                                      photoUrl: participants[i].avatarUrl,
+                                      initials: participants[i].avatarLabel,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (overflow > 0)
+                              Positioned(
+                                left: displayedCount * 16.0 + 4,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: zt.bgSecondary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '+$overflow',
+                                    style: TextStyle(fontSize: 9, color: zt.textSecondary),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    const Spacer(),
+                    Text(
+                      totalStr,
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSerif',
+                        fontSize: 50,
+                        height: 0.92,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          const Spacer(),
-          Text(totalStr,
-              style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
-                  fontSize: 50,
-                  height: 0.92,
-                  color: zt.textPrimary)),
-        ]),
-      ),
+          ),
           // New-message dot — top-right corner, only when there are pool messages
           if (model.hasAnyPoolNewMessage)
             Positioned(

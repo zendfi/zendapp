@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -250,132 +251,129 @@ class _DmInputBarState extends State<DmInputBar>
       mainAxisSize: MainAxisSize.min,
       children: [
         // ── Premium input row ─────────────────────────────────────────────────
-        Container(
-          padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + bottomPad),
-          decoration: BoxDecoration(
-            // Frosted glass treatment — very slight translucency with blur
-            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.97),
-            border: Border(top: BorderSide(color: zt.border.withValues(alpha: 0.35), width: 0.5)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // ── Bare + icon — no background circle ───────────────────────
-              GestureDetector(
-                onTap: _togglePanel,
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  width: 36, height: 44,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                    child: Icon(
-                      _panelOpen ? SolarIconsBold.closeCircle : SolarIconsBold.addSquare,
-                      key: ValueKey(_panelOpen),
-                      size: 22,
-                      color: _panelOpen ? zt.accent : zt.textSecondary,
-                    ),
-                  ),
-                ),
+        ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + bottomPad),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.78),
+                border: Border(top: BorderSide(color: zt.border.withValues(alpha: 0.35), width: 0.5)),
               ),
-              const SizedBox(width: 6),
-
-              // ── Floating frosted pill — stretches end-to-end ─────────────
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: BackdropFilter(
-                    filter: ColorFilter.mode(
-                      zt.bgSecondary.withValues(alpha: 0.0),
-                      BlendMode.srcOver,
-                    ),
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 44, maxHeight: 136),
-                      decoration: BoxDecoration(
-                        // Frosted pill — surface with a soft top highlight
-                        color: zt.bgSecondary,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border(
-                          top: BorderSide(
-                            color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.6),
-                            width: 0.5,
-                          ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // ── Bare + icon — no background circle ─────────────────
+                  GestureDetector(
+                    onTap: _togglePanel,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 36, height: 44,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                        child: Icon(
+                          _panelOpen ? SolarIconsBold.closeCircle : SolarIconsBold.addSquare,
+                          key: ValueKey(_panelOpen),
+                          size: 22,
+                          color: _panelOpen ? zt.accent : zt.textSecondary,
                         ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Text field fills the pill
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 11, 4, 11),
-                              child: TextField(
-                                controller: _ctrl,
-                                focusNode: _focusNode,
-                                onChanged: _onChanged,
-                                onSubmitted: (_) => _send(),
-                                maxLines: 5,
-                                minLines: 1,
-                                style: TextStyle(
-                                  fontFamily: 'DMSans',
-                                  fontSize: 15,
-                                  color: zt.textPrimary,
-                                  height: 1.35,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Message',
-                                  hintStyle: TextStyle(
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+
+                  // ── Floating frosted pill — stretches end-to-end ────────
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 44, maxHeight: 136),
+                        decoration: BoxDecoration(
+                          color: zt.bgSecondary,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.6),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // Text field fills the pill
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 11, 4, 11),
+                                child: TextField(
+                                  controller: _ctrl,
+                                  focusNode: _focusNode,
+                                  onChanged: _onChanged,
+                                  onSubmitted: (_) => _send(),
+                                  maxLines: 5,
+                                  minLines: 1,
+                                  style: TextStyle(
                                     fontFamily: 'DMSans',
                                     fontSize: 15,
-                                    color: zt.textSecondary.withValues(alpha: 0.55),
+                                    color: zt.textPrimary,
+                                    height: 1.35,
                                   ),
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
+                                  decoration: InputDecoration(
+                                    hintText: 'Message',
+                                    hintStyle: TextStyle(
+                                      fontFamily: 'DMSans',
+                                      fontSize: 15,
+                                      color: zt.textSecondary.withValues(alpha: 0.55),
+                                    ),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          // Dynamic send / mic button — inside the pill
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            transitionBuilder: (child, anim) => ScaleTransition(
-                              scale: Tween<double>(begin: 0.7, end: 1.0).animate(
-                                CurvedAnimation(parent: anim, curve: Curves.elasticOut),
+                            // Dynamic send / mic button — inside the pill
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              transitionBuilder: (child, anim) => ScaleTransition(
+                                scale: Tween<double>(begin: 0.7, end: 1.0).animate(
+                                  CurvedAnimation(parent: anim, curve: Curves.elasticOut),
+                                ),
+                                child: FadeTransition(opacity: anim, child: child),
                               ),
-                              child: FadeTransition(opacity: anim, child: child),
-                            ),
-                            child: _hasText
-                                ? GestureDetector(
-                                    key: const ValueKey('send'),
-                                    onTap: _send,
-                                    child: Container(
-                                      width: 32, height: 32,
-                                      margin: const EdgeInsets.only(right: 6, bottom: 6),
-                                      decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
-                                      child: const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
-                                    ),
-                                  )
-                                : GestureDetector(
-                                    key: const ValueKey('mic'),
-                                    onTap: () {}, // voice note placeholder
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(right: 10, bottom: 11),
-                                      child: Icon(
-                                        SolarIconsBold.microphone,
-                                        size: 20,
-                                        color: zt.textSecondary.withValues(alpha: 0.6),
+                              child: _hasText
+                                  ? GestureDetector(
+                                      key: const ValueKey('send'),
+                                      onTap: _send,
+                                      child: Container(
+                                        width: 32, height: 32,
+                                        margin: const EdgeInsets.only(right: 6, bottom: 6),
+                                        decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
+                                        child: const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
+                                      ),
+                                    )
+                                  : GestureDetector(
+                                      key: const ValueKey('mic'),
+                                      onTap: () {},
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 10, bottom: 11),
+                                        child: Icon(
+                                          SolarIconsBold.microphone,
+                                          size: 20,
+                                          color: zt.textSecondary.withValues(alpha: 0.6),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
         // ── Action / Vibe panel ───────────────────────────────────────────────

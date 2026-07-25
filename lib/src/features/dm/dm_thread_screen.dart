@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
@@ -117,6 +118,55 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               }
             });
           }
+        case WsFrameType.reaction:
+          final messageId = frame.data['message_id'] as String?;
+          final emoji = frame.data['emoji'] as String?;
+          final reactorUserId = frame.data['reactor_user_id'] as String?;
+          if (messageId != null && emoji != null) {
+            setState(() {
+              final idx = _messages.indexWhere((m) => m.id == messageId);
+              if (idx != -1) {
+                final isMe = reactorUserId == model.currentUserId;
+                final existing = _messages[idx].reactions.indexWhere((r) => r.emoji == emoji);
+                final updated = List<DmReaction>.from(_messages[idx].reactions);
+                if (existing != -1) {
+                  // Only increment if the reactor is not the current user
+                  // (current user already applied it optimistically)
+                  if (!isMe) {
+                    updated[existing] = updated[existing].copyWith(
+                      count: updated[existing].count + 1,
+                    );
+                  }
+                } else {
+                  updated.add(DmReaction(emoji: emoji, count: 1, reactedByMe: isMe));
+                }
+                _messages[idx].reactions = updated;
+              }
+            });
+          }
+        case WsFrameType.reactionRemoved:
+          final messageId = frame.data['message_id'] as String?;
+          final emoji = frame.data['emoji'] as String?;
+          final reactorUserId = frame.data['reactor_user_id'] as String?;
+          if (messageId != null && emoji != null) {
+            setState(() {
+              final idx = _messages.indexWhere((m) => m.id == messageId);
+              if (idx != -1) {
+                final isMe = reactorUserId == model.currentUserId;
+                final updated = _messages[idx].reactions
+                    .map((r) {
+                      if (r.emoji != emoji) return r;
+                      // Don't double-remove for current user (already applied optimistically)
+                      if (isMe) return null;
+                      if (r.count <= 1) return null;
+                      return r.copyWith(count: r.count - 1);
+                    })
+                    .whereType<DmReaction>()
+                    .toList();
+                _messages[idx].reactions = updated;
+              }
+            });
+          }
         default:
           break;
       }
@@ -182,7 +232,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (text.isEmpty) return;
     HapticFeedback.lightImpact();
     final model = ZendScope.of(context);
-    final clientId = DateTime.now().millisecondsSinceEpoch.toString();
+    final clientId = const Uuid().v4();
 
     final optimistic = DmMessage.optimistic(
       roomId: widget.roomId,
@@ -198,8 +248,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // Try WebSocket first
     _ws.sendMessage(clientId, text);
 
-    // HTTP fallback after 2s if WS not confirmed
-    Future.delayed(const Duration(seconds: 2), () {
+    // HTTP fallback after 1.5s if WS ack not received — covers dropped frames
+    // or a WS that went silent without closing cleanly.
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       final idx =
           _messages.indexWhere((m) => m.clientId == clientId);
@@ -221,6 +272,64 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               if (i != -1) {
                 _messages[i].localStatus = DmLocalStatus.failed;
               }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /// Sends a reply message — carries structured quote context so the bubble
+  /// renders a proper in-bubble quote block instead of a text prefix.
+  void _onSendWithReply(String text, DmMessage quotedMsg) {
+    if (text.isEmpty) return;
+    HapticFeedback.lightImpact();
+    final model = ZendScope.of(context);
+    final clientId = const Uuid().v4();
+
+    // Build the quoted preview text
+    final quoteContent = switch (quotedMsg.type) {
+      DmMessageType.payment => '💸 Payment',
+      DmMessageType.vibe    => '✨ Vibe',
+      DmMessageType.paymentRequest => '↙ Payment request',
+      _ => quotedMsg.content ?? '',
+    };
+
+    // Optimistic message with reply fields populated immediately
+    final optimistic = DmMessage(
+      id: 'local-$clientId',
+      roomId: widget.roomId,
+      senderUserId: model.currentUserId ?? '',
+      senderZendtag: model.currentZendtag,
+      senderAvatarUrl: model.currentAvatarUrl,
+      type: DmMessageType.text,
+      content: text,
+      clientId: clientId,
+      createdAt: DateTime.now(),
+      localStatus: DmLocalStatus.sending,
+      replyToContent: quoteContent,
+      replyToSenderZendtag: quotedMsg.senderZendtag,
+    );
+
+    setState(() => _messages.insert(0, optimistic));
+    _ws.sendMessage(clientId, text);
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      final idx = _messages.indexWhere((m) => m.clientId == clientId);
+      if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
+        model.dmService.sendMessage(widget.roomId, text, clientId).then((_) {
+          if (mounted) {
+            setState(() {
+              final i = _messages.indexWhere((m) => m.clientId == clientId);
+              if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+            });
+          }
+        }).catchError((_) {
+          if (mounted) {
+            setState(() {
+              final i = _messages.indexWhere((m) => m.clientId == clientId);
+              if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
             });
           }
         });
@@ -261,6 +370,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void _showMessageReactions(BuildContext ctx, DmMessage msg, Offset globalPos) {
     const emojis = ['🔥', '❤️', '😂', '👏', '🙏', '😭', '💸', '✅', '👑', '🚀', '💯', '👀'];
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final overlay = Overlay.of(context);
@@ -272,6 +382,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     double top = globalPos.dy - trayHeight - 12;
     if (top < 80) top = globalPos.dy + 20; // flip below if near top
     top = top.clamp(80.0, screenHeight - trayHeight - 80);
+
+    // Find the message index so we can update its reactions in place
+    final msgIdx = _messages.indexWhere((m) => m.id == msg.id);
 
     entry = OverlayEntry(builder: (overlayCtx) => Stack(children: [
       Positioned.fill(child: GestureDetector(
@@ -298,22 +411,125 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: emojis.take(8).map((e) => GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  entry.remove();
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Text(e, style: const TextStyle(fontSize: 26, decoration: TextDecoration.none)),
-                ),
-              )).toList(),
+              children: emojis.take(8).map((e) {
+                // Check if the current user already reacted with this emoji
+                final alreadyReacted = msgIdx != -1
+                    ? _messages[msgIdx].reactions.any((r) => r.emoji == e && r.reactedByMe)
+                    : false;
+
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    entry.remove();
+
+                    if (msgIdx == -1) return;
+                    final targetMsg = _messages[msgIdx];
+
+                    if (alreadyReacted) {
+                      // Toggle off — remove the reaction optimistically
+                      setState(() {
+                        final updatedReactions = targetMsg.reactions
+                            .map((r) {
+                              if (r.emoji != e) return r;
+                              if (r.count <= 1) return null; // remove entirely
+                              return r.copyWith(count: r.count - 1, reactedByMe: false);
+                            })
+                            .whereType<DmReaction>()
+                            .toList();
+                        _messages[msgIdx].reactions = updatedReactions;
+                      });
+                      _ws.sendReactionRemoved(targetMsg.id, e);
+                    } else {
+                      // Add the reaction optimistically
+                      setState(() {
+                        final existing = targetMsg.reactions.indexWhere((r) => r.emoji == e);
+                        final updated = List<DmReaction>.from(targetMsg.reactions);
+                        if (existing != -1) {
+                          updated[existing] = updated[existing].copyWith(
+                            count: updated[existing].count + 1,
+                            reactedByMe: true,
+                          );
+                        } else {
+                          updated.add(DmReaction(emoji: e, count: 1, reactedByMe: true));
+                        }
+                        _messages[msgIdx].reactions = updated;
+                      });
+                      _ws.sendReaction(targetMsg.id, e);
+                      // Notify the other party via SSE — the WS fan-out
+                      // handles this server-side automatically.
+                      unawaited(model.dmService.sendMessageReaction(
+                        widget.roomId,
+                        messageId: targetMsg.id,
+                        emoji: e,
+                      ));
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                    decoration: alreadyReacted
+                        ? BoxDecoration(
+                            color: zt.accent.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          )
+                        : null,
+                    child: Text(
+                      e,
+                      style: TextStyle(
+                        fontSize: alreadyReacted ? 24 : 26,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
       ),
     ]));
     overlay.insert(entry);
+
+    // Also handle incoming reaction frames from the WS while the tray is open
+    // (these arrive in _wsSub listener in _initWs)
+  }
+
+  void _onToggleReaction(DmMessage msg, String emoji) {
+    final msgIdx = _messages.indexWhere((m) => m.id == msg.id);
+    if (msgIdx == -1) return;
+    final model = ZendScope.of(context);
+    final targetMsg = _messages[msgIdx];
+    final alreadyReacted = targetMsg.reactions.any((r) => r.emoji == emoji && r.reactedByMe);
+
+    HapticFeedback.selectionClick();
+    if (alreadyReacted) {
+      setState(() {
+        final updated = targetMsg.reactions
+            .map((r) {
+              if (r.emoji != emoji) return r;
+              if (r.count <= 1) return null;
+              return r.copyWith(count: r.count - 1, reactedByMe: false);
+            })
+            .whereType<DmReaction>()
+            .toList();
+        _messages[msgIdx].reactions = updated;
+      });
+      _ws.sendReactionRemoved(targetMsg.id, emoji);
+      unawaited(model.dmService.removeMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
+    } else {
+      setState(() {
+        final existing = targetMsg.reactions.indexWhere((r) => r.emoji == emoji);
+        final updated = List<DmReaction>.from(targetMsg.reactions);
+        if (existing != -1) {
+          updated[existing] = updated[existing].copyWith(count: updated[existing].count + 1, reactedByMe: true);
+        } else {
+          updated.add(DmReaction(emoji: emoji, count: 1, reactedByMe: true));
+        }
+        _messages[msgIdx].reactions = updated;
+      });
+      _ws.sendReaction(targetMsg.id, emoji);
+      unawaited(model.dmService.sendMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
+    }
   }
 
   void _onRetry(String clientId) {
@@ -429,10 +645,20 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     ),
                   ),
                 ),
-                SizedBox(height: 16 + (bottomInset > 0 ? 0 : MediaQuery.of(ctx).viewPadding.bottom)),
-                // Confirm button
+                // Confirm button — always visible above the keyboard.
+                // When the keyboard is up, we push the button up by the
+                // keyboard height (bottomInset). When it's down, we use
+                // the device's bottom safe-area inset + a comfortable 20px
+                // margin so the button never sits flush with the home bar.
                 Padding(
-                  padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset > 0 ? bottomInset : 16),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    bottomInset > 0
+                        ? bottomInset + 8
+                        : MediaQuery.of(ctx).viewPadding.bottom + 20,
+                  ),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -469,7 +695,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   void _sendPaymentRequest(double amount, String? note) {
     final model = ZendScope.of(context);
-    final clientId = 'req_${DateTime.now().millisecondsSinceEpoch}';
+    final clientId = const Uuid().v4();
     final myZendtag = model.currentZendtag ?? '';
 
     // Optimistic message
@@ -584,7 +810,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   Future<void> _onSendVibe(VibeSendResult vibe) async {
     final model = ZendScope.of(context);
-    final clientId = 'vibe_${DateTime.now().millisecondsSinceEpoch}';
+    final clientId = const Uuid().v4();
 
     // 1. Show the optimistic sticker immediately — amount hidden, feels like
     //    sending a sticker. The DmLocalStatus.sending state is invisible to
@@ -884,6 +1110,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                         : null,
                                     onPayRequest: _onPayRequest,
                                     onLongPress: _showMessageReactions,
+                                    onReactionTap: _onToggleReaction,
                                   ),
                                 ),
                               ],
@@ -913,11 +1140,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             // ── Input ─────────────────────────────────────────────────────
             DmInputBar(
               onSend: (text) {
-                // If replying, prepend a quote marker — simple inline quote
                 if (_replyingTo != null) {
                   final quoted = _replyingTo!;
                   setState(() => _replyingTo = null);
-                  _onSend('↩ ${quoted.content ?? ''}\n$text');
+                  // Send with structured reply context — not a text prefix.
+                  // The optimistic message carries replyToContent/replyToSenderZendtag
+                  // so the bubble renders a proper quote block immediately.
+                  _onSendWithReply(text, quoted);
                 } else {
                   _onSend(text);
                 }

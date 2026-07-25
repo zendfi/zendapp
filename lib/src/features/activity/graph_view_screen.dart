@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'graph_model.dart';
@@ -149,7 +149,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
             ),
             Expanded(
               child: (zendModel.threadedActivityLoading && _model == null)
-                  ? Center(child: ZendLoader(size: 24))
+                  ? const GraphViewSkeleton()
                   : (_model == null || _model!.nodes.length <= 1)
                       ? Center(
                           child: Text(

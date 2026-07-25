@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -382,7 +383,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
               child: RefreshIndicator(
                 onRefresh: () => model.fetchThreadedActivity(),
                 child: isLoading
-                    ? Center(child: ZendLoader(size: 24))
+                    ? const ActivityFeedSkeleton()
                     : feedItems.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -113,7 +114,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
             Expanded(
               child: _loading
-                  ? const Center(child: ZendLoader())
+                  ? const UserProfileSkeleton()
                   : _error != null
                       ? _ErrorState(
                           message: _error!,

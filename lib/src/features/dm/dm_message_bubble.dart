@@ -66,6 +66,7 @@ class DmMessageBubble extends StatefulWidget {
     this.onPayRequest,
     this.onLongPress,
     this.onReply,
+    this.onReactionTap,
     this.showTimestamp = false,
   });
 
@@ -79,6 +80,9 @@ class DmMessageBubble extends StatefulWidget {
   final void Function(BuildContext, DmMessage, Offset)? onLongPress;
   /// Called when the user swipes right to reply to this message.
   final void Function(DmMessage)? onReply;
+  /// Called when the user taps a reaction chip directly — carries the emoji
+  /// so the caller can toggle it without reopening the full emoji tray.
+  final void Function(DmMessage, String emoji)? onReactionTap;
   /// When true, the exact timestamp is shown (revealed by left-edge swipe).
   final bool showTimestamp;
 
@@ -285,7 +289,27 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
 
     return Padding(
       padding: EdgeInsets.only(top: topPad, bottom: 1),
-      child: child,
+      child: Column(
+        crossAxisAlignment: widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          child,
+          // ── Reaction chips ─────────────────────────────────────────────
+          if (widget.message.reactions.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(
+                top: 4,
+                left: widget.isMe ? 0 : 36,
+                right: widget.isMe ? 8 : 0,
+              ),
+              child: _ReactionRow(
+                reactions: widget.message.reactions,
+                // Direct toggle — no tray, just flip the emoji immediately
+                onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -315,13 +339,15 @@ class _TextBubble extends StatelessWidget {
   final bool isMe, isFirst, isLast;
   final VoidCallback? onRetry;
 
+  bool get _hasReply =>
+      (message.replyToContent?.isNotEmpty ?? false) ||
+      (message.replyToSenderZendtag?.isNotEmpty ?? false);
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final radius = _bubbleRadius(isMe: isMe, isFirst: isFirst, isLast: isLast);
 
-    // Sent: subtle gradient from accent top to slightly darker bottom
-    // Received: flat surface
     final decoration = isMe
         ? BoxDecoration(
             gradient: LinearGradient(
@@ -335,6 +361,16 @@ class _TextBubble extends StatelessWidget {
             borderRadius: radius,
           )
         : BoxDecoration(color: zt.bgSecondary, borderRadius: radius);
+
+    // Accent bar colour: white on sent, theme accent on received
+    final barColor = isMe
+        ? Colors.white.withValues(alpha: 0.55)
+        : zt.accent;
+
+    // Quote block background: slightly lighter/darker overlay
+    final quoteBg = isMe
+        ? Colors.black.withValues(alpha: 0.18)
+        : zt.bgPrimary;
 
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -350,6 +386,23 @@ class _TextBubble extends StatelessWidget {
               crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // ── Quote block ──────────────────────────────────────────
+                if (_hasReply) ...[
+                  _QuoteBlock(
+                    senderZendtag: message.replyToSenderZendtag,
+                    content: message.replyToContent,
+                    barColor: barColor,
+                    bgColor: quoteBg,
+                    textColor: isMe
+                        ? Colors.white.withValues(alpha: 0.85)
+                        : zt.textPrimary,
+                    labelColor: isMe
+                        ? Colors.white.withValues(alpha: 0.6)
+                        : zt.accent,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                // ── Message body ─────────────────────────────────────────
                 if (message.content?.isNotEmpty == true)
                   Text(
                     message.content!,
@@ -384,6 +437,80 @@ class _TextBubble extends StatelessWidget {
         ),
         if (isMe) const SizedBox(width: 4),
       ],
+    );
+  }
+}
+
+// ── Quote block — WhatsApp-style in-bubble reply ──────────────────────────────
+
+class _QuoteBlock extends StatelessWidget {
+  const _QuoteBlock({
+    required this.senderZendtag,
+    required this.content,
+    required this.barColor,
+    required this.bgColor,
+    required this.textColor,
+    required this.labelColor,
+  });
+
+  final String? senderZendtag;
+  final String? content;
+  final Color barColor;
+  final Color bgColor;
+  final Color textColor;
+  final Color labelColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left accent bar — the hallmark of a quoted reply
+            Container(width: 3, color: barColor),
+            // Quote content
+            Flexible(
+              child: Container(
+                color: bgColor,
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (senderZendtag != null && senderZendtag!.isNotEmpty)
+                      Text(
+                        '@$senderZendtag',
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: labelColor,
+                          height: 1.2,
+                        ),
+                      ),
+                    if (content != null && content!.isNotEmpty) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        content!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 13,
+                          color: textColor,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -501,6 +628,9 @@ class DmPaymentBubble extends StatelessWidget {
 }
 
 // ── Payment request bubble ───────────────────────────────────────────────────
+//
+// Matches the visual weight of DmPaymentBubble: opaque fill, amount dominant,
+// same tail-corner geometry. Purple accent for "request" vs green for "sent".
 
 class DmPaymentRequestBubble extends StatelessWidget {
   const DmPaymentRequestBubble({super.key, required this.message, required this.isMe, this.onPay});
@@ -510,65 +640,124 @@ class DmPaymentRequestBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
     final rd = message.paymentRequestData;
     final amountStr = rd?.amountUsdc ?? '0.00';
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
     final isPending = rd?.isPending ?? true;
-    const purple = Color(0xFF6C63FF);
 
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: EdgeInsets.only(left: isMe ? 60 : 4, right: isMe ? 4 : 60, top: 2, bottom: 2),
-        child: Container(
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-          decoration: BoxDecoration(
-            color: purple.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(_kOuter),
-            border: Border.all(color: purple.withValues(alpha: 0.28), width: 1),
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(SolarIconsBold.squareArrowRightDown, size: 13, color: purple),
-                const SizedBox(width: 4),
-                Text(isMe ? 'You requested' : 'Payment request',
-                  style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: purple, fontWeight: FontWeight.w600)),
-              ]),
-              const SizedBox(height: 6),
-              Text(amountFormatted, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28,
-                fontStyle: FontStyle.italic, color: zt.textPrimary, height: 1.1)),
-              if (rd?.note != null && rd!.note!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(rd.note!, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+    // Same tail corner logic as DmPaymentBubble — the request bubble lives
+    // in the chat stream just like a payment, so it gets identical geometry.
+    // isFirst/isLast default to true (always standalone — not grouped).
+    final borderRadius = _bubbleRadius(isMe: isMe, isFirst: true, isLast: true);
+
+    // Sent by me (requesting money): deep purple-indigo.
+    // Received (someone is requesting money from me): slightly lighter purple.
+    final bg = isMe
+        ? const Color(0xFF2E1D6B)   // deep indigo — "I sent this request"
+        : const Color(0xFF1E1040);  // darker base — "incoming ask"
+    const amountColor = Colors.white;
+    final labelColor = Colors.white.withValues(alpha: 0.5);
+    final noteColor = Colors.white.withValues(alpha: 0.75);
+    const purple = Color(0xFF9B8EFF);  // lighter purple for accents on dark bg
+
+    return Row(
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (!isMe) const SizedBox(width: 4),
+        Flexible(
+          child: Container(
+            constraints: BoxConstraints(
+              minWidth: 120,
+              maxWidth: MediaQuery.of(context).size.width * 0.65,
+            ),
+            decoration: BoxDecoration(color: bg, borderRadius: borderRadius),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 11),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Direction label — small, muted, top
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isMe ? SolarIconsBold.squareArrowRightDown : SolarIconsBold.squareArrowRightUp,
+                      size: 11,
+                      color: purple,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isMe ? 'you requested' : 'requesting payment',
+                      style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                // Amount — dominant, large, white
+                Text(
+                  amountFormatted,
+                  style: const TextStyle(
+                    fontFamily: 'InstrumentSerif',
+                    fontSize: 36,
+                    fontStyle: FontStyle.italic,
+                    color: amountColor,
+                    height: 1.0,
+                  ),
+                ),
+                // Note
+                if (rd?.note != null && rd!.note!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(rd.note!, style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 10),
+                // Action / status
+                if (!isMe && isPending && onPay != null)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onPay,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: purple,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w700)),
+                    ),
+                  )
+                else if (isMe && isPending)
+                  Text(
+                    'Waiting for payment…',
+                    style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor),
+                  )
+                else if (!isPending)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Paid',
+                        style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    _formatTime(message.createdAt),
+                    style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor),
+                  ),
+                ),
               ],
-              const SizedBox(height: 10),
-              if (!isMe && isPending && onPay != null)
-                SizedBox(width: double.infinity, child: ElevatedButton(
-                  onPressed: onPay,
-                  style: ElevatedButton.styleFrom(backgroundColor: purple, foregroundColor: Colors.white, elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
-                    padding: const EdgeInsets.symmetric(vertical: 10)),
-                  child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w700)),
-                ))
-              else if (isMe && isPending)
-                Text('Waiting for payment…', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary))
-              else if (!isPending)
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
-                  const SizedBox(width: 4),
-                  Text('Paid', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
-                ]),
-              const SizedBox(height: 6),
-              Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
-            ],
+            ),
           ),
         ),
-      ),
+        if (isMe) const SizedBox(width: 4),
+      ],
     );
   }
 }
@@ -596,6 +785,66 @@ String _formatTime(DateTime dt) {
 String _weekday(int w) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return days[(w - 1).clamp(0, 6)];
+}
+
+// ── Reaction row ──────────────────────────────────────────────────────────────
+
+class _ReactionRow extends StatelessWidget {
+  const _ReactionRow({required this.reactions, required this.onTap});
+
+  final List<DmReaction> reactions;
+  final void Function(String emoji) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: reactions.map((r) {
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap(r.emoji);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: r.reactedByMe
+                  ? zt.accent.withValues(alpha: 0.2)
+                  : zt.bgSecondary,
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+              border: Border.all(
+                color: r.reactedByMe
+                    ? zt.accent.withValues(alpha: 0.5)
+                    : zt.border.withValues(alpha: 0.4),
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(r.emoji, style: const TextStyle(fontSize: 13, decoration: TextDecoration.none)),
+                if (r.count > 1) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    '${r.count}',
+                    style: TextStyle(
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 // ── Heart popup — double-tap reaction ────────────────────────────────────────

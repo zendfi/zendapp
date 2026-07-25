@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
-import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import 'activity_comment_sheet.dart';
@@ -139,7 +139,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
             Divider(color: zt.border, height: 1),
             Expanded(
               child: _loading
-                  ? Center(child: ZendLoader(size: 24))
+                  ? const PersonActivitySkeleton()
                   : _error != null
                       ? Center(
                           child: Text(

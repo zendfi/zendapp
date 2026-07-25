@@ -55,9 +55,24 @@ class DmService {
   /// Gets or creates a DM room with the given user and returns the canonical
   /// room_id from the server. This is the single source of truth — never
   /// compute room_id client-side.
+  ///
+  /// Fast path: if the thread is already in [cachedThreads] we return
+  /// immediately without a network round-trip. The server stays the source of
+  /// truth — the cache is only used to avoid the API call when we already have
+  /// the room_id (e.g. navigating from the Activity page to a person you've
+  /// already chatted with).
   Future<({String roomId, DmCounterparty counterparty})> getOrCreateRoom(
     String otherUserId,
   ) async {
+    // ── Cache-first lookup ────────────────────────────────────────────────
+    final cached = cachedThreads
+        .where((t) => t.counterparty.userId == otherUserId)
+        .firstOrNull;
+    if (cached != null) {
+      return (roomId: cached.roomId, counterparty: cached.counterparty);
+    }
+
+    // ── Network fallback ──────────────────────────────────────────────────
     final response = await _apiClient.dio.get(
       '/api/zend/dm/with/$otherUserId',
     );
@@ -128,6 +143,41 @@ class DmService {
       );
     } on DioException catch (_) {
       // Non-fatal — unread count will sync on next thread list fetch.
+    }
+  }
+
+  /// Sends a reaction on a DM message via HTTP (so the server can fan-out
+  /// notifications to the other party). The WS path already handles live
+  /// delivery to connected clients; this call ensures the reaction is
+  /// persisted and the counterparty gets notified even if they're offline.
+  Future<void> sendMessageReaction(
+    String roomId, {
+    required String messageId,
+    required String emoji,
+  }) async {
+    try {
+      await _apiClient.dio.post(
+        '/api/zend/dm/$roomId/messages/$messageId/react',
+        data: {'emoji': emoji},
+      );
+    } on DioException catch (_) {
+      // Non-fatal — the optimistic UI update already happened.
+    }
+  }
+
+  /// Removes a reaction from a DM message.
+  Future<void> removeMessageReaction(
+    String roomId, {
+    required String messageId,
+    required String emoji,
+  }) async {
+    try {
+      await _apiClient.dio.delete(
+        '/api/zend/dm/$roomId/messages/$messageId/react',
+        data: {'emoji': emoji},
+      );
+    } on DioException catch (_) {
+      // Non-fatal — the optimistic UI update already happened.
     }
   }
 
