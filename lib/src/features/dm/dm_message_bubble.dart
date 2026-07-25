@@ -8,40 +8,45 @@ import '../vibes/vibe_message_bubble.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 
-/// Full outer radius — always applied to the "far" corners.
+/// Full outer radius — always applied to all corners.
 const double _kOuter = 20.0;
 
-/// Compressed inner radius — for the "near" corners in a grouped run.
-/// Gives the iMessage look: soft overall, but tight at group joints.
-const double _kInner = 5.0;
-
-/// Tail radius — the very bottom corner that "points" toward the sender avatar.
+/// Tail radius — the sharp "beak" corner that points toward the sender.
 const double _kTail = 4.0;
 
 /// Computes the 4-corner BorderRadius for a bubble given its position in a
-/// message group — WhatsApp style: the tail appears on the FIRST (topmost)
-/// bubble in a run, not the last. For sent messages the tail is top-right;
-/// for received messages it is top-left. Grouped follow-on bubbles tighten
-/// the inner corner to [_kInner], creating the merged-run look.
+/// message group — asymmetric per the design spec:
+///
+/// Sender (right):
+///   • FIRST bubble in the run → sharp top-right corner (the "beak/tail")
+///   • All other bubbles in the run → all corners fully rounded
+///
+/// Receiver (left):
+///   • LAST bubble in the run → sharp bottom-left corner (the "beak/tail"),
+///     aligned with the avatar that only appears on this bubble
+///   • All other bubbles in the run → all corners fully rounded
+///
+/// Non-grouped (solo) messages are both isFirst AND isLast simultaneously,
+/// so they get the tail on the correct corner with everything else rounded.
 BorderRadius _bubbleRadius({
   required bool isMe,
   required bool isFirst,
   required bool isLast,
 }) {
   if (isMe) {
-    // Sent: tail (sharp corner) at top-right of the first bubble in the run
+    // Sent: tail (sharp corner) only at top-right of the FIRST bubble
     return BorderRadius.only(
       topLeft:     const Radius.circular(_kOuter),
-      topRight:    Radius.circular(isFirst ? _kTail : _kInner),
+      topRight:    Radius.circular(isFirst ? _kTail : _kOuter),
       bottomLeft:  const Radius.circular(_kOuter),
-      bottomRight: Radius.circular(isLast ? _kOuter : _kInner),
+      bottomRight: const Radius.circular(_kOuter),
     );
   } else {
-    // Received: tail at top-left of the first bubble
+    // Received: tail (sharp corner) only at bottom-left of the LAST bubble
     return BorderRadius.only(
-      topLeft:    Radius.circular(isFirst ? _kTail : _kInner),
-      topRight:   const Radius.circular(_kOuter),
-      bottomLeft: Radius.circular(isLast ? _kOuter : _kInner),
+      topLeft:     const Radius.circular(_kOuter),
+      topRight:    const Radius.circular(_kOuter),
+      bottomLeft:  Radius.circular(isLast ? _kTail : _kOuter),
       bottomRight: const Radius.circular(_kOuter),
     );
   }
@@ -88,11 +93,12 @@ class DmMessageBubble extends StatefulWidget {
 }
 
 class _DmMessageBubbleState extends State<DmMessageBubble>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _arrivalCtrl;
   late final Animation<double> _scaleAnim;
-  bool _pressed = false;
-  double _swipeDx = 0.0;   // tracks swipe-right offset for reply gesture
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressAnim;
+  double _swipeDx = 0.0;
   bool _replyTriggered = false;
   OverlayEntry? _heartOverlay;
 
@@ -116,38 +122,79 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   @override
   void initState() {
     super.initState();
+
+    // ── Arrival bounce ────────────────────────────────────────────────────
+    // Plays on:
+    //   • Outgoing optimistic messages (localStatus == sending)
+    //   • Incoming WS messages (id does NOT start with 'local-', newly created)
+    // Skipped for messages loaded from history (isContinuation implied by
+    // the fact that they were already in the cache when the screen opened).
     _arrivalCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 380),
     );
 
-    // Spring bounce on arrival — fast approach with slight overshoot
+    // Spring pop: fast scale-up with overshoot, then settle.
+    // Starts from 0.0 so the bubble literally pops in from nothing.
     _scaleAnim = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 0.82, end: 1.06)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 55),
+          tween: Tween(begin: 0.0, end: 1.08)
+              .chain(CurveTween(curve: Curves.easeOutCubic)),
+          weight: 60),
       TweenSequenceItem(
-          tween: Tween(begin: 1.06, end: 0.97)
+          tween: Tween(begin: 1.08, end: 0.95)
               .chain(CurveTween(curve: Curves.easeInOut)),
-          weight: 25),
+          weight: 20),
       TweenSequenceItem(
-          tween: Tween(begin: 0.97, end: 1.0)
+          tween: Tween(begin: 0.95, end: 1.0)
               .chain(CurveTween(curve: Curves.easeOut)),
           weight: 20),
     ]).animate(_arrivalCtrl);
 
-    // Animate only on fresh (sending) messages
-    if (widget.message.localStatus == DmLocalStatus.sending) {
+    final shouldAnimate = widget.message.localStatus == DmLocalStatus.sending ||
+        (!widget.message.id.startsWith('local-') &&
+         widget.message.createdAt.isAfter(DateTime.now().subtract(const Duration(seconds: 3))));
+
+    if (shouldAnimate) {
       _arrivalCtrl.forward();
     } else {
       _arrivalCtrl.value = 1.0;
     }
+
+    // ── Press spring ──────────────────────────────────────────────────────
+    // Quick squish down then springy release — feels physical.
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _pressAnim = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.93)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 50),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.93, end: 1.0)
+              .chain(CurveTween(curve: Curves.elasticOut)),
+          weight: 50),
+    ]).animate(_pressCtrl);
+  }
+
+  void _onTapDown(TapDownDetails _) {
+    _pressCtrl.forward(from: 0);
+  }
+
+  void _onTapUp(TapUpDetails _) {
+    // Spring releases naturally through the animation
+  }
+
+  void _onTapCancel() {
+    _pressCtrl.reverse();
   }
 
   @override
   void dispose() {
     _arrivalCtrl.dispose();
+    _pressCtrl.dispose();
     _heartOverlay?.remove();
     super.dispose();
   }
@@ -176,16 +223,15 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     child = GestureDetector(
       onDoubleTap: () {
         HapticFeedback.lightImpact();
-        // Double-tap drops an instant heart — pop then fade out
         _showHeartPop(context);
       },
       onLongPressStart: (details) {
         HapticFeedback.mediumImpact();
         widget.onLongPress?.call(context, widget.message, details.globalPosition);
       },
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => Future.delayed(const Duration(milliseconds: 80), () { if (mounted) setState(() => _pressed = false); }),
-      onTapCancel: () => setState(() => _pressed = false),
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
       // Swipe right → reply
       onHorizontalDragUpdate: (details) {
         if (details.delta.dx > 0 && widget.onReply != null) {
@@ -208,10 +254,14 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         });
       },
       onHorizontalDragCancel: () => setState(() { _swipeDx = 0.0; _replyTriggered = false; }),
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
+      // Press spring wraps the child directly
+      child: AnimatedBuilder(
+        animation: _pressAnim,
+        builder: (ctx, c) => Transform.scale(
+          scale: _pressAnim.value,
+          alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: c,
+        ),
         child: child,
       ),
     );

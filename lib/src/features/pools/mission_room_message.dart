@@ -11,24 +11,25 @@ import '../../models/pool_message_local.dart';
 // ── Corner radius constants (mirrors dm_message_bubble.dart) ─────────────────
 
 const double _kOuter = 20.0;
-const double _kInner = 5.0;
 const double _kTail  = 4.0;
 
-/// WhatsApp-style bubble radius — tail at the TOP corner of the first bubble
-/// in a run (top-right for sent, top-left for received).
+/// WhatsApp-style bubble radius — asymmetric per design spec:
+/// Sender: tail at top-right of FIRST bubble only.
+/// Receiver: tail at bottom-left of LAST bubble only (aligned with avatar).
+/// Non-tail bubbles in a group are fully rounded.
 BorderRadius _bubbleRadius({required bool isMe, required bool isFirst, required bool isLast}) {
   if (isMe) {
     return BorderRadius.only(
       topLeft:     const Radius.circular(_kOuter),
-      topRight:    Radius.circular(isFirst ? _kTail : _kInner),
+      topRight:    Radius.circular(isFirst ? _kTail : _kOuter),
       bottomLeft:  const Radius.circular(_kOuter),
-      bottomRight: Radius.circular(isLast ? _kOuter : _kInner),
+      bottomRight: const Radius.circular(_kOuter),
     );
   } else {
     return BorderRadius.only(
-      topLeft:    Radius.circular(isFirst ? _kTail : _kInner),
-      topRight:   const Radius.circular(_kOuter),
-      bottomLeft: Radius.circular(isLast ? _kOuter : _kInner),
+      topLeft:     const Radius.circular(_kOuter),
+      topRight:    const Radius.circular(_kOuter),
+      bottomLeft:  Radius.circular(isLast ? _kTail : _kOuter),
       bottomRight: const Radius.circular(_kOuter),
     );
   }
