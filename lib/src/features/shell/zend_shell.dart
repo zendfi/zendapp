@@ -151,6 +151,11 @@ class _ZendShellState extends State<ZendShell> {
 
   @override
   Widget build(BuildContext context) {
+    // ── Read only what's needed for the PageView and tab bar ──────────────
+    // Using a Builder here would still subscribe this whole build to model
+    // changes. Instead we read only the fields that affect the *structure*
+    // (tab index, which is local state) and leave banner/badge reads to
+    // sub-widgets that have their own element nodes.
     final model = ZendScope.of(context);
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
@@ -229,13 +234,16 @@ class _ZendShellState extends State<ZendShell> {
 
     // Wrap each page in AutomaticKeepAlive so the PageView keeps all tabs
     // alive — prevents full rebuilds when switching between tabs.
+    // RepaintBoundary isolates each tab's render tree so SSE-driven
+    // notifyListeners() calls don't cause cross-tab repaints.
     final keepAlivePages = pages
-        .map((p) => _KeepAlive(child: p))
+        .map((p) => _KeepAlive(child: RepaintBoundary(child: p)))
         .toList();
 
     return Scaffold(
-      body: Stack(
-        children: [
+      body: RepaintBoundary(
+        child: Stack(
+          children: [
           PageView(
             controller: _pageController,
             // Keep all pages alive so switching tabs doesn't rebuild heavy
@@ -335,6 +343,7 @@ class _ZendShellState extends State<ZendShell> {
               ),
             ),
         ],
+        ),  // close RepaintBoundary
       ),
       bottomNavigationBar: ZendBottomBar(
         currentIndex: _tabIndex,

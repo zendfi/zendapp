@@ -56,8 +56,8 @@ class _BubblePainter extends CustomPainter {
   final Color? borderColor;
   final double borderWidth;
 
-  // Tail is always on the last bubble of a group (closest to compose bar).
-  bool get _showTail => isLast;
+  // Sender: tail on FIRST bubble (top). Receiver: tail on LAST bubble (bottom).
+  bool get _showTail => isMe ? isFirst : isLast;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,16 +73,19 @@ class _BubblePainter extends CustomPainter {
     // Per-corner radii — inner side tightens for grouped bubbles.
     final double rTL, rTR, rBL, rBR;
     if (isMe) {
-      // Sent: right side is the "inner" side (faces adjacent grouped bubbles)
+      // Sent: right side is the "inner" side
+      // Tail is on FIRST bubble (top of the stack, matching the design spec where
+      // the sender's beak points upward from the first message in the run).
       rTL = _kOuter;
-      rTR = isFirst ? _kOuter : _kInner; // top-right: outer on first, inner on rest
+      rTR = isFirst ? 0.0 : _kInner; // tail corner = 0 on first, inner on rest
       rBL = _kOuter;
-      rBR = (showTail) ? 0.0 : _kInner;  // tail corner = 0 (clean), else inner
+      rBR = isLast ? _kOuter : _kInner;
     } else {
       // Received: left side is the inner side
+      // Tail is on LAST bubble (bottom, aligned with avatar).
       rTL = isFirst ? _kOuter : _kInner;
       rTR = _kOuter;
-      rBL = (showTail) ? 0.0 : _kInner;  // tail corner = 0 (clean), else inner
+      rBL = isLast ? 0.0 : _kInner;  // tail corner = 0 on last
       rBR = _kOuter;
     }
 
@@ -94,27 +97,22 @@ class _BubblePainter extends CustomPainter {
       path.moveTo(bL + rTL, 0);
       // Top edge →
       path.lineTo(bR - rTR, 0);
-      if (rTR > 0) {
+      // rTR == 0 when this is the tail bubble — no arc, straight into beak
+      if (showTail) {
+        // Beak at top-right: protrudes rightward from the top corner
+        path.lineTo(bR, 0);        // top-right corner (square, rTR==0)
+        path.lineTo(w, 0);         // beak tip at very top-right
+        path.lineTo(bR, _kTailH);  // back down to bubble right edge
+      } else if (rTR > 0) {
         path.arcToPoint(Offset(bR, rTR),
             radius: Radius.circular(rTR), clockwise: true);
       }
-
-      if (showTail) {
-        // Tail at bottom-right: beak protrudes rightward from bR
-        // Go straight down to where the beak starts (h - _kTailH),
-        // then draw the triangle, then continue down.
-        path.lineTo(bR, h - _kTailH);   // right edge down to beak top
-        path.lineTo(w, h);               // beak tip (bottom-right)
-        path.lineTo(bR, h);              // back to bubble bottom-right
-      } else {
-        // No tail — straight right edge + bottom-right arc
-        path.lineTo(bR, h - rBR);
-        if (rBR > 0) {
-          path.arcToPoint(Offset(bR - rBR, h),
-              radius: Radius.circular(rBR), clockwise: true);
-        }
+      // Right edge ↓ (starts at _kTailH if tail, else rTR)
+      path.lineTo(bR, h - rBR);
+      if (rBR > 0) {
+        path.arcToPoint(Offset(bR - rBR, h),
+            radius: Radius.circular(rBR), clockwise: true);
       }
-
       // Bottom edge ←
       path.lineTo(bL + rBL, h);
       if (rBL > 0) {
@@ -214,7 +212,7 @@ class _BubbleShape extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Only add beak-side padding when this bubble actually has the tail.
-    final showTail = isLast;
+    final showTail = isMe ? isFirst : isLast;
     final leftPad  = (!isMe && showTail) ? _kTailW : 0.0;
     final rightPad = (isMe  && showTail) ? _kTailW : 0.0;
     return CustomPaint(
