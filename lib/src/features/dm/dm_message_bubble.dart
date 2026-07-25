@@ -8,14 +8,36 @@ import '../vibes/vibe_message_bubble.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 
-/// Standard bubble corner radius.
+/// Outer (far) corner — large, fully rounded.
 const double _kOuter = 18.0;
 
-/// Tail/beak protrusion — how far the triangle sticks out beyond the bubble.
-const double _kTailW = 8.0;
-const double _kTailH = 10.0;
+/// Inner (joining) corner — tight, visually fuses grouped bubbles together.
+const double _kInner = 4.0;
+
+/// Tail protrusion dimensions.
+const double _kTailW = 8.0;   // horizontal extent of the beak triangle
+const double _kTailH = 12.0;  // vertical height of the beak triangle
 
 // ── CustomPainter that draws a bubble with a real protruding beak ─────────────
+//
+// Design rules (from WhatsApp reference + analysis):
+//
+// 1. Tail position: LAST bubble in a run for BOTH sender and receiver.
+//    The tail sits closest to the compose bar — newest message in a turn.
+//
+// 2. Per-corner radii respond to grouping:
+//    Sender (right side):
+//      first-in-group: TL=outer, TR=outer (tail here on non-last, inner on non-first)
+//      middle: TL=outer, TR=inner, BL=outer, BR=inner
+//      last-in-group (tail): TL=outer, TR=inner, BL=outer, BR=0 (tail corner, no arc)
+//    Receiver (left side):
+//      first-in-group: TL=outer, TR=outer, BL=inner, BR=outer
+//      middle: TL=inner, TR=outer, BL=inner, BR=outer
+//      last-in-group (tail): TL=inner, TR=outer, BL=0 (tail corner, no arc), BR=outer
+//
+// 3. Self-intersection fix: the tail corner uses radius 0 (no arc). This
+//    prevents the path from drawing an arc and then overlapping it with the
+//    beak lines, which produced a faint seam / zero-winding artifact in Skia.
 
 class _BubblePainter extends CustomPainter {
   const _BubblePainter({
@@ -34,62 +56,114 @@ class _BubblePainter extends CustomPainter {
   final Color? borderColor;
   final double borderWidth;
 
+  // Tail is always on the last bubble of a group (closest to compose bar).
+  bool get _showTail => isLast;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final showTail = isMe ? isFirst : isLast;
-    final r = _kOuter;
     final w = size.width;
     final h = size.height;
+    final showTail = _showTail;
 
-    // Bubble rect (offset from the beak side by _kTailW so the beak protrudes)
+    // The bubble body occupies [bL, bR] horizontally.
+    // On the tail side we leave _kTailW room for the protruding triangle.
     final double bL = (!isMe && showTail) ? _kTailW : 0.0;
     final double bR = (isMe  && showTail) ? w - _kTailW : w;
 
-    final path = Path();
-
-    if (isMe && showTail) {
-      // Sent: beak protrudes top-right
-      path
-        ..moveTo(bL + r, 0)
-        ..lineTo(bR - r, 0)
-        ..arcToPoint(Offset(bR, r), radius: Radius.circular(r), clockwise: true)
-        // Beak: goes right of bR
-        ..lineTo(bR, 0)       // top of beak base
-        ..lineTo(w, 0)        // tip at top-right
-        ..lineTo(w, _kTailH)  // tip bottom
-        ..lineTo(bR, _kTailH) // back to bubble edge
-        ..lineTo(bR, h - r)
-        ..arcToPoint(Offset(bR - r, h), radius: Radius.circular(r), clockwise: true)
-        ..lineTo(bL + r, h)
-        ..arcToPoint(Offset(bL, h - r), radius: Radius.circular(r), clockwise: true)
-        ..lineTo(bL, r)
-        ..arcToPoint(Offset(bL + r, 0), radius: Radius.circular(r), clockwise: true)
-        ..close();
-    } else if (!isMe && showTail) {
-      // Received: beak protrudes bottom-left
-      path
-        ..moveTo(bL + r, 0)
-        ..lineTo(bR - r, 0)
-        ..arcToPoint(Offset(bR, r), radius: Radius.circular(r), clockwise: true)
-        ..lineTo(bR, h - r)
-        ..arcToPoint(Offset(bR - r, h), radius: Radius.circular(r), clockwise: true)
-        ..lineTo(bL, h)
-        // Beak: goes left of bL
-        ..lineTo(bL, h)         // bottom of beak base
-        ..lineTo(0, h)          // tip at bottom-left
-        ..lineTo(0, h - _kTailH)// tip top
-        ..lineTo(bL, h - _kTailH) // back to bubble edge
-        ..lineTo(bL, r)
-        ..arcToPoint(Offset(bL + r, 0), radius: Radius.circular(r), clockwise: true)
-        ..close();
+    // Per-corner radii — inner side tightens for grouped bubbles.
+    final double rTL, rTR, rBL, rBR;
+    if (isMe) {
+      // Sent: right side is the "inner" side (faces adjacent grouped bubbles)
+      rTL = _kOuter;
+      rTR = isFirst ? _kOuter : _kInner; // top-right: outer on first, inner on rest
+      rBL = _kOuter;
+      rBR = (showTail) ? 0.0 : _kInner;  // tail corner = 0 (clean), else inner
     } else {
-      // No beak — plain rounded rect
-      path.addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTRB(bL, 0, bR, h),
-        Radius.circular(r),
-      ));
+      // Received: left side is the inner side
+      rTL = isFirst ? _kOuter : _kInner;
+      rTR = _kOuter;
+      rBL = (showTail) ? 0.0 : _kInner;  // tail corner = 0 (clean), else inner
+      rBR = _kOuter;
     }
 
+    final path = Path();
+
+    if (isMe) {
+      // ── Sent bubble (right-aligned) ──────────────────────────────────
+      // Traverse clockwise from top-left:
+      path.moveTo(bL + rTL, 0);
+      // Top edge →
+      path.lineTo(bR - rTR, 0);
+      if (rTR > 0) {
+        path.arcToPoint(Offset(bR, rTR),
+            radius: Radius.circular(rTR), clockwise: true);
+      }
+
+      if (showTail) {
+        // Tail at bottom-right: beak protrudes rightward from bR
+        // Go straight down to where the beak starts (h - _kTailH),
+        // then draw the triangle, then continue down.
+        path.lineTo(bR, h - _kTailH);   // right edge down to beak top
+        path.lineTo(w, h);               // beak tip (bottom-right)
+        path.lineTo(bR, h);              // back to bubble bottom-right
+      } else {
+        // No tail — straight right edge + bottom-right arc
+        path.lineTo(bR, h - rBR);
+        if (rBR > 0) {
+          path.arcToPoint(Offset(bR - rBR, h),
+              radius: Radius.circular(rBR), clockwise: true);
+        }
+      }
+
+      // Bottom edge ←
+      path.lineTo(bL + rBL, h);
+      if (rBL > 0) {
+        path.arcToPoint(Offset(bL, h - rBL),
+            radius: Radius.circular(rBL), clockwise: true);
+      }
+      // Left edge ↑
+      path.lineTo(bL, rTL);
+      if (rTL > 0) {
+        path.arcToPoint(Offset(bL + rTL, 0),
+            radius: Radius.circular(rTL), clockwise: true);
+      }
+      path.close();
+    } else {
+      // ── Received bubble (left-aligned) ──────────────────────────────
+      // Traverse clockwise from top-left:
+      path.moveTo(bL + rTL, 0);
+      // Top edge →
+      path.lineTo(bR - rTR, 0);
+      if (rTR > 0) {
+        path.arcToPoint(Offset(bR, rTR),
+            radius: Radius.circular(rTR), clockwise: true);
+      }
+      // Right edge ↓
+      path.lineTo(bR, h - rBR);
+      if (rBR > 0) {
+        path.arcToPoint(Offset(bR - rBR, h),
+            radius: Radius.circular(rBR), clockwise: true);
+      }
+      // Bottom edge ←
+      path.lineTo(bL, h);
+
+      if (showTail) {
+        // Tail at bottom-left: beak protrudes leftward from bL
+        path.lineTo(bL, h);              // bottom of bubble left edge
+        path.lineTo(0, h);               // beak tip (bottom-left)
+        path.lineTo(bL, h - _kTailH);   // back up to where beak starts
+      }
+
+      // Left edge ↑
+      path.lineTo(bL, rTL);
+      if (rTL > 0) {
+        path.arcToPoint(Offset(bL + rTL, 0),
+            radius: Radius.circular(rTL), clockwise: true);
+      }
+      path.close();
+    }
+
+    // Fill
     final fillRect = Rect.fromLTRB(bL, 0, bR, h);
     final paint = Paint()..style = PaintingStyle.fill;
     if (gradient != null) {
@@ -99,6 +173,7 @@ class _BubblePainter extends CustomPainter {
     }
     canvas.drawPath(path, paint);
 
+    // Optional border
     if (borderColor != null && borderWidth > 0) {
       canvas.drawPath(path, Paint()
         ..style = PaintingStyle.stroke
@@ -114,8 +189,9 @@ class _BubblePainter extends CustomPainter {
       old.gradient != gradient;
 }
 
-/// Wraps [child] in a painted bubble with a protruding beak.
-/// Adds horizontal padding on the beak side to make room for the protrusion.
+/// Wraps [child] in a painted bubble with a protruding beak on the correct side.
+/// Expands the layout by [_kTailW] on the tail side so the protrusion doesn't
+/// overlap the content or get clipped.
 class _BubbleShape extends StatelessWidget {
   const _BubbleShape({
     required this.isMe,
@@ -137,7 +213,8 @@ class _BubbleShape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showTail = isMe ? isFirst : isLast;
+    // Only add beak-side padding when this bubble actually has the tail.
+    final showTail = isLast;
     final leftPad  = (!isMe && showTail) ? _kTailW : 0.0;
     final rightPad = (isMe  && showTail) ? _kTailW : 0.0;
     return CustomPaint(
@@ -152,10 +229,6 @@ class _BubbleShape extends StatelessWidget {
     );
   }
 }
-
-
-
-// ── Main bubble widget ───────────────────────────────────────────────────────
 
 /// Renders a single DM message with iMessage-style grouped corners,
 /// gradient fills, bounce animation on arrival, and press feedback.

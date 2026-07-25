@@ -941,7 +941,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final current = _messages[index];
     final next = _messages[index + 1]; // older message (list is reversed)
     if (current.senderUserId != next.senderUserId) return false;
-    return current.createdAt.difference(next.createdAt).inSeconds.abs() < 60;
+    return current.createdAt.difference(next.createdAt).inMinutes.abs() < 5;
   }
 
   /// Whether the message at [index] is the FIRST (topmost) in its sender run.
@@ -951,16 +951,17 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final current = _messages[index];
     final newer = _messages[index - 1];
     if (current.senderUserId != newer.senderUserId) return true;
-    return current.createdAt.difference(newer.createdAt).inSeconds.abs() >= 60;
+    return current.createdAt.difference(newer.createdAt).inMinutes.abs() >= 5;
   }
 
-  /// Whether the message at [index] is the LAST (bottommost) in its sender run — gets the tail.
+  /// Whether the message at [index] is the LAST (bottommost) in its sender run.
+  /// The last bubble gets the tail and (for received) shows the avatar.
   bool _isLastInGroup(int index) {
     if (index >= _messages.length - 1) return true;
     final current = _messages[index];
     final older = _messages[index + 1];
     if (current.senderUserId != older.senderUserId) return true;
-    return current.createdAt.difference(older.createdAt).inSeconds.abs() >= 60;
+    return current.createdAt.difference(older.createdAt).inMinutes.abs() >= 5;
   }
 
   @override
