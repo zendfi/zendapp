@@ -8,49 +8,152 @@ import '../vibes/vibe_message_bubble.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 
-/// Full outer radius — always applied to all corners.
-const double _kOuter = 20.0;
+/// Standard bubble corner radius.
+const double _kOuter = 18.0;
 
-/// Tail radius — the sharp "beak" corner that points toward the sender.
-const double _kTail = 4.0;
+/// Tail/beak protrusion — how far the triangle sticks out beyond the bubble.
+const double _kTailW = 8.0;
+const double _kTailH = 10.0;
 
-/// Computes the 4-corner BorderRadius for a bubble given its position in a
-/// message group — asymmetric per the design spec:
-///
-/// Sender (right):
-///   • FIRST bubble in the run → sharp top-right corner (the "beak/tail")
-///   • All other bubbles in the run → all corners fully rounded
-///
-/// Receiver (left):
-///   • LAST bubble in the run → sharp bottom-left corner (the "beak/tail"),
-///     aligned with the avatar that only appears on this bubble
-///   • All other bubbles in the run → all corners fully rounded
-///
-/// Non-grouped (solo) messages are both isFirst AND isLast simultaneously,
-/// so they get the tail on the correct corner with everything else rounded.
-BorderRadius _bubbleRadius({
-  required bool isMe,
-  required bool isFirst,
-  required bool isLast,
-}) {
-  if (isMe) {
-    // Sent: tail (sharp corner) only at top-right of the FIRST bubble
-    return BorderRadius.only(
-      topLeft:     const Radius.circular(_kOuter),
-      topRight:    Radius.circular(isFirst ? _kTail : _kOuter),
-      bottomLeft:  const Radius.circular(_kOuter),
-      bottomRight: const Radius.circular(_kOuter),
-    );
-  } else {
-    // Received: tail (sharp corner) only at bottom-left of the LAST bubble
-    return BorderRadius.only(
-      topLeft:     const Radius.circular(_kOuter),
-      topRight:    const Radius.circular(_kOuter),
-      bottomLeft:  Radius.circular(isLast ? _kTail : _kOuter),
-      bottomRight: const Radius.circular(_kOuter),
+// ── CustomPainter that draws a bubble with a real protruding beak ─────────────
+
+class _BubblePainter extends CustomPainter {
+  const _BubblePainter({
+    required this.color,
+    required this.isMe,
+    required this.isFirst,
+    required this.isLast,
+    this.gradient,
+    this.borderColor,
+    this.borderWidth = 0,
+  });
+
+  final Color color;
+  final bool isMe, isFirst, isLast;
+  final Gradient? gradient;
+  final Color? borderColor;
+  final double borderWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final showTail = isMe ? isFirst : isLast;
+    final r = _kOuter;
+    final w = size.width;
+    final h = size.height;
+
+    // Bubble rect (offset from the beak side by _kTailW so the beak protrudes)
+    final double bL = (!isMe && showTail) ? _kTailW : 0.0;
+    final double bR = (isMe  && showTail) ? w - _kTailW : w;
+
+    final path = Path();
+
+    if (isMe && showTail) {
+      // Sent: beak protrudes top-right
+      path
+        ..moveTo(bL + r, 0)
+        ..lineTo(bR - r, 0)
+        ..arcToPoint(Offset(bR, r), radius: Radius.circular(r), clockwise: true)
+        // Beak: goes right of bR
+        ..lineTo(bR, 0)       // top of beak base
+        ..lineTo(w, 0)        // tip at top-right
+        ..lineTo(w, _kTailH)  // tip bottom
+        ..lineTo(bR, _kTailH) // back to bubble edge
+        ..lineTo(bR, h - r)
+        ..arcToPoint(Offset(bR - r, h), radius: Radius.circular(r), clockwise: true)
+        ..lineTo(bL + r, h)
+        ..arcToPoint(Offset(bL, h - r), radius: Radius.circular(r), clockwise: true)
+        ..lineTo(bL, r)
+        ..arcToPoint(Offset(bL + r, 0), radius: Radius.circular(r), clockwise: true)
+        ..close();
+    } else if (!isMe && showTail) {
+      // Received: beak protrudes bottom-left
+      path
+        ..moveTo(bL + r, 0)
+        ..lineTo(bR - r, 0)
+        ..arcToPoint(Offset(bR, r), radius: Radius.circular(r), clockwise: true)
+        ..lineTo(bR, h - r)
+        ..arcToPoint(Offset(bR - r, h), radius: Radius.circular(r), clockwise: true)
+        ..lineTo(bL, h)
+        // Beak: goes left of bL
+        ..lineTo(bL, h)         // bottom of beak base
+        ..lineTo(0, h)          // tip at bottom-left
+        ..lineTo(0, h - _kTailH)// tip top
+        ..lineTo(bL, h - _kTailH) // back to bubble edge
+        ..lineTo(bL, r)
+        ..arcToPoint(Offset(bL + r, 0), radius: Radius.circular(r), clockwise: true)
+        ..close();
+    } else {
+      // No beak — plain rounded rect
+      path.addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTRB(bL, 0, bR, h),
+        Radius.circular(r),
+      ));
+    }
+
+    final fillRect = Rect.fromLTRB(bL, 0, bR, h);
+    final paint = Paint()..style = PaintingStyle.fill;
+    if (gradient != null) {
+      paint.shader = gradient!.createShader(fillRect);
+    } else {
+      paint.color = color;
+    }
+    canvas.drawPath(path, paint);
+
+    if (borderColor != null && borderWidth > 0) {
+      canvas.drawPath(path, Paint()
+        ..style = PaintingStyle.stroke
+        ..color = borderColor!
+        ..strokeWidth = borderWidth);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BubblePainter old) =>
+      old.color != color || old.isMe != isMe ||
+      old.isFirst != isFirst || old.isLast != isLast ||
+      old.gradient != gradient;
+}
+
+/// Wraps [child] in a painted bubble with a protruding beak.
+/// Adds horizontal padding on the beak side to make room for the protrusion.
+class _BubbleShape extends StatelessWidget {
+  const _BubbleShape({
+    required this.isMe,
+    required this.isFirst,
+    required this.isLast,
+    required this.child,
+    required this.color,
+    this.gradient,
+    this.borderColor,
+    this.borderWidth = 0,
+  });
+
+  final bool isMe, isFirst, isLast;
+  final Widget child;
+  final Color color;
+  final Gradient? gradient;
+  final Color? borderColor;
+  final double borderWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final showTail = isMe ? isFirst : isLast;
+    final leftPad  = (!isMe && showTail) ? _kTailW : 0.0;
+    final rightPad = (isMe  && showTail) ? _kTailW : 0.0;
+    return CustomPaint(
+      painter: _BubblePainter(
+        color: color, isMe: isMe, isFirst: isFirst, isLast: isLast,
+        gradient: gradient, borderColor: borderColor, borderWidth: borderWidth,
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(left: leftPad, right: rightPad),
+        child: child,
+      ),
     );
   }
 }
+
+
 
 // ── Main bubble widget ───────────────────────────────────────────────────────
 
@@ -393,28 +496,16 @@ class _TextBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final radius = _bubbleRadius(isMe: isMe, isFirst: isFirst, isLast: isLast);
 
-    final decoration = isMe
-        ? BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                zt.accent,
-                Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!,
-              ],
-            ),
-            borderRadius: radius,
-          )
-        : BoxDecoration(color: zt.bgSecondary, borderRadius: radius);
+    final sentGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
+    );
 
     // Accent bar colour: white on sent, theme accent on received
-    final barColor = isMe
-        ? Colors.white.withValues(alpha: 0.55)
-        : zt.accent;
-
-    // Quote block background: enough contrast to be readable inside the bubble
+    final barColor = isMe ? Colors.white.withValues(alpha: 0.55) : zt.accent;
+    // Quote block background
     final quoteBg = isMe
         ? Colors.black.withValues(alpha: 0.28)
         : zt.border.withValues(alpha: 0.5);
@@ -425,63 +516,65 @@ class _TextBubble extends StatelessWidget {
       children: [
         if (!isMe) const SizedBox(width: 4),
         Flexible(
-          child: Container(
+          child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.74),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: decoration,
-            child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Quote block ──────────────────────────────────────────
-                if (_hasReply) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: _QuoteBlock(
-                      senderZendtag: message.replyToSenderZendtag,
-                      content: message.replyToContent,
-                      barColor: barColor,
-                      bgColor: quoteBg,
-                      textColor: isMe
-                          ? Colors.white.withValues(alpha: 0.85)
-                          : zt.textPrimary,
-                      labelColor: isMe
-                          ? Colors.white.withValues(alpha: 0.6)
-                          : zt.accent,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                // ── Message body ─────────────────────────────────────────
-                if (message.content?.isNotEmpty == true)
-                  Text(
-                    message.content!,
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 15,
-                      color: isMe ? Colors.white : zt.textPrimary,
-                      height: 1.35,
-                    ),
-                  ),
-                const SizedBox(height: 3),
-                Row(
+            child: _BubbleShape(
+              isMe: isMe,
+              isFirst: isFirst,
+              isLast: isLast,
+              color: isMe ? zt.accent : zt.bgSecondary,
+              gradient: isMe ? sentGradient : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Column(
+                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _formatTime(message.createdAt),
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 10,
-                        color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                    if (_hasReply) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: _QuoteBlock(
+                          senderZendtag: message.replyToSenderZendtag,
+                          content: message.replyToContent,
+                          barColor: barColor,
+                          bgColor: quoteBg,
+                          textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
+                          labelColor: isMe ? Colors.white.withValues(alpha: 0.6) : zt.accent,
+                        ),
                       ),
-                    ),
-                    if (isMe) ...[
-                      const SizedBox(width: 4),
-                      _StatusIcon(status: message.localStatus, onRetry: onRetry),
+                      const SizedBox(height: 6),
                     ],
+                    if (message.content?.isNotEmpty == true)
+                      Text(
+                        message.content!,
+                        style: TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          color: isMe ? Colors.white : zt.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatTime(message.createdAt),
+                          style: TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 10,
+                            color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                          ),
+                        ),
+                        if (isMe) ...[
+                          const SizedBox(width: 4),
+                          _StatusIcon(status: message.localStatus, onRetry: onRetry),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -612,7 +705,6 @@ class DmPaymentBubble extends StatelessWidget {
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
-    final borderRadius = _bubbleRadius(isMe: isMe, isFirst: isFirst, isLast: isLast);
 
     // Monochromatic: sent uses the accent surface with a hairline accent border,
     // received uses bgSecondary. The border on sent creates clear visual
@@ -632,57 +724,53 @@ class DmPaymentBubble extends StatelessWidget {
       children: [
         if (!isMe) const SizedBox(width: 4),
         Flexible(
-          child: Container(
+          child: ConstrainedBox(
             constraints: BoxConstraints(
               minWidth: 110,
               maxWidth: MediaQuery.of(context).size.width * 0.62,
             ),
-            decoration: BoxDecoration(
+            child: _BubbleShape(
+              isMe: isMe, isFirst: isFirst, isLast: isLast,
               color: bg,
-              borderRadius: borderRadius,
-              border: sentBorder,
-            ),
-            padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Direction — icon + label
-                Row(
+              borderColor: sentBorder != null ? zt.accent.withValues(alpha: 0.25) : null,
+              borderWidth: sentBorder != null ? 0.8 : 0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isMe ? SolarIconsBold.squareArrowRightUp : SolarIconsBold.squareArrowRightDown,
-                      size: 11, color: iconColor,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isMe ? SolarIconsBold.squareArrowRightUp : SolarIconsBold.squareArrowRightDown,
+                          size: 11, color: iconColor,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          isMe ? 'sent' : 'received',
+                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 3),
+                    const SizedBox(height: 2),
                     Text(
-                      isMe ? 'sent' : 'received',
-                      style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                      amountFormatted,
+                      style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, color: amountColor, height: 1.0),
+                    ),
+                    if (note != null && note.isNotEmpty && note != 'vibe') ...[
+                      const SizedBox(height: 3),
+                      Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  amountFormatted,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 28,
-                    fontStyle: FontStyle.italic,
-                    color: amountColor,
-                    height: 1.0,
-                  ),
-                ),
-                if (note != null && note.isNotEmpty && note != 'vibe') ...[
-                  const SizedBox(height: 3),
-                  Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -710,13 +798,9 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final amountStr = rd?.amountUsdc ?? '0.00';
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
     final isPending = rd?.isPending ?? true;
-    final borderRadius = _bubbleRadius(isMe: isMe, isFirst: true, isLast: true);
 
-    // Monochromatic: same surface as payment bubble, with accent border on sent
     final bg = isMe ? zt.bgAccentSurface : zt.bgSecondary;
-    final sentBorder = isMe
-        ? Border.all(color: zt.accent.withValues(alpha: 0.25), width: 0.8)
-        : null;
+    final hasBorder = isMe;
     final amountColor = zt.textPrimary;
     final labelColor = zt.textSecondary;
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
@@ -728,91 +812,69 @@ class DmPaymentRequestBubble extends StatelessWidget {
       children: [
         if (!isMe) const SizedBox(width: 4),
         Flexible(
-          child: Container(
+          child: ConstrainedBox(
             constraints: BoxConstraints(
               minWidth: 120,
               maxWidth: MediaQuery.of(context).size.width * 0.65,
             ),
-            decoration: BoxDecoration(
+            child: _BubbleShape(
+              isMe: isMe, isFirst: true, isLast: true,
               color: bg,
-              borderRadius: borderRadius,
-              border: sentBorder,
-            ),
-            padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Direction label with icon
-                Row(
+              borderColor: hasBorder ? zt.accent.withValues(alpha: 0.25) : null,
+              borderWidth: hasBorder ? 0.8 : 0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isMe ? SolarIconsBold.billCheck : SolarIconsBold.bill,
-                      size: 11, color: accentColor,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      isMe ? 'you requested' : 'payment request',
-                      style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(isMe ? SolarIconsBold.billCheck : SolarIconsBold.bill, size: 11, color: accentColor),
+                      const SizedBox(width: 3),
+                      Text(isMe ? 'you requested' : 'payment request',
+                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4)),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text(amountFormatted,
+                        style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, color: amountColor, height: 1.0)),
+                    if (rd?.note != null && rd!.note!.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(rd.note!, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 8),
+                    if (!isMe && isPending && onPay != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: onPay,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentColor, foregroundColor: Colors.white, elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700)),
+                        ),
+                      )
+                    else if (isMe && isPending)
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(SolarIconsBold.clockCircle, size: 11, color: labelColor),
+                        const SizedBox(width: 4),
+                        Text('Waiting…', style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
+                      ])
+                    else if (!isPending)
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
+                        const SizedBox(width: 4),
+                        Text('Paid', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
+                      ]),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  amountFormatted,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
-                    fontSize: 28,
-                    fontStyle: FontStyle.italic,
-                    color: amountColor,
-                    height: 1.0,
-                  ),
-                ),
-                if (rd?.note != null && rd!.note!.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(rd.note!, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
-                const SizedBox(height: 8),
-                if (!isMe && isPending && onPay != null)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: onPay,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700)),
-                    ),
-                  )
-                else if (isMe && isPending)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(SolarIconsBold.clockCircle, size: 11, color: labelColor),
-                      const SizedBox(width: 4),
-                      Text('Waiting…', style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
-                    ],
-                  )
-                else if (!isPending)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
-                      const SizedBox(width: 4),
-                      Text('Paid', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
-                ),
-              ],
+              ),
             ),
           ),
         ),

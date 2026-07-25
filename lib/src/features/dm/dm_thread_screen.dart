@@ -50,6 +50,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _showScrollToBottom = false;
   bool _showTimestamps = false;      // revealed by left-edge swipe
   DmMessage? _replyingTo;           // the message being replied to
+  bool _cleared = false;            // set after "Clear chat" to skip server reload
 
   final _scrollController = ScrollController();
 
@@ -174,6 +175,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   Future<void> _loadMessages({bool more = false}) async {
+    if (_cleared && !more) return; // Don't reload after explicit clear
     if (more && (_loadingMore || _nextCursor == null)) return;
     // Only show the full-screen spinner if we have nothing to display yet
     if (!more) setState(() => _loading = _messages.isEmpty);
@@ -801,7 +803,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       case _ChatMenuAction.disappearing:
         break; // coming soon
       case _ChatMenuAction.clearChat:
-        setState(() => _messages.clear());
+        setState(() {
+          _messages.clear();
+          _cleared = true;
+        });
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
@@ -1087,8 +1092,18 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               final msgDay = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
                               final olderDay = DateTime(older.createdAt.year, older.createdAt.month, older.createdAt.day);
                               if (msgDay != olderDay) {
-                                separator = _DateSeparator(date: olderDay);
+                                // Label with msgDay — the separator sits between two different-day
+                                // groups, and its label should name the day of the messages ABOVE
+                                // it (i.e. the newer/current msgDay in this reversed list).
+                                separator = _DateSeparator(date: msgDay);
                               }
+                            }
+                            // Top-of-list: always show a separator for the newest messages' day
+                            // so users know which day the top group belongs to.
+                            final isFirstInList = msgIdx == 0;
+                            Widget? topSeparator;
+                            if (isFirstInList) {
+                              topSeparator = _DateSeparator(date: DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day));
                             }
 
                             final bubble = Row(
@@ -1123,6 +1138,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
                             if (separator != null) {
                               return Column(children: [bubble, separator]);
+                            }
+                            if (topSeparator != null) {
+                              return Column(children: [topSeparator, bubble]);
                             }
                             return bubble;
                           },
