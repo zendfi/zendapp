@@ -50,7 +50,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _showScrollToBottom = false;
   bool _showTimestamps = false;      // revealed by left-edge swipe
   DmMessage? _replyingTo;           // the message being replied to
-  bool _cleared = false;            // set after "Clear chat" to skip server reload
 
   final _scrollController = ScrollController();
 
@@ -86,6 +85,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       switch (frame.type) {
         case WsFrameType.message:
           final msg = DmMessage.fromJson(frame.data);
+          // Unmark the room as cleared when new messages arrive from the other party,
+          // so reopening the chat will show history again.
+          if (model.dmService.isRoomCleared(widget.roomId) &&
+              msg.senderUserId != model.currentUserId) {
+            model.dmService.unmarkCleared(widget.roomId);
+          }
           setState(() {
             // Remove any optimistic version of this message
             _messages.removeWhere((m) =>
@@ -175,7 +180,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   Future<void> _loadMessages({bool more = false}) async {
-    if (_cleared && !more) return; // Don't reload after explicit clear
+    // If the user cleared this room, don't reload from server — show empty.
+    // New incoming WS messages will populate it naturally and unmark the clear.
+    final model = ZendScope.of(context);
+    if (!more && model.dmService.isRoomCleared(widget.roomId)) return;
     if (more && (_loadingMore || _nextCursor == null)) return;
     // Only show the full-screen spinner if we have nothing to display yet
     if (!more) setState(() => _loading = _messages.isEmpty);
@@ -803,10 +811,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       case _ChatMenuAction.disappearing:
         break; // coming soon
       case _ChatMenuAction.clearChat:
-        setState(() {
-          _messages.clear();
-          _cleared = true;
-        });
+        setState(() => _messages.clear());
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
@@ -964,6 +969,35 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     return current.createdAt.difference(older.createdAt).inMinutes.abs() >= 5;
   }
 
+  // ── Display list (message items + date separators) ────────────────────────
+  //
+  // Mirrors the mission room pattern: iterate oldest→newest, insert a date
+  // separator whenever the day changes, label with that day. The resulting
+  // list is reversed so the newest item is at index 0, matching the reversed
+  // ListView — exactly the same order as _messages but with separator items
+  // interspersed.
+
+  List<_DmDisplayItem> _buildDisplayList() {
+    if (_messages.isEmpty) return const [];
+
+    // _messages is newest-first. Iterate oldest-first to build chronologically.
+    final chronological = _messages.reversed.toList();
+    final items = <_DmDisplayItem>[];
+    DateTime? lastDay;
+
+    for (final msg in chronological) {
+      final day = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+      if (lastDay == null || day != lastDay) {
+        items.add(_DmSeparatorItem(date: day));
+        lastDay = day;
+      }
+      items.add(_DmMessageItem(message: msg));
+    }
+
+    // Reverse so newest is at index 0 — matches the reversed ListView
+    return items.reversed.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -1060,55 +1094,50 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 children: [
                   _loading
                       ? const DmThreadSkeleton()
-                      : ListView.builder(
+                      : Builder(builder: (ctx) {
+                          final displayList = _buildDisplayList();
+                          final typingOffset = _theyAreTyping ? 1 : 0;
+                          final moreOffset  = _loadingMore ? 1 : 0;
+                          final totalCount  = displayList.length + typingOffset + moreOffset;
+
+                          return ListView.builder(
                           controller: _scrollController,
                           reverse: true,
                           padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                          itemCount: _messages.length +
-                              (_theyAreTyping ? 1 : 0) +
-                              (_loadingMore ? 1 : 0),
+                          itemCount: totalCount,
                           itemBuilder: (ctx, i) {
-                            if (_loadingMore &&
-                                i == _messages.length + (_theyAreTyping ? 1 : 0)) {
+                            // "Load more" spinner at the very end (oldest)
+                            if (_loadingMore && i == displayList.length + typingOffset) {
                               return const Padding(
                                 padding: EdgeInsets.all(8),
                                 child: Center(child: ZendLoader(size: 18)),
                               );
                             }
+                            // Typing indicator at the very start (newest)
                             if (_theyAreTyping && i == 0) {
                               return _TypingIndicator(avatarUrl: cp.avatarUrl, initial: cp.initialLetter);
                             }
-                            final msgIdx = _theyAreTyping ? i - 1 : i;
-                            final msg = _messages[msgIdx];
+                            final listIdx = i - typingOffset;
+                            final item = displayList[listIdx];
+
+                            // Date separator
+                            if (item is _DmSeparatorItem) {
+                              return _DateSeparator(date: item.date);
+                            }
+
+                            final msgItem = item as _DmMessageItem;
+                            final msg = msgItem.message;
+
+                            // Map back to _messages index for grouping helpers
+                            final msgIdx = _messages.indexWhere((m) => m.id == msg.id || (m.clientId != null && m.clientId == msg.clientId));
+
                             final isMe = msg.senderUserId == model.currentUserId;
-                            final isCont = _isContinuation(msgIdx);
-                            final isFirst = _isFirstInGroup(msgIdx);
-                            final isLast = _isLastInGroup(msgIdx);
-                            // Avatar shows on the bottommost received bubble (isFirst = newest = bottom in reversed list)
+                            final isCont = msgIdx >= 0 ? _isContinuation(msgIdx) : false;
+                            final isFirst = msgIdx >= 0 ? _isFirstInGroup(msgIdx) : true;
+                            final isLast  = msgIdx >= 0 ? _isLastInGroup(msgIdx) : true;
                             final isGroupEnd = !isMe && isFirst;
 
-                            Widget? separator;
-                            final isLastInList = msgIdx == _messages.length - 1;
-                            if (!isLastInList) {
-                              final older = _messages[msgIdx + 1];
-                              final msgDay = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
-                              final olderDay = DateTime(older.createdAt.year, older.createdAt.month, older.createdAt.day);
-                              if (msgDay != olderDay) {
-                                // Label with msgDay — the separator sits between two different-day
-                                // groups, and its label should name the day of the messages ABOVE
-                                // it (i.e. the newer/current msgDay in this reversed list).
-                                separator = _DateSeparator(date: msgDay);
-                              }
-                            }
-                            // Top-of-list: always show a separator for the newest messages' day
-                            // so users know which day the top group belongs to.
-                            final isFirstInList = msgIdx == 0;
-                            Widget? topSeparator;
-                            if (isFirstInList) {
-                              topSeparator = _DateSeparator(date: DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day));
-                            }
-
-                            final bubble = Row(
+                            return Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 // Avatar slot — only shown on group-end for incoming
@@ -1137,16 +1166,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 ),
                               ],
                             );
-
-                            if (separator != null) {
-                              return Column(children: [bubble, separator]);
-                            }
-                            if (topSeparator != null) {
-                              return Column(children: [topSeparator, bubble]);
-                            }
-                            return bubble;
                           },
-                        ),
+                        );
+                        }),
                   // ── Scroll-to-bottom button ─────────────────────────────
                   _buildScrollToBottomButton(zt),
                 ],
@@ -1192,6 +1214,20 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 // ── Chat menu ─────────────────────────────────────────────────────────────────
 
 enum _ChatMenuAction { viewContact, searchInChat, disappearing, clearChat, block }
+
+// ── Display list item types ───────────────────────────────────────────────────
+
+sealed class _DmDisplayItem {}
+
+class _DmMessageItem extends _DmDisplayItem {
+  _DmMessageItem({required this.message});
+  final DmMessage message;
+}
+
+class _DmSeparatorItem extends _DmDisplayItem {
+  _DmSeparatorItem({required this.date});
+  final DateTime date;
+}
 
 // ── Reply strip ───────────────────────────────────────────────────────────────
 

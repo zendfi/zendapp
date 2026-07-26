@@ -25,25 +25,46 @@ class DmService {
   /// so there's never a spinner for rooms the user has visited before.
   final Map<String, List<DmMessage>> _messageCache = {};
 
+  /// Rooms the user has explicitly cleared — messages won't be reloaded
+  /// from the server until the user navigates away and back (or restarts).
+  /// Persists for the lifetime of the DmService instance (i.e. the app session).
+  final Set<String> _clearedRooms = {};
+
+  /// Returns true if the user has cleared this room in the current session.
+  bool isRoomCleared(String roomId) => _clearedRooms.contains(roomId);
+
   /// Returns cached messages for a room, or empty list if not yet loaded.
   List<DmMessage> getCachedMessages(String roomId) =>
       List.unmodifiable(_messageCache[roomId] ?? const []);
 
   /// Updates the message cache for a room.
+  /// Also unmarks a cleared room so incoming messages are shown.
   void _updateMessageCache(String roomId, List<DmMessage> messages) {
     _messageCache[roomId] = List.of(messages);
+    _unmarkCleared(roomId);
   }
 
   /// Clears the cache (e.g. on sign-out).
   void clearCaches() {
     cachedThreads = [];
     _messageCache.clear();
+    _clearedRooms.clear();
   }
 
-  /// Clears the cached messages for a single room (e.g. after "Clear chat").
+  /// Clears the cached messages for a single room and marks it as user-cleared
+  /// so the screen doesn't refetch from the server on reopen.
   void clearRoomCache(String roomId) {
     _messageCache.remove(roomId);
+    _clearedRooms.add(roomId);
   }
+
+  /// Unclears a room — called when new incoming messages arrive so the room
+  /// becomes active again after a clear.
+  void unmarkCleared(String roomId) {
+    _clearedRooms.remove(roomId);
+  }
+
+  void _unmarkCleared(String roomId) => unmarkCleared(roomId);
 
   /// Lists all DM threads for the current user, sorted by recency.
   Future<List<DmThread>> listThreads() async {
