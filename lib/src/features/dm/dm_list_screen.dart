@@ -141,7 +141,7 @@ class _DmListScreenState extends State<DmListScreen> {
                           ? SolarIconsBold.bellOff
                           : SolarIconsBold.bell,
                       color: _notificationsMuted ? zt.accent : zt.textSecondary,
-                      size: 20,
+                      size: 24,
                     ),
                     tooltip: _notificationsMuted ? 'Unmute chat notifications' : 'Mute chat notifications',
                   ),
@@ -153,7 +153,7 @@ class _DmListScreenState extends State<DmListScreen> {
                           ? SolarIconsBold.magnifierZoomOut
                           : SolarIconsBold.magnifier,
                       color: _searchActive ? zt.accent : zt.textSecondary,
-                      size: 20,
+                      size: 24,
                     ),
                     tooltip: _searchActive ? 'Close search' : 'Search chats',
                   ),
@@ -254,16 +254,16 @@ class _DmThreadTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(ZendRadii.xl),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           child: Row(
             children: [
               // Avatar
               ZendAvatar(
-                radius: 24,
+                radius: 26,
                 photoUrl: cp.avatarUrl,
                 initials: cp.initialLetter,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               // Content
               Expanded(
                 child: Column(
@@ -276,7 +276,7 @@ class _DmThreadTile extends StatelessWidget {
                             cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
                             style: TextStyle(
                               fontFamily: 'DMSans',
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
                               color: zt.textPrimary,
                             ),
@@ -289,13 +289,13 @@ class _DmThreadTile extends StatelessWidget {
                           _relativeTime(thread.lastMessageAt),
                           style: TextStyle(
                             fontFamily: 'DMMono',
-                            fontSize: 11,
+                            fontSize: 12,
                             color: hasUnread ? zt.accent : zt.textSecondary.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Expanded(
@@ -305,7 +305,7 @@ class _DmThreadTile extends StatelessWidget {
                                 : thread.lastMessagePreview,
                             style: TextStyle(
                               fontFamily: 'DMSans',
-                              fontSize: 13,
+                              fontSize: 14,
                               color: hasUnread ? zt.textPrimary : zt.textSecondary,
                               fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
                             ),

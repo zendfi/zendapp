@@ -56,8 +56,13 @@ class _BubblePainter extends CustomPainter {
   final Color? borderColor;
   final double borderWidth;
 
-  // Sender: tail on FIRST bubble (top). Receiver: tail on LAST bubble (bottom).
-  bool get _showTail => isMe ? isFirst : isLast;
+  // In a reversed ListView (index 0 = newest = visually BOTTOM):
+  // • isFirst = newest in group = visually BOTTOM of the group
+  // • isLast  = oldest in group = visually TOP of the group
+  //
+  // Sender beak: top of the group → isLast (oldest = top)
+  // Receiver beak: bottom of the group (next to avatar) → isFirst (newest = bottom)
+  bool get _showTail => isMe ? isLast : isFirst;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,19 +78,18 @@ class _BubblePainter extends CustomPainter {
     // Per-corner radii — inner side tightens for grouped bubbles.
     final double rTL, rTR, rBL, rBR;
     if (isMe) {
-      // Sent: right side is the "inner" side
-      // Tail is on FIRST bubble (top of the stack, matching the design spec where
-      // the sender's beak points upward from the first message in the run).
+      // Sent: right side is the "inner" side.
+      // Tail (beak) is on isLast = oldest = visually topmost sent bubble.
       rTL = _kOuter;
-      rTR = isFirst ? 0.0 : _kInner; // tail corner = 0 on first, inner on rest
+      rTR = isLast ? 0.0 : _kInner; // tail corner = 0 on last (top), inner on rest
       rBL = _kOuter;
-      rBR = isLast ? _kOuter : _kInner;
+      rBR = isFirst ? _kOuter : _kInner; // bottom of group stays outer
     } else {
-      // Received: left side is the inner side
-      // Tail is on LAST bubble (bottom, aligned with avatar).
-      rTL = isFirst ? _kOuter : _kInner;
+      // Received: left side is the inner side.
+      // Tail (beak) is on isFirst = newest = visually bottommost, where avatar is.
+      rTL = isLast ? _kOuter : _kInner;  // top of group stays outer
       rTR = _kOuter;
-      rBL = isLast ? 0.0 : _kInner;  // tail corner = 0 on last
+      rBL = isFirst ? 0.0 : _kInner; // tail corner = 0 on first (bottom)
       rBR = _kOuter;
     }
 
@@ -212,7 +216,7 @@ class _BubbleShape extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Only add beak-side padding when this bubble actually has the tail.
-    final showTail = isMe ? isFirst : isLast;
+    final showTail = isMe ? isLast : isFirst;
     final leftPad  = (!isMe && showTail) ? _kTailW : 0.0;
     final rightPad = (isMe  && showTail) ? _kTailW : 0.0;
     return CustomPaint(
@@ -336,20 +340,16 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     }
 
     // ── Press spring ──────────────────────────────────────────────────────
-    // Quick squish down then springy release — feels physical.
+    // Immediate squish on press, springy elastic release.
     _pressCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 60),  // fast press-down
     );
     _pressAnim = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.93)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 50),
-      TweenSequenceItem(
-          tween: Tween(begin: 0.93, end: 1.0)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 50),
+          tween: Tween(begin: 1.0, end: 0.91)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 100),
     ]).animate(_pressCtrl);
   }
 
@@ -358,11 +358,20 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   }
 
   void _onTapUp(TapUpDetails _) {
-    // Spring releases naturally through the animation
+    // Spring back with elastic overshoot on release
+    _pressCtrl.animateTo(
+      0,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.elasticOut,
+    );
   }
 
   void _onTapCancel() {
-    _pressCtrl.reverse();
+    _pressCtrl.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.elasticOut,
+    );
   }
 
   @override

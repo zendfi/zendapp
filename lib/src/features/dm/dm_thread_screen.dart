@@ -1084,7 +1084,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             final isCont = _isContinuation(msgIdx);
                             final isFirst = _isFirstInGroup(msgIdx);
                             final isLast = _isLastInGroup(msgIdx);
-                            final isGroupEnd = !isMe && isLast;
+                            // Avatar shows on the bottommost received bubble (isFirst = newest = bottom in reversed list)
+                            final isGroupEnd = !isMe && isFirst;
 
                             Widget? separator;
                             final isLastInList = msgIdx == _messages.length - 1;

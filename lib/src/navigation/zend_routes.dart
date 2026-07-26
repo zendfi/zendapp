@@ -8,8 +8,9 @@ import 'package:flutter/material.dart';
 /// repaints of BOTH the incoming and outgoing screens during the animation.
 PageRoute<T> zendRoute<T>({required Widget page}) {
   return PageRouteBuilder<T>(
+    opaque: true,          // incoming screen is fully opaque — no compositing of both layers
     pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 240),
+    transitionDuration: const Duration(milliseconds: 220),
     reverseTransitionDuration: const Duration(milliseconds: 180),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final slideIn = Tween<Offset>(
@@ -22,12 +23,9 @@ PageRoute<T> zendRoute<T>({required Widget page}) {
 
       return SlideTransition(
         position: slideIn,
-        child: RepaintBoundary(child: child),
+        child: child,  // RepaintBoundary not needed when opaque=true
       );
     },
-    // opaque = false means Flutter still composites both screens, which is
-    // needed for the slide. But with RepaintBoundary on each, repaint
-    // invalidations don't cross the boundary.
   );
 }
 
