@@ -259,7 +259,14 @@ class DmService {
     );
   }
 
-  /// Step 1: gets blockhash + ATA addresses for client-side signing.
+  /// Updates the current user's presence visibility preference.
+  /// 'everyone' | 'contacts' | 'nobody'
+  Future<void> updatePresencePrivacy(String visibility) async {
+    await _apiClient.dio.patch(
+      '/api/zend/presence/privacy',
+      data: {'visibility': visibility},
+    );
+  }
   Future<Map<String, dynamic>> prepareVibe(
     String roomId, {
     required String stickerId,

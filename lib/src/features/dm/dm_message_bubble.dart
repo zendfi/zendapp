@@ -71,9 +71,12 @@ class _BubblePainter extends CustomPainter {
     final showTail = _showTail;
 
     // The bubble body occupies [bL, bR] horizontally.
-    // On the tail side we leave _kTailW room for the protruding triangle.
-    final double bL = (!isMe && showTail) ? _kTailW : 0.0;
-    final double bR = (isMe  && showTail) ? w - _kTailW : w;
+    // The gutter (_kTailW) is ALWAYS reserved on the tail side, even on non-tail
+    // bubbles — this keeps body edges flush across the whole group.
+    // The beak triangle is only drawn when showTail is true; otherwise that
+    // strip is left transparent.
+    final double bL = !isMe ? _kTailW : 0.0;
+    final double bR = isMe  ? w - _kTailW : w;
 
     // Per-corner radii — inner side tightens for grouped bubbles.
     final double rTL, rTR, rBL, rBR;
@@ -215,10 +218,11 @@ class _BubbleShape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Only add beak-side padding when this bubble actually has the tail.
-    final showTail = isMe ? isLast : isFirst;
-    final leftPad  = (!isMe && showTail) ? _kTailW : 0.0;
-    final rightPad = (isMe  && showTail) ? _kTailW : 0.0;
+    // Gutter is ALWAYS reserved on the tail side for every bubble — not just
+    // the tailed one — so all body edges line up flush. The painter only draws
+    // the actual beak triangle when showTail is true.
+    final leftPad  = !isMe ? _kTailW : 0.0;
+    final rightPad = isMe  ? _kTailW : 0.0;
     return CustomPaint(
       painter: _BubblePainter(
         color: color, isMe: isMe, isFirst: isFirst, isLast: isLast,

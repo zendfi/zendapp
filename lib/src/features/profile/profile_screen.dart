@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
-import '../../design/zend_tokens.dart';
-import '../../navigation/zend_routes.dart';
+import '../../design/zend_tokens.dart';import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
 import 'account_information_screen.dart';
 import 'bridge_kyc_screen.dart';
@@ -149,6 +149,13 @@ class ProfileScreen extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
+                    // ── Privacy ───────────────────────────────────────────
+                    _SectionLabel('Privacy'),
+                    const SizedBox(height: 8),
+                    _PresencePrivacyTile(),
+
+                    const SizedBox(height: 24),
+
                     // ── Appearance ─────────────────────────────────────────
                     _SectionLabel('Appearance'),
                     const SizedBox(height: 8),
@@ -246,6 +253,111 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Presence privacy tile ────────────────────────────────────────────────────
+
+class _PresencePrivacyTile extends StatefulWidget {
+  const _PresencePrivacyTile();
+
+  @override
+  State<_PresencePrivacyTile> createState() => _PresencePrivacyTileState();
+}
+
+class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
+  String _visibility = 'everyone';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load from shared prefs as a local cache
+    SharedPreferences.getInstance().then((prefs) {
+      if (mounted) {
+        setState(() => _visibility = prefs.getString('presence_visibility') ?? 'everyone');
+      }
+    });
+  }
+
+  Future<void> _update(String newVal) async {
+    if (_saving || newVal == _visibility) return;
+    setState(() => _saving = true);
+    try {
+      await ZendScope.of(context).dmService.updatePresencePrivacy(newVal);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('presence_visibility', newVal);
+      if (mounted) setState(() => _visibility = newVal);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update — try again')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      child: ColoredBox(
+        color: zt.bgSecondary,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Row(
+                children: [
+                  Icon(SolarIconsBold.eyeClosed, size: 20, color: zt.textSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Online status & last seen',
+                      style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                    ),
+                  ),
+                  if (_saving) ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
+                ],
+              ),
+            ),
+            for (final option in [
+              ('everyone', 'Everyone', 'Anyone you chat with'),
+              ('contacts', 'Contacts only', 'People you\'ve transacted with'),
+              ('nobody',   'Nobody',   'Appear offline to everyone'),
+            ]) ...[
+              Divider(color: zt.border, height: 1, indent: 48, endIndent: 0),
+              InkWell(
+                onTap: () => _update(option.$1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 32),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(option.$2, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                            Text(option.$3, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      if (_visibility == option.$1)
+                        Icon(SolarIconsBold.checkCircle, size: 18, color: zt.accent),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
           ],
         ),
       ),

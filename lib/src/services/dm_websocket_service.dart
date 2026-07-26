@@ -50,4 +50,7 @@ class DmWebSocketService {
 
   void sendReactionRemoved(String messageId, String emoji) =>
       _ws.sendReactionRemoved(messageId, emoji);
+
+  void sendRecordingAudio(bool isRecording) =>
+      _ws.sendRecordingAudio(isRecording);
 }

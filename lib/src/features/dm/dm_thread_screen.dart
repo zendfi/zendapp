@@ -44,7 +44,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   final _messages = <DmMessage>[];
   bool _loading = true;
   bool _theyAreTyping = false;
+  bool _theyAreRecording = false;  // "recording audio..." indicator
+  // Counterparty presence
+  bool? _counterpartyOnline;        // null = unknown, true = online, false = offline
+  DateTime? _counterpartyLastSeen;  // null = hidden by privacy setting
   Timer? _typingClearTimer;
+  Timer? _recordingClearTimer;
   String? _nextCursor;
   bool _loadingMore = false;
   bool _showScrollToBottom = false;
@@ -174,6 +179,35 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             });
           }
         default:
+          // Handle presence + recording frames
+          if (frame.type == WsFrameType.presenceUpdate) {
+            final userId = frame.data['user_id'] as String?;
+            if (userId != null && userId != model.currentUserId) {
+              setState(() {
+                _counterpartyOnline = frame.data['is_online'] as bool? ?? false;
+                final lastSeenStr = frame.data['last_seen_at'] as String?;
+                if (lastSeenStr != null && lastSeenStr != 'hidden' && lastSeenStr != 'never') {
+                  _counterpartyLastSeen = DateTime.tryParse(lastSeenStr)?.toLocal();
+                } else {
+                  _counterpartyLastSeen = null;
+                }
+              });
+            }
+          } else if (frame.type == WsFrameType.recordingAudio) {
+            final senderId = frame.data['sender_user_id'] as String?;
+            final isRecording = frame.data['is_recording'] as bool? ?? false;
+            if (senderId != null && senderId != model.currentUserId) {
+              setState(() => _theyAreRecording = isRecording);
+              if (isRecording) {
+                _recordingClearTimer?.cancel();
+                _recordingClearTimer = Timer(const Duration(seconds: 30), () {
+                  if (mounted) setState(() => _theyAreRecording = false);
+                });
+              } else {
+                _recordingClearTimer?.cancel();
+              }
+            }
+          }
           break;
       }
     });
@@ -349,6 +383,64 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         });
       }
     });
+  }
+
+  Widget _buildPresenceSubtitle(ZendTheme zt, DmCounterparty cp) {
+    // Priority: recording > typing > online/last seen > zendtag
+    if (_theyAreRecording) {
+      return _PresenceLabel(
+        text: 'recording audio…',
+        color: zt.accent,
+        dot: true,
+      );
+    }
+    if (_theyAreTyping) {
+      return _PresenceLabel(
+        text: 'typing…',
+        color: zt.accent,
+        dot: true,
+      );
+    }
+    if (_counterpartyOnline == true) {
+      return _PresenceLabel(
+        text: 'online',
+        color: ZendColors.positive,
+        dot: true,
+      );
+    }
+    if (_counterpartyOnline == false && _counterpartyLastSeen != null) {
+      return _PresenceLabel(
+        text: 'last seen ${_formatLastSeen(_counterpartyLastSeen!)}',
+        color: zt.textSecondary,
+        dot: false,
+      );
+    }
+    // Fallback: show zendtag + streak
+    return Builder(builder: (ctx) {
+      final model = ZendScope.of(ctx);
+      final streak = model.activeStreaks[cp.userId];
+      return Row(
+        children: [
+          Text('@${cp.zendtag}',
+              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+          if (streak != null && streak.isActive)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Text('🔥 ${streak.streakWeeks}w', style: const TextStyle(fontSize: 11)),
+            ),
+        ],
+      );
+    });
+  }
+
+  String _formatLastSeen(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}';
   }
 
   Widget _buildScrollToBottomButton(ZendTheme zt) {
@@ -938,6 +1030,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _ws.dispose();
     _scrollController.dispose();
     _typingClearTimer?.cancel();
+    _recordingClearTimer?.cancel();
     super.dispose();
   }
 
@@ -1035,19 +1128,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
                             style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                           ),
-                          Row(
-                            children: [
-                              Text('@${cp.zendtag}', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
-                              Builder(builder: (ctx) {
-                                final streak = model.activeStreaks[cp.userId];
-                                if (streak == null || !streak.isActive) return const SizedBox.shrink();
-                                return Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: Text('🔥 ${streak.streakWeeks}w', style: const TextStyle(fontSize: 11)),
-                                );
-                              }),
-                            ],
-                          ),
+                          // ── Presence / status row ─────────────────────
+                          _buildPresenceSubtitle(zt, cp),
                         ],
                       ),
                     ),
@@ -1207,6 +1289,40 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Presence label ────────────────────────────────────────────────────────────
+
+class _PresenceLabel extends StatelessWidget {
+  const _PresenceLabel({required this.text, required this.color, required this.dot});
+  final String text;
+  final Color color;
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (dot) ...[
+          Container(
+            width: 6, height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          text,
+          style: TextStyle(
+            fontFamily: 'DMSans',
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

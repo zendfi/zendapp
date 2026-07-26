@@ -6,7 +6,7 @@ import 'package:web_socket_channel/status.dart' as ws_status;
 
 enum WsConnectionState { disconnected, connecting, connected, reconnecting }
 
-enum WsFrameType { ack, message, typing, readReceipt, reaction, reactionRemoved, error, unknown }
+enum WsFrameType { ack, message, typing, readReceipt, reaction, reactionRemoved, presenceUpdate, recordingAudio, error, unknown }
 
 class WsServerFrame {
   final WsFrameType type;
@@ -23,6 +23,8 @@ class WsServerFrame {
       'read_receipt' => WsFrameType.readReceipt,
       'reaction' => WsFrameType.reaction,
       'reaction_removed' => WsFrameType.reactionRemoved,
+      'presence_update' => WsFrameType.presenceUpdate,
+      'recording_audio' => WsFrameType.recordingAudio,
       'error' => WsFrameType.error,
       _ => WsFrameType.unknown,
     };
@@ -226,6 +228,14 @@ class PoolWebSocketService {
       'type': 'reaction_removed',
       'message_id': messageId,
       'emoji': emoji,
+    }));
+  }
+
+  /// Sends a "recording audio" status (DM rooms only).
+  void sendRecordingAudio(bool isRecording) {
+    _send(jsonEncode({
+      'type': 'recording_audio',
+      'is_recording': isRecording,
     }));
   }
 
