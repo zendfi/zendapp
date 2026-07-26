@@ -30,6 +30,11 @@ class DmService {
   /// Persists for the lifetime of the DmService instance (i.e. the app session).
   final Set<String> _clearedRooms = {};
 
+  /// Live presence cache keyed by user_id.
+  /// Updated by DmThreadScreen when WS presence frames arrive.
+  /// Used by DmListScreen to show online dots without needing an open WS.
+  final Map<String, bool> presenceCache = {};
+
   /// Returns true if the user has cleared this room in the current session.
   bool isRoomCleared(String roomId) => _clearedRooms.contains(roomId);
 

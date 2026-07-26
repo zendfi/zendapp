@@ -183,8 +183,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           if (frame.type == WsFrameType.presenceUpdate) {
             final userId = frame.data['user_id'] as String?;
             if (userId != null && userId != model.currentUserId) {
+              final online = frame.data['is_online'] as bool? ?? false;
+              // Update service-level presence cache so the DM list can show dots
+              model.dmService.presenceCache[userId] = online;
               setState(() {
-                _counterpartyOnline = frame.data['is_online'] as bool? ?? false;
+                _counterpartyOnline = online;
                 final lastSeenStr = frame.data['last_seen_at'] as String?;
                 if (lastSeenStr != null && lastSeenStr != 'hidden' && lastSeenStr != 'never') {
                   _counterpartyLastSeen = DateTime.tryParse(lastSeenStr)?.toLocal();
@@ -217,7 +220,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // If the user cleared this room, don't reload from server — show empty.
     // New incoming WS messages will populate it naturally and unmark the clear.
     final model = ZendScope.of(context);
-    if (!more && model.dmService.isRoomCleared(widget.roomId)) return;
+    if (!more && model.dmService.isRoomCleared(widget.roomId)) {
+      // Make sure we're not stuck in loading state
+      if (_loading) setState(() => _loading = false);
+      return;
+    }
     if (more && (_loadingMore || _nextCursor == null)) return;
     // Only show the full-screen spinner if we have nothing to display yet
     if (!more) setState(() => _loading = _messages.isEmpty);
@@ -1114,7 +1121,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   ),
                   GestureDetector(
                     onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
-                    child: ZendAvatar(radius: 20, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
+                    child: ZendAvatar(
+                      radius: 20,
+                      photoUrl: cp.avatarUrl,
+                      initials: cp.initialLetter,
+                      isOnline: _counterpartyOnline,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

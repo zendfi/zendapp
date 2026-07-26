@@ -257,12 +257,17 @@ class _DmThreadTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           child: Row(
             children: [
-              // Avatar
-              ZendAvatar(
-                radius: 26,
-                photoUrl: cp.avatarUrl,
-                initials: cp.initialLetter,
-              ),
+              // Avatar with presence badge
+              Builder(builder: (ctx) {
+                final dmService = ZendScope.of(ctx).dmService;
+                final isOnline = dmService.presenceCache[cp.userId];
+                return ZendAvatar(
+                  radius: 26,
+                  photoUrl: cp.avatarUrl,
+                  initials: cp.initialLetter,
+                  isOnline: isOnline,
+                );
+              }),
               const SizedBox(width: 14),
               // Content
               Expanded(

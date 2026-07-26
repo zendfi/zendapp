@@ -12,6 +12,9 @@ import 'package:solar_icons/solar_icons.dart';
 /// - The initials background color is deterministically derived from the
 ///   initials string so the same user always gets the same color.
 /// - Fully dark-mode aware — uses [ZendTheme] for fallback colors.
+/// - Pass [isOnline] to show a presence dot: true = green, false = grey,
+///   null = no dot. The dot scales with [radius] and has a border that
+///   matches the scaffold background so it reads cleanly on any surface.
 class ZendAvatar extends StatelessWidget {
   const ZendAvatar({
     super.key,
@@ -19,29 +22,26 @@ class ZendAvatar extends StatelessWidget {
     this.photoUrl,
     this.initials,
     this.backgroundColor,
+    this.isOnline,
   });
 
   final double radius;
-
-  /// CDN URL of the user's profile photo. If null or empty, falls back to
-  /// [initials] or the person icon.
   final String? photoUrl;
-
-  /// Single uppercase letter (or short string) shown when no photo is set.
   final String? initials;
-
-  /// Override the background color for the initials/icon fallback.
-  /// If null, a color is derived from [initials].
   final Color? backgroundColor;
+  /// Presence indicator: true = online (green dot), false = offline (grey dot),
+  /// null = no dot shown.
+  final bool? isOnline;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final size = radius * 2;
 
-    // ── Network photo ──────────────────────────────────────────────────────
+    // ── Build the avatar circle ────────────────────────────────────────────
+    final Widget avatar;
     if (photoUrl != null && photoUrl!.isNotEmpty) {
-      return ClipOval(
+      avatar = ClipOval(
         child: CachedNetworkImage(
           imageUrl: photoUrl!,
           width: size,
@@ -61,14 +61,42 @@ class ZendAvatar extends StatelessWidget {
           ),
         ),
       );
+    } else {
+      avatar = _FallbackCircle(
+        radius: radius,
+        initials: initials,
+        backgroundColor: backgroundColor,
+        zt: zt,
+      );
     }
 
-    // ── Initials / icon fallback ───────────────────────────────────────────
-    return _FallbackCircle(
-      radius: radius,
-      initials: initials,
-      backgroundColor: backgroundColor,
-      zt: zt,
+    // ── No presence dot → return avatar directly ──────────────────────────
+    if (isOnline == null) return avatar;
+
+    // ── Presence dot overlay ──────────────────────────────────────────────
+    final dotSize = (radius * 0.50).clamp(7.0, 14.0);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -1,
+          bottom: -1,
+          child: Container(
+            width: dotSize,
+            height: dotSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isOnline! ? ZendColors.positive : const Color(0x66888888),
+              border: Border.all(
+                // Use scaffold background colour so the ring adapts to any surface
+                color: Theme.of(context).scaffoldBackgroundColor,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
