@@ -82,6 +82,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           .replaceFirst('https://', 'wss://')
           .replaceFirst('http://', 'ws://'),
       getToken: () => model.walletService.apiClient.getToken(),
+      apiClient: model.walletService.apiClient,
     );
     _ws.connect();
 

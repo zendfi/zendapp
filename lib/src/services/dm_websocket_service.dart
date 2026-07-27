@@ -1,25 +1,36 @@
 import 'package:flutter/foundation.dart';
 
+import 'api_client.dart';
 import 'pool_websocket_service.dart';
 
 export 'pool_websocket_service.dart'
     show WsConnectionState, WsFrameType, WsServerFrame;
 
 /// DM WebSocket service — thin wrapper around [PoolWebSocketService] that
-/// connects to the DM room WebSocket endpoint instead of a pool room.
+/// connects to the DM room WebSocket endpoint.
 ///
-/// All frame handling (send_message, typing, read receipts) is identical to
-/// pool rooms — the only difference is the connection URL.
+/// Uses the WS ticket endpoint (`POST /api/zend/dm/ws-ticket`) to obtain a
+/// short-lived single-use ticket so the JWT is never exposed in the URL.
 class DmWebSocketService {
   DmWebSocketService({
     required String roomId,
     required String baseWsUrl,
     required Future<String?> Function() getToken,
+    required ApiClient apiClient,
   }) : _ws = PoolWebSocketService(
           poolId: roomId,
           baseWsUrl: baseWsUrl,
           getToken: getToken,
           pathOverride: '/api/zend/dm/$roomId/ws',
+          getTicket: () async {
+            try {
+              final response = await apiClient.dio.post('/api/zend/dm/ws-ticket');
+              return response.data['ticket'] as String?;
+            } catch (_) {
+              // Ticket fetch failed — PoolWebSocketService falls back to ?token=
+              return null;
+            }
+          },
         );
 
   final PoolWebSocketService _ws;

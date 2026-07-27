@@ -75,7 +75,13 @@ class PoolWebSocketService {
     required this.baseWsUrl,
     required this.getToken,
     this.pathOverride,
+    this.getTicket,
   });
+
+  /// Optional: fetches a short-lived WS ticket. When provided, the ticket
+  /// is used as `?ticket=<uuid>` instead of passing the JWT directly in the
+  /// URL (where it appears in server access logs).
+  final Future<String?> Function()? getTicket;
 
   int get consecutiveFailures => _consecutiveFailures;
 
@@ -97,13 +103,27 @@ class PoolWebSocketService {
       return;
     }
 
+    // Prefer ticket over raw JWT — ticket doesn't expose the JWT in the URL
+    final Map<String, String> queryParams;
+    if (getTicket != null) {
+      final ticket = await getTicket!();
+      if (ticket != null) {
+        queryParams = {'ticket': ticket};
+      } else {
+        // Ticket fetch failed — fall back to JWT (still functional)
+        queryParams = {'token': token};
+      }
+    } else {
+      queryParams = {'token': token};
+    }
+
     try {
       final uri = Uri(
         scheme: baseWsUrl.startsWith('wss') ? 'wss' : 'ws',
         host: Uri.parse(baseWsUrl).host,
         port: Uri.parse(baseWsUrl).port,
         path: pathOverride ?? '/api/zend/pools/$poolId/ws',
-        queryParameters: {'token': token},
+        queryParameters: queryParams,
       );
       _channel = WebSocketChannel.connect(uri);
       await _channel!.ready;
