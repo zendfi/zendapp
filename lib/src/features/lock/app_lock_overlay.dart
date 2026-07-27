@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -193,6 +195,12 @@ class _LockScreenState extends State<_LockScreen>
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
         WalletSessionCache.instance.store(keypair);
+        // Register E2EE pubkey (wallet address) with backend — best-effort,
+        // non-blocking. The wallet address is the Ed25519 public key in base58.
+        final walletAddress = await model.walletService.getWalletAddress();
+        if (walletAddress != null) {
+          unawaited(model.e2eeService.registerPubkey(walletAddress));
+        }
         for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
       } catch (_) {}
 

@@ -159,7 +159,6 @@ class DmMessage {
   final String? senderZendtag;
   final String? senderAvatarUrl;
   final DmMessageType type;
-  final String? content;
   final DmPaymentData? paymentData;
   final DmVibeData? vibeData;
   final DmPaymentRequestData? paymentRequestData;
@@ -171,6 +170,11 @@ class DmMessage {
   /// If this message is a reply, the quoted snippet of the parent message.
   final String? replyToContent;
   final String? replyToSenderZendtag;
+  /// True when the content was encrypted at rest and has been decrypted for display.
+  bool isEncrypted = false;
+
+  // content is mutable so E2EE decryption can update it in place after load
+  String? content;
 
   bool get isMe => false; // caller sets based on currentUserId
 

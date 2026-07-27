@@ -38,6 +38,7 @@ import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 import '../models/streak_info.dart';
 import '../services/dm_service.dart';
+import '../services/e2ee_service.dart';
 
 const Map<String, String> _localeGreetings = {
   'yo': 'Ẹ káàbọ̀',
@@ -159,7 +160,8 @@ class ZendAppModel extends ChangeNotifier {
     required this.localDb,
     EmailIntentService? emailIntentService,
   })  : _emailIntentService = emailIntentService,
-        dmService = DmService(apiClient: walletService.apiClient);
+        dmService = DmService(apiClient: walletService.apiClient),
+        e2eeService = E2eeService(apiClient: walletService.apiClient);
 
   final AuthService authService;
   final WalletService walletService;
@@ -203,6 +205,9 @@ class ZendAppModel extends ChangeNotifier {
 
   /// DM service — HTTP client for the DM thread and message endpoints.
   final DmService dmService;
+
+  /// E2EE service — encrypts/decrypts DM messages using X25519 ECDH + ChaCha20-Poly1305.
+  final E2eeService e2eeService;
 
   /// Total unread DM message count across all threads.
   int dmUnreadTotal = 0;

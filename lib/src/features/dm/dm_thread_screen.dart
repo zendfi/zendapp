@@ -48,6 +48,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   // Counterparty presence
   bool? _counterpartyOnline;        // null = unknown, true = online, false = offline
   DateTime? _counterpartyLastSeen;  // null = hidden by privacy setting
+  // E2EE
+  String? _counterpartyPubkey;      // counterparty's Ed25519 pubkey (base58)
+  bool get _e2eeReady => _counterpartyPubkey != null;
   Timer? _typingClearTimer;
   Timer? _recordingClearTimer;
   String? _nextCursor;
@@ -72,6 +75,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _initWs();
     _loadMessages();
     _scrollController.addListener(_onScroll);
+    _fetchCounterpartyPubkey();
+  }
+
+  Future<void> _fetchCounterpartyPubkey() async {
+    final model = ZendScope.of(context);
+    final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
+      widget.counterparty.userId,
+    );
+    if (mounted && pubkey != null) {
+      setState(() => _counterpartyPubkey = pubkey);
+      // Also register our own pubkey in case it wasn't registered yet
+      final walletAddress = await model.walletService.getWalletAddress();
+      if (walletAddress != null) {
+        unawaited(model.e2eeService.registerPubkey(walletAddress));
+      }
+    }
   }
 
   void _initWs() {
@@ -97,12 +116,26 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               msg.senderUserId != model.currentUserId) {
             model.dmService.unmarkCleared(widget.roomId);
           }
-          setState(() {
-            // Remove any optimistic version of this message
-            _messages.removeWhere((m) =>
-                m.clientId != null && m.clientId == msg.clientId);
-            _messages.insert(0, msg);
-          });
+          // Decrypt E2EE content inline before displaying
+          if (msg.content != null && msg.content!.startsWith('e2ee:')) {
+            _decryptIfNeeded(msg.content).then((plain) {
+              if (!mounted) return;
+              msg.content = plain ?? msg.content;
+              msg.isEncrypted = true;
+              setState(() {
+                _messages.removeWhere((m) =>
+                    m.clientId != null && m.clientId == msg.clientId);
+                _messages.insert(0, msg);
+              });
+            });
+          } else {
+            setState(() {
+              // Remove any optimistic version of this message
+              _messages.removeWhere((m) =>
+                  m.clientId != null && m.clientId == msg.clientId);
+              _messages.insert(0, msg);
+            });
+          }
           if (msg.senderUserId != model.currentUserId) {
             _ws.sendRead(msg.id);
           }
@@ -253,6 +286,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         _loading = false;
         _loadingMore = false;
       });
+      // Decrypt E2EE messages after loading
+      if (_e2eeReady) {
+        await _decryptMessages(_messages);
+        if (mounted) setState(() {});
+      }
       // Mark as read
       if (_messages.isNotEmpty) {
         model.dmService.markRead(widget.roomId, _messages.first.id);
@@ -303,37 +341,40 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
     setState(() => _messages.insert(0, optimistic));
 
-    // Try WebSocket first
-    _ws.sendMessage(clientId, text);
+    // Encrypt if E2EE is active, then send
+    _encryptForSend(text).then((wireContent) {
+      // Try WebSocket first
+      _ws.sendMessage(clientId, wireContent);
 
-    // HTTP fallback after 1.5s if WS ack not received — covers dropped frames
-    // or a WS that went silent without closing cleanly.
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      final idx =
-          _messages.indexWhere((m) => m.clientId == clientId);
-      if (idx != -1 &&
-          _messages[idx].localStatus == DmLocalStatus.sending) {
-        model.dmService.sendMessage(widget.roomId, text, clientId).then((_) {
-          if (mounted) {
-            setState(() {
-              final i = _messages.indexWhere((m) => m.clientId == clientId);
-              if (i != -1) {
-                _messages[i].localStatus = DmLocalStatus.delivered;
-              }
-            });
-          }
-        }).catchError((_) {
-          if (mounted) {
-            setState(() {
-              final i = _messages.indexWhere((m) => m.clientId == clientId);
-              if (i != -1) {
-                _messages[i].localStatus = DmLocalStatus.failed;
-              }
-            });
-          }
-        });
-      }
+      // HTTP fallback after 1.5s if WS ack not received — covers dropped frames
+      // or a WS that went silent without closing cleanly.
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (!mounted) return;
+        final idx =
+            _messages.indexWhere((m) => m.clientId == clientId);
+        if (idx != -1 &&
+            _messages[idx].localStatus == DmLocalStatus.sending) {
+          model.dmService.sendMessage(widget.roomId, wireContent, clientId).then((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) {
+                  _messages[i].localStatus = DmLocalStatus.delivered;
+                }
+              });
+            }
+          }).catchError((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) {
+                  _messages[i].localStatus = DmLocalStatus.failed;
+                }
+              });
+            }
+          });
+        }
+      });
     });
   }
 
@@ -373,32 +414,34 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
 
     setState(() => _messages.insert(0, optimistic));
-    _ws.sendMessage(clientId, text);
+    _encryptForSend(text).then((wireContent) {
+      _ws.sendMessage(clientId, wireContent);
 
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      final idx = _messages.indexWhere((m) => m.clientId == clientId);
-      if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
-        model.dmService.sendMessage(
-          widget.roomId, text, clientId,
-          replyToContent: quoteContent,
-          replyToSenderZendtag: quotedMsg.senderZendtag,
-        ).then((_) {
-          if (mounted) {
-            setState(() {
-              final i = _messages.indexWhere((m) => m.clientId == clientId);
-              if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
-            });
-          }
-        }).catchError((_) {
-          if (mounted) {
-            setState(() {
-              final i = _messages.indexWhere((m) => m.clientId == clientId);
-              if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
-            });
-          }
-        });
-      }
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (!mounted) return;
+        final idx = _messages.indexWhere((m) => m.clientId == clientId);
+        if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
+          model.dmService.sendMessage(
+            widget.roomId, wireContent, clientId,
+            replyToContent: quoteContent,
+            replyToSenderZendtag: quotedMsg.senderZendtag,
+          ).then((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+              });
+            }
+          }).catchError((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
+              });
+            }
+          });
+        }
+      });
     });
   }
 
@@ -448,6 +491,59 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         ],
       );
     });
+  }
+
+  // ── E2EE helpers ────────────────────────────────────────────────────────────
+
+  /// Encrypts [plaintext] for sending. Returns the `e2ee:…` wire string,
+  /// or the original plaintext if E2EE is not ready (counterparty has no pubkey).
+  Future<String> _encryptForSend(String plaintext) async {
+    if (!_e2eeReady) return plaintext;
+    final model = ZendScope.of(context);
+    final cached = WalletSessionCache.instance.keypair;
+    if (cached == null) return plaintext;
+    // Extract 32-byte seed from cached keypair bytes
+    final seed = cached.length >= 32 ? cached.sublist(0, 32) : cached;
+    final encrypted = await model.e2eeService.encrypt(
+      plaintext: plaintext,
+      mySeed32: seed,
+      counterpartyPubkeyB58: _counterpartyPubkey!,
+      roomId: widget.roomId,
+    );
+    return encrypted ?? plaintext;
+  }
+
+  /// Decrypts [content] if it starts with `e2ee:`. Returns the plaintext,
+  /// or null if decryption fails. Returns the original string if not encrypted.
+  Future<String?> _decryptIfNeeded(String? content) async {
+    if (content == null) return null;
+    if (!content.startsWith('e2ee:')) return content;
+    // Need seed — try session cache first, then fall back to null
+    final cached = WalletSessionCache.instance.keypair;
+    if (cached == null) return '🔒 (unlock to decrypt)';
+    final seed = cached.length >= 32 ? cached.sublist(0, 32) : cached;
+    final model = ZendScope.of(context);
+    // For decryption we need the other party's pubkey — could be sender or recipient
+    final pubkey = _counterpartyPubkey;
+    if (pubkey == null) return '🔒 (key unavailable)';
+    final decrypted = await model.e2eeService.decrypt(
+      wireContent: content,
+      mySeed32: seed,
+      counterpartyPubkeyB58: pubkey,
+      roomId: widget.roomId,
+    );
+    return decrypted ?? '🔒 (decryption failed)';
+  }
+
+  /// Applies E2EE decryption in-place on a loaded message list.
+  Future<void> _decryptMessages(List<DmMessage> messages) async {
+    for (final msg in messages) {
+      if (msg.content != null && msg.content!.startsWith('e2ee:')) {
+        final decrypted = await _decryptIfNeeded(msg.content);
+        msg.content = decrypted ?? msg.content;
+        msg.isEncrypted = true;
+      }
+    }
   }
 
   String _formatLastSeen(DateTime dt) {
@@ -1149,9 +1245,20 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                            style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
+                                  style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_e2eeReady) ...[
+                                const SizedBox(width: 5),
+                                Icon(SolarIconsBold.lockPassword, size: 13, color: ZendColors.positive),
+                              ],
+                            ],
                           ),
                           // ── Presence / status row ─────────────────────
                           _buildPresenceSubtitle(zt, cp),
