@@ -69,8 +69,6 @@ class DmService {
     _clearedRooms.remove(roomId);
   }
 
-  void _unmarkCleared(String roomId) => unmarkCleared(roomId);
-
   /// Lists all DM threads for the current user, sorted by recency.
   Future<List<DmThread>> listThreads() async {
     final response = await _apiClient.dio.get('/api/zend/dm');
