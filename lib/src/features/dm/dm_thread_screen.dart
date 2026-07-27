@@ -380,6 +380,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   /// Sends a reply message — carries structured quote context so the bubble
   /// renders a proper in-bubble quote block instead of a text prefix.
+  ///
+  /// Reply messages always go via HTTP (not WS) so the reply metadata
+  /// (replyToContent / replyToSenderZendtag) is persisted on the server.
+  /// The WS-only path only supports plain content — metadata would be lost.
+  /// The SSE fan-out and WS broadcast still happen server-side, so the
+  /// counterparty sees the message in real time.
   void _onSendWithReply(String text, DmMessage quotedMsg) {
     if (text.isEmpty) return;
     HapticFeedback.lightImpact();
@@ -397,7 +403,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       _ => quotedMsg.content ?? '',
     };
 
-    // Optimistic message with reply fields populated immediately
+    // Optimistic message with reply fields populated immediately for instant UI
     final optimistic = DmMessage(
       id: 'local-$clientId',
       roomId: widget.roomId,
@@ -414,31 +420,30 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
 
     setState(() => _messages.insert(0, optimistic));
+
     _encryptForSend(text).then((wireContent) {
+      // Always use HTTP for reply messages — only HTTP carries metadata.
+      // We also still send via WS so the counterparty gets the WS fan-out
+      // immediately, and the ON CONFLICT (client_id) ensures the HTTP write
+      // doesn't duplicate if the WS already persisted.
       _ws.sendMessage(clientId, wireContent);
 
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (!mounted) return;
-        final idx = _messages.indexWhere((m) => m.clientId == clientId);
-        if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
-          model.dmService.sendMessage(
-            widget.roomId, wireContent, clientId,
-            replyToContent: quoteContent,
-            replyToSenderZendtag: quotedMsg.senderZendtag,
-          ).then((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
-              });
-            }
-          }).catchError((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
-              });
-            }
+      model.dmService.sendMessage(
+        widget.roomId, wireContent, clientId,
+        replyToContent: quoteContent,
+        replyToSenderZendtag: quotedMsg.senderZendtag,
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            final i = _messages.indexWhere((m) => m.clientId == clientId);
+            if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+          });
+        }
+      }).catchError((_) {
+        if (mounted) {
+          setState(() {
+            final i = _messages.indexWhere((m) => m.clientId == clientId);
+            if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
           });
         }
       });
@@ -544,6 +549,53 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         msg.isEncrypted = true;
       }
     }
+  }
+
+  // ── Reply scroll-to-original ─────────────────────────────────────────────────
+  //
+  // When the user taps a quote block inside a bubble, scroll to the original
+  // message. We match by content + sender because we don't store the original
+  // message ID in the metadata yet. If the message is off-screen we scroll to
+  // it and flash the bubble to confirm.
+
+  // Keys for each message row — used by _scrollToReplyOrigin to find and
+  // flash-highlight the original message without estimating pixel offsets.
+  final _msgItemKeys = <String, GlobalKey>{};
+  String? _flashingMsgId;
+
+  void _scrollToReplyOrigin(DmMessage replyMsg) {
+    final replyContent = replyMsg.replyToContent;
+    final replySender = replyMsg.replyToSenderZendtag;
+    if (replyContent == null) return;
+
+    // Find the original message in the current list.
+    // Match by content and sender; skip E2EE blobs (the stored plaintext
+    // may already be decrypted in-place, so compare against the display value).
+    final idx = _messages.indexWhere((m) =>
+        (m.content == replyContent) &&
+        (replySender == null || m.senderZendtag == replySender));
+
+    if (idx == -1) return;
+
+    final targetId = _messages[idx].id;
+    final key = _msgItemKeys[targetId];
+    if (key?.currentContext == null) return;
+
+    // Scroll the item into view with a comfortable alignment.
+    Scrollable.ensureVisible(
+      key!.currentContext!,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+      alignment: 0.3, // show it 30% from the top of the visible area
+    ).then((_) {
+      // Flash the target bubble after scroll settles
+      if (mounted) {
+        setState(() => _flashingMsgId = targetId);
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) setState(() => _flashingMsgId = null);
+        });
+      }
+    });
   }
 
   String _formatLastSeen(DateTime dt) {
@@ -1342,6 +1394,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             final msgItem = item as _DmMessageItem;
                             final msg = msgItem.message;
 
+                            // Stable per-message key for scroll-to-reply
+                            final itemKey = _msgItemKeys.putIfAbsent(
+                              msg.id,
+                              () => GlobalKey(),
+                            );
+
                             // Map back to _messages index for grouping helpers
                             final msgIdx = _messages.indexWhere((m) => m.id == msg.id || (m.clientId != null && m.clientId == msg.clientId));
 
@@ -1350,15 +1408,21 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             final isFirst = msgIdx >= 0 ? _isFirstInGroup(msgIdx) : true;
                             final isLast  = msgIdx >= 0 ? _isLastInGroup(msgIdx) : true;
                             final isGroupEnd = !isMe && isFirst;
+                            final isFlashing = _flashingMsgId == msg.id;
 
-                            return Row(
+                            Widget bubbleRow = Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                // Avatar slot — only shown on group-end for incoming
+                                // Avatar slot — only shown on group-end for incoming.
+                                // Fixed 26×26 so the circle never stretches to an oval.
                                 if (!isMe) SizedBox(
                                   width: 32,
+                                  height: 26,
                                   child: isGroupEnd
-                                      ? ZendAvatar(radius: 13, photoUrl: cp.avatarUrl, initials: cp.initialLetter)
+                                      ? Align(
+                                          alignment: Alignment.bottomCenter,
+                                          child: ZendAvatar(radius: 13, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
+                                        )
                                       : null,
                                 ),
                                 Expanded(
@@ -1370,6 +1434,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                     isLast: isLast,
                                     showTimestamp: _showTimestamps,
                                     onReply: (m) => setState(() => _replyingTo = m),
+                                    onReplyTap: (m) => _scrollToReplyOrigin(m),
                                     onRetry: msg.localStatus == DmLocalStatus.failed
                                         ? () => _onRetry(msg.clientId ?? '')
                                         : null,
@@ -1379,6 +1444,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                   ),
                                 ),
                               ],
+                            );
+
+                            // Flash highlight — AnimatedContainer tint that
+                            // fades in and out when tapping a reply to jump
+                            // back to the original message.
+                            return _FlashHighlight(
+                              key: itemKey,
+                              isFlashing: isFlashing,
+                              child: bubbleRow,
                             );
                           },
                         );
@@ -1494,49 +1568,173 @@ class _ReplyStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final isMe = message.senderUserId == currentUserId;
-    final preview = switch (message.type) {
-      DmMessageType.payment => '💸 Payment',
-      DmMessageType.vibe => '✨ Vibe',
-      DmMessageType.paymentRequest => '↙ Payment request',
-      _ => message.content ?? '',
-    };
-    final previewShort = preview.length > 50 ? '${preview.substring(0, 50)}…' : preview;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      color: zt.bgSecondary,
-      child: Row(
-        children: [
-          // Accent bar
-          Container(width: 3, height: 32, decoration: BoxDecoration(color: zt.accent, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  isMe ? 'Replying to yourself' : 'Replying to @${message.senderZendtag ?? '…'}',
-                  style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+    // Icon + preview text per message type
+    final (IconData typeIcon, String preview) = switch (message.type) {
+      DmMessageType.payment        => (SolarIconsBold.transferHorizontal, '💸 Payment'),
+      DmMessageType.vibe           => (SolarIconsBold.star,              '✨ Vibe'),
+      DmMessageType.paymentRequest => (SolarIconsBold.bill,               '↙ Payment request'),
+      _                            => (SolarIconsBold.chatRound,          message.content ?? ''),
+    };
+    final previewShort = preview.length > 60
+        ? '${preview.substring(0, 60)}…'
+        : preview;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Hairline separator above the strip
+        Divider(height: 1, color: zt.border.withValues(alpha: 0.6)),
+        Container(
+          color: zt.bgSecondary,
+          padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Accent pill bar
+              Container(
+                width: 3,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: zt.accent,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  previewShort,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary),
+              ),
+              const SizedBox(width: 10),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // "Replying to @zendtag" header
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(SolarIconsBold.reply, size: 11, color: zt.accent),
+                        const SizedBox(width: 4),
+                        Text(
+                          isMe
+                              ? 'Replying to yourself'
+                              : 'Replying to @${message.senderZendtag ?? '…'}',
+                          style: TextStyle(
+                            fontFamily: 'DMMono',
+                            fontSize: 11,
+                            color: zt.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    // Preview row with type icon
+                    Row(
+                      children: [
+                        Icon(typeIcon, size: 12, color: zt.textSecondary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            previewShort,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'DMSans',
+                              fontSize: 13,
+                              color: zt.textSecondary,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Cancel button
+              IconButton(
+                onPressed: onCancel,
+                icon: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: onCancel,
-            icon: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Flash highlight — animates a subtle tint on the message when the user
+// taps a reply quote to jump back to the original ────────────────────────────
+
+class _FlashHighlight extends StatefulWidget {
+  const _FlashHighlight({
+    super.key,
+    required this.isFlashing,
+    required this.child,
+  });
+
+  final bool isFlashing;
+  final Widget child;
+
+  @override
+  State<_FlashHighlight> createState() => _FlashHighlightState();
+}
+
+class _FlashHighlightState extends State<_FlashHighlight>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _opacity = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
       ),
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 40,
+      ),
+    ]).animate(_ctrl);
+  }
+
+  @override
+  void didUpdateWidget(_FlashHighlight old) {
+    super.didUpdateWidget(old);
+    if (widget.isFlashing && !old.isFlashing) {
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (ctx, child) => ColoredBox(
+        color: ZendTheme.of(ctx).accent.withValues(alpha: _opacity.value * 0.18),
+        child: child,
+      ),
+      child: widget.child,
     );
   }
 }

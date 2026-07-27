@@ -251,6 +251,7 @@ class DmMessageBubble extends StatefulWidget {
     this.onLongPress,
     this.onReply,
     this.onReactionTap,
+    this.onReplyTap,
     this.showTimestamp = false,
   });
 
@@ -267,6 +268,9 @@ class DmMessageBubble extends StatefulWidget {
   /// Called when the user taps a reaction chip directly — carries the emoji
   /// so the caller can toggle it without reopening the full emoji tray.
   final void Function(DmMessage, String emoji)? onReactionTap;
+  /// Called when the user taps the in-bubble quote block to jump to the
+  /// original message. The [DmMessage.replyToContent] is passed for matching.
+  final void Function(DmMessage)? onReplyTap;
   /// When true, the exact timestamp is shown (revealed by left-edge swipe).
   final bool showTimestamp;
 
@@ -389,6 +393,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   @override
   Widget build(BuildContext context) {
     final topPad = widget.isContinuation ? 1.0 : 5.0;
+    final hasReactions = widget.message.reactions.isNotEmpty;
 
     Widget child = switch (widget.message.type) {
       DmMessageType.payment => DmPaymentBubble(
@@ -397,13 +402,17 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       DmMessageType.vibe => _buildVibeBubble(),
       DmMessageType.paymentRequest => DmPaymentRequestBubble(
           message: widget.message, isMe: widget.isMe,
+          isFirst: widget.isFirst, isLast: widget.isLast,
           onPay: widget.message.paymentRequestData != null && !widget.isMe
               ? () => widget.onPayRequest?.call(widget.message.paymentRequestData!)
               : null),
       _ => _TextBubble(
           message: widget.message, isMe: widget.isMe,
           isFirst: widget.isFirst, isLast: widget.isLast,
-          onRetry: widget.onRetry),
+          onRetry: widget.onRetry,
+          onReplyTap: widget.onReplyTap != null
+              ? () => widget.onReplyTap!(widget.message)
+              : null),
     };
 
     // Press feedback + double-tap heart + long-press → full reactions
@@ -453,21 +462,49 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       ),
     );
 
+    // ── iMessage-style reaction chips — float above the TOP of the bubble ──
+    // Chips sit just above the bubble's top edge, overlapping it by a few px.
+    // We push the bubble down by the chip height so chips don't obscure the
+    // message above in the list. The 4px overlap gives the "attached" feel.
+    const double kChipH = 22.0;
+    if (hasReactions) {
+      child = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Push bubble down to make room for chips above.
+          Padding(
+            padding: const EdgeInsets.only(top: kChipH - 4),
+            child: child,
+          ),
+          Positioned(
+            top: 0,
+            // Align chips with the bubble body edge (past avatar+gutter for received)
+            right: widget.isMe ? _kTailW + 2 : null,
+            left:  widget.isMe ? null : 32.0 + _kTailW + 2,
+            child: _ReactionRow(
+              reactions: widget.message.reactions,
+              onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
+            ),
+          ),
+        ],
+      );
+    }
+
     // Swipe-right offset transform — pulls bubble right with spring-back
     if (_swipeDx > 0) {
       child = Stack(
         clipBehavior: Clip.none,
         children: [
-          // Reply icon revealed behind the bubble
+          // Reply icon: always on the LEFT — user drags right, icon peeks out
+          // from behind the left edge. Tint accent when threshold reached.
           Positioned(
-            left: widget.isMe ? null : 0,
-            right: widget.isMe ? 0 : null,
+            left: 0,
             top: 0, bottom: 0,
             child: Opacity(
               opacity: (_swipeDx / 56.0).clamp(0.0, 1.0),
               child: Center(
                 child: Icon(
-                  SolarIconsBold.altArrowLeft,
+                  SolarIconsBold.reply,
                   size: 18,
                   color: _replyTriggered
                       ? ZendTheme.of(context).accent
@@ -523,27 +560,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
 
     return Padding(
       padding: EdgeInsets.only(top: topPad, bottom: 1),
-      child: Column(
-        crossAxisAlignment: widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          child,
-          // ── Reaction chips ─────────────────────────────────────────────
-          if (widget.message.reactions.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(
-                top: 4,
-                left: widget.isMe ? 0 : 36,
-                right: widget.isMe ? 8 : 0,
-              ),
-              child: _ReactionRow(
-                reactions: widget.message.reactions,
-                // Direct toggle — no tray, just flip the emoji immediately
-                onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
-              ),
-            ),
-        ],
-      ),
+      child: child,
     );
   }
 
@@ -567,11 +584,13 @@ class _TextBubble extends StatelessWidget {
     required this.message, required this.isMe,
     required this.isFirst, required this.isLast,
     this.onRetry,
+    this.onReplyTap,
   });
 
   final DmMessage message;
   final bool isMe, isFirst, isLast;
   final VoidCallback? onRetry;
+  final VoidCallback? onReplyTap;
 
   bool get _hasReply =>
       (message.replyToContent?.isNotEmpty ?? false) ||
@@ -624,6 +643,7 @@ class _TextBubble extends StatelessWidget {
                           bgColor: quoteBg,
                           textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
                           labelColor: isMe ? Colors.white.withValues(alpha: 0.6) : zt.accent,
+                          onTap: onReplyTap,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -678,6 +698,7 @@ class _QuoteBlock extends StatelessWidget {
     required this.bgColor,
     required this.textColor,
     required this.labelColor,
+    this.onTap,
   });
 
   final String? senderZendtag;
@@ -686,56 +707,68 @@ class _QuoteBlock extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
   final Color labelColor;
+  /// Optional tap handler — used to scroll to the original message.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left accent bar — the hallmark of a quoted reply
-            Container(width: 3, color: barColor),
-            // Quote content
-            Flexible(
-              child: Container(
-                color: bgColor,
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (senderZendtag != null && senderZendtag!.isNotEmpty)
-                      Text(
-                        '@$senderZendtag',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: labelColor,
-                          height: 1.2,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left accent bar — the hallmark of a quoted reply
+              Container(width: 3, color: barColor),
+              // Quote content
+              Flexible(
+                child: Container(
+                  color: bgColor,
+                  padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (senderZendtag != null && senderZendtag!.isNotEmpty)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(SolarIconsBold.reply, size: 10, color: labelColor),
+                            const SizedBox(width: 3),
+                            Text(
+                              '@$senderZendtag',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: labelColor,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    if (content != null && content!.isNotEmpty) ...[
-                      const SizedBox(height: 1),
-                      Text(
-                        content!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontSize: 13,
-                          color: textColor,
-                          height: 1.3,
+                      if (content != null && content!.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          content!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 12.5,
+                            color: textColor,
+                            height: 1.3,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -870,9 +903,17 @@ class DmPaymentBubble extends StatelessWidget {
 // same tail-corner geometry. Purple accent for "request" vs green for "sent".
 
 class DmPaymentRequestBubble extends StatelessWidget {
-  const DmPaymentRequestBubble({super.key, required this.message, required this.isMe, this.onPay});
+  const DmPaymentRequestBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    this.isFirst = true,
+    this.isLast = true,
+    this.onPay,
+  });
   final DmMessage message;
   final bool isMe;
+  final bool isFirst, isLast;
   final VoidCallback? onPay;
 
   @override
@@ -902,7 +943,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
               maxWidth: MediaQuery.of(context).size.width * 0.65,
             ),
             child: _BubbleShape(
-              isMe: isMe, isFirst: true, isLast: true,
+              isMe: isMe, isFirst: isFirst, isLast: isLast,
               color: bg,
               borderColor: hasBorder ? zt.accent.withValues(alpha: 0.25) : null,
               borderWidth: hasBorder ? 0.8 : 0,
