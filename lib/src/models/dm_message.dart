@@ -151,6 +151,7 @@ class DmMessage {
     this.reactions = const [],
     this.replyToContent,
     this.replyToSenderZendtag,
+    this.replyToMessageId,
   });
 
   final String id;
@@ -170,6 +171,8 @@ class DmMessage {
   /// If this message is a reply, the quoted snippet of the parent message.
   final String? replyToContent;
   final String? replyToSenderZendtag;
+  /// UUID of the original message being replied to — used for accurate scroll-to-original.
+  final String? replyToMessageId;
   /// True when the content was encrypted at rest and has been decrypted for display.
   bool isEncrypted = false;
 
@@ -221,6 +224,8 @@ class DmMessage {
           ?? meta['reply_to_content'] as String?,
       replyToSenderZendtag: json['reply_to_sender_zendtag'] as String?
           ?? meta['reply_to_sender_zendtag'] as String?,
+      replyToMessageId: json['reply_to_message_id'] as String?
+          ?? meta['reply_to_message_id'] as String?,
     );
   }
 

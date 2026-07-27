@@ -52,6 +52,21 @@ class DmWebSocketService {
   void sendMessage(String clientId, String content) =>
       _ws.sendMessage(clientId, content);
 
+  void sendMessageWithReply(
+    String clientId,
+    String content, {
+    String? replyToMessageId,
+    String? replyToContent,
+    String? replyToSenderZendtag,
+  }) =>
+      _ws.sendMessageWithReply(
+        clientId,
+        content,
+        replyToMessageId: replyToMessageId,
+        replyToContent: replyToContent,
+        replyToSenderZendtag: replyToSenderZendtag,
+      );
+
   void sendTyping(bool isTyping) => _ws.sendTyping(isTyping);
 
   void sendRead(String lastReadMessageId) => _ws.sendRead(lastReadMessageId);

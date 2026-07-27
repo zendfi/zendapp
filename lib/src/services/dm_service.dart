@@ -148,15 +148,17 @@ class DmService {
     String clientId, {
     String? replyToContent,
     String? replyToSenderZendtag,
+    String? replyToMessageId,
   }) async {
     final data = <String, dynamic>{
       'content': content,
       'client_id': clientId,
     };
-    if (replyToContent != null || replyToSenderZendtag != null) {
+    if (replyToContent != null || replyToSenderZendtag != null || replyToMessageId != null) {
       data['metadata'] = {
         'reply_to_content': replyToContent,
         'reply_to_sender_zendtag': replyToSenderZendtag,
+        'reply_to_message_id': replyToMessageId,
       };
     }
     final response = await _apiClient.dio.post(
@@ -174,6 +176,7 @@ class DmService {
           DateTime.now().toIso8601String(),
       'reply_to_content': replyToContent,
       'reply_to_sender_zendtag': replyToSenderZendtag,
+      'reply_to_message_id': replyToMessageId,
     });
   }
 

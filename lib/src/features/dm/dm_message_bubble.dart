@@ -634,19 +634,16 @@ class _TextBubble extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_hasReply) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: _QuoteBlock(
-                          senderZendtag: message.replyToSenderZendtag,
-                          content: message.replyToContent,
-                          barColor: barColor,
-                          bgColor: quoteBg,
-                          textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
-                          labelColor: isMe ? Colors.white.withValues(alpha: 0.6) : zt.accent,
-                          onTap: onReplyTap,
-                        ),
+                      _QuoteBlock(
+                        senderZendtag: message.replyToSenderZendtag,
+                        content: message.replyToContent,
+                        barColor: barColor,
+                        bgColor: quoteBg,
+                        textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
+                        labelColor: isMe ? Colors.white.withValues(alpha: 0.7) : zt.accent,
+                        onTap: onReplyTap,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                     ],
                     if (message.content?.isNotEmpty == true)
                       Text(
@@ -689,6 +686,12 @@ class _TextBubble extends StatelessWidget {
 }
 
 // ── Quote block — WhatsApp-style in-bubble reply ──────────────────────────────
+//
+// Design goals (from the screenshot feedback):
+// - Fills the full bubble width — no narrow card floating on the left
+// - Subtle background tint, not a heavy opaque box
+// - Left accent bar is the main visual indicator of "this is a quote"
+// - Compact: sender label + 1-2 lines preview, no excessive padding
 
 class _QuoteBlock extends StatelessWidget {
   const _QuoteBlock({
@@ -707,7 +710,6 @@ class _QuoteBlock extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
   final Color labelColor;
-  /// Optional tap handler — used to scroll to the original message.
   final VoidCallback? onTap;
 
   @override
@@ -715,15 +717,15 @@ class _QuoteBlock extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Left accent bar — the hallmark of a quoted reply
+              // 3px accent bar — the core visual cue for "quoted reply"
               Container(width: 3, color: barColor),
-              // Quote content
-              Flexible(
+              // Content — fills all available width
+              Expanded(
                 child: Container(
                   color: bgColor,
                   padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
@@ -732,25 +734,19 @@ class _QuoteBlock extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (senderZendtag != null && senderZendtag!.isNotEmpty)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(SolarIconsBold.reply, size: 10, color: labelColor),
-                            const SizedBox(width: 3),
-                            Text(
-                              '@$senderZendtag',
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: labelColor,
-                                height: 1.2,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          '@$senderZendtag',
+                          style: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: labelColor,
+                            height: 1.2,
+                          ),
                         ),
                       if (content != null && content!.isNotEmpty) ...[
-                        const SizedBox(height: 1),
+                        if (senderZendtag != null && senderZendtag!.isNotEmpty)
+                          const SizedBox(height: 1),
                         Text(
                           content!,
                           maxLines: 2,

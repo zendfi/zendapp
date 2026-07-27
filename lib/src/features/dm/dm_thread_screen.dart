@@ -395,15 +395,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       model.dmService.unmarkCleared(widget.roomId);
     }
 
-    // Build the quoted preview text
+    // Build the quoted preview — use the actual message ID for reliable lookup
     final quoteContent = switch (quotedMsg.type) {
-      DmMessageType.payment => '💸 Payment',
-      DmMessageType.vibe    => '✨ Vibe',
+      DmMessageType.payment        => '💸 Payment',
+      DmMessageType.vibe           => '✨ Vibe',
       DmMessageType.paymentRequest => '↙ Payment request',
-      _ => quotedMsg.content ?? '',
+      _                            => quotedMsg.content ?? '',
     };
+    // Use the real server ID, not a local-* id (optimistic messages don't have a stable ID yet)
+    final replyToId = quotedMsg.id.startsWith('local-') ? null : quotedMsg.id;
 
-    // Optimistic message with reply fields populated immediately for instant UI
     final optimistic = DmMessage(
       id: 'local-$clientId',
       roomId: widget.roomId,
@@ -417,33 +418,45 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       localStatus: DmLocalStatus.sending,
       replyToContent: quoteContent,
       replyToSenderZendtag: quotedMsg.senderZendtag,
+      replyToMessageId: replyToId,
     );
 
     setState(() => _messages.insert(0, optimistic));
 
     _encryptForSend(text).then((wireContent) {
-      // Always use HTTP for reply messages — only HTTP carries metadata.
-      // We also still send via WS so the counterparty gets the WS fan-out
-      // immediately, and the ON CONFLICT (client_id) ensures the HTTP write
-      // doesn't duplicate if the WS already persisted.
-      _ws.sendMessage(clientId, wireContent);
-
-      model.dmService.sendMessage(
-        widget.roomId, wireContent, clientId,
+      // Send over WS with full reply context — backend now persists metadata
+      _ws.sendMessageWithReply(
+        clientId,
+        wireContent,
+        replyToMessageId: replyToId,
         replyToContent: quoteContent,
         replyToSenderZendtag: quotedMsg.senderZendtag,
-      ).then((_) {
-        if (mounted) {
-          setState(() {
-            final i = _messages.indexWhere((m) => m.clientId == clientId);
-            if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
-          });
-        }
-      }).catchError((_) {
-        if (mounted) {
-          setState(() {
-            final i = _messages.indexWhere((m) => m.clientId == clientId);
-            if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
+      );
+
+      // HTTP fallback after 1.5s (also carries reply metadata via DmService)
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (!mounted) return;
+        final idx = _messages.indexWhere((m) => m.clientId == clientId);
+        if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
+          model.dmService.sendMessage(
+            widget.roomId, wireContent, clientId,
+            replyToContent: quoteContent,
+            replyToSenderZendtag: quotedMsg.senderZendtag,
+            replyToMessageId: replyToId,
+          ).then((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+              });
+            }
+          }).catchError((_) {
+            if (mounted) {
+              setState(() {
+                final i = _messages.indexWhere((m) => m.clientId == clientId);
+                if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
+              });
+            }
           });
         }
       });
@@ -566,14 +579,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void _scrollToReplyOrigin(DmMessage replyMsg) {
     final replyContent = replyMsg.replyToContent;
     final replySender = replyMsg.replyToSenderZendtag;
-    if (replyContent == null) return;
+    final replyMsgId = replyMsg.replyToMessageId;
 
-    // Find the original message in the current list.
-    // Match by content and sender; skip E2EE blobs (the stored plaintext
-    // may already be decrypted in-place, so compare against the display value).
-    final idx = _messages.indexWhere((m) =>
-        (m.content == replyContent) &&
-        (replySender == null || m.senderZendtag == replySender));
+    int idx = -1;
+
+    // Prefer ID-based lookup (exact, works for all message types including
+    // payment/vibe which have null content)
+    if (replyMsgId != null) {
+      idx = _messages.indexWhere((m) => m.id == replyMsgId);
+    }
+
+    // Fallback: content+sender match for messages sent before ID tracking
+    if (idx == -1 && replyContent != null) {
+      idx = _messages.indexWhere((m) =>
+          m.content == replyContent &&
+          (replySender == null || m.senderZendtag == replySender));
+    }
 
     if (idx == -1) return;
 
@@ -581,14 +602,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final key = _msgItemKeys[targetId];
     if (key?.currentContext == null) return;
 
-    // Scroll the item into view with a comfortable alignment.
     Scrollable.ensureVisible(
       key!.currentContext!,
       duration: const Duration(milliseconds: 380),
       curve: Curves.easeOutCubic,
-      alignment: 0.3, // show it 30% from the top of the visible area
+      alignment: 0.3,
     ).then((_) {
-      // Flash the target bubble after scroll settles
       if (mounted) {
         setState(() => _flashingMsgId = targetId);
         Future.delayed(const Duration(milliseconds: 1000), () {

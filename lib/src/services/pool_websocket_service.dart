@@ -219,6 +219,25 @@ class PoolWebSocketService {
     }));
   }
 
+  /// Sends a `send_message` frame with reply context (DM rooms only).
+  void sendMessageWithReply(
+    String clientId,
+    String content, {
+    String? replyToMessageId,
+    String? replyToContent,
+    String? replyToSenderZendtag,
+  }) {
+    final frame = <String, dynamic>{
+      'type': 'send_message',
+      'client_id': clientId,
+      'content': content,
+    };
+    if (replyToMessageId != null) frame['reply_to_message_id'] = replyToMessageId;
+    if (replyToContent != null) frame['reply_to_content'] = replyToContent;
+    if (replyToSenderZendtag != null) frame['reply_to_sender_zendtag'] = replyToSenderZendtag;
+    _send(jsonEncode(frame));
+  }
+
   /// Sends a `typing` frame to the server.
   void sendTyping(bool isTyping) {
     _send(jsonEncode({'type': 'typing', 'is_typing': isTyping}));
