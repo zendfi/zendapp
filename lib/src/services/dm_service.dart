@@ -43,10 +43,10 @@ class DmService {
       List.unmodifiable(_messageCache[roomId] ?? const []);
 
   /// Updates the message cache for a room.
-  /// Also unmarks a cleared room so incoming messages are shown.
   void _updateMessageCache(String roomId, List<DmMessage> messages) {
     _messageCache[roomId] = List.of(messages);
-    _unmarkCleared(roomId);
+    // Note: do NOT unmark cleared rooms here. Clearing is only undone when
+    // the counterparty sends a new message (handled in DmThreadScreen._initWs).
   }
 
   /// Clears the cache (e.g. on sign-out).

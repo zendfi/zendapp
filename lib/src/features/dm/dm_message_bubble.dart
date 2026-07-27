@@ -16,7 +16,7 @@ const double _kInner = 4.0;
 
 /// Tail protrusion dimensions.
 const double _kTailW = 8.0;   // horizontal extent of the beak triangle
-const double _kTailH = 12.0;  // vertical height of the beak triangle
+const double _kTailH = 7.0;   // vertical height — shorter = subtler beak
 
 // ── CustomPainter that draws a bubble with a real protruding beak ─────────────
 //

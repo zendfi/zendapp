@@ -285,6 +285,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
 
+    // Sending a new message means the user is actively chatting again —
+    // unmark the room as cleared so history reloads on the next open.
+    if (model.dmService.isRoomCleared(widget.roomId)) {
+      model.dmService.unmarkCleared(widget.roomId);
+    }
+
     final optimistic = DmMessage.optimistic(
       roomId: widget.roomId,
       senderUserId: model.currentUserId ?? '',
@@ -337,6 +343,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     HapticFeedback.lightImpact();
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
+    if (model.dmService.isRoomCleared(widget.roomId)) {
+      model.dmService.unmarkCleared(widget.roomId);
+    }
 
     // Build the quoted preview text
     final quoteContent = switch (quotedMsg.type) {
@@ -810,6 +819,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
     final myZendtag = model.currentZendtag ?? '';
+    if (model.dmService.isRoomCleared(widget.roomId)) {
+      model.dmService.unmarkCleared(widget.roomId);
+    }
 
     // Optimistic message
     final optimistic = DmMessage(
