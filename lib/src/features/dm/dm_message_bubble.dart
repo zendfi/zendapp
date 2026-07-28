@@ -466,28 +466,33 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // bubble, overlapping its bottom edge by a few px and mostly sitting in
     // the gap toward the next (newer) message below it.
     //
-    // Bubble body reserves `kReactionReserve` of extra space below itself so
-    // the badge has somewhere to sit without covering the next message; the
-    // badge is then anchored to the bottom of that reserved space, which
-    // makes it overlap the bubble's own bottom corner by
-    // `kReactionBadgeSize - kReactionReserve` — just enough to look
-    // "attached" without hiding the bubble content.
-    const double kReactionReserve = 18.0;
+    // IMPORTANT: this Stack must NOT reserve extra layout space for the
+    // badge (e.g. via bottom padding on `child`) — this widget is placed
+    // inside an `Expanded` cell of a Row that also holds the avatar, and
+    // that Row uses `crossAxisAlignment: CrossAxisAlignment.end`. Any extra
+    // height added here shifts where "the bottom" is for the whole Row,
+    // which drags the avatar down with it, detaching it from the bubble.
+    // Using a Positioned child with a *negative* bottom offset lets the
+    // badge visually overlap past the bubble's edge without changing the
+    // Stack's (and therefore the Row's) reported size — Stack sizes itself
+    // to its non-positioned child only.
+    //
+    // Horizontal anchoring: this widget's own coordinate space starts at its
+    // Row's leading gap (4px) then the bubble's tail gutter (_kTailW, 8px)
+    // before the visible rounded body — it does NOT include the avatar
+    // gutter, which lives in a sibling widget one level up. So both sides
+    // use the same `_kTailW + 4` inset from their respective edge.
     if (hasReactions) {
       child = Stack(
         clipBehavior: Clip.none,
         children: [
-          // Reserve room below the bubble for the badge to sit in.
-          Padding(
-            padding: const EdgeInsets.only(bottom: kReactionReserve),
-            child: child,
-          ),
+          child,
           Positioned(
-            bottom: 0,
+            bottom: -10,
             // Anchor to the tail-side corner — bottom-right for sent
-            // messages, bottom-left (past the avatar gutter) for received.
+            // messages, bottom-left for received.
             right: widget.isMe ? _kTailW + 4 : null,
-            left:  widget.isMe ? null : 32.0 + _kTailW + 4,
+            left:  widget.isMe ? null : _kTailW + 4,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
