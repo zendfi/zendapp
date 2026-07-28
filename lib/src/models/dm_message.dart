@@ -181,6 +181,20 @@ class DmMessage {
 
   bool get isMe => false; // caller sets based on currentUserId
 
+  /// Safe content for display. If [content] still carries the raw `e2ee:`
+  /// wire prefix — meaning a decryption attempt hasn't replaced it yet, due
+  /// to the async key-fetch/history-load race — show a lock placeholder
+  /// instead of the ciphertext. Once decryption succeeds (or fails and is
+  /// replaced with a 🔒 placeholder string), content no longer starts with
+  /// `e2ee:` and this simply returns it unchanged.
+  String? get displayContent {
+    final c = content;
+    if (c != null && c.startsWith('e2ee:')) {
+      return '🔒 (decrypting…)';
+    }
+    return c;
+  }
+
   factory DmMessage.fromJson(Map<String, dynamic> json) {
     final typeStr = json['message_type'] as String? ?? 'text';
     final type = switch (typeStr) {

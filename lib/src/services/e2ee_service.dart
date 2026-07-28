@@ -14,16 +14,26 @@ const kE2eePrefix = 'e2ee:';
 /// Manages end-to-end encryption for DM rooms using static X25519 ECDH.
 ///
 /// Security model:
-///   - Ed25519 seed (first 32 bytes of the wallet keypair) → X25519 key via
-///     the standard RFC 8032 clamping. Same keypair already on device.
+///   - Ed25519 seed (32 bytes of the wallet keypair) → X25519 private scalar
+///     via SHA-512(seed)[0:32] (the same "expanded scalar" Ed25519 itself
+///     uses internally — X25519 clamps it again at use time, which is
+///     idempotent). This is the standard `crypto_sign_ed25519_sk_to_curve25519`
+///     conversion used by libsodium.
+///   - Counterparty's Ed25519 public key (Edwards y-coordinate) → X25519
+///     public key (Montgomery u-coordinate) via the birational map
+///     u = (1 + y) / (1 - y) mod (2^255 - 19). This is the standard
+///     `crypto_sign_ed25519_pk_to_curve25519` conversion. Without this
+///     conversion, raw Ed25519 pubkey bytes are NOT a valid X25519 public key
+///     for the corresponding private scalar, and ECDH between two different
+///     users' wallets will not produce a matching shared secret.
 ///   - ECDH shared secret per (sender, recipient) pair → HKDF-SHA256 per room.
 ///   - ChaCha20-Poly1305 AEAD for each message.
 ///   - No forward secrecy (same level as Snapchat/Instagram DMs).
 ///   - The server only ever sees `e2ee:<base64_blob>` — no plaintext.
 ///
 /// Key derivation flow:
-///   seed32 → X25519PrivateKey
-///   counterpartyPubKey → X25519PublicKey (from base58-encoded Ed25519 pubkey)
+///   mySeed32 → SHA-512 → first 32 bytes → X25519 private key
+///   counterpartyPubKey (base58 Ed25519) → decode → birational map → X25519 public key
 ///   X25519.sharedSecretKey(myPriv, theirPub) → sharedSecret
 ///   HKDF(sharedSecret, salt=room_id, info='zend-dm-e2ee') → symmetricKey
 ///   ChaCha20Poly1305.encrypt(key=symmetricKey, nonce=random12, plaintext) → ciphertext
@@ -87,19 +97,30 @@ class E2eeService {
     if (_keyCache.containsKey(cacheKey)) return _keyCache[cacheKey];
 
     try {
-      // Step 1: Ed25519 seed → X25519 private key
-      // The X25519 private key is the clamped SHA-512 hash of the Ed25519 seed.
-      // We use the `cryptography` package's X25519 directly from seed bytes.
-      final myPriv = await _x25519.newKeyPairFromSeed(mySeed32);
+      // Step 1: Ed25519 seed → X25519 private scalar.
+      // This is the standard `crypto_sign_ed25519_sk_to_curve25519` conversion:
+      // SHA-512(seed), take the first 32 bytes, then RFC 7748 clamp. This is
+      // the exact same scalar Ed25519 itself derives internally, so it is
+      // guaranteed to correspond to the Ed25519 public key we published.
+      final privScalar = await _ed25519SeedToX25519Scalar(mySeed32);
+      final myPriv = await _x25519.newKeyPairFromSeed(privScalar);
 
       // Step 2: Decode counterparty's Ed25519 pubkey (base58) → raw bytes
       final theirPubBytes = _decodeBase58(counterpartyPubkeyB58);
       if (theirPubBytes == null || theirPubBytes.length != 32) return null;
 
-      // The `cryptography` X25519 package treats Ed25519 pubkey bytes as
-      // X25519 pubkey bytes directly — this is the "static ECDH" approach
-      // used by libsodium's crypto_box and NaCl.
-      final theirPub = SimplePublicKey(theirPubBytes, type: KeyPairType.x25519);
+      // Step 2b: Convert their Ed25519 public key (Edwards y-coordinate) to
+      // the corresponding X25519 public key (Montgomery u-coordinate) via the
+      // standard birational map. Ed25519 and X25519 pubkey bytes are NOT
+      // interchangeable — treating one as the other silently produces a
+      // shared secret that only matches by coincidence, so decryption across
+      // two different users' devices was unreliable without this step.
+      final theirU = _edwardsYToMontgomeryU(theirPubBytes);
+      if (theirU == null) return null;
+      final theirPub = SimplePublicKey(
+        _bigIntToLittleEndian32(theirU),
+        type: KeyPairType.x25519,
+      );
 
       // Step 3: ECDH → shared secret
       final sharedSecret = await _x25519.sharedSecretKey(
@@ -214,6 +235,67 @@ class E2eeService {
 
   /// Clears the key cache (call on logout or key rotation).
   void clearCache() => _keyCache.clear();
+
+  // ── Ed25519 → X25519 conversion ─────────────────────────────────────────────
+  //
+  // Standard conversions (same as libsodium's crypto_sign_ed25519_*_to_curve25519).
+  // These are required because Ed25519 and X25519 keys live on different
+  // (birationally equivalent) curve models — Edwards vs Montgomery — so raw
+  // byte reuse between them is not a valid substitute for the real mapping.
+
+  static final _sha512 = Sha512();
+
+  /// Converts an Ed25519 seed to the corresponding X25519 private scalar.
+  /// SHA-512(seed) → take the first 32 bytes. `X25519.newKeyPairFromSeed`
+  /// applies RFC 7748 clamping on top of this, matching Ed25519's own
+  /// internal scalar derivation.
+  Future<Uint8List> _ed25519SeedToX25519Scalar(Uint8List seed) async {
+    final hash = await _sha512.hash(seed);
+    return Uint8List.fromList(hash.bytes.sublist(0, 32));
+  }
+
+  /// The finite field prime p = 2^255 - 19 used by both Curve25519 and Ed25519.
+  static final BigInt _p =
+      BigInt.parse('7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed', radix: 16);
+
+  /// Converts a compressed Ed25519 public key (little-endian, sign bit in the
+  /// top bit of the last byte) to the Montgomery u-coordinate used by X25519,
+  /// via the birational map u = (1 + y) / (1 - y) mod p.
+  BigInt? _edwardsYToMontgomeryU(Uint8List edPubKey) {
+    if (edPubKey.length != 32) return null;
+    try {
+      // Decode the y-coordinate: little-endian 255 bits (clear the sign bit).
+      final clamped = Uint8List.fromList(edPubKey);
+      clamped[31] &= 0x7f;
+      var y = BigInt.zero;
+      for (var i = 31; i >= 0; i--) {
+        y = (y << 8) | BigInt.from(clamped[i]);
+      }
+      if (y >= _p) return null;
+
+      final one = BigInt.one;
+      final numerator = (one + y) % _p;
+      final denominator = (one - y) % _p;
+      final denominatorInv = denominator.modInverse(_p);
+      final u = (numerator * denominatorInv) % _p;
+      return u < BigInt.zero ? u + _p : u;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Serializes a field element as 32 little-endian bytes, as required by
+  /// the X25519 public key wire format.
+  Uint8List _bigIntToLittleEndian32(BigInt value) {
+    final out = Uint8List(32);
+    var v = value;
+    final mask = BigInt.from(0xff);
+    for (var i = 0; i < 32; i++) {
+      out[i] = (v & mask).toInt();
+      v = v >> 8;
+    }
+    return out;
+  }
 
   // ── Base58 decoder ─────────────────────────────────────────────────────────
   // Solana wallet addresses are base58-encoded 32-byte Ed25519 public keys.

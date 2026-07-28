@@ -645,9 +645,9 @@ class _TextBubble extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                     ],
-                    if (message.content?.isNotEmpty == true)
+                    if (message.displayContent?.isNotEmpty == true)
                       Text(
-                        message.content!,
+                        message.displayContent!,
                         style: TextStyle(
                           fontFamily: 'DMSans',
                           fontSize: 15,

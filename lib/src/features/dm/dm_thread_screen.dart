@@ -93,9 +93,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
       widget.counterparty.userId,
     );
-    if (mounted && pubkey != null) {
-      setState(() => _counterpartyPubkey = pubkey);
-    }
+    if (!mounted || pubkey == null) return;
+    setState(() => _counterpartyPubkey = pubkey);
+    // _loadMessages() may have already finished (or the room may have been
+    // seeded from cache in initState) before the counterparty key arrived —
+    // in that case any e2ee: messages were left as raw ciphertext because
+    // _e2eeReady was false at load time. Decrypt the currently-held list now
+    // that the key is available so we never display ciphertext to the user.
+    await _decryptMessages(_messages);
+    if (mounted) setState(() {});
   }
 
   void _initWs() {
@@ -405,7 +411,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       DmMessageType.payment        => '💸 Payment',
       DmMessageType.vibe           => '✨ Vibe',
       DmMessageType.paymentRequest => '↙ Payment request',
-      _                            => quotedMsg.content ?? '',
+      // Use displayContent, not content — if the quoted message hasn't
+      // finished decrypting yet, content still holds the raw `e2ee:` blob
+      // and we must never let that leak into the reply-quote metadata.
+      _                            => quotedMsg.displayContent ?? '',
     };
     // Use the real server ID, not a local-* id (optimistic messages don't have a stable ID yet)
     final replyToId = quotedMsg.id.startsWith('local-') ? null : quotedMsg.id;
@@ -1599,7 +1608,7 @@ class _ReplyStrip extends StatelessWidget {
       DmMessageType.payment        => (SolarIconsBold.transferHorizontal, '💸 Payment'),
       DmMessageType.vibe           => (SolarIconsBold.star,              '✨ Vibe'),
       DmMessageType.paymentRequest => (SolarIconsBold.bill,               '↙ Payment request'),
-      _                            => (SolarIconsBold.chatRound,          message.content ?? ''),
+      _                            => (SolarIconsBold.chatRound,          message.displayContent ?? ''),
     };
     final previewShort = preview.length > 60
         ? '${preview.substring(0, 60)}…'
