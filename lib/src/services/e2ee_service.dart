@@ -256,7 +256,7 @@ class E2eeService {
 
   /// The finite field prime p = 2^255 - 19 used by both Curve25519 and Ed25519.
   static final BigInt _p =
-      BigInt.parse('7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed', radix: 16);
+      BigInt.parse('7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed', radix: 16);
 
   /// Converts a compressed Ed25519 public key (little-endian, sign bit in the
   /// top bit of the last byte) to the Montgomery u-coordinate used by X25519,
