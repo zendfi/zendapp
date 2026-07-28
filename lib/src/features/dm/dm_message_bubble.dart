@@ -462,25 +462,32 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       ),
     );
 
-    // ── iMessage-style reaction chips — float above the TOP of the bubble ──
-    // Chips sit just above the bubble's top edge, overlapping it by a few px.
-    // We push the bubble down by the chip height so chips don't obscure the
-    // message above in the list. The 4px overlap gives the "attached" feel.
-    const double kChipH = 22.0;
+    // ── WhatsApp-style reaction badge — floats at the BOTTOM corner of the
+    // bubble, overlapping its bottom edge by a few px and mostly sitting in
+    // the gap toward the next (newer) message below it.
+    //
+    // Bubble body reserves `kReactionReserve` of extra space below itself so
+    // the badge has somewhere to sit without covering the next message; the
+    // badge is then anchored to the bottom of that reserved space, which
+    // makes it overlap the bubble's own bottom corner by
+    // `kReactionBadgeSize - kReactionReserve` — just enough to look
+    // "attached" without hiding the bubble content.
+    const double kReactionReserve = 18.0;
     if (hasReactions) {
       child = Stack(
         clipBehavior: Clip.none,
         children: [
-          // Push bubble down to make room for chips above.
+          // Reserve room below the bubble for the badge to sit in.
           Padding(
-            padding: const EdgeInsets.only(top: kChipH - 4),
+            padding: const EdgeInsets.only(bottom: kReactionReserve),
             child: child,
           ),
           Positioned(
-            top: 0,
-            // Align chips with the bubble body edge (past avatar+gutter for received)
-            right: widget.isMe ? _kTailW + 2 : null,
-            left:  widget.isMe ? null : 32.0 + _kTailW + 2,
+            bottom: 0,
+            // Anchor to the tail-side corner — bottom-right for sent
+            // messages, bottom-left (past the avatar gutter) for received.
+            right: widget.isMe ? _kTailW + 4 : null,
+            left:  widget.isMe ? null : 32.0 + _kTailW + 4,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
@@ -1032,6 +1039,18 @@ String _weekday(int w) {
 
 // ── Reaction row ──────────────────────────────────────────────────────────────
 
+/// WhatsApp-inspired reaction badge — a single floating pill/circle anchored
+/// to the bottom corner of the bubble, rather than a row of separate chips.
+///
+/// - Exactly one distinct emoji with a single reactor → a small circle
+///   containing just that emoji (matches the 1-on-1 DM screenshots: a plain
+///   dark circle with the heart, no count).
+/// - Multiple reactors and/or multiple distinct emojis → a pill showing up
+///   to 3 emoji glyphs followed by the total reaction count.
+///
+/// The badge uses the chat background colour (not the bubble colour) with a
+/// thin border and soft shadow, so it reads as "punched into" the wallpaper
+/// behind the bubble — the same visual trick WhatsApp uses.
 class _ReactionRow extends StatelessWidget {
   const _ReactionRow({required this.reactions, required this.onTap});
 
@@ -1040,52 +1059,82 @@ class _ReactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (reactions.isEmpty) return const SizedBox.shrink();
     final zt = ZendTheme.of(context);
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      children: reactions.map((r) {
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onTap(r.emoji);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-              color: r.reactedByMe
-                  ? zt.accent.withValues(alpha: 0.2)
-                  : zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-              border: Border.all(
-                color: r.reactedByMe
-                    ? zt.accent.withValues(alpha: 0.5)
-                    : zt.border.withValues(alpha: 0.4),
-                width: 0.8,
+    final totalCount = reactions.fold<int>(0, (sum, r) => sum + r.count);
+    final reactedByMe = reactions.any((r) => r.reactedByMe);
+    final isSingle = reactions.length == 1 && totalCount == 1;
+
+    final badgeDecoration = BoxDecoration(
+      color: zt.bgPrimary,
+      borderRadius: BorderRadius.circular(ZendRadii.pill),
+      border: Border.all(
+        color: reactedByMe
+            ? zt.accent.withValues(alpha: 0.55)
+            : zt.border.withValues(alpha: 0.5),
+        width: reactedByMe ? 1.2 : 1.0,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.18),
+          blurRadius: 3,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
+
+    void handleTap(String emoji) {
+      HapticFeedback.selectionClick();
+      onTap(emoji);
+    }
+
+    if (isSingle) {
+      final r = reactions.first;
+      return GestureDetector(
+        onTap: () => handleTap(r.emoji),
+        child: Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: badgeDecoration,
+          child: Text(
+            r.emoji,
+            style: const TextStyle(fontSize: 14, decoration: TextDecoration.none),
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => handleTap(reactions.first.emoji),
+      child: Container(
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: badgeDecoration,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final r in reactions.take(3))
+              Padding(
+                padding: const EdgeInsets.only(right: 1),
+                child: Text(
+                  r.emoji,
+                  style: const TextStyle(fontSize: 13, decoration: TextDecoration.none),
+                ),
+              ),
+            const SizedBox(width: 3),
+            Text(
+              '$totalCount',
+              style: TextStyle(
+                fontFamily: 'DMMono',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: reactedByMe ? zt.accent : zt.textSecondary,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(r.emoji, style: const TextStyle(fontSize: 13, decoration: TextDecoration.none)),
-                if (r.count > 1) ...[
-                  const SizedBox(width: 3),
-                  Text(
-                    '${r.count}',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+          ],
+        ),
+      ),
     );
   }
 }
