@@ -1480,13 +1480,37 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               ],
                             );
 
+                            // When this message carries reactions, the floating
+                            // badge (drawn inside DmMessageBubble via a
+                            // Positioned widget with a negative bottom offset,
+                            // so it doesn't affect the Row's own height / the
+                            // avatar's cross-axis-end alignment above) needs
+                            // somewhere below the bubble to actually sit in.
+                            // Grouped messages normally sit almost flush
+                            // together (1-5px gap), which isn't enough room —
+                            // without this spacer the badge bleeds onto the
+                            // next message's bubble. Adding the extra gap
+                            // HERE (as a sibling below the Row, not inside it)
+                            // reserves that space without dragging the avatar
+                            // down with it.
+                            Widget itemContent = msg.reactions.isNotEmpty
+                                ? Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      bubbleRow,
+                                      const SizedBox(height: 14),
+                                    ],
+                                  )
+                                : bubbleRow;
+
                             // Flash highlight — AnimatedContainer tint that
                             // fades in and out when tapping a reply to jump
                             // back to the original message.
                             return _FlashHighlight(
                               key: itemKey,
                               isFlashing: isFlashing,
-                              child: bubbleRow,
+                              child: itemContent,
                             );
                           },
                         );

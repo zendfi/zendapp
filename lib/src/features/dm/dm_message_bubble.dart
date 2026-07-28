@@ -653,6 +653,7 @@ class _TextBubble extends StatelessWidget {
                         bgColor: quoteBg,
                         textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
                         labelColor: isMe ? Colors.white.withValues(alpha: 0.7) : zt.accent,
+                        isMe: isMe,
                         onTap: onReplyTap,
                       ),
                       const SizedBox(height: 5),
@@ -662,7 +663,7 @@ class _TextBubble extends StatelessWidget {
                         message.displayContent!,
                         style: TextStyle(
                           fontFamily: 'DMSans',
-                          fontSize: 15,
+                          fontSize: 16.5,
                           color: isMe ? Colors.white : zt.textPrimary,
                           height: 1.35,
                         ),
@@ -713,6 +714,7 @@ class _QuoteBlock extends StatelessWidget {
     required this.bgColor,
     required this.textColor,
     required this.labelColor,
+    required this.isMe,
     this.onTap,
   });
 
@@ -722,60 +724,76 @@ class _QuoteBlock extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
   final Color labelColor;
+  /// When true (this is the sender's own bubble), the quote mirrors to the
+  /// right: accent bar on the right edge, text right-aligned — matching the
+  /// sent-bubble's own right alignment instead of always defaulting to left.
+  final bool isMe;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final bar = Container(width: 3, color: barColor);
+    final textAlign = isMe ? TextAlign.right : TextAlign.left;
+    final crossAlign = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
+    final content_ = Container(
+      color: bgColor,
+      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+      child: Column(
+        crossAxisAlignment: crossAlign,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (senderZendtag != null && senderZendtag!.isNotEmpty)
+            Text(
+              '@$senderZendtag',
+              textAlign: textAlign,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: labelColor,
+                height: 1.2,
+              ),
+            ),
+          if (content != null && content!.isNotEmpty) ...[
+            if (senderZendtag != null && senderZendtag!.isNotEmpty)
+              const SizedBox(height: 1),
+            Text(
+              content!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: textAlign,
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: textColor,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: IntrinsicHeight(
           child: Row(
+            // MainAxisSize.min is the key fix here — without it, a Row
+            // always reports its OWN width as the full incoming max width
+            // regardless of whether its children use Expanded, which forced
+            // every reply quote (and therefore the whole bubble, since the
+            // bubble's Column sizes to its widest child) to stretch to the
+            // maximum allowed bubble width even for short messages. With
+            // `min`, the Row (and its non-flex Container child below) sizes
+            // to its actual text content instead, capped by the same ambient
+            // max-width constraint so long quotes still ellipsize correctly.
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 3px accent bar — the core visual cue for "quoted reply"
-              Container(width: 3, color: barColor),
-              // Content — fills all available width
-              Expanded(
-                child: Container(
-                  color: bgColor,
-                  padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (senderZendtag != null && senderZendtag!.isNotEmpty)
-                        Text(
-                          '@$senderZendtag',
-                          style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: labelColor,
-                            height: 1.2,
-                          ),
-                        ),
-                      if (content != null && content!.isNotEmpty) ...[
-                        if (senderZendtag != null && senderZendtag!.isNotEmpty)
-                          const SizedBox(height: 1),
-                        Text(
-                          content!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'DMSans',
-                            fontSize: 12.5,
-                            color: textColor,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            // Mirror the bar to the trailing edge for the sender's own bubble.
+            children: isMe ? [content_, bar] : [bar, content_],
           ),
         ),
       ),
