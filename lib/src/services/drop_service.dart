@@ -38,6 +38,15 @@ class DropService {
       (pin != null) ^ (keypairBytes != null),
       'Exactly one of pin or keypairBytes must be provided',
     );
+    // The assert above is stripped in release builds — this explicit check
+    // is the real guard preventing a Drop transfer from ever reaching the
+    // backend/signing step without a credential (see zendapp-hardening
+    // spec, Req 1.1). Do not remove even though it duplicates the assert.
+    if ((pin == null) == (keypairBytes == null)) {
+      throw StateError(
+        'executeDropTransfer requires exactly one of pin or keypairBytes',
+      );
+    }
 
     // Step 1: Prepare — resolves recipient, creates ATA, returns blockhash.
     // We reuse the existing prepareTransfer endpoint (same as regular sends).

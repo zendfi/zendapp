@@ -18,6 +18,7 @@ import '../../models/qr_payment_intent.dart';
 import '../profile/user_profile_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../vibes/vibe_picker_sheet.dart';
+import '../vibes/vibe_pin_prompt.dart';
 import 'dm_message_bubble.dart';
 import 'dm_input_bar.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -80,16 +81,20 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   Future<void> _fetchCounterpartyPubkey() async {
     final model = ZendScope.of(context);
+
+    // Publish our key before checking the other user. The former ordering only
+    // registered a key after a counterparty already had one, so two newly
+    // upgraded users could never bootstrap E2EE.
+    final walletAddress = await model.walletService.getWalletAddress();
+    if (walletAddress != null) {
+      await model.e2eeService.registerPubkey(walletAddress);
+    }
+
     final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
       widget.counterparty.userId,
     );
     if (mounted && pubkey != null) {
       setState(() => _counterpartyPubkey = pubkey);
-      // Also register our own pubkey in case it wasn't registered yet
-      final walletAddress = await model.walletService.getWalletAddress();
-      if (walletAddress != null) {
-        unawaited(model.e2eeService.registerPubkey(walletAddress));
-      }
     }
   }
 
@@ -728,7 +733,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             .toList();
                         _messages[msgIdx].reactions = updatedReactions;
                       });
-                      _ws.sendReactionRemoved(targetMsg.id, e);
+                      unawaited(model.dmService.removeMessageReaction(
+                        widget.roomId,
+                        messageId: targetMsg.id,
+                        emoji: e,
+                      ));
                     } else {
                       // Add the reaction optimistically
                       setState(() {
@@ -744,9 +753,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         }
                         _messages[msgIdx].reactions = updated;
                       });
-                      _ws.sendReaction(targetMsg.id, e);
-                      // Notify the other party via SSE — the WS fan-out
-                      // handles this server-side automatically.
+                      // The persisted endpoint broadcasts to the other
+                      // connected participant; this client already updated
+                      // its own reaction optimistically.
                       unawaited(model.dmService.sendMessageReaction(
                         widget.roomId,
                         messageId: targetMsg.id,
@@ -804,7 +813,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             .toList();
         _messages[msgIdx].reactions = updated;
       });
-      _ws.sendReactionRemoved(targetMsg.id, emoji);
       unawaited(model.dmService.removeMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
     } else {
       setState(() {
@@ -817,7 +825,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         }
         _messages[msgIdx].reactions = updated;
       });
-      _ws.sendReaction(targetMsg.id, emoji);
       unawaited(model.dmService.sendMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
     }
   }
@@ -1149,26 +1156,25 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
       final String signedTx;
 
-      // Use session cache if available (session-signing policy), else PIN not
-      // needed for Vibes — they're micro amounts. We fall back gracefully.
-      final cached = WalletSessionCache.instance.keypair;
-      if (cached != null) {
-        signedTx = await model.walletService.buildAndSignTransactionFromCache(
-          keypairBytes: cached,
-          amountUsdc: vibe.amountUsdc,
-          recipientAddress: recipientAddress,
-          blockhash: blockhash,
-          feePayerAddress: feePayerAddress,
-          senderAtaOverride: senderAta,
-          recipientAtaOverride: recipientAta,
-        );
-        for (var i = 0; i < cached.length; i++) { cached[i] = 0; }
-      } else {
-        // Session not cached — skip the Vibe silently, mark as failed.
-        // In practice this shouldn't happen if the user is authenticated,
-        // but we never want to surface a PIN dialog for a sticker send.
-        throw Exception('Session expired — re-open to send Vibes');
+      // Resolve a signing credential — uses the session cache when policy
+      // allows it, otherwise prompts for PIN (never silently fails just
+      // because the cache is empty; see zendapp-hardening Req 1.2).
+      if (!mounted) return;
+      final keypair = await resolveVibeSigningKeypair(context, vibe.amountUsdc);
+      if (keypair == null) {
+        // User cancelled the PIN prompt — treat as a failed send.
+        throw Exception('Vibe cancelled');
       }
+      signedTx = await model.walletService.buildAndSignTransactionFromCache(
+        keypairBytes: keypair,
+        amountUsdc: vibe.amountUsdc,
+        recipientAddress: recipientAddress,
+        blockhash: blockhash,
+        feePayerAddress: feePayerAddress,
+        senderAtaOverride: senderAta,
+        recipientAtaOverride: recipientAta,
+      );
+      for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
 
       // Step C: submit the signed transaction
       await model.dmService.submitVibe(

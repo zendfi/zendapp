@@ -755,6 +755,28 @@ class ZendAppModel extends ChangeNotifier {
   /// _onLockStateChanged never fires because isLocked was never set.
   VoidCallback? onAuthenticated;
 
+  /// Optional callback fired by [handleUnauthorized] once local state has
+  /// been torn down. Wired by app.dart to navigate to `WelcomeScreen` using
+  /// the app's global navigator key — deliberately not tied to any single
+  /// screen's `BuildContext`, since a 401 can be triggered by a request
+  /// from any screen (see zendapp-hardening spec Req 1.4).
+  VoidCallback? onForcedSignOut;
+
+  /// Handles a confirmed session invalidation (HTTP 401 from the backend).
+  /// Wired to [ApiClient.onUnauthorized] in `main.dart` so *any* API call,
+  /// from *any* screen, that discovers the session is dead deterministically
+  /// signs the user out — clears all local state, stops realtime services,
+  /// and navigates to the welcome screen.
+  ///
+  /// Idempotent: multiple in-flight requests on an already-dead session will
+  /// each independently reach this method, but only the first does anything —
+  /// subsequent calls no-op once [isAuthenticated] is already false.
+  void handleUnauthorized() {
+    if (!isAuthenticated) return;
+    resetState();
+    onForcedSignOut?.call();
+  }
+
   // Set true the first time fetchThreadedActivity() runs (i.e. once the
   // Activity tab has been opened this session). Used to gate SSE-driven
   // refreshes of the threaded feed so we don't fetch it before it's ever
@@ -1360,30 +1382,11 @@ class ZendAppModel extends ChangeNotifier {
     String? avatarUrl,
   }) {
     // If a different user is authenticating (account switch), zero out all
-    // stale per-user state so the previous user's balance/history never
-    // bleeds into the new session. On the same-user re-auth (app resume)
-    // this is a no-op since the userId matches.
+    // stale per-user state so the previous user's balance/history/social
+    // data never bleeds into the new session. On the same-user re-auth
+    // (app resume) this is a no-op since the userId matches.
     if (isAuthenticated && currentUserId != null && currentUserId != userId) {
-      // CRITICAL: clear the session keypair cache so the previous user's
-      // decrypted keypair cannot be used to sign transactions for the new user.
-      WalletSessionCache.instance.clear();
-      balance = 0.0;
-      spendableBalance = 0.0;
-      monthlyYield = 0.0;
-      recentTransactions = [];
-      recentContacts = [];
-      walletAddress = null;
-      hasWallet = false;
-      hasPinSetup = false;
-      pools.clear();
-      savingsBalance = 0.0;
-      _pendingEmailIntents = [];
-      outboundPaymentRequests = [];
-      inboundPaymentRequests = [];
-      pendingPaymentRequest = null;
-      lastBalanceError = null;
-      lastHistoryError = null;
-      lastPoolsError = null;
+      _clearPerUserState();
     }
 
     isAuthenticated = true;
@@ -1470,33 +1473,106 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void resetState() {
-    stopPolling(); // Stop live updates on logout
-    appLockService.reset(); // Stop inactivity timer and clear lock state
+  /// Clears every piece of per-user state — everything that must never
+  /// survive a sign-out or an account switch on a shared device. This is
+  /// the single, authoritative enumeration of stateful `ZendAppModel`
+  /// fields; [resetState] and the account-switch branch of
+  /// [setAuthenticated] both delegate to it so there is exactly one place
+  /// to update when a new stateful field is added (see zendapp-hardening
+  /// spec Req 1.5 — a checklist test asserts every field here is actually
+  /// reset).
+  ///
+  /// Fields intentionally NOT cleared here (because they are genuinely
+  /// device/global preferences, not per-user data): [balanceHidden],
+  /// [isDarkMode], [hasExplicitTheme], [selectedCurrency], [_locale]/
+  /// [greetingPrefix]. [resetState] resets a couple of these anyway for a
+  /// full logout's UX, but account-switch deliberately leaves them — a
+  /// user switching accounts on a shared device keeps their own device
+  /// preferences.
+  void _clearPerUserState() {
     // CRITICAL: zero and clear the in-memory keypair so it cannot be reused
     // by a subsequent user logging in on the same device.
     WalletSessionCache.instance.clear();
-    isAuthenticated = false;
-    currentUserId = null;
-    currentZendtag = null;
-    currentDisplayName = null;
-    currentAvatarUrl = null;
-    walletAddress = null;
-    hasWallet = false;
-    hasPinSetup = false;
+
+    // ── Balance ──
     balance = 0.0;
     spendableBalance = 0.0;
     monthlyYield = 0.0;
     balanceLoading = false;
     lastBalanceError = null;
+
+    // ── Wallet identity ──
+    walletAddress = null;
+    hasWallet = false;
+    hasPinSetup = false;
+
+    // ── Transfer/activity history ──
     recentTransactions = [];
     recentContacts = [];
     historyLoading = false;
     lastHistoryError = null;
-    username = 'blessed';
+
+    // ── Threaded activity (Phase 2 Activity Relationship Graph) ──
+    threadedActivityEdges = [];
+    threadedActivityLoading = false;
+    lastThreadedActivityError = null;
+    _threadedActivityNextCursor = null;
+    _threadedActivityEverLoaded = false;
+    activityUnreadCount = 0;
+    pendingActivityReaction = null;
+    pendingActivityComment = null;
+
+    // ── Pools ──
+    pools.clear();
+    poolsLoading = false;
+    lastPoolsError = null;
+    poolsWithNewMessages.clear();
+    paymentRequests.clear();
+
+    // ── Savings ──
+    savingsApy = 0.0;
+    savingsBalance = 0.0;
+    savingsLoading = false;
+
+    // ── Email intents ──
+    _pendingEmailIntents = [];
+
+    // ── Payment requests ──
+    pendingPaymentRequest = null;
+    outboundPaymentRequests = [];
+    inboundPaymentRequests = [];
+
+    // ── DMs / E2EE ──
+    dmUnreadTotal = 0;
+    lastDmBannerData = null;
+    dmService.clearCaches();
+    e2eeService.clearCache();
+
+    // ── Streaks / social ──
+    activeStreaks = {};
+    pendingStreakMilestone = null;
+    suggestedConnections = [];
+
+    // ── Vibe daily spend (per-user; a new user starts with a fresh limit) ──
+    _vibeSpentToday = 0.0;
+    _vibeSpentDate = '';
+
+    // ── Waitlist hold-over ──
     pendingWaitlistMatch = false;
     pendingReservedZendtag = null;
     pendingWaitlistFullName = null;
+  }
+
+  void resetState() {
+    stopPolling(); // Stop live updates on logout
+    appLockService.reset(); // Stop inactivity timer and clear lock state
+    _clearPerUserState();
+    isAuthenticated = false;
+    currentUserId = null;
+    currentZendtag = null;
+    currentDisplayName = null;
+    currentAvatarUrl = null;
+    username = 'blessed';
     balanceHidden = false;
     isDarkMode = false;
     hasExplicitTheme = false;
@@ -1504,16 +1580,6 @@ class ZendAppModel extends ChangeNotifier {
     isLoading = false;
     loadingMessage = 'Loading';
     unawaited(recentContactsStore.clear());
-    pools.clear();
-    poolsLoading = false;
-    lastPoolsError = null;
-    savingsApy = 0.0;
-    savingsBalance = 0.0;
-    savingsLoading = false;
-    pendingPaymentRequest = null;
-    outboundPaymentRequests = [];
-    inboundPaymentRequests = [];
-    _pendingEmailIntents = [];
     notifyListeners();
   }
 

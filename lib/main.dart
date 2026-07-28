@@ -119,6 +119,12 @@ void main() async {
     localDb: localDb,
   );
 
+  // Wire every confirmed 401 (from any API call, on any screen) to a
+  // deterministic sign-out. Navigation itself is handled by app.dart via
+  // model.onForcedSignOut, set once the navigator key is available — see
+  // zendapp-hardening spec Req 1.4.
+  apiClient.onUnauthorized = model.handleUnauthorized;
+
   await model.hydrateRecentContacts();
   await model.loadPersistedPreferences();
 

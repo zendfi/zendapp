@@ -20,6 +20,19 @@ class ApiClient {
 
   static const _tokenKey = 'zend_session_token';
 
+  /// Fired exactly once per confirmed 401 (the token has already been
+  /// deleted by the time this fires). Wired by `main.dart` to
+  /// `ZendAppModel.handleUnauthorized()` so a session invalidated mid-use
+  /// deterministically signs the user out — regardless of which screen or
+  /// request triggered it. See zendapp-hardening spec Req 1.4.
+  ///
+  /// This is a single global callback (not per-request) because a 401 means
+  /// the whole session is dead, not just one call — every in-flight request
+  /// on an already-dead session will independently hit this same path, and
+  /// the callback's own idempotency (via `ZendAppModel.isAuthenticated`)
+  /// keeps that safe.
+  VoidCallback? onUnauthorized;
+
   /// Exposes the underlying Dio instance for services that need direct access.
   Dio get dio => _dio;
 
@@ -107,6 +120,7 @@ class ApiClient {
 
         if (response?.statusCode == 401) {
           _secureStorage.delete(key: _tokenKey);
+          onUnauthorized?.call();
         }
 
         if (response?.data is Map<String, dynamic>) {

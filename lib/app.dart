@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
+import 'src/services/auth_service.dart' show SessionValidation;
 import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
@@ -83,6 +84,20 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         }
         NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
       });
+    };
+
+    // Register the forced-sign-out hook — fires once ZendAppModel.resetState()
+    // has already run (see handleUnauthorized()). Navigation is driven from
+    // the global navigator key rather than any specific screen's context,
+    // since a 401 can be discovered by a request fired from anywhere in the
+    // app (zendapp-hardening spec Req 1.4).
+    widget.model.onForcedSignOut = () {
+      final navigator = _navigatorKey.currentState;
+      if (navigator == null) return;
+      navigator.pushAndRemoveUntil(
+        zendRoute<void>(page: const WelcomeScreen()),
+        (route) => false,
+      );
     };
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -522,18 +537,30 @@ class _SplashWithSessionRestoreState
   }
 
   Future<void> _restoreSession() async {
-    final hasToken = await widget.model.authService.isAuthenticated();
+    // Validate the stored JWT against the backend rather than only checking
+    // token presence. `isAuthenticated()` would treat an expired or
+    // server-revoked token as good forever, which previously let
+    // setAuthenticated() (and everything it starts — SSE, push
+    // registration, pool/savings fetch, Drop discoverability) run on a
+    // dead session. See zendapp-hardening spec Req 1.3.
+    //
+    // `unknown` (no network / server hiccup at cold launch) is treated the
+    // same as a valid session so the app degrades gracefully offline,
+    // exactly like every other network call in this codebase — it is only
+    // `invalid` (a confirmed 401 from the backend) that must never be
+    // treated as authenticated. Any session that turns out to actually be
+    // invalid will be caught by the very next authenticated API call via
+    // ApiClient's centralized 401 handler.
+    final validation = await widget.model.authService.tryRestoreSession();
     if (!mounted) return;
 
-    if (hasToken) {
-      await widget.model.restoreUserIdentity();
-      if (!mounted) return;
-    }
-
-    if (!hasToken) {
+    if (validation == SessionValidation.invalid) {
       pushReplacementZendSlide(context, const WelcomeScreen());
       return;
     }
+
+    await widget.model.restoreUserIdentity();
+    if (!mounted) return;
 
     final hasLocalKeypair = await widget.model.walletService.hasLocalKeypair();
     final hasPinSetup = await widget.model.walletService.hasPinSetup();

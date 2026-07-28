@@ -15,8 +15,8 @@ import '../../models/pool_message_local.dart';
 import '../../services/outbox_queue.dart';
 import '../../services/pool_websocket_service.dart';
 import '../../services/sse_service.dart';
-import '../../services/wallet_session_cache.dart';
 import '../vibes/vibe_picker_sheet.dart';
+import '../vibes/vibe_pin_prompt.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -126,10 +126,24 @@ class _MissionRoomState extends State<MissionRoom> {
     final wsBaseUrl = apiBaseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
+    final apiClient = model.walletService.apiClient;
     _wsService = PoolWebSocketService(
       poolId: _pool.id,
       baseWsUrl: wsBaseUrl,
       getToken: () => storage.read(key: 'zend_session_token'),
+      // Prefer a short-lived, single-use ticket over the raw JWT so the
+      // session token never appears in the WebSocket URL (and therefore
+      // never in proxy/access logs) — mirrors DmWebSocketService's pattern.
+      // See zendapp-hardening spec Req 1.6.
+      getTicket: () async {
+        try {
+          final response = await apiClient.dio.post('/api/zend/pools/ws-ticket');
+          return response.data['ticket'] as String?;
+        } catch (_) {
+          // Ticket fetch failed — PoolWebSocketService falls back to ?token=
+          return null;
+        }
+      },
     );
 
     // Set up outbox queue
@@ -631,11 +645,19 @@ class _MissionRoomState extends State<MissionRoom> {
         amountUsdc: vibe.amountUsdc,
       );
 
-      final cached = WalletSessionCache.instance.keypair;
-      if (cached == null) throw Exception('Session expired');
+      // Resolve a signing credential — uses the session cache when policy
+      // allows it, otherwise prompts for PIN (never silently fails just
+      // because the cache is empty; see zendapp-hardening Req 1.2).
+      if (!mounted) return;
+      final keypair = await resolveVibeSigningKeypair(context, vibe.amountUsdc);
+      if (keypair == null) {
+        // User cancelled the PIN prompt — treat as a failed send, not an
+        // exception, so the optimistic bubble shows a retry affordance.
+        throw Exception('Vibe cancelled');
+      }
 
       final signedTx = await model.walletService.buildAndSignTransactionFromCache(
-        keypairBytes: cached,
+        keypairBytes: keypair,
         amountUsdc: vibe.amountUsdc,
         recipientAddress: prepareData['recipient_wallet_address'] as String,
         blockhash: prepareData['blockhash'] as String,
@@ -643,7 +665,7 @@ class _MissionRoomState extends State<MissionRoom> {
         senderAtaOverride: prepareData['sender_ata'] as String?,
         recipientAtaOverride: prepareData['recipient_ata'] as String?,
       );
-      for (var i = 0; i < cached.length; i++) { cached[i] = 0; }
+      for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
 
       await model.walletService.apiClient.submitPoolVibe(
         poolId: _pool.id,

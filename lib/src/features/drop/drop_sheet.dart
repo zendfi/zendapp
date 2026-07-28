@@ -33,6 +33,7 @@ enum DropStage {
   countdown,     // Tier 1 (≤$50): 2-second auto-execute
   confirm,       // Tier 2 ($51–$500): confirm button
   biometric,     // Tier 3 ($501–$10,000): confirm + biometric
+  pin,           // PIN required — session cache empty or policy requires PIN
   processing,
   success,
   error,
@@ -82,6 +83,17 @@ class _DropSheetState extends State<DropSheet>
   // re-sending the same nonce if the BLE scan still returns the stale beacon.
   final Set<String> _exhaustedNonces = {};
 
+  // ── PIN entry state ──────────────────────────────────────────────────────
+  // Reached whenever the session cache is empty or SigningPolicyService
+  // requires a PIN for this amount — the tier confirmation stages
+  // (countdown/confirm/biometric) are a UX gate, not an authentication gate,
+  // so they route here via _startSigning() rather than signing directly.
+  String _pinDigits = '';
+  int _pinAttempts = 0;
+  String? _pinError;
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
   // RSSI gap threshold: if top device is this many dBm stronger than second,
   // auto-select without showing the disambiguation list.
   static const int _kAutoSelectRssiGap = 8;
@@ -110,6 +122,20 @@ class _DropSheetState extends State<DropSheet>
     _bleScannerService = BleScannerService(
       apiClient: model.walletService.apiClient,
     );
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.elasticOut,
+    ));
     DropDebugLog.i.clear(); // Fresh log for each Drop session
     DropDebugLog.i.add('SHEET', 'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}');
     _checkBluetoothAndStart();
@@ -122,6 +148,7 @@ class _DropSheetState extends State<DropSheet>
     _bleScannerService.stopScan();
     _bleScannerService.dispose();
     _noteController.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -293,40 +320,132 @@ class _DropSheetState extends State<DropSheet>
     }
   }
 
+  // ── Signing gate ──────────────────────────────────────────────────────────
+  //
+  // Called by the tier-confirmation stages (countdown/confirm/biometric) once
+  // the user has cleared that UX gate. The tier stages are NOT an
+  // authentication gate — they never produce a signing credential. This
+  // method is the single place that decides whether the cached session
+  // keypair may be used or whether a PIN must be collected first, mirroring
+  // SendFlowSheet's _proceedFromRecipient/_submitPin split.
+
+  Future<void> _startSigning() async {
+    final policy = SigningPolicyService();
+    final cache = WalletSessionCache.instance;
+    final needsPin = await policy.requiresPinForAmount(widget.amount);
+
+    if (!mounted) return;
+
+    if (!needsPin && cache.hasKeypair) {
+      // Session signing — skip PIN, go straight to processing.
+      await _performTransfer(keypairBytes: cache.keypair);
+    } else {
+      // Either the cache is empty or policy requires PIN regardless —
+      // both cases need real PIN entry. There is no other way to obtain
+      // a signing credential.
+      setState(() {
+        _pinDigits = '';
+        _pinError = null;
+      });
+      _goTo(DropStage.pin);
+    }
+  }
+
+  void _onPinKey(String value) {
+    HapticFeedback.lightImpact();
+
+    setState(() {
+      _pinError = null;
+
+      if (value == 'del') {
+        if (_pinDigits.isNotEmpty) {
+          _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        }
+        return;
+      }
+
+      if (_pinDigits.length >= 6) return;
+      _pinDigits += value;
+    });
+
+    if (_pinDigits.length == 6) {
+      _submitPin();
+    }
+  }
+
+  Future<void> _submitPin() async {
+    final pin = _pinDigits;
+    final cache = WalletSessionCache.instance;
+
+    try {
+      if (cache.hasKeypair) {
+        // Cache is populated but policy required PIN anyway — verify the
+        // entered PIN against the cached keypair without a server round-trip,
+        // then still sign with the cache (avoids a second decrypt).
+        final model = ZendScope.of(context);
+        final valid = await model.signingPolicyService
+            .verifyPinAgainstCache(pin, model.walletService);
+        if (!valid) {
+          _onPinRejected(lockOnMaxAttempts: true);
+          return;
+        }
+        await _performTransfer(keypairBytes: cache.keypair);
+      } else {
+        // No cache — sign directly with the PIN. WalletService decrypts and
+        // zeroes the keypair internally; DropService/WalletService throw
+        // PinDecryptionException on a wrong PIN.
+        await _performTransfer(pin: pin);
+      }
+    } on PinDecryptionException {
+      _onPinRejected(lockOnMaxAttempts: false);
+    }
+  }
+
+  void _onPinRejected({required bool lockOnMaxAttempts}) {
+    if (!mounted) return;
+    _pinAttempts++;
+    if (_pinAttempts >= 5) {
+      if (lockOnMaxAttempts) {
+        ZendScope.of(context).appLockService.lock();
+      }
+      setState(() => _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.');
+      _goTo(DropStage.error);
+    } else {
+      _shakeController.forward(from: 0);
+      setState(() {
+        _pinDigits = '';
+        _pinError = 'Incorrect PIN';
+      });
+      // _performTransfer already advanced the stage to `processing` before
+      // the signing attempt failed — return to the PIN stage so the user
+      // can retry rather than being stuck on a spinner.
+      _goTo(DropStage.pin);
+    }
+  }
+
   // ── Transfer execution ────────────────────────────────────────────────────
 
-  Future<void> _executeTransfer() async {
+  /// Performs the actual signing + Drop execution. Exactly one of [pin] or
+  /// [keypairBytes] must be provided — enforced by [DropService] itself.
+  /// Never called directly by a tier-confirmation stage; always reached via
+  /// [_startSigning]/[_submitPin] so a signing credential is guaranteed.
+  Future<void> _performTransfer({String? pin, Uint8List? keypairBytes}) async {
     DropDebugLog.i.add('XFER', 'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}');
     _goTo(DropStage.processing);
     // BleAdvertiserService is no longer used from the sheet.
     // Discoverability is paused via dropDiscoverabilityService in _onReceiverConfirmed.
     try {
       final model = ZendScope.of(context);
-      final policy = SigningPolicyService();
-      final cache = WalletSessionCache.instance;
-      final needsPin = await policy.requiresPinForAmount(widget.amount);
 
-      if (!needsPin && cache.hasKeypair) {
-        await _dropService.executeDropTransfer(
-          beacon: _confirmedReceiver!.gattPayload!,
-          amountUsdc: widget.amount,
-          note: _noteController.text.trim().isEmpty
-              ? null
-              : _noteController.text.trim(),
-          keypairBytes: cache.keypair,
-        );
-      } else {
-        // For Drop, tier-based confirmation (countdown/confirm/biometric) acts
-        // as the auth gate. Fall back to session cache if available.
-        await _dropService.executeDropTransfer(
-          beacon: _confirmedReceiver!.gattPayload!,
-          amountUsdc: widget.amount,
-          note: _noteController.text.trim().isEmpty
-              ? null
-              : _noteController.text.trim(),
-          keypairBytes: cache.keypair,
-        );
-      }
+      await _dropService.executeDropTransfer(
+        beacon: _confirmedReceiver!.gattPayload!,
+        amountUsdc: widget.amount,
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
+        pin: pin,
+        keypairBytes: keypairBytes,
+      );
 
       if (!mounted) return;
       unawaited(model.fetchBalance());
@@ -341,6 +460,8 @@ class _DropSheetState extends State<DropSheet>
       unawaited(SoundService.playZentSuccess());
       DropDebugLog.i.add('XFER', 'Transfer success!', level: DropLogLevel.ok);
       _goTo(DropStage.success);
+    } on PinDecryptionException {
+      rethrow;
     } on ApiException catch (e) {
       DropDebugLog.i.add('XFER', 'API error: ${e.userMessage}', level: DropLogLevel.error);
       if (!mounted) return;
@@ -567,7 +688,7 @@ class _DropSheetState extends State<DropSheet>
           note: _noteController.text.trim().isEmpty
               ? null
               : _noteController.text.trim(),
-          onExecute: _executeTransfer,
+          onExecute: _startSigning,
           onCancel: () {
             setState(() => _confirmedReceiver = null);
             _bleScannerService.stopScan();
@@ -585,7 +706,7 @@ class _DropSheetState extends State<DropSheet>
               ? null
               : _noteController.text.trim(),
           requiresBiometric: false,
-          onConfirm: _executeTransfer,
+          onConfirm: _startSigning,
           onCancel: () {
             setState(() => _confirmedReceiver = null);
             _bleScannerService.stopScan();
@@ -603,9 +724,36 @@ class _DropSheetState extends State<DropSheet>
               ? null
               : _noteController.text.trim(),
           requiresBiometric: true,
-          onConfirm: _executeTransfer,
+          onConfirm: _startSigning,
           onCancel: () {
             setState(() => _confirmedReceiver = null);
+            _bleScannerService.stopScan();
+            _bleScannerService.startScan();
+            _goTo(DropStage.scanning);
+          },
+        );
+
+      case DropStage.pin:
+        return SendPinStage(
+          key: const ValueKey('drop-pin'),
+          amountFormatted: widget.amount == widget.amount.roundToDouble()
+              ? '\$${widget.amount.toStringAsFixed(0)}'
+              : '\$${widget.amount.toStringAsFixed(2)}',
+          recipientZendtag: _confirmedReceiver?.gattPayload?.zendtag ??
+              _confirmedReceiver?.preview?.zendtag ??
+              '?',
+          note: _noteController.text.trim(),
+          pinDigits: _pinDigits,
+          pinError: _pinError,
+          shakeAnimation: _shakeAnimation,
+          shakeController: _shakeController,
+          onKey: _onPinKey,
+          onBack: () {
+            setState(() {
+              _pinDigits = '';
+              _pinError = null;
+              _confirmedReceiver = null;
+            });
             _bleScannerService.stopScan();
             _bleScannerService.startScan();
             _goTo(DropStage.scanning);

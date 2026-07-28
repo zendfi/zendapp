@@ -3,6 +3,18 @@ import 'api_client.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 
+/// Result of validating a locally-stored session against the backend.
+///
+/// - [valid]: the backend confirmed the JWT is still honored.
+/// - [invalid]: the backend explicitly rejected the JWT (401) — the token
+///   has already been cleared from secure storage by the time this is
+///   returned.
+/// - [unknown]: validation could not be confirmed either way (no network,
+///   server error, timeout). Deliberately distinct from [invalid] — a
+///   transient connectivity issue at launch must never be treated the same
+///   as a confirmed-revoked session (zendapp-hardening Req 1.3).
+enum SessionValidation { valid, invalid, unknown }
+
 class AuthService {
   final ApiClient _apiClient;
   final FlutterSecureStorage _secureStorage;
@@ -61,23 +73,42 @@ class AuthService {
     await _saveUserIdentity(profile);
   }
 
-  Future<bool> tryRestoreSession() async {
+  /// Validates the locally-stored JWT against the backend.
+  ///
+  /// This is the ONLY reliable way to know whether a session is actually
+  /// still authenticated — [isAuthenticated] only checks token *presence*,
+  /// which is true even for an expired/revoked token. Callers that gate
+  /// [ZendAppModel.setAuthenticated] (and therefore SSE/push/pool/savings/
+  /// Drop service startup) on session validity must use this method, not
+  /// [isAuthenticated] (zendapp-hardening Req 1.3).
+  Future<SessionValidation> tryRestoreSession() async {
     final token = await _secureStorage.read(key: _tokenKey);
-    if (token == null || token.isEmpty) return false;
+    if (token == null || token.isEmpty) return SessionValidation.invalid;
     try {
-      await _apiClient.getBalance(); // validates JWT
-      return true;
+      await _apiClient.getBalance(); // validates JWT server-side
+      return SessionValidation.valid;
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
+        // Backend explicitly rejected the token — clear it so no other
+        // code path can mistake token presence for validity afterwards.
         await _clearAll();
-        return false;
+        return SessionValidation.invalid;
       }
-      rethrow;
+      // Any other API error (5xx, malformed response, etc.) is ambiguous —
+      // do NOT clear the token or treat it as a confirmed invalid session.
+      return SessionValidation.unknown;
     } catch (_) {
-      return false;
+      // Network/timeout/connection error — ambiguous, not a confirmed
+      // rejection. Clearing the token here would force a signed-out state
+      // every time the user opens the app offline.
+      return SessionValidation.unknown;
     }
   }
 
+  /// Whether a JWT is present in secure storage. This does NOT mean the
+  /// session is valid — an expired or server-revoked token still passes
+  /// this check. Use [tryRestoreSession] wherever the answer needs to be
+  /// trustworthy (i.e. before granting authenticated access).
   Future<bool> isAuthenticated() async {
     final token = await _secureStorage.read(key: _tokenKey);
     return token != null && token.isNotEmpty;
