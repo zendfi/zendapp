@@ -8,9 +8,9 @@ import 'drop_glow_effect.dart';
 const _kDropBackground = Color(0xFF080808);
 
 const _kAmountStyle = TextStyle(
-  fontFamily: 'InstrumentSerif',
+  fontFamily: 'Satoshi',
+  fontWeight: FontWeight.w700,
   fontSize: 88,
-  fontStyle: FontStyle.italic,
   color: Colors.white,
   height: 1.0,
 );

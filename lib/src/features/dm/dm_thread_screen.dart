@@ -13,6 +13,7 @@ import '../../models/dm_message.dart';
 import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/dm_websocket_service.dart';
+import '../../services/e2ee_service.dart' show kE2eePrefix;
 import '../../services/wallet_session_cache.dart';
 import '../../models/qr_payment_intent.dart';
 import '../profile/user_profile_screen.dart';
@@ -22,6 +23,18 @@ import '../vibes/vibe_pin_prompt.dart';
 import 'dm_message_bubble.dart';
 import 'dm_input_bar.dart';
 import 'package:solar_icons/solar_icons.dart';
+
+/// State of the E2EE key exchange for the currently open room.
+enum _E2eeStatus {
+  /// Key exchange (publish mine, fetch theirs) is in flight.
+  resolving,
+  /// Counterparty pubkey is available — messages are encrypted.
+  ready,
+  /// Key exchange finished but the counterparty has no pubkey on file
+  /// (old app version, or never unlocked since E2EE shipped). Messages
+  /// send as plaintext by necessity, and the UI marks them as such.
+  unavailable,
+}
 
 class DmThreadScreen extends StatefulWidget {
   const DmThreadScreen({
@@ -51,7 +64,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   DateTime? _counterpartyLastSeen;  // null = hidden by privacy setting
   // E2EE
   String? _counterpartyPubkey;      // counterparty's Ed25519 pubkey (base58)
-  bool get _e2eeReady => _counterpartyPubkey != null;
+  _E2eeStatus _e2eeStatus = _E2eeStatus.resolving;
+  bool get _e2eeReady => _e2eeStatus == _E2eeStatus.ready;
+  /// Completes once key exchange has settled (ready OR confirmed unavailable —
+  /// never left pending). [_onSend]/[_onSendWithReply] await this (with a
+  /// bound) before encrypting, so the very first messages in a new chat wait
+  /// for the exchange instead of racing it and silently sending plaintext.
+  final Completer<void> _e2eeResolution = Completer<void>();
   Timer? _typingClearTimer;
   Timer? _recordingClearTimer;
   String? _nextCursor;
@@ -82,26 +101,49 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   Future<void> _fetchCounterpartyPubkey() async {
     final model = ZendScope.of(context);
 
-    // Publish our key before checking the other user. The former ordering only
-    // registered a key after a counterparty already had one, so two newly
-    // upgraded users could never bootstrap E2EE.
-    final walletAddress = await model.walletService.getWalletAddress();
-    if (walletAddress != null) {
-      await model.e2eeService.registerPubkey(walletAddress);
-    }
+    try {
+      // Publish our key before checking the other user. The former ordering
+      // only registered a key after a counterparty already had one, so two
+      // newly upgraded users could never bootstrap E2EE. In the common case
+      // this is a no-op network-wise: bootstrapE2ee() already ran at unlock,
+      // and E2eeService.registerPubkey() short-circuits once registered.
+      final walletAddress = await model.walletService.getWalletAddress();
+      if (walletAddress != null) {
+        await model.e2eeService.registerPubkey(walletAddress);
+      }
 
-    final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
-      widget.counterparty.userId,
+      final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
+        widget.counterparty.userId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _counterpartyPubkey = pubkey;
+        _e2eeStatus = pubkey != null ? _E2eeStatus.ready : _E2eeStatus.unavailable;
+      });
+      // _loadMessages() may have already finished (or the room may have been
+      // seeded from cache in initState) before the counterparty key arrived —
+      // in that case any e2ee: messages were left as raw ciphertext because
+      // _e2eeReady was false at load time. Decrypt the currently-held list now
+      // that the key is available so we never display ciphertext to the user.
+      await _decryptMessages(_messages);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) setState(() => _e2eeStatus = _E2eeStatus.unavailable);
+    } finally {
+      if (!_e2eeResolution.isCompleted) _e2eeResolution.complete();
+    }
+  }
+
+  /// Waits for the E2EE key exchange to settle before sending, so the first
+  /// message(s) of a new chat don't race the exchange and silently fall back
+  /// to plaintext. Bounded so a slow/failed network call never blocks sending
+  /// indefinitely — after the timeout we proceed with whatever state we have
+  /// (ready or unavailable), matching [_encryptForSend]'s existing fallback.
+  Future<void> _awaitE2eeResolution() {
+    return _e2eeResolution.future.timeout(
+      const Duration(seconds: 6),
+      onTimeout: () {},
     );
-    if (!mounted || pubkey == null) return;
-    setState(() => _counterpartyPubkey = pubkey);
-    // _loadMessages() may have already finished (or the room may have been
-    // seeded from cache in initState) before the counterparty key arrived —
-    // in that case any e2ee: messages were left as raw ciphertext because
-    // _e2eeReady was false at load time. Decrypt the currently-held list now
-    // that the key is available so we never display ciphertext to the user.
-    await _decryptMessages(_messages);
-    if (mounted) setState(() {});
   }
 
   void _initWs() {
@@ -352,8 +394,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
     setState(() => _messages.insert(0, optimistic));
 
-    // Encrypt if E2EE is active, then send
-    _encryptForSend(text).then((wireContent) {
+    // Wait for the E2EE key exchange to settle (bounded — see
+    // _awaitE2eeResolution) before encrypting, so the first message(s) of a
+    // brand-new chat don't race the exchange and get sent as plaintext just
+    // because the counterparty's pubkey hadn't arrived yet.
+    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((wireContent) {
+      if (mounted) {
+        setState(() => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix));
+      } else {
+        optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix);
+      }
       // Try WebSocket first
       _ws.sendMessage(clientId, wireContent);
 
@@ -437,7 +487,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
     setState(() => _messages.insert(0, optimistic));
 
-    _encryptForSend(text).then((wireContent) {
+    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((wireContent) {
+      if (mounted) {
+        setState(() => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix));
+      } else {
+        optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix);
+      }
       // Send over WS with full reply context — backend now persists metadata
       _ws.sendMessageWithReply(
         clientId,
@@ -893,7 +948,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Request from', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
-                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                         ],
                       ),
                     ],
@@ -910,7 +965,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('\$', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 32, color: zt.textSecondary, fontStyle: FontStyle.italic)),
+                            Text('\$', style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
                             const SizedBox(width: 4),
                             Flexible(
                               child: TextField(
@@ -918,10 +973,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 autofocus: true,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 48, fontStyle: FontStyle.italic, color: zt.textPrimary, height: 1),
+                                style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
                                 decoration: InputDecoration(
                                   hintText: '0',
-                                  hintStyle: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 48, fontStyle: FontStyle.italic, color: zt.textSecondary.withValues(alpha: 0.4)),
+                                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
                                   border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
                                 ),
                                 onChanged: (_) => setModalState(() => errorMsg = null),
@@ -931,7 +986,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         ),
                       ),
                       if (errorMsg != null)
-                        Text(errorMsg!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive)),
+                        Text(errorMsg!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive)),
                     ],
                   ),
                 ),
@@ -941,10 +996,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: TextField(
                     controller: noteCtrl,
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Add a note…',
-                      hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
+                      hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
                       filled: true, fillColor: zt.bgPrimary,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -984,7 +1039,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('Send request', style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700)),
+                      child: const Text('Send request', style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ),
@@ -1090,7 +1145,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -1109,11 +1164,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         setState(() => _messages.clear());
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'Satoshi')), backgroundColor: zt.bgSecondary),
         );
       case _ChatMenuAction.block:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'DMSans')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'Satoshi')), backgroundColor: zt.bgSecondary),
         );
     }
   }
@@ -1336,7 +1391,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               Flexible(
                                 child: Text(
                                   cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                  style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                                  style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1530,6 +1585,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 onCancel: () => setState(() => _replyingTo = null),
               ),
 
+            // "Securing chat…" strip — shown only while the E2EE key exchange
+            // for this room is still in flight. Messages sent during this
+            // window still wait for resolution (see _awaitE2eeResolution),
+            // this is purely informational so the user isn't left guessing
+            // why the lock icon in the AppBar hasn't appeared yet.
+            if (_e2eeStatus == _E2eeStatus.resolving)
+              _SecuringChatStrip(zt: zt),
+
             // ── Input ─────────────────────────────────────────────────────
             DmInputBar(
               onSend: (text) {
@@ -1552,6 +1615,46 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Securing chat strip ─────────────────────────────────────────────────────
+//
+// Thin informational banner shown above the composer while the E2EE key
+// exchange (publish our pubkey, fetch theirs) is still in flight. Sends are
+// already gated on this via _awaitE2eeResolution — this is just a visual cue
+// so the wait isn't invisible to the user.
+
+class _SecuringChatStrip extends StatelessWidget {
+  const _SecuringChatStrip({required this.zt});
+  final ZendTheme zt;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: zt.bgSecondary,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 12, height: 12,
+            child: CircularProgressIndicator(strokeWidth: 1.6, color: zt.textSecondary),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Securing chat…',
+            style: TextStyle(
+              fontFamily: 'Satoshi',
+              fontSize: 12,
+              color: zt.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1580,7 +1683,7 @@ class _PresenceLabel extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            fontFamily: 'DMSans',
+            fontFamily: 'Satoshi',
             fontSize: 11,
             color: color,
             fontWeight: FontWeight.w500,
@@ -1696,7 +1799,7 @@ class _ReplyStrip extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontFamily: 'DMSans',
+                              fontFamily: 'Satoshi',
                               fontSize: 13,
                               color: zt.textSecondary,
                               height: 1.2,

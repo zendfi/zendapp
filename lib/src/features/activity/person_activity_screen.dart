@@ -57,7 +57,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'DMSans'))),
+        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Satoshi'))),
       );
       return;
     }
@@ -130,7 +130,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                   Expanded(
                     child: Text(
                       widget.label,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                   ),
                 ],
@@ -144,14 +144,14 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                       ? Center(
                           child: Text(
                             'Could not load this person\'s activity',
-                            style: TextStyle(fontFamily: 'DMSans', color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'Satoshi', color: zt.textSecondary),
                           ),
                         )
                       : _edges.isEmpty
                           ? Center(
                               child: Text(
                                 'No shared activity to show',
-                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                               ),
                             )
                           : ListView.separated(
@@ -206,7 +206,7 @@ class _PersonActivityRow extends StatelessWidget {
                       headline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                     ),
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
@@ -214,7 +214,7 @@ class _PersonActivityRow extends StatelessWidget {
                         edge.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
                     ],
                   ],

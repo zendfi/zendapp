@@ -22,6 +22,14 @@ Future<void> showContributeSheet(
     isScrollControlled: true,
     useRootNavigator: true,
     useSafeArea: true,
+    // Barrier-tap dismissal is intentionally still allowed at every stage
+    // except processing — ContributeSheet's own build() blocks the barrier
+    // AND drag dismissal exclusively during _ContributeStage.processing via
+    // PopScope + a competing drag recognizer (see build()). Disabling it
+    // globally here would remove the tap-outside-to-close affordance on the
+    // amount/pin/success/error stages, which users rely on.
+    isDismissible: true,
+    enableDrag: true,
     backgroundColor: Colors.transparent,
     builder: (_) => ContributeSheet(pool: pool),
   );
@@ -47,6 +55,14 @@ class _ContributeSheetState extends State<ContributeSheet> {
   String? _pinError;
 
   String? _errorMessage;
+
+  /// True from the moment "Contribute" is tapped until `_proceedFromAmount`
+  /// has either moved on to the PIN stage or committed to the processing
+  /// stage. `requiresPinForAmount` reads secure storage (a platform-channel
+  /// round trip), so there is a real window between the tap and the stage
+  /// actually changing during which the button previously stayed enabled —
+  /// a fast double-tap could sign and submit two on-chain contributions.
+  bool _confirmInFlight = false;
 
   double get _parsedAmount {
     if (_amountInput.isEmpty) return 0.0;
@@ -108,6 +124,9 @@ class _ContributeSheetState extends State<ContributeSheet> {
   }
 
   void _onAmountConfirm() {
+    // Guards the async gap between this tap and _proceedFromAmount actually
+    // changing _stage — see _confirmInFlight's doc comment.
+    if (_confirmInFlight) return;
     if (_remainingAmount <= 0) {
       setState(() => _amountError = 'This pool is already full');
       return;
@@ -121,6 +140,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
       setState(() => _amountError = 'Insufficient balance');
       return;
     }
+    setState(() => _confirmInFlight = true);
     _proceedFromAmount();
   }
 
@@ -128,12 +148,19 @@ class _ContributeSheetState extends State<ContributeSheet> {
     final policy = SigningPolicyService();
     final cache = WalletSessionCache.instance;
     final needsPin = await policy.requiresPinForAmount(_parsedAmount);
+    if (!mounted) return;
 
     if (!needsPin && cache.hasKeypair) {
-      setState(() => _stage = _ContributeStage.processing);
+      setState(() {
+        _stage = _ContributeStage.processing;
+        _confirmInFlight = false;
+      });
       await _executeContribution(pin: null, keypairBytes: cache.keypair);
     } else {
-      setState(() => _stage = _ContributeStage.pin);
+      setState(() {
+        _stage = _ContributeStage.pin;
+        _confirmInFlight = false;
+      });
     }
   }
 
@@ -271,24 +298,41 @@ class _ContributeSheetState extends State<ContributeSheet> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final screenHeight = mq.size.height;
+    final blockDismissal = _stage == _ContributeStage.processing;
 
     return PopScope(
-      canPop: _stage != _ContributeStage.processing,
-      child: Container(
-        height: screenHeight * _heightFactor,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(ZendRadii.xxl),
+      // Blocks the system back gesture/button while a contribution is
+      // signing and submitting.
+      canPop: !blockDismissal,
+      child: GestureDetector(
+        // PopScope does NOT cover the sheet's own drag-to-dismiss gesture —
+        // verified empirically: a modal bottom sheet's internal drag
+        // recognizer sits on an ancestor of this content and wins the
+        // gesture arena independently of PopScope, so a user could drag the
+        // sheet down mid-submit and never learn whether the contribution
+        // went through. Claiming the vertical drag here — only while
+        // blockDismissal is true — closes that gap without touching the
+        // swipe-to-dismiss affordance on every other stage.
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: blockDismissal ? (_) {} : null,
+        onVerticalDragUpdate: blockDismissal ? (_) {} : null,
+        onVerticalDragEnd: blockDismissal ? (_) {} : null,
+        child: Container(
+          height: screenHeight * _heightFactor,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(ZendRadii.xxl),
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 14),
-            const ZendSheetHandle(),
-            const SizedBox(height: 8),
-            Expanded(child: _buildStage()),
-          ],
+          child: Column(
+            children: [
+              const SizedBox(height: 14),
+              const ZendSheetHandle(),
+              const SizedBox(height: 8),
+              Expanded(child: _buildStage()),
+            ],
+          ),
         ),
       ),
     );
@@ -303,6 +347,7 @@ class _ContributeSheetState extends State<ContributeSheet> {
           userBalance: _userBalance,
           remainingAmount: _remainingAmount,
           hasSufficientBalance: _hasSufficientBalance,
+          confirmInFlight: _confirmInFlight,
           onKey: _onAmountKey,
           onConfirm: _onAmountConfirm,
         ),
@@ -351,6 +396,7 @@ class _AmountStage extends StatelessWidget {
     required this.userBalance,
     required this.remainingAmount,
     required this.hasSufficientBalance,
+    required this.confirmInFlight,
     required this.onKey,
     required this.onConfirm,
   });
@@ -361,6 +407,7 @@ class _AmountStage extends StatelessWidget {
   final double userBalance;
   final double remainingAmount;
   final bool hasSufficientBalance;
+  final bool confirmInFlight;
   final ValueChanged<String> onKey;
   final VoidCallback onConfirm;
 
@@ -383,7 +430,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             pool.name,
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -420,7 +467,7 @@ class _AmountStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -433,7 +480,7 @@ class _AmountStage extends StatelessWidget {
               amountError ??
                   'Balance: \$${userBalance.toStringAsFixed(2)}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
@@ -448,7 +495,7 @@ class _AmountStage extends StatelessWidget {
 
           PrimaryButton(
             label: 'Contribute $_displayAmount',
-            onPressed: isValid ? onConfirm : null,
+            onPressed: isValid && !confirmInFlight ? onConfirm : null,
           ),
         ],
       ),
@@ -492,7 +539,7 @@ class _PinStage extends StatelessWidget {
             'Contribute \$${amount.toStringAsFixed(2)} to ${pool.name}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -519,7 +566,7 @@ class _PinStage extends StatelessWidget {
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
@@ -551,7 +598,7 @@ class _ProcessingStage extends StatelessWidget {
             'Contributing \$${amount.toStringAsFixed(2)} to ${pool.name}...',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -594,8 +641,8 @@ class _SuccessStage extends StatelessWidget {
             Text(
               'Contributed! 🔥',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -605,7 +652,7 @@ class _SuccessStage extends StatelessWidget {
               '\$${amount.toStringAsFixed(2)} added to ${pool.name}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -655,7 +702,7 @@ class _ErrorStage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textPrimary,
               ),
@@ -675,7 +722,7 @@ class _ErrorStage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'DMSans')),
+                        style: TextStyle(fontFamily: 'Satoshi')),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),
@@ -721,7 +768,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

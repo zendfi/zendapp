@@ -254,9 +254,9 @@ class _CardFace extends StatelessWidget {
             Text(
               '@$username',
               style: const TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 26,
-                fontStyle: FontStyle.italic,
                 color: _textOnDeep,
                 height: 1.1,
               ),
@@ -269,7 +269,7 @@ class _CardFace extends StatelessWidget {
             const Text(
               'Scan to pay instantly',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: _textMuted,
                 letterSpacing: 0.3,
@@ -323,7 +323,7 @@ class _CardButton extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: Color(0xCCE8F4EC),
               ),

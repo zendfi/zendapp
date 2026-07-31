@@ -498,7 +498,7 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
                   child: Text(
                     "Payment confirmed — return to ${_requesterDisplayName ?? 'the developer'}'s site failed.",
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive),
+                    style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive),
                   ),
                 ),
               ),
@@ -575,7 +575,7 @@ class _DevConfirmStage extends StatelessWidget {
                 ? 'Pay $requesterDisplayName'
                 : 'Pay @$requesterZendtag',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -590,8 +590,8 @@ class _DevConfirmStage extends StatelessWidget {
           Text(
             _formatAmount(amountUsdc),
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
-              fontStyle: FontStyle.italic,
+              fontFamily: 'Satoshi',
+              fontWeight: FontWeight.w700,
               fontSize: 40,
               color: zt.textPrimary,
             ),
@@ -602,14 +602,14 @@ class _DevConfirmStage extends StatelessWidget {
               description!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
             ),
           ],
           if (insufficientBalance) ...[
             const SizedBox(height: 8),
             const Text(
               'Insufficient balance',
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive),
             ),
           ],
           const Spacer(),
@@ -646,13 +646,13 @@ class _DevTerminalStage extends StatelessWidget {
           children: [
             Text(
               title,
-              style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
             ),
             const SizedBox(height: 24),
             SizedBox(

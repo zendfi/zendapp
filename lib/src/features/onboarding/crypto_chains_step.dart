@@ -69,7 +69,7 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary)),
+            Text(_error!, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: ZendTheme.of(context).textSecondary)),
             const SizedBox(height: 12),
             TextButton(
               onPressed: () { setState(() { _loading = true; _error = null; }); _loadChains(); },
@@ -98,10 +98,10 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
           leading: CircleAvatar(
             radius: 18,
             backgroundColor: zt.bgSecondary,
-            child: Text(initial, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            child: Text(initial, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
           ),
-          title: Text(displayName, style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary)),
-          subtitle: Text(symbol, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
+          title: Text(displayName, style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary)),
+          subtitle: Text(symbol, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
           trailing: Checkbox(
             value: isSelected,
             activeColor: zt.accent,
@@ -129,7 +129,7 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
               Text(
                 'One last step!',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -140,7 +140,7 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
                 "Would you be receiving or sending crypto on any of these chains? "
                 "We'll set up your deposit addresses in the background.",
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -171,7 +171,7 @@ class _CryptoChainSelectionStepState extends State<CryptoChainSelectionStep> {
                         child: const Text(
                           'Skip',
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),

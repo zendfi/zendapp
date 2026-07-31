@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,7 +23,18 @@ class DropDebugLog {
   Stream<List<DropLogEntry>> get stream => _controller.stream;
   List<DropLogEntry> get entries => List.unmodifiable(_entries);
 
+  /// Records a Drop diagnostic event.
+  ///
+  /// In release builds this is a no-op. The only consumer of this log is
+  /// [DropDebugPanel], which is itself gated behind [kDebugMode] — so in
+  /// release the list append, the broadcast to listeners and the
+  /// `debugPrint` were pure overhead. That overhead was not trivial: this
+  /// method is called once per matching BLE advertisement while scanning in
+  /// `AndroidScanMode.lowLatency` with `continuousUpdates: true`, which on
+  /// lower-end Android devices contributed to scan-time jank.
   void add(String tag, String message, {DropLogLevel level = DropLogLevel.info}) {
+    if (!kDebugMode) return;
+
     final entry = DropLogEntry(
       time: DateTime.now(),
       tag: tag,

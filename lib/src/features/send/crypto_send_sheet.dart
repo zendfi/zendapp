@@ -418,7 +418,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Send $_amountFormatted to',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -457,7 +457,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                       ? 'No chains found'
                       : 'No chains available',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -505,7 +505,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                 child: Text(
                                   avatarLabel,
                                   style: TextStyle(
-                                    fontFamily: 'DMSans',
+                                    fontFamily: 'Satoshi',
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: zt.textPrimary,
@@ -521,7 +521,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                     Text(
                                       displayName,
                                       style: TextStyle(
-                                        fontFamily: 'DMSans',
+                                        fontFamily: 'Satoshi',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: zt.textPrimary,
@@ -585,7 +585,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 child: const Text(
                   'Get quote',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -628,7 +628,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Sending $_amountFormattedExact',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -638,7 +638,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               '→ ~${quote.estimatedReceiveAmount} $symbol on ${quote.destinationChainDisplay}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
@@ -648,7 +648,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               Text(
                 'Bridge fee: ~\$${quote.estimatedFeeUsdc.toStringAsFixed(4)}',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 12,
                   color: zt.textSecondary,
                 ),
@@ -704,7 +704,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               '$_amountFormattedExact to $chainName',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -714,7 +714,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               _truncateAddress(address),
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -735,7 +735,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               _pinError ?? 'Enter your PIN',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: _pinError != null
                     ? ZendColors.destructive
@@ -768,7 +768,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Processing...',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: ZendTheme.of(context).textSecondary,
               ),
@@ -817,7 +817,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               Text(
                 'Oops',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 32,
                   color: zt.textPrimary,
                 ),
@@ -827,7 +828,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 _errorMessage ?? 'Something went wrong.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 15,
                   color: zt.textSecondary,
                 ),
@@ -931,8 +932,8 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
             Text(
               'Sent!',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: zt.textPrimary,
               ),
@@ -941,7 +942,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
             Text(
               '${widget.amountFormattedExact} → ${widget.destinationChainDisplay}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -1084,7 +1085,7 @@ class _CryptoPinKeypadKeyState extends State<_CryptoPinKeypadKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,

@@ -74,7 +74,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 'Set up wallet recovery',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -85,7 +85,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 'If you ever forget your PIN, you can recover your wallet using your government ID number — completely without involving Zend.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 15,
                   height: 1.5,
                   color: zt.textSecondary,
@@ -122,7 +122,7 @@ class RecoverySetupScreen extends StatelessWidget {
                     'If you skip this, a forgotten PIN means you permanently lose access to your wallet.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 12,
                       color: zt.textSecondary,
                       height: 1.45,
@@ -140,7 +140,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 child: Text(
                   isFirstTime ? 'Set it up later' : 'Cancel',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -191,7 +191,7 @@ class _BulletItem extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 14,
               height: 1.45,
               color: zt.textPrimary,

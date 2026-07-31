@@ -39,7 +39,7 @@ class LoaderScreen extends StatelessWidget {
                 Text(
                   message,
                   style: const TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: ZendColors.textOnDeep,
                     letterSpacing: 0.3,

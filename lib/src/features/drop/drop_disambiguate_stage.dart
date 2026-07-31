@@ -7,11 +7,12 @@ import '../../models/drop_models.dart';
 /// scanner cannot safely auto-select. The user picks the correct recipient.
 ///
 /// Design principles:
-/// - Sorted strongest-signal first (already sorted by BleScannerService)
+/// - Sorted strongest-signal first the FIRST time this list is shown, then
+///   position is frozen by device identity — see [_DropDisambiguateStageState]
 /// - Signal strength shown as a discreet bar (3 levels) not raw dBm
 /// - "Closest" badge on the top entry as a gentle nudge
 /// - Minimal chrome — same restrained aesthetic as the rest of Drop
-class DropDisambiguateStage extends StatelessWidget {
+class DropDisambiguateStage extends StatefulWidget {
   const DropDisambiguateStage({
     super.key,
     required this.amount,
@@ -25,7 +26,62 @@ class DropDisambiguateStage extends StatelessWidget {
   final ValueChanged<DiscoveredReceiver> onSelect;
   final VoidCallback onCancel;
 
+  @override
+  State<DropDisambiguateStage> createState() => _DropDisambiguateStageState();
+}
+
+class _DropDisambiguateStageState extends State<DropDisambiguateStage> {
+  // Stable row order, keyed by DiscoveredReceiver.deviceId. Established once
+  // on first build (already RSSI-sorted by BleScannerService at that point)
+  // and never re-sorted afterward.
+  //
+  // BleScannerService re-emits the candidate list on every BLE scan result —
+  // several times a second — and RSSI genuinely fluctuates a few dBm per
+  // reading at close range. DropSheet previously fed each new, freshly
+  // re-sorted list straight into a plain ListView.builder with no item keys,
+  // so Flutter's reconciliation matched by *position*, not identity: two
+  // people standing at similar range would have their names, avatars and the
+  // "CLOSEST" badge visibly swap between rows mid-gesture. A user could tap
+  // the row showing the person they meant to pay and have it actually belong
+  // to someone else by the time the tap landed.
+  //
+  // Live RSSI (used for the signal-strength bars) still updates in place —
+  // only the row *order* is frozen.
+  late List<String> _order;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.candidates.map((r) => r.deviceId).toList();
+  }
+
+  @override
+  void didUpdateWidget(DropDisambiguateStage old) {
+    super.didUpdateWidget(old);
+    final incomingIds = widget.candidates.map((r) => r.deviceId).toSet();
+    // Keep previously-seen devices in their established order; append any
+    // genuinely new device (one that has never appeared in this list before)
+    // at the end rather than wherever RSSI would sort it, and drop devices
+    // that are no longer confirmed.
+    final next = _order.where(incomingIds.contains).toList();
+    for (final r in widget.candidates) {
+      if (!next.contains(r.deviceId)) next.add(r.deviceId);
+    }
+    _order = next;
+  }
+
+  /// [widget.candidates] reordered to match the frozen [_order], with each
+  /// entry carrying whatever RSSI/preview data is current for it.
+  List<DiscoveredReceiver> get _orderedCandidates {
+    final byId = {for (final r in widget.candidates) r.deviceId: r};
+    return [
+      for (final id in _order)
+        if (byId.containsKey(id)) byId[id]!,
+    ];
+  }
+
   String get _amountFormatted {
+    final amount = widget.amount;
     if (amount == amount.roundToDouble()) {
       return '\$${amount.toStringAsFixed(0)}';
     }
@@ -35,6 +91,9 @@ class DropDisambiguateStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final candidates = _orderedCandidates;
+    final onSelect = widget.onSelect;
+    final onCancel = widget.onCancel;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,9 +108,9 @@ class DropDisambiguateStage extends StatelessWidget {
               Text(
                 'Drop $_amountFormatted to…',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 24,
-                  fontStyle: FontStyle.italic,
                   color: zt.textPrimary,
                 ),
               ),
@@ -59,7 +118,7 @@ class DropDisambiguateStage extends StatelessWidget {
               Text(
                 '${candidates.length} nearby Zend users detected. Tap the right one.',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: zt.textSecondary,
                 ),
@@ -68,7 +127,8 @@ class DropDisambiguateStage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Candidate list
+        // Candidate list — order frozen by _order, keyed by deviceId (see
+        // class doc above) so rows never swap identity mid-gesture.
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -78,6 +138,7 @@ class DropDisambiguateStage extends StatelessWidget {
               final r = candidates[i];
               final isClosest = i == 0;
               return _CandidateTile(
+                key: ValueKey(r.deviceId),
                 receiver: r,
                 isClosest: isClosest,
                 onTap: () => onSelect(r),
@@ -96,7 +157,7 @@ class DropDisambiguateStage extends StatelessWidget {
                 'Cancel',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -111,6 +172,7 @@ class DropDisambiguateStage extends StatelessWidget {
 
 class _CandidateTile extends StatelessWidget {
   const _CandidateTile({
+    super.key,
     required this.receiver,
     required this.isClosest,
     required this.onTap,
@@ -174,7 +236,7 @@ class _CandidateTile extends StatelessWidget {
                   Text(
                     _displayName,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,

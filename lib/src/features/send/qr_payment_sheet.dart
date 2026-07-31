@@ -580,7 +580,7 @@ class _QrLoadingStage extends StatelessWidget {
           Text(
             'Loading payment request...',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: ZendTheme.of(context).textSecondary,
             ),
@@ -690,7 +690,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               Text(
                 'Pay @${widget.intent.zendtag}',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: ZendTheme.of(context).textPrimary,
@@ -726,7 +726,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               Text(
                 'Insufficient balance',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -735,7 +735,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               Text(
                 'Minimum payment is \$0.50',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -745,8 +745,8 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             Text(
               _formatAmount(widget.resolvedAmount ?? 0),
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: ZendTheme.of(context).textPrimary,
               ),
@@ -770,7 +770,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: ZendTheme.of(context).textSecondary,
                 ),
@@ -781,7 +781,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               Text(
                 'Insufficient balance',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -846,24 +846,24 @@ class _AmountDisplay extends StatelessWidget {
     final decSize = compact ? 26.0 : 30.0;
 
     final wholeStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: zt.textPrimary,
       fontSize: wholeSize,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
     final decStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: zt.textPrimary.withValues(alpha: 0.8),
       fontSize: decSize,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
     final currencyStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: zt.textPrimary.withValues(alpha: 0.5),
       fontSize: wholeSize * 0.5,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
 
@@ -991,7 +991,7 @@ class _AmountKeyState extends State<_AmountKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,

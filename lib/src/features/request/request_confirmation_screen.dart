@@ -132,11 +132,10 @@ class _RequestConfirmationContentState
                       : 'Link created!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 36,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
-                fontStyle: FontStyle.italic,
               ),
             ),
             const SizedBox(height: 8),
@@ -146,7 +145,7 @@ class _RequestConfirmationContentState
                 "They'll get a notification to pay you.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -156,7 +155,7 @@ class _RequestConfirmationContentState
                 "Sent to ${widget.paymentRequest.recipientEmail}",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -178,7 +177,7 @@ class _RequestConfirmationContentState
               formatRequestAmount(widget.paymentRequest.amount),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -248,7 +247,7 @@ class _RequestConfirmationContentState
                 child: const Text(
                   'Share',
                   style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 15,
                       fontWeight: FontWeight.w600),
                 ),
@@ -263,7 +262,7 @@ class _RequestConfirmationContentState
               child: Text(
                 'Done',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,

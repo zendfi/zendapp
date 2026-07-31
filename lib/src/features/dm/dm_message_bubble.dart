@@ -608,6 +608,24 @@ class _TextBubble extends StatelessWidget {
       (message.replyToContent?.isNotEmpty ?? false) ||
       (message.replyToSenderZendtag?.isNotEmpty ?? false);
 
+  /// Whether to show the "Not encrypted" badge. This flags genuinely
+  /// plaintext messages — either historical messages from before E2EE
+  /// shipped, or messages sent while the counterparty had no pubkey on file.
+  ///
+  /// Guards against two false positives:
+  ///  - `localStatus == sending`: outgoing messages sit optimistically in
+  ///    the list while the encryption promise (and E2EE key exchange it
+  ///    waits on — see DmThreadScreen._awaitE2eeResolution) is still
+  ///    resolving. [DmMessage.isEncrypted] isn't final yet, so don't flag.
+  ///  - content still carrying the raw `e2ee:` wire prefix: this message IS
+  ///    encrypted but hasn't been decrypted for display yet (async
+  ///    key-fetch/history-load race — same one `displayContent` guards
+  ///    against). Showing "Not encrypted" here would be actively wrong.
+  bool get _showNotEncryptedBadge =>
+      !message.isEncrypted &&
+      message.localStatus != DmLocalStatus.sending &&
+      !(message.content?.startsWith('e2ee:') ?? false);
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -662,7 +680,7 @@ class _TextBubble extends StatelessWidget {
                       Text(
                         message.displayContent!,
                         style: TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 16.5,
                           color: isMe ? Colors.white : zt.textPrimary,
                           height: 1.35,
@@ -672,6 +690,23 @@ class _TextBubble extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (_showNotEncryptedBadge) ...[
+                          Icon(
+                            SolarIconsBold.lockKeyholeUnlocked,
+                            size: 10,
+                            color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Not encrypted',
+                            style: TextStyle(
+                              fontFamily: 'DMMono',
+                              fontSize: 9.5,
+                              color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         Text(
                           _formatTime(message.createdAt),
                           style: TextStyle(
@@ -748,7 +783,7 @@ class _QuoteBlock extends StatelessWidget {
               '@$senderZendtag',
               textAlign: textAlign,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: labelColor,
@@ -764,7 +799,7 @@ class _QuoteBlock extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: textAlign,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: textColor,
                 height: 1.3,
@@ -900,11 +935,11 @@ class DmPaymentBubble extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       amountFormatted,
-                      style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, color: amountColor, height: 1.0),
+                      style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
                     ),
                     if (note != null && note.isNotEmpty && note != 'vibe') ...[
                       const SizedBox(height: 3),
-                      Text(note, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(note, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
                     ],
                     const SizedBox(height: 4),
                     Align(
@@ -987,10 +1022,10 @@ class DmPaymentRequestBubble extends StatelessWidget {
                     ]),
                     const SizedBox(height: 2),
                     Text(amountFormatted,
-                        style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, color: amountColor, height: 1.0)),
+                        style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(rd.note!, style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(rd.note!, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
                     ],
                     const SizedBox(height: 8),
                     if (!isMe && isPending && onPay != null)
@@ -1003,7 +1038,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700)),
+                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w700)),
                         ),
                       )
                     else if (isMe && isPending)

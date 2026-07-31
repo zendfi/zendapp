@@ -254,7 +254,8 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                 _title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),
@@ -264,7 +265,7 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                 _subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -289,7 +290,7 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

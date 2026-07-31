@@ -341,7 +341,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             pocketLabel?.trim().isNotEmpty == true ? pocketLabel! : 'Save money',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -353,7 +353,7 @@ class _AmountStage extends StatelessWidget {
             child: Text(
               displayAmount,
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -366,7 +366,7 @@ class _AmountStage extends StatelessWidget {
             child: Text(
               amountError ?? 'Available: \$${userBalance.toStringAsFixed(2)}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
@@ -426,7 +426,7 @@ class _PinStage extends StatelessWidget {
             'Save \$${amount.toStringAsFixed(2)}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -453,7 +453,7 @@ class _PinStage extends StatelessWidget {
           Text(
             pinError ?? 'Confirm with your PIN',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: pinError != null
                   ? ZendColors.destructive
@@ -487,7 +487,7 @@ class _ProcessingStage extends StatelessWidget {
             'Saving \$${amount.toStringAsFixed(2)}...',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: ZendTheme.of(context).textSecondary,
             ),
@@ -527,8 +527,8 @@ class _SuccessStage extends StatelessWidget {
             Text(
               'Money saved! 🎉',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -538,7 +538,7 @@ class _SuccessStage extends StatelessWidget {
               '\$${amount.toStringAsFixed(2)} added to your savings',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -590,7 +590,7 @@ class _ErrorStage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textPrimary,
               ),
@@ -610,7 +610,7 @@ class _ErrorStage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'DMSans')),
+                        style: TextStyle(fontFamily: 'Satoshi')),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),
@@ -658,7 +658,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

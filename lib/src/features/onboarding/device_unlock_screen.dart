@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -148,6 +150,11 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
         WalletSessionCache.instance.store(keypair);
+        // Register E2EE pubkey with backend — best-effort, non-blocking.
+        // This is the most common daily entry point (cold-start unlock), so
+        // skipping this is what makes the first DM of a session send in
+        // plaintext until a chat screen lazily registers the key itself.
+        unawaited(model.bootstrapE2ee());
         for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
       } catch (_) {
         // Non-fatal — session cache will be empty, PIN will be re-requested as needed
@@ -206,7 +213,8 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
               const Text(
                 'Unlock Zend',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),
@@ -216,7 +224,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 'Enter your PIN to unlock this device',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -243,7 +251,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),
@@ -269,7 +277,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                   label: const Text('Use biometrics'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0x99E8F4EC),
-                    textStyle: const TextStyle(fontFamily: 'DMSans', fontSize: 13),
+                    textStyle: const TextStyle(fontFamily: 'Satoshi', fontSize: 13),
                   ),
                 ),
               ],

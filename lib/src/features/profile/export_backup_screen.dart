@@ -96,7 +96,7 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text('Export backup',
-          style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 20, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
       ),
       body: SafeArea(
         child: switch (_stage) {
@@ -134,10 +134,10 @@ class _PinStage extends StatelessWidget {
         children: [
           SizedBox(height: compact ? 24 : 40),
           Text('Confirm your PIN', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 26, color: zt.textPrimary)),
+            style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
           const SizedBox(height: 8),
           Text('Enter your PIN to generate the backup file.', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
           SizedBox(height: compact ? 32 : 48),
           _PinDots(filledCount: digits.length, zt: zt),
           const SizedBox(height: 16),
@@ -145,7 +145,7 @@ class _PinStage extends StatelessWidget {
             height: 20,
             child: errorMessage != null
                 ? Text(errorMessage!, textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive))
+                    style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive))
                 : loading
                     ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                     : null,
@@ -190,12 +190,12 @@ class _WarningStage extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('Store this file safely.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, color: zt.textPrimary)),
+                  style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
                 const SizedBox(height: 8),
                 Text(
                   'Anyone with this file and your PIN can access your wallet.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                  style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                 ),
               ],
             ),
@@ -211,13 +211,13 @@ class _WarningStage extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
               ),
               child: const Text('I understand — export backup',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(fontFamily: 'DMSans', color: zt.textSecondary)),
+            child: Text('Cancel', style: TextStyle(fontFamily: 'Satoshi', color: zt.textSecondary)),
           ),
           const SizedBox(height: 24),
         ],
@@ -245,10 +245,10 @@ class _DoneStage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text('Backup exported',
-            style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, color: zt.textPrimary)),
+            style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary)),
           const SizedBox(height: 8),
           Text('Store it somewhere safe.',
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -259,7 +259,7 @@ class _DoneStage extends StatelessWidget {
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
               ),
-              child: const Text('Done', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text('Done', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
         ],

@@ -253,9 +253,9 @@ class _SendScreenState extends State<SendScreen>
                                           ? 'hidden'
                                           : ZendScope.of(context).spendableBalance.toStringAsFixed(2)),
                                       style: const TextStyle(
-                                        fontFamily: 'InstrumentSerif',
+                                        fontFamily: 'Satoshi',
+                                        fontWeight: FontWeight.w700,
                                         fontSize: 15,
-                                        fontStyle: FontStyle.italic,
                                         color: Color(0xCCF0F0F0),
                                       ),
                                     ),
@@ -323,10 +323,10 @@ class _SendScreenState extends State<SendScreen>
                                         _primaryDisplay,
                                         key: ValueKey<String>(_primaryDisplay),
                                         style: TextStyle(
-                                          fontFamily: 'InstrumentSerif',
+                                          fontFamily: 'Satoshi',
+                                          fontWeight: FontWeight.w700,
                                           color: ZendColors.textOnDeep,
                                           fontSize: compact ? 72 : 84,
-                                          fontStyle: FontStyle.italic,
                                           height: 1.0,
                                         ),
                                       ),
@@ -610,7 +610,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                                 ? 'Hold… ${(3 - fill * 3).ceil()}s'
                                 : 'Drop',
                             style: TextStyle(
-                              fontFamily: 'DMSans',
+                              fontFamily: 'Satoshi',
                               fontSize: 14,
                               color: fill > 0
                                   ? ZendColors.accentBright
@@ -651,7 +651,7 @@ class _GlassPill extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'DMSans', color: ZendColors.textOnDeep, fontSize: 14),
+              fontFamily: 'Satoshi', color: ZendColors.textOnDeep, fontSize: 14),
         ),
       ),
     );
@@ -677,7 +677,7 @@ class _PayButton extends StatelessWidget {
         child: Text(
           'Pay',
           style: TextStyle(
-            fontFamily: 'DMSans',
+            fontFamily: 'Satoshi',
             color: zt.isDark ? ZendColors.bgDeep : ZendColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -811,7 +811,7 @@ class _KeypadKeyState extends State<_KeypadKey> {
                   : Text(
                       widget.label,
                       style: const TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 24,
                         color: ZendColors.textOnDeep,
                         fontWeight: FontWeight.w300,
@@ -845,26 +845,26 @@ class _UsdAmountDisplay extends StatelessWidget {
     final decSize = compact ? 28.0 : 32.0;
 
     final wholeStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: ZendColors.textOnDeep,
       fontSize: wholeSize,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
 
     final decStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: const Color(0xCCF0F0F0),
       fontSize: decSize,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
 
     final currencyStyle = TextStyle(
-      fontFamily: 'InstrumentSerif',
+      fontFamily: 'Satoshi',
+      fontWeight: FontWeight.w700,
       color: const Color(0x80F0F0F0),
       fontSize: wholeSize * 0.5,
-      fontStyle: FontStyle.italic,
       height: 1.0,
     );
 
@@ -895,10 +895,10 @@ class _UsdAmountDisplay extends StatelessWidget {
                   Text(
                     '.',
                     style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
+                      fontFamily: 'Satoshi',
+                      fontWeight: FontWeight.w700,
                       color: const Color(0xCCF0F0F0),
                       fontSize: decSize,
-                      fontStyle: FontStyle.italic,
                       height: 1.0,
                     ),
                   ),

@@ -144,14 +144,14 @@ class _SearchScreenState extends State<SearchScreen> {
                         focusNode: _focusNode,
                         onChanged: _onQueryChanged,
                         style: TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 15,
                           color: zt.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search transactions, pools, users…',
                           hintStyle: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 14,
                             color: zt.textSecondary,
                           ),
@@ -177,7 +177,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 14,
                         color: zt.textSecondary,
                       ),
@@ -330,7 +330,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Text(
             'Search transactions, users, pools',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -345,7 +345,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Text(
         'No results for "$_query"',
         style: TextStyle(
-          fontFamily: 'DMSans',
+          fontFamily: 'Satoshi',
           fontSize: 14,
           color: zt.textSecondary,
         ),
@@ -411,7 +411,7 @@ class _SearchTile extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -423,7 +423,7 @@ class _SearchTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),

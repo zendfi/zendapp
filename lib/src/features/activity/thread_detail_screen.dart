@@ -146,7 +146,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               ),
               Text(
                 'React to this',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -221,7 +221,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               preset == 'share_activity_amount_hidden'
                   ? 'Now visible to your network (amount hidden)'
                   : 'Now visible to your network',
-              style: const TextStyle(fontFamily: 'DMSans'),
+              style: const TextStyle(fontFamily: 'Satoshi'),
             ),
           ),
         );
@@ -229,7 +229,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not make this public — try again', style: TextStyle(fontFamily: 'DMSans'))),
+          const SnackBar(content: Text('Could not make this public — try again', style: TextStyle(fontFamily: 'Satoshi'))),
         );
       }
     } finally {
@@ -270,7 +270,8 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               Text(
                 'Share this activity',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 20,
                   color: zt.textPrimary,
                 ),
@@ -279,7 +280,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               Text(
                 'Choose what your network sees.',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: zt.textSecondary,
                 ),
@@ -355,7 +356,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'DMSans'))),
+        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Satoshi'))),
       );
       return;
     }
@@ -405,7 +406,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                       children: [
                         Text(
                           widget.counterparty.displayLabel,
-                          style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                         ),
                         Builder(builder: (ctx) {
                           final streak = ZendScope.of(ctx).activeStreaks[widget.counterparty.id];
@@ -588,7 +589,7 @@ class _FeedPost extends StatelessWidget {
                           if (isVibe)
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                                 children: [
                                   if (isOutgoing) const TextSpan(text: '✨ Vibe sent to '),
                                   if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
@@ -599,7 +600,7 @@ class _FeedPost extends StatelessWidget {
                           else if (isPoolContrib)
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                                 children: [
                                   if (isOutgoing) const TextSpan(text: 'You contributed to '),
                                   TextSpan(text: counterparty.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -610,7 +611,7 @@ class _FeedPost extends StatelessWidget {
                           else
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                                 children: [
                                   if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
                                   TextSpan(
@@ -653,7 +654,7 @@ class _FeedPost extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     edge.note!,
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 14, height: 1.35, color: zt.textPrimary.withValues(alpha: 0.9)),
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, height: 1.35, color: zt.textPrimary.withValues(alpha: 0.9)),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -791,7 +792,7 @@ class _ShareOptionState extends State<_ShareOption> {
                     Text(
                       widget.title,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -800,7 +801,7 @@ class _ShareOptionState extends State<_ShareOption> {
                     Text(
                       widget.subtitle,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),

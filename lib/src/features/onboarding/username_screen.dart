@@ -25,7 +25,9 @@ class _UsernameScreenState extends State<UsernameScreen> {
   @override
   void initState() {
     super.initState();
-    final model = ZendScope.of(context);
+    // One-shot read — ZendScope.of() throws in debug builds when called
+    // before initState() completes.
+    final model = ZendScope.read(context);
     final reserved = model.pendingReservedZendtag;
     if (reserved != null && reserved.isNotEmpty) {
       _controller.text = reserved;
@@ -85,13 +87,13 @@ class _UsernameScreenState extends State<UsernameScreen> {
                     const SizedBox(height: 40),
                     Text(
                       _showingReservedBadge ? 'Your @, as you reserved it.' : 'Choose your @',
-                      style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     if (_showingReservedBadge) ...[
                       const SizedBox(height: 6),
                       Text(
                         "We held it for you. Keep it, or pick a different one.",
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary, height: 1.5),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary, height: 1.5),
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -179,7 +181,7 @@ class _PreviewCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your Zend Link', style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              Text('Your Zend Link', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
               const SizedBox(height: 2),
               Text('zdfi.me/', style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary)),
               Text(safeUsername, style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textPrimary)),

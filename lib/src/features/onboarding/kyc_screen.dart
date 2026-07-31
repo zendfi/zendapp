@@ -28,7 +28,7 @@ class KycScreen extends StatelessWidget {
                     Text(
                       'Verify your identity',
                       style: const TextStyle(
-                        fontFamily: 'InstrumentSerif',
+                        fontFamily: 'Satoshi',
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                       ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -101,6 +103,8 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
         WalletSessionCache.instance.store(keypair);
+        // Register E2EE pubkey with backend — best-effort, non-blocking.
+        unawaited(model.bootstrapE2ee());
         for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
       } catch (_) {}
 
@@ -180,7 +184,8 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
               const Text(
                 'Enter your PIN',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),
@@ -190,7 +195,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                 'Enter your transfer PIN to restore your wallet',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -221,7 +226,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

@@ -298,7 +298,7 @@ class _NameEmojiStage extends StatelessWidget {
           Text(
             'Name your goal',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -313,7 +313,7 @@ class _NameEmojiStage extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'e.g. New car, Holiday fund…',
               hintStyle: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 color: zt.textSecondary,
               ),
               errorText: nameError,
@@ -324,13 +324,13 @@ class _NameEmojiStage extends StatelessWidget {
                 borderSide: BorderSide.none,
               ),
               counterStyle: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 11,
                 color: zt.textSecondary,
               ),
             ),
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 16,
               color: zt.textPrimary,
             ),
@@ -341,7 +341,7 @@ class _NameEmojiStage extends StatelessWidget {
           Text(
             'Pick an emoji',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: zt.textSecondary,
@@ -447,7 +447,7 @@ class _TargetDeadlineStage extends StatelessWidget {
           Text(
             'Set your target',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -459,7 +459,7 @@ class _TargetDeadlineStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -471,7 +471,7 @@ class _TargetDeadlineStage extends StatelessWidget {
               child: Text(
                 targetError!,
                 style: const TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -500,7 +500,7 @@ class _TargetDeadlineStage extends StatelessWidget {
                           ? _formatDate(deadline!)
                           : 'Set a deadline (optional)',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 14,
                         color: deadline != null
                             ? zt.textPrimary
@@ -566,7 +566,7 @@ class _ModeStage extends StatelessWidget {
           Text(
             'Choose a saving style',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -660,7 +660,7 @@ class _ModeOption extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -670,7 +670,7 @@ class _ModeOption extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 13,
                       color: zt.textSecondary,
                     ),
@@ -753,7 +753,7 @@ class _ConfirmStage extends StatelessWidget {
                 Text(
                   '$emoji $name',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -772,7 +772,7 @@ class _ConfirmStage extends StatelessWidget {
                   Text(
                     'Deadline: ${_formatDate(deadline!)}',
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 13,
                       color: zt.textSecondary,
                     ),
@@ -780,7 +780,7 @@ class _ConfirmStage extends StatelessWidget {
                 Text(
                   'Mode: ${mode == 'strict' ? 'Strict' : 'Flexible'}',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -812,7 +812,7 @@ class _ConfirmStage extends StatelessWidget {
             errorMessage ?? pinError ?? 'Confirm with your PIN',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: (pinError != null || errorMessage != null)
                   ? ZendColors.destructive
@@ -860,7 +860,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

@@ -126,7 +126,7 @@ class _DmListScreenState extends State<DmListScreen> {
                     child: Text(
                       'Chats',
                       style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
+                        fontFamily: 'Satoshi',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -171,10 +171,10 @@ class _DmListScreenState extends State<DmListScreen> {
                       child: TextField(
                         controller: _searchController,
                         focusNode: _searchFocus,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Search chats…',
-                          hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                           prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? GestureDetector(
@@ -204,7 +204,7 @@ class _DmListScreenState extends State<DmListScreen> {
                           ? Center(
                               child: Text(
                                 'No chats matching "$_searchQuery"',
-                                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                               ),
                             )
                           : const _EmptyState()
@@ -280,7 +280,7 @@ class _DmThreadTile extends StatelessWidget {
                           child: Text(
                             cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
                             style: TextStyle(
-                              fontFamily: 'DMSans',
+                              fontFamily: 'Satoshi',
                               fontSize: 16,
                               fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
                               color: zt.textPrimary,
@@ -309,7 +309,7 @@ class _DmThreadTile extends StatelessWidget {
                                 ? 'Start a conversation'
                                 : thread.lastMessagePreview,
                             style: TextStyle(
-                              fontFamily: 'DMSans',
+                              fontFamily: 'Satoshi',
                               fontSize: 14,
                               color: hasUnread ? zt.textPrimary : zt.textSecondary,
                               fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
@@ -366,12 +366,12 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'No chats yet',
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textSecondary),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             'Send a payment or tap a profile to start',
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary.withValues(alpha: 0.7)),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary.withValues(alpha: 0.7)),
           ),
         ],
       ),

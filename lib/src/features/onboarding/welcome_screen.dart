@@ -27,7 +27,7 @@ class WelcomeScreen extends StatelessWidget {
                     Text(
                       'Money,\neverywhere.',
                       style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
+                        fontFamily: 'Satoshi',
                         fontSize: 56,
                         height: 1.08,
                         fontWeight: FontWeight.w700,

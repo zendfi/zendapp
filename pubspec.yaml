@@ -204,27 +204,20 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   fonts:
-    - family: InstrumentSerif
+    # Satoshi is the single sans family: Regular/Medium for body & UI,
+    # Bold/Black for display & headline styles. No italics by design.
+    - family: Satoshi
       fonts:
-        - asset: assets/fonts/instrumentserif-regular.ttf
-        - asset: assets/fonts/instrumentserif-italic.ttf
-          style: italic
-    - family: DMSans
-      fonts:
-        - asset: assets/fonts/DMSans-Regular.ttf
+        - asset: assets/fonts/Satoshi-Light.otf
+          weight: 300
+        - asset: assets/fonts/Satoshi-Regular.otf
           weight: 400
-        - asset: assets/fonts/DMSans-Italic.ttf
-          style: italic
-        - asset: assets/fonts/DMSans-Medium.ttf
+        - asset: assets/fonts/Satoshi-Medium.otf
           weight: 500
-        - asset: assets/fonts/DMSans-MediumItalic.ttf
-          weight: 500
-          style: italic
-        - asset: assets/fonts/DMSans-Bold.ttf
+        - asset: assets/fonts/Satoshi-Bold.otf
           weight: 700
-        - asset: assets/fonts/DMSans-BoldItalic.ttf
-          weight: 700
-          style: italic
+        - asset: assets/fonts/Satoshi-Black.otf
+          weight: 900
     - family: DMMono
       fonts:
         - asset: assets/fonts/DMMono-Light.ttf

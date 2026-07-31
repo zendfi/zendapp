@@ -60,7 +60,7 @@ class PrimaryButton extends StatelessWidget {
             : Text(
                 label,
                 style: const TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -92,7 +92,7 @@ class OutlineActionButton extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               fontWeight: FontWeight.w600),
         ),

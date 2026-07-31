@@ -5,34 +5,34 @@ ThemeData buildZendTheme() {
   final base = ThemeData.light(useMaterial3: true);
   final textTheme = base.textTheme
       .apply(
-        fontFamily: 'DMSans',
+        fontFamily: 'Satoshi',
         bodyColor: ZendColors.textPrimary,
         displayColor: ZendColors.textPrimary,
       )
       .copyWith(
         displayLarge: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
           color: ZendColors.textPrimary,
         ),
         displayMedium: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
           color: ZendColors.textPrimary,
         ),
         headlineMedium: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
           color: ZendColors.textPrimary,
         ),
         headlineSmall: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
@@ -69,7 +69,7 @@ ThemeData buildZendTheme() {
 
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'DMSans',
+    fontFamily: 'Satoshi',
     colorScheme: const ColorScheme.light(
       primary: ZendColors.accent,
       secondary: ZendColors.accentBright,
@@ -112,34 +112,34 @@ ThemeData buildZendDarkTheme() {
 
   final textTheme = base.textTheme
       .apply(
-        fontFamily: 'DMSans',
+        fontFamily: 'Satoshi',
         bodyColor: darkTextPrimary,
         displayColor: darkTextPrimary,
       )
       .copyWith(
         displayLarge: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
           color: darkTextPrimary,
         ),
         displayMedium: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
           color: darkTextPrimary,
         ),
         headlineMedium: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
           color: darkTextPrimary,
         ),
         headlineSmall: const TextStyle(
-          fontFamily: 'InstrumentSerif',
+          fontFamily: 'Satoshi',
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
@@ -176,7 +176,7 @@ ThemeData buildZendDarkTheme() {
 
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'DMSans',
+    fontFamily: 'Satoshi',
     colorScheme: const ColorScheme.dark(
       primary: Color(0xFF52B788), 
       secondary: Color(0xFF95D5B2),

@@ -243,7 +243,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 44),
-                    Text('Enter the code', style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                    Text('Enter the code', style: TextStyle(fontFamily: 'Satoshi', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                     const SizedBox(height: 6),
                     Text(_subtitleText, style: TextStyle(color: zt.textSecondary, fontSize: 14)),
                     const SizedBox(height: 20),
@@ -272,7 +272,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     if (_errorText != null) ...[
                       const SizedBox(height: 8),
-                      Text(_errorText!, style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive)),
+                      Text(_errorText!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive)),
                     ],
                     const SizedBox(height: 12),
                     if (_remaining.inSeconds > 0)
@@ -291,7 +291,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             : const Text(
                                 'Resend code',
                                 style: TextStyle(
-                                  fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600,
+                                  fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600,
                                   color: ZendColors.accentPop,
                                   decoration: TextDecoration.underline,
                                   decorationColor: ZendColors.accentPop,
@@ -345,7 +345,7 @@ class _OtpBox extends StatelessWidget {
           maxLength: 1,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: TextStyle(fontFamily: 'DMSans', fontSize: 24, fontWeight: FontWeight.w700, color: zt.textPrimary),
+          style: TextStyle(fontFamily: 'Satoshi', fontSize: 24, fontWeight: FontWeight.w700, color: zt.textPrimary),
           decoration: InputDecoration(
             counterText: '',
             isDense: true,

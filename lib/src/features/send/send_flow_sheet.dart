@@ -864,7 +864,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                   Text(
                     'Pay ${widget.amountFormatted}',
                     style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
+                      fontFamily: 'Satoshi',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -920,7 +920,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                                 : null,
                       ),
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 15,
                         color: zt.textPrimary,
                       ),
@@ -989,7 +989,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                         filled: false,
                       ),
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 15,
                         color: zt.textPrimary,
                       ),
@@ -1019,7 +1019,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                     Text(
                       'PREVIOUS',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.1,
@@ -1159,7 +1159,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       contact.name,
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -1258,7 +1258,7 @@ class _EmailIntentStage extends StatelessWidget {
           Text(
             amountFormatted,
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -1296,7 +1296,7 @@ class _EmailIntentStage extends StatelessWidget {
             Text(
               pinError ?? 'Enter your PIN to confirm',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: pinError != null
                     ? ZendColors.destructive
@@ -1409,8 +1409,8 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
             Text(
               'Sent!',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 36,
                 color: zt.textPrimary,
               ),
@@ -1420,7 +1420,7 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
               '${widget.amountFormatted} to $maskedEmail',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -1514,7 +1514,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 Text(
                   'CONTACTS',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.1,
@@ -1533,7 +1533,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 child: Text(
                   'Finding your contacts on Zend…',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -1554,7 +1554,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                           ? 'Show fewer'
                           : 'Show ${contacts.length - 3} more',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 13,
                         color: zt.accent,
                       ),

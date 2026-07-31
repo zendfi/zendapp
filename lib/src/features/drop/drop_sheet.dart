@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -10,6 +11,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/drop_models.dart';
 import '../../services/ble_scanner_service.dart';
+import '../../services/drop_discoverability_service.dart';
 import '../../services/drop_service.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
@@ -111,10 +113,20 @@ class _DropSheetState extends State<DropSheet>
   final _noteController = TextEditingController();
   bool _noteExpanded = false;
 
+  // ── Discoverability restore ──────────────────────────────────────────────
+  // Cached at initState so dispose() (where ZendScope.of/.read on a
+  // possibly-defunct element is riskier) never needs to touch context.
+  // See _onReceiverConfirmed/_resumeDiscoverability/_returnToScanning/_dismiss.
+  late final DropDiscoverabilityService _discoverabilityService;
+  bool _discoverabilityPaused = false;
+
   @override
   void initState() {
     super.initState();
-    final model = ZendScope.of(context);
+    // One-shot read — ZendScope.of() throws in debug builds when called
+    // before initState() completes.
+    final model = ZendScope.read(context);
+    _discoverabilityService = model.dropDiscoverabilityService;
     _dropService = DropService(
       apiClient: model.walletService.apiClient,
       walletService: model.walletService,
@@ -143,6 +155,11 @@ class _DropSheetState extends State<DropSheet>
 
   @override
   void dispose() {
+    // Catch-all: if the sheet is torn down through some path that didn't
+    // already call _resumeDiscoverability() (e.g. the route is popped by an
+    // ancestor navigator rather than this widget's own _dismiss()), make sure
+    // "Be Discoverable" doesn't stay stuck paused.
+    _resumeDiscoverability();
     _previewTimeoutTimer?.cancel();
     _scanSub?.cancel();
     _bleScannerService.stopScan();
@@ -305,11 +322,13 @@ class _DropSheetState extends State<DropSheet>
     DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
     setState(() => _confirmedReceiver = receiver);
 
-    // Pause discoverable advertising while acting as sender.
-    // The discoverability service will be resumed after the transfer
-    // completes (success or failure) in _executeTransfer.
-    final model = ZendScope.of(context);
-    unawaited(model.dropDiscoverabilityService.pause());
+    // Pause discoverable advertising while acting as sender. Every exit from
+    // this point onward — success, failure, cancel, back, or sheet dismissal —
+    // must go through _resumeDiscoverability(), otherwise the user's
+    // "Be Discoverable" toggle keeps reading ON in Profile while nothing is
+    // actually broadcasting and nobody can Drop to them.
+    _discoverabilityPaused = true;
+    unawaited(_discoverabilityService.pause());
 
     if (widget.amount <= 50) {
       _goTo(DropStage.countdown);
@@ -406,7 +425,7 @@ class _DropSheetState extends State<DropSheet>
     _pinAttempts++;
     if (_pinAttempts >= 5) {
       if (lockOnMaxAttempts) {
-        ZendScope.of(context).appLockService.lock();
+        ZendScope.read(context).appLockService.lock();
       }
       setState(() => _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.');
       _goTo(DropStage.error);
@@ -433,9 +452,9 @@ class _DropSheetState extends State<DropSheet>
     DropDebugLog.i.add('XFER', 'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}');
     _goTo(DropStage.processing);
     // BleAdvertiserService is no longer used from the sheet.
-    // Discoverability is paused via dropDiscoverabilityService in _onReceiverConfirmed.
+    // Discoverability is paused via _discoverabilityService in _onReceiverConfirmed.
     try {
-      final model = ZendScope.of(context);
+      final model = ZendScope.read(context);
 
       await _dropService.executeDropTransfer(
         beacon: _confirmedReceiver!.gattPayload!,
@@ -454,7 +473,7 @@ class _DropSheetState extends State<DropSheet>
       final usedNonce = _confirmedReceiver?.gattPayload?.nonce;
       if (usedNonce != null) _exhaustedNonces.add(usedNonce);
       // Resume discoverability after successful send
-      unawaited(model.dropDiscoverabilityService.resume());
+      _resumeDiscoverability();
 
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
@@ -465,8 +484,6 @@ class _DropSheetState extends State<DropSheet>
     } on ApiException catch (e) {
       DropDebugLog.i.add('XFER', 'API error: ${e.userMessage}', level: DropLogLevel.error);
       if (!mounted) return;
-      // Resume discoverability on failure so receiver can still be found
-      unawaited(ZendScope.of(context).dropDiscoverabilityService.resume());
 
       // Nonce-specific errors: the beacon is stale or already used.
       // Mark it exhausted and silently return to scanning — no error state,
@@ -479,25 +496,39 @@ class _DropSheetState extends State<DropSheet>
         DropDebugLog.i.add('XFER',
             'Nonce ${staleNonce?.substring(0, 8) ?? '?'}… is ${e.errorCode} — returning to scan for fresh beacon',
             level: DropLogLevel.warn);
-        setState(() {
-          _confirmedReceiver = null;
-          _candidates = [];
-        });
-        _bleScannerService.stopScan();
-        _bleScannerService.startScan();
-        _goTo(DropStage.scanning);
+        // Resume discoverability so the receiver can still be found (also
+        // restarts the scan and clears the stale candidate).
+        _returnToScanning();
         return;
       }
 
+      // Resume discoverability on failure so the sender can still be found
+      // by someone else — a payment error shouldn't strand them un-Drop-able.
+      _resumeDiscoverability();
       setState(() => _errorMessage = e.userMessage);
       _goTo(DropStage.error);
     } catch (e) {
       DropDebugLog.i.add('XFER', 'Unexpected error: $e', level: DropLogLevel.error);
       if (!mounted) return;
-      unawaited(ZendScope.of(context).dropDiscoverabilityService.resume());
+      _resumeDiscoverability();
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
       _goTo(DropStage.error);
     }
+  }
+
+  // ── Discoverability restore ───────────────────────────────────────────────
+
+  /// Resumes the "Be Discoverable" beacon if this sheet paused it.
+  ///
+  /// Idempotent and safe to call on every exit path: the service itself
+  /// re-reads the persisted preference and no-ops when the user never had
+  /// discoverability enabled. The [_discoverabilityPaused] flag stops us
+  /// issuing a redundant beacon fetch when nothing was ever paused.
+  void _resumeDiscoverability() {
+    if (!_discoverabilityPaused) return;
+    _discoverabilityPaused = false;
+    unawaited(_discoverabilityService.resume());
+    DropDebugLog.i.add('SHEET', 'Discoverability resumed');
   }
 
   // ── Error retry ───────────────────────────────────────────────────────────
@@ -507,9 +538,30 @@ class _DropSheetState extends State<DropSheet>
       _errorMessage = null;
       _confirmedReceiver = null;
     });
+    _restartScan();
+    _goTo(DropStage.scanning);
+  }
+
+  /// Returns to the scanning stage after the user backs out of a confirmation
+  /// or PIN stage. Restores discoverability, since [_onReceiverConfirmed]
+  /// paused it on the way in.
+  void _returnToScanning({bool clearPin = false}) {
+    _resumeDiscoverability();
+    setState(() {
+      _confirmedReceiver = null;
+      _candidates = [];
+      if (clearPin) {
+        _pinDigits = '';
+        _pinError = null;
+      }
+    });
+    _restartScan();
+    _goTo(DropStage.scanning);
+  }
+
+  void _restartScan() {
     _bleScannerService.stopScan();
     _bleScannerService.startScan();
-    _goTo(DropStage.scanning);
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
@@ -519,6 +571,7 @@ class _DropSheetState extends State<DropSheet>
   }
 
   void _dismiss() {
+    _resumeDiscoverability();
     Navigator.of(context).pop();
   }
 
@@ -557,34 +610,43 @@ class _DropSheetState extends State<DropSheet>
         child: Column(
           children: [
             const SizedBox(height: 14),
-            // Header row: drag handle + debug toggle
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Expanded(child: SizedBox()),
-                const ZendSheetHandle(),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _showDebugPanel = !_showDebugPanel),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16, top: 4),
-                        child: Text(
-                          '🐛',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _showDebugPanel
-                                ? const Color(0xFF52B788)
-                                : const Color(0x33F0F0F0),
+            // Header row: drag handle (+ debug toggle in debug builds only).
+            //
+            // The debug toggle is deliberately gated behind kDebugMode. It
+            // exposes BLE device identifiers, beacon nonces, zendtags and
+            // native crash logs, and previously shipped to production as a
+            // near-invisible 20%-alpha glyph sitting next to the drag handle
+            // — easy to hit by accident and impossible to interpret.
+            if (kDebugMode)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Expanded(child: SizedBox()),
+                  const ZendSheetHandle(),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showDebugPanel = !_showDebugPanel),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16, top: 4),
+                          child: Text(
+                            '🐛',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _showDebugPanel
+                                  ? const Color(0xFF52B788)
+                                  : const Color(0x33F0F0F0),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              const ZendSheetHandle(),
             const SizedBox(height: 8),
             // Note field — shown above stage content on scanning/preview stages
             if (_stage == DropStage.scanning ||
@@ -616,7 +678,7 @@ class _DropSheetState extends State<DropSheet>
                     },
                     child: RepaintBoundary(child: _buildStageContent()),
                   ),
-                  if (_showDebugPanel) const DropDebugPanel(),
+                  if (kDebugMode && _showDebugPanel) const DropDebugPanel(),
                 ],
               ),
             ),
@@ -672,12 +734,12 @@ class _DropSheetState extends State<DropSheet>
             setState(() => _candidates = []);
             _onReceiverConfirmed(receiver);
           },
-          onCancel: () {
-            setState(() => _candidates = []);
-            _bleScannerService.stopScan();
-            _bleScannerService.startScan();
-            _goTo(DropStage.scanning);
-          },
+          // No discoverability pause has happened yet at this stage (that
+          // only occurs once a single receiver is confirmed), so a plain
+          // "back to scanning" is correct here — but routing through the
+          // shared helper keeps this stage safe if that ever changes, and
+          // is a no-op today since _discoverabilityPaused is still false.
+          onCancel: () => _returnToScanning(),
         );
 
       case DropStage.countdown:
@@ -689,12 +751,7 @@ class _DropSheetState extends State<DropSheet>
               ? null
               : _noteController.text.trim(),
           onExecute: _startSigning,
-          onCancel: () {
-            setState(() => _confirmedReceiver = null);
-            _bleScannerService.stopScan();
-            _bleScannerService.startScan();
-            _goTo(DropStage.scanning);
-          },
+          onCancel: () => _returnToScanning(),
         );
 
       case DropStage.confirm:
@@ -707,12 +764,7 @@ class _DropSheetState extends State<DropSheet>
               : _noteController.text.trim(),
           requiresBiometric: false,
           onConfirm: _startSigning,
-          onCancel: () {
-            setState(() => _confirmedReceiver = null);
-            _bleScannerService.stopScan();
-            _bleScannerService.startScan();
-            _goTo(DropStage.scanning);
-          },
+          onCancel: () => _returnToScanning(),
         );
 
       case DropStage.biometric:
@@ -725,12 +777,7 @@ class _DropSheetState extends State<DropSheet>
               : _noteController.text.trim(),
           requiresBiometric: true,
           onConfirm: _startSigning,
-          onCancel: () {
-            setState(() => _confirmedReceiver = null);
-            _bleScannerService.stopScan();
-            _bleScannerService.startScan();
-            _goTo(DropStage.scanning);
-          },
+          onCancel: () => _returnToScanning(),
         );
 
       case DropStage.pin:
@@ -748,16 +795,7 @@ class _DropSheetState extends State<DropSheet>
           shakeAnimation: _shakeAnimation,
           shakeController: _shakeController,
           onKey: _onPinKey,
-          onBack: () {
-            setState(() {
-              _pinDigits = '';
-              _pinError = null;
-              _confirmedReceiver = null;
-            });
-            _bleScannerService.stopScan();
-            _bleScannerService.startScan();
-            _goTo(DropStage.scanning);
-          },
+          onBack: () => _returnToScanning(clearPin: true),
         );
 
       case DropStage.processing:
@@ -859,7 +897,7 @@ class _NoteField extends StatelessWidget {
             Text(
               hasNote ? preview! : 'Add note',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -888,7 +926,7 @@ class _NoteField extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Add a note…',
                   hintStyle: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -901,7 +939,7 @@ class _NoteField extends StatelessWidget {
                   filled: false,
                 ),
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textPrimary,
                 ),

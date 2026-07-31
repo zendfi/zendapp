@@ -918,7 +918,7 @@ class _MissionRoomState extends State<MissionRoom> {
                 children: [
                   ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
                   const SizedBox(width: 8),
-                  Text('Reconnecting...', style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary)),
+                  Text('Reconnecting...', style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
                 ],
               ),
             );
@@ -937,7 +937,7 @@ class _MissionRoomState extends State<MissionRoom> {
                 child: Text(
                   'Could not connect. Tap to retry.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textPrimary),
+                  style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textPrimary),
                 ),
               ),
             );
@@ -954,7 +954,7 @@ class _MissionRoomState extends State<MissionRoom> {
               child: Text(
                 'This pool has closed — messages are read-only',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary),
               ),
             );
           }),
@@ -967,7 +967,7 @@ class _MissionRoomState extends State<MissionRoom> {
                   ? Center(
                       child: Text(
                         'No messages yet. Say something! 👋',
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: ZendTheme.of(context).textSecondary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: ZendTheme.of(context).textSecondary),
                       ),
                     )
                   : Stack(
@@ -1168,7 +1168,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 6),
           Text(
             _label,
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 12, color: zt.textSecondary),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary),
           ),
         ],
       ),
@@ -1386,7 +1386,7 @@ class _InputBarState extends State<_InputBar> {
                 const Spacer(),
                 TextButton(
                   onPressed: () => unawaited(widget.onMicStop()),
-                  child: const Text('Stop', style: TextStyle(fontFamily: 'DMSans', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
+                  child: const Text('Stop', style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
                 ),
               ],
             )
@@ -1453,14 +1453,14 @@ class _InputBarState extends State<_InputBar> {
                       minLines: 1,
                       maxLength: 280,
                       textInputAction: TextInputAction.newline,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                       buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
                         if (!isFocused || !overLimit) return null;
                         return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
                       },
                       decoration: InputDecoration(
                         hintText: 'Message the group...',
-                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                        hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                         border: InputBorder.none,
                         counterText: '',
                         isDense: true,

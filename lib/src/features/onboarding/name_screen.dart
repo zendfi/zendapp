@@ -27,7 +27,10 @@ class _NameScreenState extends State<NameScreen> {
     //
     // Done in initState (not didChangeDependencies) because the
     // ZendState reference is stable for the lifetime of the screen.
-    final model = ZendScope.of(context);
+    // Uses ZendScope.read, not .of — this is a one-shot read with no
+    // rebuild dependency, and .of() throws in debug builds when called
+    // before initState() completes.
+    final model = ZendScope.read(context);
     final stored = model.pendingWaitlistFullName?.trim() ?? '';
     if (stored.isNotEmpty) {
       final parts = stored.split(RegExp(r'\s+'));
@@ -81,16 +84,16 @@ class _NameScreenState extends State<NameScreen> {
                       const SizedBox(height: 8),
                       Text(
                         waitlistFirstName.isEmpty ? "Welcome in. Let's set up your account." : "Welcome in, $waitlistFirstName.",
-                        style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         "We've been holding a spot for you. A couple of details and you're in.",
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary, height: 1.5),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary, height: 1.5),
                       ),
                       const SizedBox(height: 32),
                     ] else ...[
-                      Text("What's your name?", style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                      Text("What's your name?", style: TextStyle(fontFamily: 'Satoshi', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                       const SizedBox(height: 24),
                     ],
                     TextField(

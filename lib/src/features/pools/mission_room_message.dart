@@ -336,7 +336,7 @@ class _TextMessageRow extends StatelessWidget {
                       Text(
                         message.content ?? '',
                         style: TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 15,
                           color: textColor,
                           height: 1.35,
@@ -417,7 +417,7 @@ class _TextMessageRow extends StatelessWidget {
               ],
               Text(
                 message.content ?? '',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary, height: 1.4),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary, height: 1.4),
               ),
               if (isMe || readers.isNotEmpty) ...[
                 const SizedBox(height: 2),
@@ -479,7 +479,7 @@ class _ContributionEventRow extends StatelessWidget {
             child: Text(
               message.content ?? '',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: zt.accent,

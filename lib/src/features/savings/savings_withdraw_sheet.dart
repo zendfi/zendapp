@@ -384,7 +384,7 @@ class _GoalLockedStage extends StatelessWidget {
             Text(
               'Goal is locked',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -395,7 +395,7 @@ class _GoalLockedStage extends StatelessWidget {
               'This goal is set to Strict mode. Withdrawals are locked until you reach your target.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 14,
                 height: 1.45,
                 color: zt.textSecondary,
@@ -434,7 +434,7 @@ class _FreeConfirmStage extends StatelessWidget {
           Text(
             'Cash out',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -444,7 +444,7 @@ class _FreeConfirmStage extends StatelessWidget {
           Text(
             'Available: \$${availableAmount.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -500,7 +500,7 @@ class _FreeAmountStage extends StatelessWidget {
           Text(
             'Cash out',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -511,7 +511,7 @@ class _FreeAmountStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -523,7 +523,7 @@ class _FreeAmountStage extends StatelessWidget {
             child: Text(
               amountError ?? 'Available: \$${availableAmount.toStringAsFixed(2)}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
@@ -567,7 +567,7 @@ class _GoalConfirmStage extends StatelessWidget {
           Text(
             'Withdraw from goal',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -585,7 +585,7 @@ class _GoalConfirmStage extends StatelessWidget {
                 ? 'Flexible goal — you can withdraw anytime.'
                 : 'Goal target reached — withdrawal is now available.',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: zt.textSecondary,
             ),
@@ -635,7 +635,7 @@ class _LockConfirmStage extends StatelessWidget {
           Text(
             'Withdraw locked savings',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -653,7 +653,7 @@ class _LockConfirmStage extends StatelessWidget {
                 ? 'Locked until ${_formatDate(lockUnlockDate)} — now unlocked.'
                 : 'Your lock has expired and is ready to withdraw.',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: zt.textSecondary,
             ),
@@ -692,7 +692,7 @@ class _ConfirmStage extends StatelessWidget {
           Text(
             'Cash out',
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -717,7 +717,7 @@ class _ConfirmStage extends StatelessWidget {
             value: '−${_fmt(position.feeUsd)}',
             valueColor: zt.textSecondary,
             labelStyle: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: zt.textSecondary,
             ),
@@ -766,7 +766,7 @@ class _BreakdownRow extends StatelessWidget {
           label,
           style: labelStyle ??
               TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: bold ? 15 : 14,
                 fontWeight:
                     bold ? FontWeight.w600 : FontWeight.w400,
@@ -823,7 +823,7 @@ class _PinStage extends StatelessWidget {
             'Cash out \$${receiveAmount.toStringAsFixed(2)}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -850,7 +850,7 @@ class _PinStage extends StatelessWidget {
           Text(
             pinError ?? 'Confirm with your PIN',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: pinError != null
                   ? ZendColors.destructive
@@ -883,7 +883,7 @@ class _ProcessingStage extends StatelessWidget {
             'Cashing out...',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: ZendTheme.of(context).textSecondary,
             ),
@@ -923,8 +923,8 @@ class _SuccessStage extends StatelessWidget {
             Text(
               'Cashed out! 💸',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -934,7 +934,7 @@ class _SuccessStage extends StatelessWidget {
               'You received \$${receiveAmount.toStringAsFixed(2)}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -986,7 +986,7 @@ class _ErrorStage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textPrimary,
               ),
@@ -1006,7 +1006,7 @@ class _ErrorStage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'DMSans')),
+                        style: TextStyle(fontFamily: 'Satoshi')),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),
@@ -1054,7 +1054,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

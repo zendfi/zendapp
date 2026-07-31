@@ -103,9 +103,9 @@ class _DropCountdownStageState extends State<DropCountdownStage>
             Text(
               'Sending $_amountFormatted',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 28,
-                fontStyle: FontStyle.italic,
                 color: zt.textPrimary,
               ),
             ),
@@ -113,7 +113,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
             Text(
               'to @$_zendtag',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 16,
                 color: zt.textSecondary,
               ),
@@ -168,7 +168,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
                 child: Text(
                   'Cancel',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),

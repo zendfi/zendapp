@@ -134,7 +134,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               Text(
                 'Enter your government ID',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -144,7 +144,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               Text(
                 'This number is combined with your wallet salt to create a recovery key — it never leaves your device.',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   height: 1.5,
                   color: zt.textSecondary,
@@ -167,7 +167,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                   underline: const SizedBox.shrink(),
                   dropdownColor: zt.bgSecondary,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     color: zt.textPrimary,
                   ),
@@ -207,7 +207,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                 decoration: InputDecoration(
                   hintText: _hintText,
                   hintStyle: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: zt.textSecondary,
                     letterSpacing: 0,
@@ -228,7 +228,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                   ),
                   errorText: _error,
                   errorStyle: const TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 12,
                     color: ZendColors.destructive,
                   ),
@@ -257,7 +257,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                     child: Text(
                       'Your ID number is never sent to Zend\'s servers or stored in the cloud.',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),

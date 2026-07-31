@@ -141,7 +141,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         title: const Text(
           'Write NFC tag',
           style: TextStyle(
-            fontFamily: 'DMSans',
+            fontFamily: 'Satoshi',
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: ZendColors.textOnDeep,
@@ -273,9 +273,9 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       text,
       textAlign: TextAlign.center,
       style: const TextStyle(
-        fontFamily: 'InstrumentSerif',
+        fontFamily: 'Satoshi',
+        fontWeight: FontWeight.w700,
         fontSize: 28,
-        fontStyle: FontStyle.italic,
         color: ZendColors.textOnDeep,
       ),
     );
@@ -303,7 +303,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       text,
       textAlign: TextAlign.center,
       style: const TextStyle(
-        fontFamily: 'DMSans',
+        fontFamily: 'Satoshi',
         fontSize: 15,
         color: Color(0x99E8F4EC),
         height: 1.5,
@@ -382,7 +382,7 @@ class _ActionButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'DMSans',
+            fontFamily: 'Satoshi',
             fontSize: 15,
             fontWeight: FontWeight.w600,
             color: primary

@@ -55,9 +55,9 @@ class _DropScannerStageState extends State<DropScannerStage>
         Text(
           _amountFormatted,
           style: TextStyle(
-            fontFamily: 'InstrumentSerif',
+            fontFamily: 'Satoshi',
+            fontWeight: FontWeight.w700,
             fontSize: 56,
-            fontStyle: FontStyle.italic,
             color: zt.textPrimary,
           ),
         ),

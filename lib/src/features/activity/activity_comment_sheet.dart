@@ -177,7 +177,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
               ),
               Text(
                 'React to this',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -214,7 +214,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not post comment — try again', style: TextStyle(fontFamily: 'DMSans'))),
+          const SnackBar(content: Text('Could not post comment — try again', style: TextStyle(fontFamily: 'Satoshi'))),
         );
       }
     } finally {
@@ -272,13 +272,13 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 Expanded(
                   child: Text(
                     'Activity',
-                    style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
                 TextButton.icon(
                   onPressed: widget.onViewReceipt,
                   icon: Icon(SolarIconsBold.bill, size: 16, color: zt.accent),
-                  label: Text('Receipt', style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
+                  label: Text('Receipt', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
                 ),
               ],
             ),
@@ -300,14 +300,14 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       // Headline is the primary text — larger, more prominent
                       Text(
                         widget.headline,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary, height: 1.3),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary, height: 1.3),
                       ),
                       const SizedBox(height: 6),
                       // Note (payment memo) rendered as post body copy
                       if (edge.note?.isNotEmpty == true) ...[
                         Text(
                           edge.note!,
-                          style: TextStyle(fontFamily: 'DMSans', fontSize: 15, height: 1.45, color: zt.textPrimary.withValues(alpha: 0.88)),
+                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, height: 1.45, color: zt.textPrimary.withValues(alpha: 0.88)),
                         ),
                         const SizedBox(height: 10),
                       ],
@@ -401,7 +401,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                           child: Text(
                             'No comments yet — be the first to say something.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'Satoshi', fontSize: 13.5, color: zt.textSecondary),
                           ),
                         ),
                       )
@@ -463,10 +463,10 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       maxLines: 4,
                       minLines: 1,
                       textInputAction: TextInputAction.newline,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Add a comment…',
-                        hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                        hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                         border: InputBorder.none,
                         counterText: '',
                         isDense: true,
@@ -561,13 +561,13 @@ class _CommentRow extends StatelessWidget {
                 Row(
                   children: [
                     Text('@${comment.authorZendtag}',
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                     const SizedBox(width: 6),
                     Text(relativeTime, style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(comment.body, style: TextStyle(fontFamily: 'DMSans', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9))),
+                Text(comment.body, style: TextStyle(fontFamily: 'Satoshi', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9))),
               ],
             ),
           ),

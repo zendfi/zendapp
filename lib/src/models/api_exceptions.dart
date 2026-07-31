@@ -49,6 +49,12 @@ class ApiException extends ZendException {
       case 'NONCE_SUPERSEDED':
       case 'INVALID_NONCE':
         return 'Beacon expired. Scanning for a fresh connection…';
+      case 'VIBE_DAILY_LIMIT_EXCEEDED':
+        return "You've hit today's \$25 Vibe limit. Try again tomorrow.";
+      case 'POOL_NOT_ACTIVE':
+        return 'This pool is no longer active.';
+      case 'POOL_FULL':
+        return 'This pool has already reached its goal.';
       default:
         return 'Something went wrong. Please try again.';
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -118,6 +120,11 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
         WalletSessionCache.instance.store(keypair);
+        // Register E2EE pubkey with backend — best-effort, non-blocking.
+        // This is a brand-new wallet, so this is the very first time this
+        // key can be published; skipping it here is what let two freshly
+        // signed-up users be unable to bootstrap E2EE with each other.
+        unawaited(model.bootstrapE2ee());
         for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
       } catch (_) {
         // Non-fatal — session cache empty, PIN will be requested on first send
@@ -216,7 +223,8 @@ class _PinSetupScreenState extends State<PinSetupScreen>
               Text(
                 'Set your transfer PIN',
                 style: const TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),
@@ -228,7 +236,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                     : 'Re-enter your PIN to confirm',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -256,7 +264,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

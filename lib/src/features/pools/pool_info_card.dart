@@ -43,7 +43,7 @@ class PoolInfoCard extends StatelessWidget {
                       child: Text(
                         pool.name,
                         style: TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: zt.textPrimary,
@@ -61,9 +61,9 @@ class PoolInfoCard extends StatelessWidget {
                 Text(
                   pool.formattedGathered,
                   style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
+                    fontFamily: 'Satoshi',
+                    fontWeight: FontWeight.w700,
                     fontSize: 22,
-                    fontStyle: FontStyle.italic,
                     color: zt.textPrimary,
                   ),
                 ),
@@ -163,7 +163,7 @@ class _AvatarRow extends StatelessWidget {
                 child: Text(
                   '+$overflow',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                     color: zt.textSecondary,

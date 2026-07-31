@@ -209,6 +209,27 @@ class ZendAppModel extends ChangeNotifier {
   /// E2EE service — encrypts/decrypts DM messages using X25519 ECDH + ChaCha20-Poly1305.
   final E2eeService e2eeService;
 
+  /// Publishes the current user's E2EE public key to the backend.
+  ///
+  /// This is the single entry point for E2EE bootstrap and MUST be called
+  /// (fire-and-forget is fine) on every path that puts a decrypted wallet
+  /// keypair into [WalletSessionCache] — signup, device unlock, backup
+  /// restore, PIN migration, and inactivity re-unlock. Without this, a DM
+  /// thread opened before any of those paths has run will send the first
+  /// messages in plaintext while it lazily registers the key itself.
+  ///
+  /// No-ops if the wallet address can't be read yet; safe to call multiple
+  /// times per session (see [E2eeService.registerPubkey] dedup/cache).
+  Future<void> bootstrapE2ee() async {
+    try {
+      final walletAddress = await walletService.getWalletAddress();
+      if (walletAddress == null) return;
+      await e2eeService.registerPubkey(walletAddress);
+    } catch (_) {
+      // Best-effort — DmThreadScreen still registers lazily as a fallback.
+    }
+  }
+
   /// Total unread DM message count across all threads.
   int dmUnreadTotal = 0;
 
@@ -1748,9 +1769,32 @@ class ZendScope extends InheritedNotifier<ZendAppModel> {
     required super.child,
   }) : super(notifier: notifier);
 
+  /// Returns the model **and subscribes** the calling element to it, so the
+  /// widget rebuilds whenever [ZendAppModel.notifyListeners] fires.
+  ///
+  /// Only legal from `build()` or `didChangeDependencies()`. Calling this from
+  /// `initState()` or `dispose()` throws in debug builds — use [read] there.
   static ZendAppModel of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<ZendScope>();
     assert(scope != null, 'ZendScope not found in widget tree');
     return scope!.notifier!;
+  }
+
+  /// Returns the model **without** subscribing the calling element to it.
+  ///
+  /// Safe from `initState()` and `dispose()`, where
+  /// `dependOnInheritedWidgetOfExactType` is illegal and throws a
+  /// `FlutterError` in debug builds ("...was called before
+  /// SomeState.initState() completed"). Because the assertion is stripped in
+  /// release, that class of bug is invisible in production and only bites
+  /// developers — which is exactly why it survived in several screens.
+  ///
+  /// Use this for one-shot reads: kicking off a fetch, constructing a service,
+  /// or detaching a listener. If the widget needs to rebuild on model changes,
+  /// use [of] from `build()` instead.
+  static ZendAppModel read(BuildContext context) {
+    final element = context.getElementForInheritedWidgetOfExactType<ZendScope>();
+    assert(element != null, 'ZendScope not found in widget tree');
+    return (element!.widget as ZendScope).notifier!;
   }
 }

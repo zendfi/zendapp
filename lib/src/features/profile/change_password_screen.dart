@@ -95,7 +95,7 @@ class _Header extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
               fontSize: 26,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,

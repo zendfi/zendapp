@@ -53,34 +53,90 @@ class E2eeService {
   // Cache derived symmetric keys per room to avoid re-deriving on every message
   final _keyCache = <String, SecretKey>{};
 
+  /// Set once [registerPubkey] has succeeded for the current session, so
+  /// repeated calls (every unlock, every DM thread open) short-circuit
+  /// instead of re-hitting the network for a key that's already published.
+  bool _pubkeyRegisteredThisSession = false;
+
+  /// Tracks an in-flight registration so concurrent callers (e.g. the app
+  /// lock overlay and a DM thread screen unlocking at the same moment) share
+  /// a single request instead of racing multiple PUTs.
+  Future<void>? _registerInFlight;
+
+  static const List<Duration> _registerRetryDelays = [
+    Duration(milliseconds: 500),
+    Duration(seconds: 2),
+    Duration(seconds: 5),
+  ];
+
   /// Registers the user's Ed25519 public key (base58 Solana wallet address)
   /// with the backend so counterparties can retrieve it for ECDH.
-  /// Should be called once on first wallet unlock, and on key rotation.
+  ///
+  /// Must be called on EVERY path that materializes the wallet keypair in
+  /// memory (fresh signup, device unlock, backup restore, PIN migration) —
+  /// not just app-lock re-unlock — otherwise the very first DM session after
+  /// that path sends plaintext until a chat happens to be opened separately.
+  ///
+  /// Safe to call redundantly: no-ops once registered this session, and
+  /// dedupes concurrent in-flight calls. Retries transient failures with
+  /// backoff before giving up (silently — the next unlock will retry).
   Future<void> registerPubkey(String walletAddress) async {
+    if (_pubkeyRegisteredThisSession) return;
+    final inFlight = _registerInFlight;
+    if (inFlight != null) return inFlight;
+
+    final future = _registerPubkeyWithRetry(walletAddress);
+    _registerInFlight = future;
     try {
-      await _apiClient.dio.put('/api/zend/users/me/pubkey', data: {
-        'ed25519_public_key': walletAddress,
-      });
-    } catch (e) {
-      // Non-fatal — will retry next unlock. Log for debugging only.
-      assert(() {
-        // ignore: avoid_print
-        print('E2EE: Failed to register pubkey: $e');
-        return true;
-      }());
+      await future;
+    } finally {
+      _registerInFlight = null;
+    }
+  }
+
+  Future<void> _registerPubkeyWithRetry(String walletAddress) async {
+    for (var attempt = 0; attempt <= _registerRetryDelays.length; attempt++) {
+      try {
+        await _apiClient.dio.put('/api/zend/users/me/pubkey', data: {
+          'ed25519_public_key': walletAddress,
+        });
+        _pubkeyRegisteredThisSession = true;
+        return;
+      } catch (e) {
+        final isLastAttempt = attempt == _registerRetryDelays.length;
+        if (isLastAttempt) {
+          // Non-fatal — will retry on the next unlock/thread open. Log for
+          // debugging only; never surface this to the user mid-flow.
+          assert(() {
+            // ignore: avoid_print
+            print('E2EE: Failed to register pubkey after ${attempt + 1} attempts: $e');
+            return true;
+          }());
+          return;
+        }
+        await Future.delayed(_registerRetryDelays[attempt]);
+      }
     }
   }
 
   /// Fetches the counterparty's Ed25519 public key from the backend.
   /// Returns null if the counterparty hasn't registered a pubkey yet
-  /// (they're on an old app version or haven't opened the app since E2EE launch).
+  /// (they're on an old app version or haven't opened the app since E2EE launch),
+  /// or if the request keeps failing after one retry (transient network blip).
   Future<String?> fetchCounterpartyPubkey(String userId) async {
-    try {
-      final resp = await _apiClient.dio.get('/api/zend/users/$userId/pubkey');
-      return resp.data['ed25519_public_key'] as String?;
-    } catch (_) {
-      return null;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final resp = await _apiClient.dio.get('/api/zend/users/$userId/pubkey');
+        return resp.data['ed25519_public_key'] as String?;
+      } catch (_) {
+        if (attempt == 0) {
+          await Future.delayed(const Duration(milliseconds: 400));
+          continue;
+        }
+        return null;
+      }
     }
+    return null;
   }
 
   /// Derives the symmetric key for a DM room.
@@ -234,7 +290,12 @@ class E2eeService {
   }
 
   /// Clears the key cache (call on logout or key rotation).
-  void clearCache() => _keyCache.clear();
+  /// Also resets the "registered this session" flag — on logout a different
+  /// user may sign in on the same app instance and must publish their own key.
+  void clearCache() {
+    _keyCache.clear();
+    _pubkeyRegisteredThisSession = false;
+  }
 
   // ── Ed25519 → X25519 conversion ─────────────────────────────────────────────
   //

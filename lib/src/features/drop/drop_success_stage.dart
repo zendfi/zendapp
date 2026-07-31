@@ -194,9 +194,9 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                   t < 0.98 ? formatted : _amountStr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
+                    fontFamily: 'Satoshi',
+                    fontWeight: FontWeight.w700,
                     fontSize: 36,
-                    fontStyle: FontStyle.italic,
                     // Transitions from primary → accentBright as it settles
                     color: Color.lerp(zt.textPrimary, zt.accentBright, t),
                   ),
@@ -210,7 +210,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
               'dropped to @$_zendtag',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -244,7 +244,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                 child: const Text(
                   'Done',
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,

@@ -134,7 +134,8 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               const Text(
                 'Enter your government ID',
                 style: TextStyle(
-                  fontFamily: 'InstrumentSerif',
+                  fontFamily: 'Satoshi',
+                  fontWeight: FontWeight.w700,
                   fontSize: 26,
                   color: ZendColors.textOnDeep,
                 ),
@@ -143,7 +144,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               const Text(
                 'Enter the government ID number you used when setting up recovery.',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   height: 1.5,
                   color: textOnDeepSecondary,
@@ -169,7 +170,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                 decoration: InputDecoration(
                   hintText: 'Government ID number',
                   hintStyle: const TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: textOnDeepMuted,
                     letterSpacing: 0,
@@ -193,7 +194,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                   ),
                   errorText: _error,
                   errorStyle: const TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 12,
                     color: ZendColors.destructive,
                   ),
@@ -223,7 +224,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                     child: Text(
                       'Your ID is used locally to decrypt — never sent to Zend.',
                       style: TextStyle(
-                        fontFamily: 'DMSans',
+                        fontFamily: 'Satoshi',
                         fontSize: 12,
                         color: textOnDeepMuted,
                       ),

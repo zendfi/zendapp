@@ -89,12 +89,11 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     "You're in, @${widget.username}",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontFamily: 'InstrumentSerif',
+                      fontFamily: 'Satoshi',
                       fontSize: 28,
                       height: 1.08,
                       color: ZendColors.textOnDeep,
                       fontWeight: FontWeight.w700,
-                      fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 8),

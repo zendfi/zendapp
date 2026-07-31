@@ -107,7 +107,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                     child: Text(
                       'Payment requests',
                       style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
+                        fontFamily: 'Satoshi',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -153,7 +153,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                       child: Text(
                         _filterLabel(filter),
                         style: TextStyle(
-                          fontFamily: 'DMSans',
+                          fontFamily: 'Satoshi',
                           color: active
                               ? ZendColors.textOnDeep
                               : zt.textSecondary,
@@ -179,7 +179,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                               Text(
                                 _error!,
                                 style: TextStyle(
-                                  fontFamily: 'DMSans',
+                                  fontFamily: 'Satoshi',
                                   fontSize: 14,
                                   color: zt.textSecondary,
                                 ),
@@ -208,7 +208,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                                               ? 'No payment requests yet'
                                               : 'No ${_filterLabel(_activeFilter).toLowerCase()} requests',
                                           style: TextStyle(
-                                            fontFamily: 'DMSans',
+                                            fontFamily: 'Satoshi',
                                             fontSize: 14,
                                             color: zt.textSecondary,
                                           ),
@@ -312,9 +312,8 @@ class _RequestTile extends StatelessWidget {
                 child: Text(
                   amountStr,
                   style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
+                    fontFamily: 'Satoshi',
                     fontSize: 22,
-                    fontStyle: FontStyle.italic,
                     fontWeight: FontWeight.w700,
                     color: zt.textPrimary,
                   ),
@@ -330,7 +329,7 @@ class _RequestTile extends StatelessWidget {
                 child: Text(
                   statusLabel,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: statusColor,
@@ -346,7 +345,7 @@ class _RequestTile extends StatelessWidget {
             Text(
               description,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -398,7 +397,7 @@ class _RequestTile extends StatelessWidget {
               child: Text(
                 'Cancel request',
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 13,
                   color: ZendColors.destructive,
                   fontWeight: FontWeight.w500,

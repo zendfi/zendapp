@@ -355,7 +355,7 @@ class _FormStage extends StatelessWidget {
                   Text(
                     'Request $amountFormatted',
                     style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
+                      fontFamily: 'Satoshi',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -372,7 +372,7 @@ class _FormStage extends StatelessWidget {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         textInputAction: TextInputAction.next,
                         onChanged: onAmountChanged,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: '0.00',
                           hintStyle: TextStyle(color: zt.textSecondary),
@@ -397,7 +397,7 @@ class _FormStage extends StatelessWidget {
                       controller: toController,
                       onChanged: onToChanged,
                       textInputAction: TextInputAction.next,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: '@username or email',
                         hintStyle: TextStyle(color: zt.textSecondary),
@@ -448,7 +448,7 @@ class _FormStage extends StatelessWidget {
                       controller: noteController,
                       maxLength: noteMaxLength,
                       textInputAction: TextInputAction.done,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'optional',
                         hintStyle: TextStyle(color: zt.textSecondary),
@@ -500,7 +500,7 @@ class _LoadingStage extends StatelessWidget {
         children: [
           ZendLoader(size: 32, color: zt.accent),
           const SizedBox(height: 20),
-          Text('Creating request…', style: TextStyle(fontFamily: 'DMSans', fontSize: 15, color: zt.textSecondary)),
+          Text('Creating request…', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textSecondary)),
         ],
       ),
     );
@@ -568,11 +568,11 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
             ),
           ),
           const SizedBox(height: 20),
-          Text(_headline(), style: TextStyle(fontFamily: 'InstrumentSerif', fontStyle: FontStyle.italic, fontSize: 40, color: zt.textPrimary)),
+          Text(_headline(), style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
           const SizedBox(height: 6),
           Text(amountStr, style: TextStyle(fontFamily: 'DMMono', fontSize: 16, color: zt.textSecondary)),
           const SizedBox(height: 4),
-          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 32),
           SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr)),
           const SizedBox(height: 12),

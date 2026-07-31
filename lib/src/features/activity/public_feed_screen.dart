@@ -110,7 +110,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       children: [
                         Text(
                           'Public',
-                          style: TextStyle(fontFamily: 'DMSans', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                         ),
                         Text(
                           "Activity your mutuals have shared",
@@ -141,10 +141,10 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Filter by @handle or note…',
-                          hintStyle: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                           prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
@@ -182,7 +182,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                               ? 'No public activity matching "$_filterQuery"'
                               : "Nothing public yet. When one of your mutuals shares an activity with their network, it shows up here.",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary),
+                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
                         ),
                       ),
                     )
@@ -421,7 +421,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   if (isVibe)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           const TextSpan(text: ' sent a Vibe ✨ to '),
@@ -432,7 +432,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   else if (isPoolContrib)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           const TextSpan(text: ' contributed to a pool'),
@@ -447,7 +447,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   else
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           TextSpan(text: ' $verb '),
@@ -472,7 +472,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                       edge.note!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
                     ),
                   ],
                   // ── Reaction pills ──
@@ -547,7 +547,7 @@ class _SuggestionsStrip extends StatelessWidget {
           child: Text(
             'People you might know',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,

@@ -230,13 +230,13 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Amount — large, gold, InstrumentSerif
+                          // Amount — large, gold, Satoshi Bold
                           Text(
                             _amountStr,
                             style: const TextStyle(
-                              fontFamily: 'InstrumentSerif',
+                              fontFamily: 'Satoshi',
+                              fontWeight: FontWeight.w700,
                               fontSize: 28,
-                              fontStyle: FontStyle.italic,
                               color: Color(0xFFFFD166),
                               height: 1.0,
                             ),
@@ -245,7 +245,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                           Text(
                             'from @${widget.senderZendtag}',
                             style: const TextStyle(
-                              fontFamily: 'DMSans',
+                              fontFamily: 'Satoshi',
                               fontSize: 13,
                               color: Color(0xCCF0F0F0),
                             ),

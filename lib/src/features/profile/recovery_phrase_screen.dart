@@ -104,7 +104,7 @@ class _RecoveryPhraseScreenState extends State<RecoveryPhraseScreen> {
           },
         ),
         title: Text('Recovery phrase',
-          style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 20, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
       ),
       body: SafeArea(
         child: switch (_stage) {
@@ -138,17 +138,17 @@ class _PinStage extends StatelessWidget {
       child: Column(children: [
         SizedBox(height: compact ? 24 : 40),
         Text('Confirm your PIN', textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 26, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
         const SizedBox(height: 8),
         Text('Enter your PIN to view your recovery phrase.', textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+          style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
         SizedBox(height: compact ? 32 : 48),
         _PinDots(filledCount: digits.length, zt: zt),
         const SizedBox(height: 16),
         SizedBox(height: 20,
           child: errorMessage != null
               ? Text(errorMessage!, textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'DMSans', fontSize: 13, color: ZendColors.destructive))
+                  style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive))
               : loading
                   ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                   : null),
@@ -188,11 +188,11 @@ class _ConfirmStage extends StatelessWidget {
             const SizedBox(height: 12),
             Text('Never share this phrase.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, color: zt.textPrimary)),
+              style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
             const SizedBox(height: 8),
             Text('Zend! staff will never ask for it. Anyone with this phrase controls your wallet.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary)),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
           ]),
         ),
         const SizedBox(height: 24),
@@ -209,7 +209,7 @@ class _ConfirmStage extends StatelessWidget {
               ),
               Expanded(child: Text(
                 'I understand this phrase gives full access to my wallet',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
               )),
             ]),
           ),
@@ -226,7 +226,7 @@ class _ConfirmStage extends StatelessWidget {
             child: loading
                 ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
                 : const Text('Show recovery phrase',
-                    style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600)),
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(height: 24),
@@ -258,7 +258,7 @@ class _DisplayStage extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: Text(
               'Never share this phrase. Zend! staff will never ask for it.',
-              style: const TextStyle(fontFamily: 'DMSans', fontSize: 12, color: ZendColors.destructive),
+              style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive),
             )),
           ]),
         ),
@@ -287,7 +287,7 @@ class _DisplayStage extends StatelessWidget {
                 style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary)),
               const SizedBox(width: 4),
               Expanded(child: Text(words[i],
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 13,
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 13,
                     fontWeight: FontWeight.w600, color: zt.textPrimary),
                 overflow: TextOverflow.ellipsis)),
             ]),
@@ -296,7 +296,7 @@ class _DisplayStage extends StatelessWidget {
         const SizedBox(height: 24),
         Text('Keep this phrase offline and never share it with anyone.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
+          style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary)),
         const SizedBox(height: 16),
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -304,7 +304,7 @@ class _DisplayStage extends StatelessWidget {
             minimumSize: const Size.fromHeight(48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
           ),
-          child: const Text('Done', style: TextStyle(fontFamily: 'DMSans', fontSize: 15)),
+          child: const Text('Done', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15)),
         ),
         const SizedBox(height: 24),
       ]),

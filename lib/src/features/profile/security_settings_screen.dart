@@ -141,14 +141,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   const SizedBox(width: 14),
                   Text(
                     'Enable biometric unlock',
-                    style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               Text(
                 'Biometrics are linked to your PIN on this device. To enable them:',
-                style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textSecondary, height: 1.4),
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary, height: 1.4),
               ),
               const SizedBox(height: 20),
               _BiometricStep(number: 1, text: 'Lock the app by pressing the home button or letting the screen time out.', zt: zt),
@@ -223,7 +223,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     'Security',
                     style: TextStyle(
-                      fontFamily: 'InstrumentSerif',
+                      fontFamily: 'Satoshi',
+                      fontWeight: FontWeight.w700,
                       fontSize: 24,
                       color: zt.textPrimary,
                     ),
@@ -327,7 +328,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                                   ? 'Sends below \$${_pinThresholdAmount!.toStringAsFixed(0)} use session signing. PIN required above.'
                                   : 'Sends use session signing after app unlock. No extra PIN needed.',
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -368,7 +369,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               ? 'Recovery backup is active. If you forget your PIN, you can recover using your government ID.'
                               : 'Set up recovery so you can regain wallet access if you forget your PIN.',
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -401,7 +402,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         child: Text(
                           'Back up your wallet before switching devices.',
                           style: TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -444,7 +445,7 @@ class _BiometricStep extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: zt.textPrimary, height: 1.4),
+            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary, height: 1.4),
           ),
         ),
       ],
@@ -478,7 +479,7 @@ class _AmountInput extends StatelessWidget {
           Text(
             'Require PIN above',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -525,7 +526,7 @@ class _AmountInput extends StatelessWidget {
             child: Text(
               'Save',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: zt.accentBright,
@@ -552,7 +553,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'DMSans',
+          fontFamily: 'Satoshi',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -614,7 +615,7 @@ class _Tile extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -661,7 +662,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -670,7 +671,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),

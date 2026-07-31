@@ -195,12 +195,8 @@ class _LockScreenState extends State<_LockScreen>
       try {
         final keypair = await model.walletService.decryptLocalKeypair(pin);
         WalletSessionCache.instance.store(keypair);
-        // Register E2EE pubkey (wallet address) with backend — best-effort,
-        // non-blocking. The wallet address is the Ed25519 public key in base58.
-        final walletAddress = await model.walletService.getWalletAddress();
-        if (walletAddress != null) {
-          unawaited(model.e2eeService.registerPubkey(walletAddress));
-        }
+        // Register E2EE pubkey with backend — best-effort, non-blocking.
+        unawaited(model.bootstrapE2ee());
         for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
       } catch (_) {}
 
@@ -269,7 +265,8 @@ class _LockScreenState extends State<_LockScreen>
                 const Text(
                   'App locked',
                   style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
+                    fontFamily: 'Satoshi',
+                    fontWeight: FontWeight.w700,
                     fontSize: 28,
                     color: ZendColors.textOnDeep,
                   ),
@@ -279,7 +276,7 @@ class _LockScreenState extends State<_LockScreen>
                   'Enter your PIN to continue',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'DMSans',
+                    fontFamily: 'Satoshi',
                     fontSize: 14,
                     color: Color(0x99E8F4EC),
                   ),
@@ -307,7 +304,7 @@ class _LockScreenState extends State<_LockScreen>
                           _errorMessage!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 13,
                             color: ZendColors.destructive,
                           ),
@@ -332,7 +329,7 @@ class _LockScreenState extends State<_LockScreen>
                     label: const Text('Use biometrics'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0x99E8F4EC),
-                      textStyle: const TextStyle(fontFamily: 'DMSans', fontSize: 13),
+                      textStyle: const TextStyle(fontFamily: 'Satoshi', fontSize: 13),
                     ),
                   ),
                 ],

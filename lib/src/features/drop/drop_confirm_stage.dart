@@ -124,9 +124,9 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             'Drop $_amountFormatted',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'InstrumentSerif',
+              fontFamily: 'Satoshi',
+              fontWeight: FontWeight.w700,
               fontSize: 32,
-              fontStyle: FontStyle.italic,
               color: zt.textPrimary,
             ),
           ),
@@ -135,7 +135,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             'to @$_zendtag',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -190,7 +190,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
                         Text(
                           widget.requiresBiometric ? 'Confirm with Biometric' : 'Confirm Drop',
                           style: const TextStyle(
-                            fontFamily: 'DMSans',
+                            fontFamily: 'Satoshi',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -209,7 +209,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
                 'Cancel',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'DMSans',
+                  fontFamily: 'Satoshi',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),

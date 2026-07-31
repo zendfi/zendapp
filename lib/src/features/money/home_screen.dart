@@ -60,9 +60,17 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadTeaserDismissalState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final model = ZendScope.of(context);
-      _displayedBalance = model.spendableBalance;
-      _previousBalance = model.spendableBalance;
+      // Must go through setState: the first build() already ran (with the
+      // 0.0 initial values) before this post-frame callback fires. Without
+      // setState here, no new frame is ever scheduled to show the real
+      // balance — the hero number can sit at "$0.00" indefinitely, which in
+      // a wallet app is indistinguishable from a genuinely empty balance.
+      setState(() {
+        _displayedBalance = model.spendableBalance;
+        _previousBalance = model.spendableBalance;
+      });
       if (model.balance == 0.0 && !model.balanceLoading) {
         model.fetchBalance();
       }
@@ -120,11 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _dropConfirmedSub?.cancel();
-    try {
-      final model = ZendScope.of(context);
-      model.removeListener(_onModelChanged);
-      model.removeListener(_onModelBalanceChanged);
-    } catch (_) {}
+    // ZendScope.read, not .of — dependOnInheritedWidgetOfExactType() is
+    // illegal inside dispose() and throws in debug builds. The try/catch
+    // below was silently masking that on every disposal, meaning these
+    // listeners were never actually removed in a debug session — a real
+    // leak that release builds hid because the assertion is stripped there.
+    final model = ZendScope.read(context);
+    model.removeListener(_onModelChanged);
+    model.removeListener(_onModelBalanceChanged);
     _sheetController.dispose();
     super.dispose();
   }
@@ -162,20 +173,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             const TextSpan(
                               text: 'hi ',
                               style: TextStyle(
-                                fontFamily: 'InstrumentSerif',
+                                fontFamily: 'Satoshi',
                                 color: ZendColors.textOnDeep,
                                 fontSize: 26,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             TextSpan(
                               text: '@${model.username}',
                               style: const TextStyle(
-                                fontFamily: 'InstrumentSerif',
+                                fontFamily: 'Satoshi',
                                 color: ZendColors.textOnDeep,
                                 fontSize: 26,
-                                fontWeight: FontWeight.w400,
-                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -314,12 +324,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       return Text(
                                         model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
                                         style: TextStyle(
-                                          fontFamily: 'InstrumentSerif',
+                                          fontFamily: 'Satoshi',
                                           color: ZendColors.textOnDeep,
                                           fontSize: balanceSize,
                                           height: 1.0,
-                                          fontStyle: FontStyle.italic,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       );
                                     },
@@ -357,12 +366,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    fontFamily: 'InstrumentSerif',
+                                    fontFamily: 'Satoshi',
                                     color: ZendColors.textOnDeep,
                                     fontSize: balanceSize,
                                     height: 1.0,
-                                    fontStyle: FontStyle.italic,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -429,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Builder(builder: (context) {
                                   final zt = ZendTheme.of(context);
                                   return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                    Text('Recent', style: TextStyle(fontFamily: 'DMSans', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                                    Text('Recent', style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
                                     GestureDetector(
                                       onTap: widget.onViewAll,
                                       child: Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.accent)),
@@ -534,16 +542,16 @@ class _TransactionRow extends StatelessWidget {
             Text(name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(height: 3),
             Text(note,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: zt.textSecondary)),
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary)),
           ])),
           const SizedBox(width: 8),
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-            Text(amount, style: TextStyle(fontFamily: 'InstrumentSerif', fontSize: 22, fontStyle: FontStyle.italic, color: amountColor ?? zt.textPrimary)),
+            Text(amount, style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
             const SizedBox(height: 4),
             Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
           ]),
@@ -593,7 +601,8 @@ class _SavingsCard extends StatelessWidget {
                 Text(
                   apyStr,
                   style: TextStyle(
-                    fontFamily: 'InstrumentSerif',
+                    fontFamily: 'Satoshi',
+                    fontWeight: FontWeight.w700,
                     fontSize: 50,
                     height: 0.92,
                     color: zt.textPrimary,
@@ -718,7 +727,8 @@ class _PoolsCard extends StatelessWidget {
                     Text(
                       totalStr,
                       style: TextStyle(
-                        fontFamily: 'InstrumentSerif',
+                        fontFamily: 'Satoshi',
+                        fontWeight: FontWeight.w700,
                         fontSize: 50,
                         height: 0.92,
                         color: zt.textPrimary,

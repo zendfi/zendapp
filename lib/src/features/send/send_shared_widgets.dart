@@ -50,7 +50,7 @@ class SendPinStage extends StatelessWidget {
           Text(
             '$amountFormatted to @$recipientZendtag',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -63,7 +63,7 @@ class SendPinStage extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -85,7 +85,7 @@ class SendPinStage extends StatelessWidget {
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 13,
               color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
@@ -222,7 +222,7 @@ class _SendPinKeypadKeyState extends State<SendPinKeypadKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'DMSans',
+                      fontFamily: 'Satoshi',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,
@@ -258,7 +258,7 @@ class SendProcessingStage extends StatelessWidget {
           Text(
             'Sending $amountFormatted to @$recipientZendtag...',
             style: TextStyle(
-              fontFamily: 'DMSans',
+              fontFamily: 'Satoshi',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -336,8 +336,8 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             Text(
               'Zent It!',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
-                fontStyle: FontStyle.italic,
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: zt.textPrimary,
               ),
@@ -346,7 +346,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             Text(
               '${widget.amountFormattedExact} to @${widget.recipientZendtag}',
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -401,7 +401,8 @@ class SendErrorStage extends StatelessWidget {
             Text(
               'Oops',
               style: TextStyle(
-                fontFamily: 'InstrumentSerif',
+                fontFamily: 'Satoshi',
+                fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -411,7 +412,7 @@ class SendErrorStage extends StatelessWidget {
               errorMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'DMSans',
+                fontFamily: 'Satoshi',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
