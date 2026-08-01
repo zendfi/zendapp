@@ -322,12 +322,11 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                             ),
                             child: Text(
                               '${edge.isOutgoing ? '-' : '+'}$amountLabel',
-                              style: TextStyle(fontFamily: 'DMMono', fontSize: 12, fontWeight: FontWeight.w700,
-                                  color: edge.isOutgoing ? zt.textSecondary : ZendColors.positive),
+                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: edge.isOutgoing ? zt.textSecondary : ZendColors.positive),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(_relativeTime(edge.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8))),
+                          Text(_relativeTime(edge.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8))),
                         ],
                       ),
                       // ── Existing reactions (tappable pills) ──
@@ -350,7 +349,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                                     Text(r.emoji, style: const TextStyle(fontSize: 13)),
                                     const SizedBox(width: 4),
-                                    Text('${r.count}', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                                    Text('${r.count}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                                   ]),
                                 ),
                               ),
@@ -563,7 +562,7 @@ class _CommentRow extends StatelessWidget {
                     Text('@${comment.authorZendtag}',
                         style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                     const SizedBox(width: 6),
-                    Text(relativeTime, style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
+                    Text(relativeTime, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
                   ],
                 ),
                 const SizedBox(height: 2),

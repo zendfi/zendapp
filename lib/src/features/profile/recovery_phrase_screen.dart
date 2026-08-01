@@ -284,7 +284,7 @@ class _DisplayStage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(children: [
               Text('${i + 1}',
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary)),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary)),
               const SizedBox(width: 4),
               Expanded(child: Text(words[i],
                 style: TextStyle(fontFamily: 'Satoshi', fontSize: 13,
@@ -371,7 +371,6 @@ class _KeyState extends State<_Key> {
         child: SizedBox(width: 80, height: widget.height, child: Center(
           child: widget.label == 'del'
               ? ZendBackspaceIcon(color: widget.zt.textPrimary, size: 22)
-              : Text(widget.label, style: TextStyle(fontFamily: 'DMMono', fontSize: 22,
-                  color: widget.zt.textPrimary, fontWeight: FontWeight.w400))))));
+              : Text(widget.label, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: widget.zt.textPrimary, fontWeight: FontWeight.w400))))));
   }
 }

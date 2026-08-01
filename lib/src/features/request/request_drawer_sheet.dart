@@ -427,14 +427,14 @@ class _FormStage extends StatelessWidget {
                             ZendAvatar(radius: 10, photoUrl: resolvedAvatarUrl, initials: resolvedDisplayName![0].toUpperCase()),
                             const SizedBox(width: 6),
                           ],
-                          Text(resolvedDisplayName!, style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.accentBright)),
+                          Text(resolvedDisplayName!, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accentBright)),
                         ],
                       ),
                     )
                   else if (resolveError != null)
                     Padding(
                       padding: const EdgeInsets.only(left: 48, top: 4),
-                      child: Text(resolveError!, style: const TextStyle(fontFamily: 'DMMono', fontSize: 12, color: ZendColors.destructive)),
+                      child: Text(resolveError!, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive)),
                     ),
 
                   const SizedBox(height: 4),
@@ -570,7 +570,7 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
           const SizedBox(height: 20),
           Text(_headline(), style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
           const SizedBox(height: 6),
-          Text(amountStr, style: TextStyle(fontFamily: 'DMMono', fontSize: 16, color: zt.textSecondary)),
+          Text(amountStr, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textSecondary)),
           const SizedBox(height: 4),
           Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 32),
@@ -601,7 +601,7 @@ class _FieldRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 36,
-            child: Text(label, style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary)),
+            child: Text(label, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
           ),
           const SizedBox(width: 12),
           Expanded(child: child),

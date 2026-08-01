@@ -952,13 +952,9 @@ class _NoteField extends StatelessWidget {
               builder: (_, value, _) {
                 return Text(
                   '${value.text.length}/100',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: value.text.length >= 90
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: value.text.length >= 90
                         ? zt.destructive
-                        : zt.textSecondary,
-                  ),
+                        : zt.textSecondary),
                 );
               },
             ),

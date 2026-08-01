@@ -43,7 +43,7 @@ class EducationalCardTile extends StatelessWidget {
             ),
             Text(
               'Tap to learn more',
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
             ),
           ],
         ),

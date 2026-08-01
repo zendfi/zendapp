@@ -31,12 +31,7 @@ class StreakIndicator extends StatelessWidget {
           ),
           child: Text(
             '🔥 ${streakWeeks}w streak',
-            style: const TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFFFF6B00),
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFFF6B00)),
           ),
         ),
       StreakIndicatorVariant.profile => Column(

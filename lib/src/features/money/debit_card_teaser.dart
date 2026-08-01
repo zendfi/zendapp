@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
+import '../../design/zend_tokens.dart';
 
 /// A single, non-functional, "coming soon" carousel card styled to resemble
 /// a physical debit card (Req 25.2) — a chip graphic, hologram-style
@@ -76,12 +77,12 @@ class DebitCardTeaser extends StatelessWidget {
             ),
           ),
           // "Coming soon" label.
-          const Positioned(
+          Positioned(
             bottom: 4,
             left: 0,
             child: Text(
               'Zend Card — coming soon',
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: Color(0xD9F0F0F0)),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: const Color(0xD9F0F0F0)),
             ),
           ),
           // Dismiss control (Req 25.5).

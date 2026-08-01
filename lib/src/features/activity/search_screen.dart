@@ -236,11 +236,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                   subtitle: zTx.note as String,
                                   trailing: Text(
                                     zTx.amount as String,
-                                    style: TextStyle(
-                                      fontFamily: 'DMMono',
-                                      fontSize: 13,
-                                      color: (zTx.amountColor as Color?) ?? zt.textPrimary,
-                                    ),
+                                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: (zTx.amountColor as Color?) ?? zt.textPrimary),
                                   ),
                                   onTap: zTx.entry != null || zTx.bankOrder != null
                                       ? () => showTransactionReceipt(context, tx: zTx)
@@ -262,11 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     subtitle: r.description ?? (r.isInbound ? 'Payment request' : 'Sent request'),
                                     trailing: Text(
                                       r.formattedAmount,
-                                      style: TextStyle(
-                                        fontFamily: 'DMMono',
-                                        fontSize: 13,
-                                        color: zt.textPrimary,
-                                      ),
+                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary),
                                     ),
                                     onTap: r.isInbound && r.isPending
                                         ? () {
@@ -365,12 +357,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Text(
         label.toUpperCase(),
-        style: TextStyle(
-          fontFamily: 'DMMono',
-          fontSize: 10,
-          letterSpacing: 1.2,
-          color: zt.textSecondary,
-        ),
+        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, letterSpacing: 1.2, color: zt.textSecondary),
       ),
     );
   }

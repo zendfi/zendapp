@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../design/zend_avatar.dart';
 import '../../models/drop_models.dart';
 import 'drop_glow_effect.dart';
+import '../../design/zend_tokens.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -111,11 +112,7 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                 child: Text(
                   '@$_receiverZendtag',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 13,
-                    color: Color(0x55FFFFFF),
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0x55FFFFFF)),
                 ),
               ),
             ],

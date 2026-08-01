@@ -145,11 +145,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             Text(
               widget.note!,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 12,
-                color: zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
             ),
           ],
           const SizedBox(height: 24),
@@ -157,11 +153,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
           Text(
             'Auto-cancels in ${_secondsRemaining}s',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 11,
-              color: zt.textSecondary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
           ),
           const SizedBox(height: 16),
           // Confirm button

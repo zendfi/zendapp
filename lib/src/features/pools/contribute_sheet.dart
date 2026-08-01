@@ -444,20 +444,12 @@ class _AmountStage extends StatelessWidget {
             children: [
               Text(
                 '${pool.formattedGathered} of ${pool.formattedTarget}',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 12,
-                  color: zt.textSecondary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
               ),
               if (remainingAmount > 0)
                 Text(
                   '\$${remainingAmount.toStringAsFixed(2)} left',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 12,
-                    color: zt.accent,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent),
                 ),
             ],
           ),

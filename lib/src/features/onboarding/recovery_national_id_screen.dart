@@ -161,12 +161,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                       RegExp(r'[\d\s\-A-Za-z]')),
                 ],
                 autofocus: true,
-                style: const TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 20,
-                  letterSpacing: 2,
-                  color: ZendColors.textOnDeep,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, letterSpacing: 2, color: ZendColors.textOnDeep),
                 decoration: InputDecoration(
                   hintText: 'Government ID number',
                   hintStyle: const TextStyle(
@@ -206,11 +201,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '${_maxAttempts - _attempts} attempt(s) remaining',
-                  style: const TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: textOnDeepMuted,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: textOnDeepMuted),
                 ),
               ],
 

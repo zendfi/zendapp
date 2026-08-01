@@ -114,7 +114,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                         ),
                         Text(
                           "Activity your mutuals have shared",
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                         ),
                       ],
                     ),
@@ -439,7 +439,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                           if (showAmount)
                             TextSpan(
                               text: ' · $amountLabel',
-                              style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                              style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 12),
                             ),
                         ],
                       ),
@@ -455,7 +455,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                           if (showAmount)
                             TextSpan(
                               text: ' · $amountLabel',
-                              style: TextStyle(color: zt.textSecondary, fontFamily: 'DMMono', fontSize: 12),
+                              style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 12),
                             ),
                         ],
                       ),
@@ -463,7 +463,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   const SizedBox(height: 2),
                   Text(
                     _relativeTime(edge.createdAt),
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
                   ),
                   // Note — suppress 'vibe' system tag
                   if (edge.note?.isNotEmpty == true && !isVibe) ...[
@@ -513,11 +513,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                     const SizedBox(height: 6),
                     Text(
                       'Hold to react',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 10,
-                        color: zt.textSecondary.withValues(alpha: 0.4),
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.4)),
                     ),
                   ],
                 ],
@@ -587,12 +583,7 @@ class _SuggestionsStrip extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '@$zendtag',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 9.5,
-                          color: zt.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: zt.textPrimary, fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -600,11 +591,7 @@ class _SuggestionsStrip extends StatelessWidget {
                       if (mutual > 0)
                         Text(
                           '$mutual mutual',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            color: zt.textSecondary,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: zt.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,

@@ -278,7 +278,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     if (_remaining.inSeconds > 0)
                       Text(
                         'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                        style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
                       )
                     else
                       GestureDetector(

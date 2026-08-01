@@ -287,35 +287,22 @@ class _HiddenVibe extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Tap to reveal ✨',
-                            style: TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ] else ...[
                         Text(
                           'sent a Vibe',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.5),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)),
                         ),
                       ],
                       if (createdAt != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           _timeLabel(createdAt!),
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            color: Colors.white.withValues(alpha: 0.3),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: Colors.white.withValues(alpha: 0.3)),
                         ),
                       ],
                     ],
@@ -472,7 +459,7 @@ class _RevealedVibe extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               _timeLabel(createdAt!),
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 9, color: Colors.white.withValues(alpha: 0.3)),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: Colors.white.withValues(alpha: 0.3)),
             ),
           ],
         ],

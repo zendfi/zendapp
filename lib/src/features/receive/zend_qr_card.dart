@@ -241,12 +241,7 @@ class _CardFace extends StatelessWidget {
             // URL
             Text(
               'zdfi.me/@$username',
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 13,
-                color: _textMuted,
-                letterSpacing: 0.2,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: _textMuted, letterSpacing: 0.2),
             ),
             const SizedBox(height: 6),
 

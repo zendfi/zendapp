@@ -98,7 +98,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                     ],
                     const SizedBox(height: 20),
                     if (_showingReservedBadge) ...[
-                      Text('RESERVED FOR YOU', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
+                      Text('RESERVED FOR YOU', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
                       const SizedBox(height: 6),
                     ],
                     Row(
@@ -106,7 +106,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: Text('@', style: TextStyle(fontFamily: 'DMMono', color: zt.textSecondary, fontSize: 18)),
+                          child: Text('@', style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 18)),
                         ),
                         Expanded(
                           child: TextField(
@@ -115,7 +115,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                               _scheduleCheck(value);
                               model.setUsername(value);
                             },
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textPrimary),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
                             decoration: InputDecoration(
                               filled: false,
                               border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
@@ -183,8 +183,8 @@ class _PreviewCard extends StatelessWidget {
             children: [
               Text('Your Zend Link', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
               const SizedBox(height: 2),
-              Text('zdfi.me/', style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary)),
-              Text(safeUsername, style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textPrimary)),
+              Text('zdfi.me/', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
+              Text(safeUsername, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
             ],
           ),
           const Spacer(),

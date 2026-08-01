@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_thread.dart';
+import '../../models/notification_category.dart';
 import '../../navigation/zend_routes.dart';
 import 'dm_thread_screen.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -44,17 +43,24 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   Future<void> _loadMutePreference() async {
-    final prefs = await SharedPreferences.getInstance();
+    final service = ZendScope.read(context).notificationPreferencesService;
+    await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = prefs.getBool('chat_notifications_muted') ?? false);
+      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.chat));
     }
   }
 
   Future<void> _toggleMute() async {
-    final prefs = await SharedPreferences.getInstance();
     final newValue = !_notificationsMuted;
-    await prefs.setBool('chat_notifications_muted', newValue);
-    if (mounted) setState(() => _notificationsMuted = newValue);
+    // Optimistic — the local preference write + backend sync happen in the
+    // background; setMuted() never throws (backend failures are swallowed
+    // internally), so there's nothing to roll back here.
+    setState(() => _notificationsMuted = newValue);
+    final model = ZendScope.read(context);
+    await model.notificationPreferencesService.setMuted(
+      NotificationCategoryKind.chat,
+      newValue,
+    );
   }
 
   Future<void> _loadThreads() async {
@@ -292,11 +298,7 @@ class _DmThreadTile extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           _relativeTime(thread.lastMessageAt),
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 12,
-                            color: hasUnread ? zt.accent : zt.textSecondary.withValues(alpha: 0.7),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: hasUnread ? zt.accent : zt.textSecondary.withValues(alpha: 0.7)),
                         ),
                       ],
                     ),
@@ -329,12 +331,7 @@ class _DmThreadTile extends StatelessWidget {
                             ),
                             child: Text(
                               thread.unreadCount > 99 ? '99+' : '${thread.unreadCount}',
-                              style: const TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
+                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ),

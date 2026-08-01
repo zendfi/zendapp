@@ -327,11 +327,7 @@ class _PinKeyState extends State<_PinKey> {
                     color: ZendColors.textOnDeep, size: 22)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 22,
-                      color: ZendColors.textOnDeep,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: ZendColors.textOnDeep),
                   ),
           ),
         ),

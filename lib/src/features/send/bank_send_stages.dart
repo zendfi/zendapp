@@ -223,11 +223,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                     if (_fxPreview.isNotEmpty)
                       Text(
                         '$amountStr · $_fxPreview',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                       ),
                   ],
                 ),
@@ -693,11 +689,7 @@ class _ConfirmationStage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '$amountStr USDC',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 13,
-                      color: zt.textSecondary,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
                   ),
                 ] else ...[
                   Text(
@@ -713,11 +705,7 @@ class _ConfirmationStage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 15,
-                        color: zt.textSecondary,
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, color: zt.textSecondary),
                     ),
                   ],
                 ],

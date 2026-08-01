@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
@@ -10,6 +9,7 @@ import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/email_intent.dart';
+import '../../models/notification_category.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
 import '../send/qr_payment_sheet.dart';
@@ -75,17 +75,21 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
   }
 
   Future<void> _loadMutePreference() async {
-    final prefs = await SharedPreferences.getInstance();
+    final service = ZendScope.read(context).notificationPreferencesService;
+    await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = prefs.getBool('notifications_muted') ?? false);
+      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.activity));
     }
   }
 
   Future<void> _toggleNotificationMute() async {
-    final prefs = await SharedPreferences.getInstance();
     final newValue = !_notificationsMuted;
-    await prefs.setBool('notifications_muted', newValue);
     setState(() => _notificationsMuted = newValue);
+    final model = ZendScope.read(context);
+    await model.notificationPreferencesService.setMuted(
+      NotificationCategoryKind.activity,
+      newValue,
+    );
     HapticFeedback.lightImpact();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -569,12 +573,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                 ),
                 child: Text(
                   statusLabel,
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -639,11 +638,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         request.linkUrl,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -840,12 +835,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
                 ),
                 child: Text(
                   'pending claim',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: zt.accent,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -932,10 +922,7 @@ class _DetailRow extends StatelessWidget {
                 fontSize: 14,
                 color: zt.textSecondary)),
         Text(value,
-            style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 13,
-                color: zt.textPrimary)),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
       ],
     );
   }
@@ -1077,11 +1064,7 @@ class _ActivityTile extends StatelessWidget {
                       ],
                       Text(
                         time,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                       ),
                     ],
                   ),

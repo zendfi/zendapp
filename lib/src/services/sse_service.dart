@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -97,6 +98,7 @@ class SseService {
   bool _active = false;
   Duration _reconnectDelay = _initialReconnectDelay;
   Timer? _reconnectTimer;
+  final _random = Random();
 
   SseService({
     required String baseUrl,
@@ -169,45 +171,49 @@ class SseService {
         cancelToken: _cancelToken,
       );
 
-      final stream = response.data!.stream;
+      // The connection succeeded and we're about to start receiving events —
+      // reset the backoff now, not just in start(). Previously the delay only
+      // reset when the *caller* explicitly called start()/forceRestartRealTimeUpdates(),
+      // so a handful of transient network blips in a row (each one successfully
+      // reconnecting before the next drop) ratcheted the delay up to the 30s
+      // ceiling and left it there for the rest of the session — every
+      // subsequent disconnect, even a one-off, then took up to 30s to recover
+      // real-time updates instead of the 1s a healthy reconnect deserves.
+      _reconnectDelay = _initialReconnectDelay;
 
-      // SSE line buffer — events can span multiple lines
-      final buffer = StringBuffer();
+      final stream = response.data!.stream.cast<List<int>>();
+
+      // Reassembles the raw byte stream into lines, correctly handling a
+      // multi-byte UTF-8 character split across two separate chunk
+      // boundaries — the previous implementation called utf8.decode() on
+      // each chunk independently via FormatException-throwing strict
+      // decoding, so a chunk boundary landing inside e.g. an emoji's byte
+      // sequence threw, unwound out of this method via the bare `catch (e)`
+      // below, and forced an unnecessary reconnect (compounding the same
+      // backoff-never-resets issue above). utf8.decoder as a
+      // StreamTransformer buffers incomplete multi-byte sequences across
+      // chunks internally, and LineSplitter buffers incomplete trailing
+      // lines the same way SSE's own multi-line `data:` frames need.
       String currentEventType = 'message';
 
-      await for (final chunk in stream) {
+      final lines = stream.transform(utf8.decoder).transform(const LineSplitter());
+
+      await for (final line in lines) {
         if (!_active) break;
 
-        final text = utf8.decode(chunk);
-        buffer.write(text);
-
-        // Process complete lines
-        final content = buffer.toString();
-        final lines = content.split('\n');
-
-        // Keep the last incomplete line in the buffer
-        buffer.clear();
-        if (!content.endsWith('\n')) {
-          buffer.write(lines.last);
+        if (line.startsWith('event:')) {
+          currentEventType = line.substring(6).trim();
+        } else if (line.startsWith('data:')) {
+          final data = line.substring(5).trim();
+          final event = SseEvent.fromRaw(currentEventType, data);
+          _controller?.add(event);
+          // Do NOT reset currentEventType here — per SSE spec the event type
+          // persists until the end of the event block (empty line).
+        } else if (line.isEmpty) {
+          // Empty line = end of SSE event block — reset type for next event
+          currentEventType = 'message';
         }
-
-        final completeLines = content.endsWith('\n') ? lines : lines.sublist(0, lines.length - 1);
-
-        for (final line in completeLines) {
-          if (line.startsWith('event:')) {
-            currentEventType = line.substring(6).trim();
-          } else if (line.startsWith('data:')) {
-            final data = line.substring(5).trim();
-            final event = SseEvent.fromRaw(currentEventType, data);
-            _controller?.add(event);
-            // Do NOT reset currentEventType here — per SSE spec the event type
-            // persists until the end of the event block (empty line).
-          } else if (line.isEmpty) {
-            // Empty line = end of SSE event block — reset type for next event
-            currentEventType = 'message';
-          }
-          // Ignore 'id:' and 'retry:' lines for now
-        }
+        // Ignore 'id:' and 'retry:' lines for now
       }
 
       // Stream ended cleanly — reconnect
@@ -233,14 +239,27 @@ class SseService {
   void _scheduleReconnect() {
     if (!_active) return;
 
+    // Full jitter: pick a delay uniformly from [0, _reconnectDelay] rather
+    // than the exact backoff value. Without jitter, every client that lost
+    // its connection at the same moment (e.g. a load balancer or backend
+    // instance restart affecting many sessions simultaneously) reconnects
+    // in lockstep on the exact same schedule — 1s, 2s, 4s, ... — so the
+    // backend sees synchronized reconnection spikes instead of a spread-out
+    // trickle. This is the standard "full jitter" strategy (AWS
+    // Architecture Blog, "Exponential Backoff And Jitter").
+    final jitteredDelay = Duration(
+      milliseconds: _random.nextInt(_reconnectDelay.inMilliseconds + 1),
+    );
+
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(_reconnectDelay, () {
+    _reconnectTimer = Timer(jitteredDelay, () {
       if (_active) {
         _connect();
       }
     });
 
-    // Exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s (max)
+    // Exponential backoff ceiling: 1s → 2s → 4s → 8s → 16s → 30s (max).
+    // This is the ceiling jitter is drawn from, not the delay itself.
     _reconnectDelay = Duration(
       seconds: (_reconnectDelay.inSeconds * 2).clamp(
         _initialReconnectDelay.inSeconds,

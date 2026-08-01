@@ -63,7 +63,7 @@ class PoolInfoCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Satoshi',
                     fontWeight: FontWeight.w700,
-                    fontSize: 22,
+                    fontSize: 19,
                     color: zt.textPrimary,
                   ),
                 ),
@@ -74,11 +74,7 @@ class PoolInfoCard extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: Text(
                     pool.formattedTarget,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: zt.textSecondary,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                   ),
                 ),
               ],

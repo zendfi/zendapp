@@ -281,7 +281,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 const SizedBox(width: 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(displayName, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600)),
-                  Text('@$zendtag', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                  Text('@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                 ]),
               ]),
             'full' => Container(
@@ -291,7 +291,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                   CircleAvatar(radius: 28, backgroundColor: Colors.white.withValues(alpha: 0.3), child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 24))),
                   const SizedBox(height: 8),
                   Text(displayName, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text('zdfi.me/@$zendtag', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: Colors.white70)),
+                  Text('zdfi.me/@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Colors.white70)),
                   if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: Colors.white70))],
                 ]),
               ),
@@ -299,7 +299,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 CircleAvatar(radius: 28, backgroundColor: themeColor, child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 24))),
                 const SizedBox(height: 8),
                 Text(displayName, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 20, fontWeight: FontWeight.w700)),
-                Text('zdfi.me/@$zendtag', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                Text('zdfi.me/@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                 if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary))],
               ]),
           },

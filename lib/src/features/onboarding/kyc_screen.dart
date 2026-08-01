@@ -42,7 +42,7 @@ class KycScreen extends StatelessWidget {
                     TextField(
                       controller: controller,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(fontFamily: 'DMMono', fontSize: 18),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18),
                       decoration: const InputDecoration(hintText: 'BVN'),
                     ),
                     const SizedBox(height: 12),

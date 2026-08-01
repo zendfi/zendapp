@@ -438,7 +438,7 @@ class _BiometricStep extends StatelessWidget {
           decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
           child: Text(
             '$number',
-            style: TextStyle(fontFamily: 'DMMono', fontSize: 12, fontWeight: FontWeight.w700, color: zt.accent),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: zt.accent),
           ),
         ),
         const SizedBox(width: 12),
@@ -487,11 +487,7 @@ class _AmountInput extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '\$',
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 16,
-              color: zt.textPrimary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textPrimary),
           ),
           const SizedBox(width: 2),
           Expanded(
@@ -503,11 +499,7 @@ class _AmountInput extends StatelessWidget {
                 FilteringTextInputFormatter.digitsOnly,
               ],
               textAlign: TextAlign.left,
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 16,
-                color: zt.textPrimary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textPrimary),
               decoration: InputDecoration(
                 hintText: '500',
                 hintStyle: TextStyle(color: zt.textSecondary),

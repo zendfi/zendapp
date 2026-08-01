@@ -254,12 +254,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                             const SizedBox(height: 2),
                             Text(
                               '"${widget.note}"',
-                              style: const TextStyle(
-                                fontFamily: 'DMMono',
-                                fontSize: 11,
-                                color: Color(0x99F0F0F0),
-                                fontStyle: FontStyle.italic,
-                              ),
+                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Color(0x99F0F0F0)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

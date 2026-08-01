@@ -484,6 +484,41 @@ class ApiClient {
     }
   }
 
+  /// Removes this device's FCM token from the backend. Called on sign-out
+  /// so a signed-out device stops receiving the previous account's push
+  /// notifications immediately, rather than only when FCM eventually
+  /// reports the token as stale (which only happens reactively on the
+  /// backend's *next* send attempt for that account).
+  Future<void> unregisterFcmToken(String fcmToken) async {
+    try {
+      await _dio.post(
+        '/api/zend/devices/unregister',
+        data: {'fcm_token': fcmToken},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Replaces the server-stored set of muted notification categories for
+  /// the current user. Category keys must match
+  /// [PushNotificationCategory.storageKey] on the client and
+  /// `NotificationCategory::storage_key()` on the backend — currently
+  /// 'transfers' | 'chat' | 'activity' | 'pools' | 'savings'.
+  ///
+  /// Muting client-side only suppresses the in-app banner; this call is
+  /// what stops the backend from sending the FCM push in the first place.
+  Future<void> updateNotificationPreferences(List<String> mutedCategories) async {
+    try {
+      await _dio.patch(
+        '/api/zend/notifications/preferences',
+        data: {'muted_categories': mutedCategories},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> createPaymentRequest({
     double? amountUsdc,
     String? description,

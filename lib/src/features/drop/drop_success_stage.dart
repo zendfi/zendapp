@@ -221,12 +221,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
               Text(
                 '"${widget.note}"',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 12,
-                  color: zt.textSecondary,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
               ),
             ],
 

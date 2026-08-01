@@ -20,6 +20,7 @@ import '../services/email_intent_service.dart';
 import '../services/fx_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/recent_contacts_store.dart';
+import '../services/notification_preferences_service.dart';
 import '../services/signing_policy_service.dart';
 import '../services/sound_service.dart';
 import '../services/sse_service.dart';
@@ -202,6 +203,13 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Signing policy service — controls session vs PIN-per-payment behaviour.
   final SigningPolicyService signingPolicyService = SigningPolicyService();
+
+  /// Single source of truth for muted notification categories — see
+  /// NotificationPreferencesService's own doc comment. Lazily constructed
+  /// so it shares this model's [walletService] (and therefore its
+  /// [ApiClient]) without needing a separate constructor parameter.
+  late final NotificationPreferencesService notificationPreferencesService =
+      NotificationPreferencesService(apiClient: walletService.apiClient);
 
   /// DM service — HTTP client for the DM thread and message endpoints.
   final DmService dmService;
@@ -1782,16 +1790,25 @@ class ZendScope extends InheritedNotifier<ZendAppModel> {
 
   /// Returns the model **without** subscribing the calling element to it.
   ///
-  /// Safe from `initState()` and `dispose()`, where
-  /// `dependOnInheritedWidgetOfExactType` is illegal and throws a
-  /// `FlutterError` in debug builds ("...was called before
-  /// SomeState.initState() completed"). Because the assertion is stripped in
-  /// release, that class of bug is invisible in production and only bites
-  /// developers — which is exactly why it survived in several screens.
+  /// Safe from `initState()`, where `dependOnInheritedWidgetOfExactType` is
+  /// illegal and throws a `FlutterError` in debug builds ("...was called
+  /// before SomeState.initState() completed"). Because the assertion is
+  /// stripped in release, that class of bug is invisible in production and
+  /// only bites developers — which is exactly why it survived in several
+  /// screens.
+  ///
+  /// NOT safe from `dispose()`. By the time `dispose()` runs, the element
+  /// has already been deactivated (`deactivate()` runs before `dispose()`),
+  /// and any ancestor lookup — including this one — throws "Looking up a
+  /// deactivated widget's ancestor is unsafe" in debug builds. There is no
+  /// variant of this method that is safe to call from `dispose()`; the
+  /// standard fix is to cache whatever you need (the model reference itself,
+  /// or a specific service/listener target) in a field during `initState()`
+  /// or `build()`, and read that cached field from `dispose()` instead.
   ///
   /// Use this for one-shot reads: kicking off a fetch, constructing a service,
-  /// or detaching a listener. If the widget needs to rebuild on model changes,
-  /// use [of] from `build()` instead.
+  /// or reading a value before the first build. If the widget needs to
+  /// rebuild on model changes, use [of] from `build()` instead.
   static ZendAppModel read(BuildContext context) {
     final element = context.getElementForInheritedWidgetOfExactType<ZendScope>();
     assert(element != null, 'ZendScope not found in widget tree');

@@ -165,11 +165,7 @@ class _RequestConfirmationContentState
             Text(
               widget.paymentRequest.link,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 13,
-                color: zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
             ),
             const SizedBox(height: 6),
 

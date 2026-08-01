@@ -209,12 +209,7 @@ class _ReactionRow extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     '${r.count}',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: r.reactedByMe ? zt.accent : zt.textSecondary, fontWeight: FontWeight.w700),
                   ),
                 ],
               ],
@@ -302,12 +297,7 @@ class _TextMessageRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: 40, bottom: 2),
               child: Text(
                 '@$sender',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: labelColor,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor),
               ),
             ),
           Row(
@@ -348,7 +338,7 @@ class _TextMessageRow extends StatelessWidget {
                         children: [
                           Text(
                             _formatTime(message.createdAt),
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: timeColor),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
                           ),
                           if (isMe) ...[
                             const SizedBox(width: 4),
@@ -400,17 +390,12 @@ class _TextMessageRow extends StatelessWidget {
                 Row(children: [
                   Text(
                     '@$sender',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: labelColor,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: labelColor),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     _formatTime(message.createdAt),
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                   ),
                 ]),
                 const SizedBox(height: 2),
@@ -576,11 +561,7 @@ class _VoiceNoteRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               timeLabel,
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                color: isMe ? Colors.white.withValues(alpha: 0.8) : zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: isMe ? Colors.white.withValues(alpha: 0.8) : zt.textSecondary),
             ),
           ],
         ),
@@ -608,10 +589,10 @@ class _VoiceNoteRow extends StatelessWidget {
                   child: Row(children: [
                     Text(
                       '@$sender',
-                      style: TextStyle(fontFamily: 'DMMono', fontSize: 12, fontWeight: FontWeight.w600, color: _senderColor(sender, zt)),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: _senderColor(sender, zt)),
                     ),
                     const SizedBox(width: 6),
-                    Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                    Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                   ]),
                 ),
               pill,

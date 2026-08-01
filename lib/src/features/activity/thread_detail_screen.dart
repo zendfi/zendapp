@@ -415,7 +415,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                             streak != null && streak.isActive
                                 ? '🔥 ${streak.streakWeeks}w streak · $activityLabel'
                                 : activityLabel,
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                           );
                         }),
                       ],
@@ -624,7 +624,7 @@ class _FeedPost extends StatelessWidget {
                             ),
                           Text(
                             _relativeTime(edge.createdAt),
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
                           ),
                         ],
                       ),
@@ -639,12 +639,7 @@ class _FeedPost extends StatelessWidget {
                         ),
                         child: Text(
                           '${isOutgoing ? '-' : '+'}$amountLabel',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isOutgoing ? zt.textSecondary : ZendColors.positive,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: isOutgoing ? zt.textSecondary : ZendColors.positive),
                         ),
                       ),
                   ],
@@ -682,7 +677,7 @@ class _FeedPost extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Text(
                                       '${r.count}',
-                                      style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary),
+                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -707,7 +702,7 @@ class _FeedPost extends StatelessWidget {
                             ? ZendLoader(size: 14, strokeWidth: 2, color: zt.accent)
                             : Text(
                                 'Make public',
-                                style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+                                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
                               ),
                       )
                     else if (edge.effectiveTier == VisibilityTier.sharedNetwork)
@@ -718,7 +713,7 @@ class _FeedPost extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             'Public',
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.7)),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.7)),
                           ),
                         ],
                       ),

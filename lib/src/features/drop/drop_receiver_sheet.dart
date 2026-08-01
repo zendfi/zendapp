@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/zend_avatar.dart';
 import 'drop_glow_effect.dart';
+import '../../design/zend_tokens.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -183,11 +184,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                       child: Text(
                         'from @${widget.senderZendtag}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 14,
-                          color: Color(0x80FFFFFF),
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: Color(0x80FFFFFF)),
                       ),
                     ),
                   ),
@@ -206,12 +203,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                         child: Text(
                           '"${widget.note}"',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 13,
-                            color: Color(0x55FFFFFF),
-                            fontStyle: FontStyle.italic,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0x55FFFFFF)),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -226,11 +218,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                     child: Text(
                       'Tap to close',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.15),
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Colors.white.withValues(alpha: 0.15)),
                     ),
                   ),
                 ],

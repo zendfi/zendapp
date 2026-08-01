@@ -943,11 +943,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                           ],
                           Text(
                             _resolvedDisplayName!,
-                            style: TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 12,
-                              color: zt.accentBright,
-                            ),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accentBright),
                           ),
                         ],
                       ),
@@ -957,11 +953,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                       padding: const EdgeInsets.only(left: 48, top: 4),
                       child: Text(
                         _resolveError!,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          color: ZendColors.destructive,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
                       ),
                     ),
                   ],
@@ -1006,11 +998,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
                         'Insufficient balance · \$${model.spendableBalance.toStringAsFixed(2)} available',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          color: ZendColors.destructive,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
                       ),
                     ),
 
@@ -1105,11 +1093,7 @@ class _FieldRow extends StatelessWidget {
             width: 36,
             child: Text(
               label,
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 13,
-                color: zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
             ),
           ),
           const SizedBox(width: 12),
@@ -1167,11 +1151,7 @@ class _ContactTile extends StatelessWidget {
                     ),
                   Text(
                     handle,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 12,
-                      color: hasRealName ? zt.textSecondary : zt.textPrimary,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: hasRealName ? zt.textSecondary : zt.textPrimary),
                   ),
                 ],
               ),
@@ -1247,12 +1227,7 @@ class _EmailIntentStage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             maskedEmail,
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: zt.textPrimary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1272,11 +1247,7 @@ class _EmailIntentStage extends StatelessWidget {
               child: Text(
                 'Insufficient balance · \$${model.spendableBalance.toStringAsFixed(2)} available',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 12,
-                  color: ZendColors.destructive,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
               ),
             ),
           SizedBox(height: compact ? 16 : 24),
@@ -1429,11 +1400,7 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
               const SizedBox(height: 4),
               Text(
                 'Expires in $daysRemaining day${daysRemaining == 1 ? '' : 's'}',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 12,
-                  color: zt.textSecondary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
               ),
             ],
             const SizedBox(height: 32),

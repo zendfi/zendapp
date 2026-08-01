@@ -405,11 +405,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 alignment: Alignment.centerRight,
                 child: Text(
                   '$nameRemaining remaining',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: nameRemaining < 10 ? ZendColors.destructive : zt.textSecondary,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: nameRemaining < 10 ? ZendColors.destructive : zt.textSecondary),
                 ),
               ),
               if (_nameError != null) ...[

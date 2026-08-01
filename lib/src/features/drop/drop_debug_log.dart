@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../design/zend_tokens.dart';
 
 /// A singleton that collects timestamped Drop debug events and broadcasts them
 /// to any listening UI panels.
@@ -224,23 +225,14 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
-                    const Text(
+                    Text(
                       'DROP DEBUG',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 10,
-                        color: Color(0xFF52B788),
-                        letterSpacing: 1.2,
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: const Color(0xFF52B788), letterSpacing: 1.2),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${_entries.length} events',
-                      style: const TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 10,
-                        color: Color(0x80F0F0F0),
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Color(0x80F0F0F0)),
                     ),
                     const Spacer(),
                     // Pin/unpin auto-scroll
@@ -250,13 +242,9 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                         child: Text(
                           _pinned ? '⬇ LIVE' : '⏸ PAUSED',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            color: _pinned
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: _pinned
                                 ? const Color(0xFF52B788)
-                                : const Color(0x80F0F0F0),
-                          ),
+                                : const Color(0x80F0F0F0)),
                         ),
                       ),
                     ),
@@ -277,15 +265,11 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                           );
                         }
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                         child: Text(
                           'COPY',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            color: Color(0x80F0F0F0),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: const Color(0x80F0F0F0)),
                         ),
                       ),
                     ),
@@ -295,15 +279,11 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                         DropDebugLog.i.clear();
                         setState(() => _entries = []);
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                         child: Text(
                           'CLR',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            color: Color(0x80F0F0F0),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: const Color(0x80F0F0F0)),
                         ),
                       ),
                     ),
@@ -314,14 +294,10 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
               // Log entries
               Expanded(
                 child: _entries.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'Waiting for events…',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 11,
-                            color: Color(0x44F0F0F0),
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: const Color(0x44F0F0F0)),
                         ),
                       )
                     : NotificationListener<ScrollNotification>(
@@ -352,11 +328,7 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                               ),
                               child: RichText(
                                 text: TextSpan(
-                                  style: const TextStyle(
-                                    fontFamily: 'DMMono',
-                                    fontSize: 10.5,
-                                    height: 1.4,
-                                  ),
+                                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, height: 1.4),
                                   children: [
                                     TextSpan(
                                       text: '$hh:$mm:$ss.$ms ',

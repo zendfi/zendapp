@@ -297,14 +297,9 @@ class _SendScreenState extends State<SendScreen>
                                 child: Text(
                                   _currencyLabel,
                                   key: ValueKey(_currencyLabel),
-                                  style: TextStyle(
-                                    fontFamily: 'DMMono',
-                                    color: isNgn
+                                  style: ZendTextStyles.tabularNumeric.copyWith(color: isNgn
                                         ? const Color(0xCCF0F0F0)
-                                        : const Color(0x80F0F0F0),
-                                    fontSize: 11,
-                                    letterSpacing: 1.4,
-                                  ),
+                                        : const Color(0x80F0F0F0), fontSize: 11, letterSpacing: 1.4),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -356,11 +351,7 @@ class _SendScreenState extends State<SendScreen>
                                         children: [
                                           Text(
                                             _secondaryDisplay!,
-                                            style: const TextStyle(
-                                              fontFamily: 'DMMono',
-                                              color: Color(0x99F0F0F0),
-                                              fontSize: 13,
-                                            ),
+                                            style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x99F0F0F0), fontSize: 13),
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
@@ -381,11 +372,7 @@ class _SendScreenState extends State<SendScreen>
                                     children: [
                                       Text(
                                         isNgn ? 'Switch to USD' : 'Switch to NGN',
-                                        style: const TextStyle(
-                                          fontFamily: 'DMMono',
-                                          color: Color(0x44F0F0F0),
-                                          fontSize: 11,
-                                        ),
+                                        style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x44F0F0F0), fontSize: 11),
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(

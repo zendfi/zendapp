@@ -223,7 +223,7 @@ class _PersonActivityRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 amountLabel,
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
               ),
             ],
           ),

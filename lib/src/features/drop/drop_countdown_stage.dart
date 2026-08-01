@@ -122,11 +122,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
               const SizedBox(height: 4),
               Text(
                 widget.note!,
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 12,
-                  color: zt.textSecondary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
               ),
             ],
             const SizedBox(height: 28),

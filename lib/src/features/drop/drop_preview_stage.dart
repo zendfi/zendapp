@@ -107,11 +107,7 @@ class _DropPreviewStageState extends State<DropPreviewStage>
         const SizedBox(height: 6),
         Text(
           widget.isConfirmed ? 'Verified nearby' : 'Verifying identity…',
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 12,
-            color: widget.isConfirmed ? zt.accentBright : zt.textSecondary,
-          ),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: widget.isConfirmed ? zt.accentBright : zt.textSecondary),
         ),
         const SizedBox(height: 40),
       ],

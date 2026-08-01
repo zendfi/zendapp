@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -8,6 +6,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import '../../models/email_intent.dart';
+import '../../models/notification_category.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
 import '../dm/dm_thread_screen.dart';
@@ -180,17 +179,21 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   }
 
   Future<void> _loadMutePreference() async {
-    final prefs = await SharedPreferences.getInstance();
+    final service = ZendScope.read(context).notificationPreferencesService;
+    await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = prefs.getBool('notifications_muted') ?? false);
+      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.activity));
     }
   }
 
   Future<void> _toggleNotificationMute() async {
-    final prefs = await SharedPreferences.getInstance();
     final newValue = !_notificationsMuted;
-    await prefs.setBool('notifications_muted', newValue);
     setState(() => _notificationsMuted = newValue);
+    final model = ZendScope.read(context);
+    await model.notificationPreferencesService.setMuted(
+      NotificationCategoryKind.activity,
+      newValue,
+    );
   }
 
   // ── Tap-through routing (Req 15) ────────────────────────────────────────
@@ -595,7 +598,7 @@ class _CountPill extends StatelessWidget {
       ),
       child: Text(
         '$count $label',
-        style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: color, fontWeight: FontWeight.w600),
+        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: color, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -649,7 +652,7 @@ class _RequestsThreadSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${group.totalCount} total',
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
             ),
             const SizedBox(height: 16),
             Flexible(
@@ -1018,7 +1021,7 @@ class _UserThreadTile extends StatelessWidget {
                       children: [
                         Text(
                           _relativeTime(mostRecent.createdAt),
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8)),
                         ),
                         if (thread.edges.length > 1) ...[
                           const SizedBox(width: 8),
@@ -1032,7 +1035,7 @@ class _UserThreadTile extends StatelessWidget {
                               thread.countIsExact
                                   ? '${thread.edges.length}x together'
                                   : '${thread.edges.length}+ together',
-                              style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -1053,12 +1056,7 @@ class _UserThreadTile extends StatelessWidget {
                   ),
                   child: Text(
                     '${isOutgoing ? '-' : '+'}$amountLabel',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: isOutgoing ? zt.textSecondary : ZendColors.positive,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12.5, fontWeight: FontWeight.w700, color: isOutgoing ? zt.textSecondary : ZendColors.positive),
                   ),
                 ),
             ],
@@ -1137,11 +1135,7 @@ class _PoolThreadTile extends StatelessWidget {
                           : '${thread.edges.length} contributions · \$${thread.runningTotal.toStringAsFixed(2)} total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 12,
-                        color: zt.textSecondary,
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -1156,13 +1150,13 @@ class _PoolThreadTile extends StatelessWidget {
                             thread.countIsExact
                                 ? '${thread.edges.length} chip-in${thread.edges.length == 1 ? '' : 's'}'
                                 : '${thread.edges.length}+ chip-ins',
-                            style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'tap for progress',
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
                         ),
                       ],
                     ),
@@ -1178,7 +1172,7 @@ class _PoolThreadTile extends StatelessWidget {
                 ),
                 child: Text(
                   '\$${thread.runningTotal.toStringAsFixed(2)}',
-                  style: TextStyle(fontFamily: 'DMMono', fontSize: 12.5, fontWeight: FontWeight.w700, color: zt.accent),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12.5, fontWeight: FontWeight.w700, color: zt.accent),
                 ),
               ),
             ],
@@ -1335,7 +1329,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                       PoolContributorUser(amountHidden: true) => 'Hidden',
                       _ => '\$${contributor.totalUsdc.toStringAsFixed(2)}',
                     },
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
                   ),
                 ],
               ),

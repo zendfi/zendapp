@@ -364,11 +364,7 @@ class _RequestTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     link,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: zt.textSecondary,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -383,11 +379,7 @@ class _RequestTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               _formatDate(createdAt),
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                color: zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
             ),
           ],
           if (onCancel != null) ...[

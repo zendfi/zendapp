@@ -340,7 +340,7 @@ class _AmountStep extends StatelessWidget {
           Center(
             child: Text(
               '\$0.01 – \$5.00 · amount is hidden from recipient until revealed',
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary),
               textAlign: TextAlign.center,
             ),
           ),
@@ -355,17 +355,17 @@ class _AmountStep extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Text('\$', style: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textSecondary)),
+                Text('\$', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textSecondary)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
                     controller: customCtrl,
                     autofocus: true,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textPrimary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
                     decoration: InputDecoration(
                       hintText: '0.00',
-                      hintStyle: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textSecondary.withValues(alpha: 0.4)),
+                      hintStyle: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textSecondary.withValues(alpha: 0.4)),
                       border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -546,7 +546,7 @@ class _PreviewStep extends StatelessWidget {
                 ),
                 child: Text(
                   '\$${amount.toStringAsFixed(2)} hidden ✨',
-                  style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.accent, fontWeight: FontWeight.w600),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 8),

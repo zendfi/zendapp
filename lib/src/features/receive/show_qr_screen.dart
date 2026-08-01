@@ -436,11 +436,7 @@ class _ReceivedViewState extends State<_ReceivedView>
             const SizedBox(height: 8),
             Text(
               widget.amountFormatted,
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 20,
-                color: Color(0x99E8F4EC),
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: Color(0x99E8F4EC)),
             ),
             if (widget.note != null && widget.note!.isNotEmpty) ...[
               const SizedBox(height: 4),

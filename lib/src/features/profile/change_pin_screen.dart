@@ -438,12 +438,7 @@ class _PinKeyState extends State<_PinKey> {
                 ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w400,
-                      color: ZendColors.textOnDeep,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
                   ),
           ),
         ),

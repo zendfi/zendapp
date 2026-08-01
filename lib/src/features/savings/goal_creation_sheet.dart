@@ -762,11 +762,7 @@ class _ConfirmStage extends StatelessWidget {
                 const SizedBox(height: ZendSpacing.xs),
                 Text(
                   'Target: \$${targetUsd.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 14,
-                    color: zt.textSecondary,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: zt.textSecondary),
                 ),
                 if (deadline != null)
                   Text(

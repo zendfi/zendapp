@@ -80,7 +80,7 @@ class _NameScreenState extends State<NameScreen> {
                   children: [
                     const SizedBox(height: 40),
                     if (waitlistMatched) ...[
-                      Text('YOU MADE IT', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
+                      Text('YOU MADE IT', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
                       const SizedBox(height: 8),
                       Text(
                         waitlistFirstName.isEmpty ? "Welcome in. Let's set up your account." : "Welcome in, $waitlistFirstName.",

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../firebase_options.dart';
+import '../models/notification_category.dart';
 import '../models/notification_destination.dart';
 import '../models/payment_request_notification.dart';
 import 'api_client.dart';
@@ -15,16 +16,40 @@ import 'pending_notification_service.dart';
 class PushNotificationService {
   final ApiClient _apiClient;
 
-  static const _androidChannelId = 'zend_transfers';
-  static const _androidChannelName = 'Zend Transfers';
-  static const _androidChannelDesc = 'Notifications for incoming Zend transfers';
-
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   /// Pending payment request from a notification tap (background/terminated).
   /// Consumed once by the app after session restore.
   static PaymentRequestNotification? pendingPaymentRequestFromNotification;
+
+  /// Held so [dispose] can actually cancel this subscription. The previous
+  /// implementation called `FirebaseMessaging.onMessage.drain()` in dispose(),
+  /// which does NOT cancel the listener registered in
+  /// [_listenForForegroundMessages] — `drain()` only consumes a stream's
+  /// remaining events on the caller's own new subscription, an unrelated
+  /// stream subscription to the same broadcast stream. Re-initializing this
+  /// service (e.g. re-login on the same app instance) without ever properly
+  /// detaching the old listener stacked a second `onMessage` handler, which
+  /// showed every foreground push as two duplicate local notifications.
+  StreamSubscription<RemoteMessage>? _foregroundMessageSub;
+  StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _backgroundTapSub;
+
+  /// The most recently registered FCM token, kept so [unregisterToken] on
+  /// sign-out can tell the backend exactly which token to remove without a
+  /// second `getToken()` round trip (which can also legitimately return a
+  /// different token than the one currently registered, if it rotated
+  /// between register and unregister).
+  String? _registeredToken;
+
+  /// Set by [ZendAppModel] (via [DmThreadScreen]/[MissionRoom] mounting) so
+  /// foreground chat notifications can be suppressed for whichever thread
+  /// the user is actively looking at — receiving a status-bar/local
+  /// notification for the exact conversation on screen is jarring and was
+  /// previously unconditional.
+  static String? activeDmRoomId;
+  static String? activePoolId;
 
   PushNotificationService({required ApiClient apiClient})
       : _apiClient = apiClient;
@@ -42,8 +67,68 @@ class PushNotificationService {
   }
 
   void dispose() {
-    FirebaseMessaging.onMessage.drain<RemoteMessage>();
+    _foregroundMessageSub?.cancel();
+    _foregroundMessageSub = null;
+    _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = null;
+    _backgroundTapSub?.cancel();
+    _backgroundTapSub = null;
   }
+
+  /// Unregisters this device's FCM token from the backend and clears any
+  /// local notification state that belongs to the outgoing session. Call
+  /// this from the sign-out flow, before [ZendAppModel.resetState] tears
+  /// down the rest of the session — otherwise a signed-out device keeps
+  /// receiving the just-signed-out account's pushes until FCM happens to
+  /// report the token as stale on some future send.
+  Future<void> unregisterToken() async {
+    final token = _registeredToken;
+    if (token == null) return;
+    try {
+      await _apiClient.unregisterFcmToken(token);
+    } catch (e) {
+      // Non-fatal — the backend will eventually clean up the token
+      // reactively when FCM reports it as unregistered/invalid for the old
+      // account. Signing out proceeds regardless.
+      if (kDebugMode) {
+        debugPrint('PushNotifications: failed to unregister token: $e');
+      }
+    } finally {
+      _registeredToken = null;
+      await clearBadge();
+    }
+  }
+
+  /// Clears the iOS home-screen badge count. Call on resume/foreground and
+  /// after sign-out — the badge is otherwise never cleared client-side, so
+  /// it can sit indefinitely at a stale count even after the user has read
+  /// everything (or signed out entirely).
+  Future<void> clearBadge() async {
+    final darwinImpl = _localNotifications.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    // badgeNumber: 0 clears the badge; flutter_local_notifications' iOS
+    // implementation applies this via a zero-duration local notification
+    // under the hood, which is the supported way to change the badge
+    // outside of an actual push payload.
+    await darwinImpl?.show(
+      _kBadgeClearNotificationId,
+      null,
+      null,
+      notificationDetails: const DarwinNotificationDetails(
+        presentAlert: false,
+        presentBadge: true,
+        presentSound: false,
+        badgeNumber: 0,
+      ),
+    );
+    await darwinImpl?.cancel(_kBadgeClearNotificationId);
+  }
+
+  /// Reserved ID for the zero-duration "clear badge" notification — never
+  /// visible to the user (presentAlert/presentSound are both false) and
+  /// immediately cancelled after use, so it can't collide with any category
+  /// range in [_notificationIdFor].
+  static const _kBadgeClearNotificationId = -1;
 
   Future<void> _setupLocalNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -62,19 +147,28 @@ class PushNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    const channel = AndroidNotificationChannel(
-      _androidChannelId,
-      _androidChannelName,
-      description: _androidChannelDesc,
-      importance: Importance.high,
-      playSound: true,
-    );
-
     final androidImpl = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidImpl?.createNotificationChannel(channel);
+    // One Android channel per category, matching the backend's
+    // NotificationCategory::android_channel_id() exactly (see
+    // src/push_notifications.rs and notification_category.dart). Previously
+    // every notification — DMs, pool chat, activity reactions, savings
+    // progress, and actual money transfers — shared a single
+    // "zend_transfers" channel, so muting any one of them via Android's own
+    // per-channel notification settings silently muted all of them.
+    for (final category in NotificationCategoryKind.values) {
+      await androidImpl?.createNotificationChannel(
+        AndroidNotificationChannel(
+          category.androidChannelId,
+          category.androidChannelName,
+          description: category.androidChannelDescription,
+          importance: Importance.high,
+          playSound: true,
+        ),
+      );
+    }
 
     // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+).
     // Without this grant, notifications will not appear in the status bar
@@ -105,7 +199,8 @@ class PushNotificationService {
   }
 
   void _listenForTokenRefresh() {
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+    _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       await _sendTokenToBackend(newToken);
     });
   }
@@ -115,7 +210,8 @@ class PushNotificationService {
   /// from main() or initState of your root widget.
   void _listenForBackgroundNotificationTaps() {
     // App was in background and user tapped the notification
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _backgroundTapSub?.cancel();
+    _backgroundTapSub = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationData(message.data);
     });
   }
@@ -165,7 +261,8 @@ class PushNotificationService {
   }
 
   void _listenForForegroundMessages() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _foregroundMessageSub?.cancel();
+    _foregroundMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       // With 'notification' field in the FCM payload, the system bar shows
       // the notification automatically when the app is backgrounded.
       // When the app is FOREGROUND, Android suppresses the system notification
@@ -186,19 +283,37 @@ class PushNotificationService {
       final role = message.data['role'] as String? ?? '';
       if (type == 'drop_confirmed' && role == 'sender') return;
 
+      // Route-aware suppression: don't pop a local notification for the
+      // exact DM thread or pool chat the user is already looking at. This
+      // previously fired unconditionally — receiving a status-bar
+      // notification for the message you're actively reading on screen is
+      // the single most jarring case of a notification "lying" about
+      // needing your attention.
+      if (type == 'dm_message') {
+        final roomId = message.data['room_id'] as String?;
+        if (roomId != null && roomId == activeDmRoomId) return;
+      }
+      if (type == 'pool_message') {
+        final poolId = message.data['pool_id'] as String?;
+        if (poolId != null && poolId == activePoolId) return;
+      }
+
+      final category = NotificationCategoryKindX.fromType(type);
+
       _localNotifications.show(
-        message.hashCode,
+        _notificationIdFor(message.data, type),
         title,
         body,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            _androidChannelId,
-            _androidChannelName,
-            channelDescription: _androidChannelDesc,
+            category.androidChannelId,
+            category.androidChannelName,
+            channelDescription: category.androidChannelDescription,
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
             playSound: true,
+            styleInformation: BigTextStyleInformation(body, contentTitle: title),
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,
@@ -208,12 +323,46 @@ class PushNotificationService {
         ),
         payload: jsonEncode(message.data),
       );
+
+      // Pool message badge — mark pool as having new messages. Previously
+      // only wired from the background-tap/terminated path via
+      // _handleNotificationData; a foreground pool message never updated the
+      // badge at all, since this method never called it.
+      if (type == 'pool_message') {
+        final poolId = message.data['pool_id'] as String?;
+        if (poolId != null) onPoolMessageReceived?.call(poolId);
+      }
     });
+  }
+
+  /// Derives a stable local-notification ID from the notification's own
+  /// identity (a room/edge/transfer/pool ID from its data payload), falling
+  /// back to a hash of the title+body only if no such ID is present.
+  ///
+  /// The previous implementation used `message.hashCode` — Dart's default
+  /// `Object.hashCode`, which is only guaranteed consistent for the
+  /// lifetime of that single `RemoteMessage` instance and has no
+  /// relationship to the notification's actual content. Two independent
+  /// deliveries of "logically the same" notification (e.g. a duplicate FCM
+  /// delivery, or the same DM room notified twice in quick succession)
+  /// could get different IDs and stack as separate status-bar entries
+  /// instead of one being replaced/updated by the other; conversely two
+  /// unrelated notifications could collide on the same ID by coincidence.
+  /// A content-derived ID makes "the same underlying thing" collapse to one
+  /// notification slot deterministically.
+  int _notificationIdFor(Map<String, dynamic> data, String type) {
+    final identity = data['room_id'] as String? ??
+        data['pool_id'] as String? ??
+        data['edge_id'] as String? ??
+        data['transfer_id'] as String? ??
+        '$type:${data['title']}:${data['body']}';
+    return identity.hashCode & 0x7fffffff; // keep it a positive 32-bit int
   }
 
   Future<void> _sendTokenToBackend(String token) async {
     try {
       await _apiClient.registerFcmToken(token);
+      _registeredToken = token;
       if (kDebugMode) {
         debugPrint('PushNotifications: FCM token registered with backend');
       }

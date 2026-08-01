@@ -775,12 +775,7 @@ class _BreakdownRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: bold ? 15 : 14,
-            fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-            color: valueColor ?? zt.textPrimary,
-          ),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: bold ? 15 : 14, fontWeight: bold ? FontWeight.w600 : FontWeight.w400, color: valueColor ?? zt.textPrimary),
         ),
       ],
     );

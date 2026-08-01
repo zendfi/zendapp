@@ -704,11 +704,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                   else
                     Text(
                       '\$${balance.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 12,
-                        color: ZendTheme.of(context).textSecondary,
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendTheme.of(context).textSecondary),
                     ),
                 ],
               ),
@@ -755,11 +751,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               const SizedBox(height: 4),
               Text(
                 '≈ ₦${_formatNgn(widget.fxPreviewNgn!)}',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 14,
-                  color: ZendTheme.of(context).textSecondary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: ZendTheme.of(context).textSecondary),
               ),
             ],
             if (widget.resolvedNote != null &&

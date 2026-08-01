@@ -10,11 +10,18 @@ ThemeData buildZendTheme() {
         displayColor: ZendColors.textPrimary,
       )
       .copyWith(
+        // Satoshi renders slightly looser than DM Sans/Instrument Serif at
+        // the same sizes — a small negative letterSpacing tightens tracking
+        // without looking cramped. Most Text widgets across the app build a
+        // fresh TextStyle(fontFamily: 'Satoshi', ...) that never sets its own
+        // letterSpacing, so this value inherits through via
+        // DefaultTextStyle/TextStyle.merge and applies app-wide.
         displayLarge: const TextStyle(
           fontFamily: 'Satoshi',
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: ZendColors.textPrimary,
         ),
         displayMedium: const TextStyle(
@@ -22,6 +29,7 @@ ThemeData buildZendTheme() {
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: ZendColors.textPrimary,
         ),
         headlineMedium: const TextStyle(
@@ -29,6 +37,7 @@ ThemeData buildZendTheme() {
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: ZendColors.textPrimary,
         ),
         headlineSmall: const TextStyle(
@@ -36,33 +45,39 @@ ThemeData buildZendTheme() {
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: ZendColors.textPrimary,
         ),
         titleLarge: const TextStyle(
           fontSize: 18,
           height: 1.2,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
           color: ZendColors.textPrimary,
         ),
         titleMedium: const TextStyle(
           fontSize: 15,
           height: 1.2,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
           color: ZendColors.textPrimary,
         ),
         bodyLarge: const TextStyle(
           fontSize: 15,
           height: 1.35,
+          letterSpacing: -0.1,
           color: ZendColors.textPrimary,
         ),
         bodyMedium: const TextStyle(
           fontSize: 13,
           height: 1.35,
+          letterSpacing: -0.1,
           color: ZendColors.textSecondary,
         ),
         labelLarge: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
           color: ZendColors.textPrimary,
         ),
       );
@@ -122,6 +137,7 @@ ThemeData buildZendDarkTheme() {
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: darkTextPrimary,
         ),
         displayMedium: const TextStyle(
@@ -129,6 +145,7 @@ ThemeData buildZendDarkTheme() {
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: darkTextPrimary,
         ),
         headlineMedium: const TextStyle(
@@ -136,6 +153,7 @@ ThemeData buildZendDarkTheme() {
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: darkTextPrimary,
         ),
         headlineSmall: const TextStyle(
@@ -143,33 +161,39 @@ ThemeData buildZendDarkTheme() {
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
           color: darkTextPrimary,
         ),
         titleLarge: const TextStyle(
           fontSize: 18,
           height: 1.2,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
           color: darkTextPrimary,
         ),
         titleMedium: const TextStyle(
           fontSize: 15,
           height: 1.2,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
           color: darkTextPrimary,
         ),
         bodyLarge: const TextStyle(
           fontSize: 15,
           height: 1.35,
+          letterSpacing: -0.1,
           color: darkTextPrimary,
         ),
         bodyMedium: const TextStyle(
           fontSize: 13,
           height: 1.35,
+          letterSpacing: -0.1,
           color: darkTextSecondary,
         ),
         labelLarge: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
           color: darkTextPrimary,
         ),
       );

@@ -198,12 +198,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                   FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-A-Za-z]')),
                 ],
                 onChanged: (_) => setState(() => _error = null),
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 18,
-                  letterSpacing: 2,
-                  color: zt.textPrimary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18, letterSpacing: 2, color: zt.textPrimary),
                 decoration: InputDecoration(
                   hintText: _hintText,
                   hintStyle: TextStyle(
@@ -240,11 +235,7 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               if (_selectedCountry['digits'] as int > 0)
                 Text(
                   '${_controller.text.replaceAll(RegExp(r'\s'), '').length} / ${_selectedCountry['digits']} digits',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: _hasExpectedDigits ? zt.accentBright : zt.textSecondary,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: _hasExpectedDigits ? zt.accentBright : zt.textSecondary),
                 ),
 
               const SizedBox(height: 8),

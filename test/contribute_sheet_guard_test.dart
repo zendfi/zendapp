@@ -98,19 +98,22 @@ void main() {
 
       final model = _buildModel();
       await tester.pumpWidget(MaterialApp(
-        home: ZendScope(
-          notifier: model,
-          child: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => ContributeSheet(pool: _testPool()),
-                  ),
-                  child: const Text('open'),
+        // ZendScope must wrap the Navigator (via `builder`), not just `home`.
+        // A modal bottom sheet is pushed as its own route — a sibling Overlay
+        // entry alongside the `home` route, not a descendant of it — so
+        // wrapping only `home` leaves the sheet's own context unable to find
+        // ZendScope, and _userBalance's try/catch silently falls back to 0.0.
+        builder: (context, child) => ZendScope(notifier: model, child: child!),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => ContributeSheet(pool: _testPool()),
                 ),
+                child: const Text('open'),
               ),
             ),
           ),
@@ -161,21 +164,19 @@ void main() {
 
       final model = _buildModel();
       await tester.pumpWidget(MaterialApp(
-        home: ZendScope(
-          notifier: model,
-          child: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    isDismissible: true,
-                    enableDrag: true,
-                    builder: (_) => ContributeSheet(pool: _testPool()),
-                  ),
-                  child: const Text('open'),
+        builder: (context, child) => ZendScope(notifier: model, child: child!),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  isDismissible: true,
+                  enableDrag: true,
+                  builder: (_) => ContributeSheet(pool: _testPool()),
                 ),
+                child: const Text('open'),
               ),
             ),
           ),
@@ -216,19 +217,17 @@ void main() {
 
       final model = _buildModel();
       await tester.pumpWidget(MaterialApp(
-        home: ZendScope(
-          notifier: model,
-          child: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => ContributeSheet(pool: _testPool()),
-                  ),
-                  child: const Text('open'),
+        builder: (context, child) => ZendScope(notifier: model, child: child!),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => ContributeSheet(pool: _testPool()),
                 ),
+                child: const Text('open'),
               ),
             ),
           ),

@@ -14,6 +14,7 @@ import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/dm_websocket_service.dart';
 import '../../services/e2ee_service.dart' show kE2eePrefix;
+import '../../services/push_notification_service.dart';
 import '../../services/wallet_session_cache.dart';
 import '../../models/qr_payment_intent.dart';
 import '../profile/user_profile_screen.dart';
@@ -85,8 +86,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // One-shot read — ZendScope.of() throws in debug builds when called
+    // before initState() completes.
     // Seed with cached messages immediately — no spinner for known rooms
-    final model = ZendScope.of(context);
+    final model = ZendScope.read(context);
+    // Route-aware push-notification suppression: while this thread is open,
+    // don't pop a local/foreground notification for messages arriving in
+    // this exact room — see PushNotificationService._listenForForegroundMessages.
+    PushNotificationService.activeDmRoomId = widget.roomId;
     final cached = model.dmService.getCachedMessages(widget.roomId);
     if (cached.isNotEmpty) {
       _messages.addAll(cached);
@@ -569,7 +576,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       return Row(
         children: [
           Text('@${cp.zendtag}',
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
           if (streak != null && streak.isActive)
             Padding(
               padding: const EdgeInsets.only(left: 6),
@@ -947,7 +954,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Request from', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+                          Text('Request from', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                           Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                         ],
                       ),
@@ -1282,6 +1289,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   @override
   void dispose() {
+    // Only clear if we're still the active room — a second DmThreadScreen
+    // instance for a different room may have already overwritten this
+    // (e.g. navigating from thread A directly into thread B without A ever
+    // fully disposing first). Unconditionally nulling it out here could
+    // erase B's active-room marker after B has already claimed it.
+    if (PushNotificationService.activeDmRoomId == widget.roomId) {
+      PushNotificationService.activeDmRoomId = null;
+    }
     WidgetsBinding.instance.removeObserver(this);
     _wsSub?.cancel();
     _ws.dispose();
@@ -1778,12 +1793,7 @@ class _ReplyStrip extends StatelessWidget {
                           isMe
                               ? 'Replying to yourself'
                               : 'Replying to @${message.senderZendtag ?? '…'}',
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 11,
-                            color: zt.accent,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -2012,11 +2022,7 @@ class _DateSeparator extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               _label(),
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                color: zt.textSecondary.withValues(alpha: 0.6),
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.6)),
             ),
           ),
           Expanded(child: Divider(color: zt.border.withValues(alpha: 0.5))),

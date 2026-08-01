@@ -387,6 +387,12 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     final model = widget.model;
 
     if (state == AppLifecycleState.resumed) {
+      // Clear the iOS home-screen badge whenever the app is actually opened
+      // — flutter_local_notifications never touches the badge count on its
+      // own, so without this it can sit at a stale number indefinitely even
+      // after the user has read everything.
+      unawaited(model.pushNotificationService.clearBadge());
+
       if (model.isAuthenticated) {
         unawaited(model.dropDiscoverabilityService.onAppForeground());
 

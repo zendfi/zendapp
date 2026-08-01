@@ -48,7 +48,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                 subtitle: Text(option.isoCode,
                     style: TextStyle(color: ZendTheme.of(context).textSecondary)),
                 trailing: Text(option.dialCode,
-                    style: const TextStyle(fontFamily: 'DMMono')),
+                    style: ZendTextStyles.tabularNumeric),
                 onTap: () => Navigator.of(context).pop(option),
               );
             },
@@ -169,7 +169,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              style: TextStyle(fontFamily: 'DMMono', fontSize: 24, color: zt.textPrimary),
+                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 24, color: zt.textPrimary),
                               decoration: InputDecoration(
                                 hintText: '0000 000 000',
                                 filled: false,
@@ -186,7 +186,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
-                        style: TextStyle(fontFamily: 'DMMono', fontSize: 20, color: zt.textPrimary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'you@example.com',
                           filled: false,

@@ -127,13 +127,9 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             alignment: Alignment.centerRight,
             child: Text(
               '$remaining characters remaining',
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                color: remaining < 30
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: remaining < 30
                     ? ZendColors.destructive
-                    : zt.textSecondary,
-              ),
+                    : zt.textSecondary),
             ),
           ),
           const SizedBox(height: ZendSpacing.md),

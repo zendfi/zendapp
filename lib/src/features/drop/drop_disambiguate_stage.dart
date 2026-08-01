@@ -244,11 +244,7 @@ class _CandidateTile extends StatelessWidget {
                   ),
                   Text(
                     '@$_zendtag',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 12,
-                      color: zt.textSecondary,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                   ),
                 ],
               ),
@@ -268,12 +264,7 @@ class _CandidateTile extends StatelessWidget {
                     ),
                     child: Text(
                       'CLOSEST',
-                      style: TextStyle(
-                        fontFamily: 'DMMono',
-                        fontSize: 9,
-                        color: ZendColors.accentBright,
-                        letterSpacing: 0.6,
-                      ),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: ZendColors.accentBright, letterSpacing: 0.6),
                     ),
                   ),
                 _SignalBars(bars: bars, activeColor: ZendColors.accentBright),

@@ -14,6 +14,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
 import '../../services/outbox_queue.dart';
 import '../../services/pool_websocket_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../services/sse_service.dart';
 import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_pin_prompt.dart';
@@ -97,6 +98,10 @@ class _MissionRoomState extends State<MissionRoom> {
     final model = ZendScope.of(context);
     // Clear pool message badge as soon as mission room opens.
     model.markPoolRead(_pool.id);
+    // Route-aware push-notification suppression: while this room is open,
+    // don't pop a local/foreground notification for messages arriving in
+    // this exact pool — see PushNotificationService._listenForForegroundMessages.
+    PushNotificationService.activePoolId = _pool.id;
 
     // Set up local DB layer
     _repository = PoolMessageRepository(model.localDb);
@@ -236,6 +241,12 @@ class _MissionRoomState extends State<MissionRoom> {
 
   @override
   void dispose() {
+    // See the matching comment in DmThreadScreen.dispose() — only clear if
+    // we're still the active pool, in case another MissionRoom instance for
+    // a different pool has already claimed this marker.
+    if (PushNotificationService.activePoolId == _pool.id) {
+      PushNotificationService.activePoolId = null;
+    }
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _sseSub?.cancel();
     _wsSub?.cancel();
@@ -1205,7 +1216,7 @@ class _DateSeparator extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               _label(),
-              style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary, letterSpacing: 0.4),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary, letterSpacing: 0.4),
             ),
           ),
           Expanded(child: Divider(color: zt.border)),
@@ -1382,7 +1393,7 @@ class _InputBarState extends State<_InputBar> {
                 const Icon(SolarIconsBold.recordCircle, color: ZendColors.destructive, size: 14),
                 const SizedBox(width: ZendSpacing.xs),
                 Text('Recording ${widget.recordingSeconds}s / 30s',
-                    style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textPrimary)),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => unawaited(widget.onMicStop()),
@@ -1456,7 +1467,7 @@ class _InputBarState extends State<_InputBar> {
                       style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
                       buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
                         if (!isFocused || !overLimit) return null;
-                        return Text('$remaining', style: const TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.destructive));
+                        return Text('$remaining', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive));
                       },
                       decoration: InputDecoration(
                         hintText: 'Message the group...',

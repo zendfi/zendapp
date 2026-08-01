@@ -529,11 +529,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                     ),
                                     Text(
                                       symbol,
-                                      style: TextStyle(
-                                        fontFamily: 'DMMono',
-                                        fontSize: 12,
-                                        color: zt.textSecondary,
-                                      ),
+                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -563,10 +559,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: const TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 13,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -657,11 +650,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             const SizedBox(height: 8),
             Text(
               _truncateAddress(address),
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 12,
-                color: zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
             ),
             const Spacer(),
             PrimaryButton(

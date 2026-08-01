@@ -218,23 +218,7 @@ flutter:
           weight: 700
         - asset: assets/fonts/Satoshi-Black.otf
           weight: 900
-    - family: DMMono
-      fonts:
-        - asset: assets/fonts/DMMono-Light.ttf
-          weight: 300
-        - asset: assets/fonts/DMMono-LightItalic.ttf
-          weight: 300
-          style: italic
-        - asset: assets/fonts/DMMono-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/DMMono-Italic.ttf
-          weight: 400
-          style: italic
-        - asset: assets/fonts/DMMono-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/DMMono-MediumItalic.ttf
-          weight: 500
-          style: italic
+  # DMMono block removed
 
 flutter_launcher_icons:
   android: true

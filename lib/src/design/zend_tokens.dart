@@ -121,3 +121,12 @@ class ZendMotion {
   static const Duration sheetEnter = Duration(milliseconds: 380);
   static const Duration splash = Duration(milliseconds: 1400);
 }
+
+class ZendTextStyles {
+  /// Use anywhere digits need to stay a fixed width — OTP boxes, PIN dots,
+  /// balances, phone number input. Replaces the old DMMono usage.
+  static const TextStyle tabularNumeric = TextStyle(
+    fontFamily: 'Satoshi',
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+}

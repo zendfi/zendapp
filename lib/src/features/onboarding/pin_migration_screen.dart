@@ -282,19 +282,14 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                       color: ZendColors.accentPop.withValues(alpha: 0.3),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(SolarIconsBold.shieldCheck, color: ZendColors.accentPop, size: 14),
-                      SizedBox(width: 6),
+                      const Icon(SolarIconsBold.shieldCheck, color: ZendColors.accentPop, size: 14),
+                      const SizedBox(width: 6),
                       Text(
                         'Security upgrade',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: ZendColors.accentPop,
-                          letterSpacing: 0.5,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.accentPop, letterSpacing: 0.5),
                       ),
                     ],
                   ),
@@ -528,12 +523,7 @@ class _PinKeyState extends State<_PinKey> {
                 ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w400,
-                      color: ZendColors.textOnDeep,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
                   ),
           ),
         ),

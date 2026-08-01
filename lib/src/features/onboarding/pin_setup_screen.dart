@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
@@ -10,7 +9,6 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/wallet_session_cache.dart';
 import '../shell/zend_shell.dart';
-import 'crypto_chains_step.dart';
 
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({super.key});
@@ -132,46 +130,13 @@ class _PinSetupScreenState extends State<PinSetupScreen>
 
       if (!mounted) return;
 
-      // Use flutter_secure_storage (already a project dependency) to persist
-      // the one-time flag — no need for shared_preferences.
-      const storage = FlutterSecureStorage();
-      const flagKey = 'crypto_chains_step_shown';
-      final stepShownRaw = await storage.read(key: flagKey);
-      final stepShown = stepShownRaw == 'true';
-
-      if (!mounted) return;
-
-      if (!stepShown) {
-        // Navigate to the chain selection step; it will navigate to ZendShell
-        // on completion or skip.
-        nav.pushAndRemoveUntil(
-          zendRoute(
-            page: CryptoChainSelectionStep(
-              apiClient: model.walletService.apiClient,
-              onSkip: () async {
-                await storage.write(key: flagKey, value: 'true');
-                nav.pushAndRemoveUntil(
-                  zendRoute(page: const ZendShell()),
-                  (route) => false,
-                );
-              },
-              onComplete: () async {
-                await storage.write(key: flagKey, value: 'true');
-                nav.pushAndRemoveUntil(
-                  zendRoute(page: const ZendShell()),
-                  (route) => false,
-                );
-              },
-            ),
-          ),
-          (route) => false,
-        );
-      } else {
-        nav.pushAndRemoveUntil(
-          zendRoute(page: const ZendShell()),
-          (route) => false,
-        );
-      }
+      // Chain selection is no longer part of onboarding — deposit addresses
+      // are now generated lazily on demand at zdfi.me instead of being
+      // front-loaded here.
+      nav.pushAndRemoveUntil(
+        zendRoute(page: const ZendShell()),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -416,12 +381,7 @@ class _PinKeyState extends State<_PinKey> {
                 ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
                 : Text(
                     widget.label,
-                    style: const TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w400,
-                      color: ZendColors.textOnDeep,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
                   ),
           ),
         ),

@@ -584,7 +584,7 @@ class _DevConfirmStage extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '@$requesterZendtag',
-            style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.textSecondary),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
           ),
           const SizedBox(height: 20),
           Text(

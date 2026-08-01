@@ -87,11 +87,7 @@ class _DropScannerStageState extends State<DropScannerStage>
         const SizedBox(height: 36),
         Text(
           'Scanning for nearby Zend users\u2026',
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 13,
-            color: zt.textSecondary,
-          ),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
         ),
         const Spacer(flex: 3),
       ],

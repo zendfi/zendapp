@@ -200,13 +200,9 @@ class _AmountStage extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Balance: \$${model.balance.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 12,
-              color: insufficientBalance
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: insufficientBalance
                   ? ZendColors.destructive
-                  : zt.textSecondary,
-            ),
+                  : zt.textSecondary),
           ),
           // Fixed-height status row — never shifts the layout regardless of
           // whether an error is shown or not.
@@ -216,21 +212,13 @@ class _AmountStage extends StatelessWidget {
                 ? Text(
                     'Amount exceeds your balance',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: 11,
-                      color: ZendColors.destructive,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive),
                   )
                 : belowMinimum
                     ? Text(
                         'Minimum withdrawal is \$5.00',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: ZendColors.destructive,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive),
                       )
                     : null,
           ),

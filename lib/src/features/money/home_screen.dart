@@ -55,13 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _teaserDismissed = false;
   final CardDismissalStore _cardDismissalStore = CardDismissalStore();
 
+  /// Cached at initState time so dispose() can detach the listeners below
+  /// without touching `context` — by the time dispose() runs, this State's
+  /// element has already been deactivated, and ANY ancestor lookup
+  /// (dependOnInheritedWidgetOfExactType, getElementForInheritedWidgetOfExactType,
+  /// ZendScope.of, ZendScope.read — all of them) throws "Looking up a
+  /// deactivated widget's ancestor is unsafe" in debug builds at that point.
+  ZendAppModel? _model;
+
   @override
   void initState() {
     super.initState();
     _loadTeaserDismissalState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final model = ZendScope.of(context);
+      final model = ZendScope.read(context);
+      _model = model;
       // Must go through setState: the first build() already ran (with the
       // 0.0 initial values) before this post-frame callback fires. Without
       // setState here, no new frame is ever scheduled to show the real
@@ -98,7 +107,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onModelChanged() {
     if (!mounted) return;
-    final model = ZendScope.of(context);
+    // Use the cached reference, not ZendScope.of(context) — this callback
+    // runs from ZendAppModel.notifyListeners(), which is not necessarily
+    // triggered from within this widget's build phase, and there is no
+    // guarantee an ancestor lookup from an arbitrary listener callback is
+    // safe in every Flutter version. The model reference doesn't change
+    // for the lifetime of this screen, so caching it removes the ambiguity
+    // entirely.
+    final model = _model;
+    if (model == null) return;
     final newBalance = model.spendableBalance;
     // Only trigger a setState if the balance actually changed — avoids rebuilding
     // on every model notify (e.g. history loading state changes).
@@ -128,14 +145,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _dropConfirmedSub?.cancel();
-    // ZendScope.read, not .of — dependOnInheritedWidgetOfExactType() is
-    // illegal inside dispose() and throws in debug builds. The try/catch
-    // below was silently masking that on every disposal, meaning these
-    // listeners were never actually removed in a debug session — a real
-    // leak that release builds hid because the assertion is stripped there.
-    final model = ZendScope.read(context);
-    model.removeListener(_onModelChanged);
-    model.removeListener(_onModelBalanceChanged);
+    // Use the cached _model, never an ancestor lookup here — by the time
+    // dispose() runs this State's element is already deactivated, and every
+    // form of ancestor lookup (ZendScope.of, ZendScope.read,
+    // dependOnInheritedWidgetOfExactType, getElementForInheritedWidgetOfExactType)
+    // throws "Looking up a deactivated widget's ancestor is unsafe" in debug
+    // builds at that point — confirmed empirically; there is no context-based
+    // API that's safe to call here. The previous try/catch around a context
+    // lookup silently swallowed that throw on every disposal, meaning these
+    // listeners were never actually removed in a debug session (and release
+    // builds only "worked" because the assertion is stripped there, not
+    // because the lookup was actually valid) — a real, if usually harmless,
+    // listener leak.
+    //
+    // If the screen is disposed before the initState post-frame callback
+    // ever ran, _model is still null and there's nothing to detach.
+    _model?.removeListener(_onModelChanged);
+    _model?.removeListener(_onModelBalanceChanged);
     _sheetController.dispose();
     super.dispose();
   }
@@ -175,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: TextStyle(
                                 fontFamily: 'Satoshi',
                                 color: ZendColors.textOnDeep,
-                                fontSize: 26,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -184,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: const TextStyle(
                                 fontFamily: 'Satoshi',
                                 color: ZendColors.textOnDeep,
-                                fontSize: 26,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -225,13 +251,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    const Text(
+                                    Text(
                                       'Discoverable',
-                                      style: TextStyle(
-                                        fontFamily: 'DMMono',
-                                        fontSize: 10,
-                                        color: ZendColors.accentBright,
-                                      ),
+                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendColors.accentBright),
                                     ),
                                   ],
                                 ),
@@ -286,7 +308,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     : _minSheetSize;
                 final t = ((sheetSize - _minSheetSize) / (maxChildSize - _minSheetSize)).clamp(0.0, 1.0);
                 final sheetTopY = height * (1 - sheetSize);
-                final balanceSize = lerpDouble(88, 32, t) ?? 88;
+                // Slightly smaller than before so larger balances (5-6+ figures)
+                // don't force a line-wrap or overflow at the expanded size.
+                final balanceSize = lerpDouble(72, 30, t) ?? 72;
                 final yieldOpacity = (1 - t).clamp(0.0, 1.0);
 
                 return Positioned(
@@ -300,14 +324,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text(
+                              Text(
                                 'Zend Balance',
-                                style: TextStyle(
-                                  fontFamily: 'DMMono',
-                                  color: Color(0x99F0F0F0),
-                                  fontSize: 11,
-                                  letterSpacing: 0.8,
-                                ),
+                                style: ZendTextStyles.tabularNumeric.copyWith(color: const Color(0x99F0F0F0), fontSize: 11, letterSpacing: 0.8),
                               ),
                               const SizedBox(height: 6),
                               Row(
@@ -440,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Text('Recent', style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
                                     GestureDetector(
                                       onTap: widget.onViewAll,
-                                      child: Text('view all', style: TextStyle(fontFamily: 'DMMono', fontSize: 12, color: zt.accent)),
+                                      child: Text('view all', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent)),
                                     ),
                                   ]);
                                 }),
@@ -553,7 +572,7 @@ class _TransactionRow extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
             Text(amount, style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
             const SizedBox(height: 4),
-            Text(time, style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+            Text(time, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
           ]),
         ]),
       ),
@@ -613,11 +632,7 @@ class _SavingsCard extends StatelessWidget {
                     ? ZendLoader(size: 14, strokeWidth: 1.5, color: zt.textSecondary)
                     : Text(
                         balanceStr,
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 12,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                       ),
               ]),
             ]),

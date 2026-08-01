@@ -100,11 +100,7 @@ class ProfileScreen extends StatelessWidget {
                                       const SizedBox(height: 2),
                                       Text(
                                         zendtag,
-                                        style: TextStyle(
-                                          fontFamily: 'DMMono',
-                                          fontSize: 12,
-                                          color: zt.textSecondary,
-                                        ),
+                                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
                                       ),
                                     ],
                                   ],
@@ -813,6 +809,12 @@ Future<void> _confirmLogout(BuildContext context) async {
 
   final model = ZendScope.of(context);
   await model.dropDiscoverabilityService.pause();
+  // Unregister this device's FCM token before tearing down the session —
+  // otherwise the backend keeps this token associated with the account
+  // being signed out of, and a signed-out device kept receiving that
+  // account's push notifications until FCM eventually reported the token
+  // as stale on some unrelated future send.
+  await model.pushNotificationService.unregisterToken();
   try {
     await model.authService.logout();
     model.resetState();
@@ -923,11 +925,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             'Broadcasting as @${service.currentPayload!.zendtag}',
-                            style: TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 11,
-                              color: zt.accentBright,
-                            ),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accentBright),
                           ),
                         ],
                       ),

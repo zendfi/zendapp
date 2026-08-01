@@ -357,7 +357,7 @@ class _ActiveState extends StatelessWidget {
           _formatUsd(position.currentValueUsd),
           style: TextStyle(
             fontFamily: 'Satoshi',
-            fontSize: 56,
+            fontSize: 48,
             height: 1.04,
             fontWeight: FontWeight.w700,
             color: zt.textPrimary,
@@ -461,12 +461,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: ZendSpacing.xxs),
           Text(
             value,
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: valueColor ?? zt.textPrimary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, fontWeight: FontWeight.w500, color: valueColor ?? zt.textPrimary),
           ),
         ],
       ),

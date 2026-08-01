@@ -266,7 +266,7 @@ class _StatusCard extends StatelessWidget {
           ],
           if (lastCheckedAt != null) ...[
             const SizedBox(height: 8),
-            Text('Last checked: ${_formatDate(lastCheckedAt!)}', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: zt.textSecondary)),
+            Text('Last checked: ${_formatDate(lastCheckedAt!)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
           ],
         ],
       ),

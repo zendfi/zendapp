@@ -285,12 +285,18 @@ class _DetailRow extends StatelessWidget {
               textAlign: TextAlign.end,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: mono ? 'DMMono' : 'Satoshi',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: valueColor ?? zt.textPrimary,
-              ),
+              style: mono
+                  ? ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: valueColor ?? zt.textPrimary,
+                    )
+                  : TextStyle(
+                      fontFamily: 'Satoshi',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: valueColor ?? zt.textPrimary,
+                    ),
             ),
           ),
         ],
@@ -424,11 +430,7 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     Center(
                       child: Text(
                         '$fiatSymbol${_formatFiatValue(fiatAmount, fiatCurrency)} $fiatCurrency',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 15,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, color: zt.textSecondary),
                       ),
                     ),
                   ],

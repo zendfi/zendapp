@@ -164,12 +164,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           ),
                           Text(
                             '${(_pocket.goalProgress ?? 0.0).toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: zt.textPrimary,
-                            ),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
                           ),
                         ],
                       ),
@@ -311,12 +306,7 @@ class _StatRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: TextStyle(
-            fontFamily: 'DMMono',
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: valueColor ?? zt.textPrimary,
-          ),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w500, color: valueColor ?? zt.textPrimary),
         ),
       ],
     );

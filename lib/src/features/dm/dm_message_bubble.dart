@@ -543,7 +543,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
               padding: const EdgeInsets.only(right: 8, bottom: 2),
               child: Text(
                 _exactTime(widget.message.createdAt),
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
               ),
             ),
           Flexible(child: child),
@@ -552,7 +552,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
               padding: const EdgeInsets.only(left: 8, bottom: 2),
               child: Text(
                 _exactTime(widget.message.createdAt),
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
               ),
             ),
         ],
@@ -699,21 +699,13 @@ class _TextBubble extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             'Not encrypted',
-                            style: TextStyle(
-                              fontFamily: 'DMMono',
-                              fontSize: 9.5,
-                              color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
-                            ),
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive),
                           ),
                           const SizedBox(width: 6),
                         ],
                         Text(
                           _formatTime(message.createdAt),
-                          style: TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 10,
-                            color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary),
                         ),
                         if (isMe) ...[
                           const SizedBox(width: 4),
@@ -928,7 +920,7 @@ class DmPaymentBubble extends StatelessWidget {
                         const SizedBox(width: 3),
                         Text(
                           isMe ? 'sent' : 'received',
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4),
                         ),
                       ],
                     ),
@@ -944,7 +936,7 @@ class DmPaymentBubble extends StatelessWidget {
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
+                      child: Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
                     ),
                   ],
                 ),
@@ -1018,7 +1010,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                       Icon(isMe ? SolarIconsBold.billCheck : SolarIconsBold.bill, size: 11, color: accentColor),
                       const SizedBox(width: 3),
                       Text(isMe ? 'you requested' : 'payment request',
-                          style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor, letterSpacing: 0.4)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4)),
                     ]),
                     const SizedBox(height: 2),
                     Text(amountFormatted,
@@ -1045,18 +1037,18 @@ class DmPaymentRequestBubble extends StatelessWidget {
                       Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(SolarIconsBold.clockCircle, size: 11, color: labelColor),
                         const SizedBox(width: 4),
-                        Text('Waiting…', style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
+                        Text('Waiting…', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
                       ])
                     else if (!isPending)
                       Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
                         const SizedBox(width: 4),
-                        Text('Paid', style: TextStyle(fontFamily: 'DMMono', fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
+                        Text('Paid', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
                       ]),
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: Text(_formatTime(message.createdAt), style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: labelColor)),
+                      child: Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
                     ),
                   ],
                 ),
@@ -1183,12 +1175,7 @@ class _ReactionRow extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               '$totalCount',
-              style: TextStyle(
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: reactedByMe ? zt.accent : zt.textSecondary,
-              ),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: reactedByMe ? zt.accent : zt.textSecondary),
             ),
           ],
         ),

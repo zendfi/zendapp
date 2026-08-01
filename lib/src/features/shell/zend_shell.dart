@@ -472,13 +472,7 @@ class _BottomNavIcon extends StatelessWidget {
                         alignment: Alignment.center,
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
-                          style: const TextStyle(
-                            fontFamily: 'DMMono',
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            height: 1.0,
-                          ),
+                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, height: 1.0),
                         ),
                       ),
                     ),

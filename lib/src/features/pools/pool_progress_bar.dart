@@ -143,11 +143,7 @@ class _CircleBar extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'done!',
-                    style: TextStyle(
-                      fontFamily: 'DMMono',
-                      fontSize: size * 0.10,
-                      color: zt.positive,
-                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: size * 0.10, color: zt.positive),
                   ),
                 ],
               ],

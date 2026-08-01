@@ -483,7 +483,7 @@ class _DmInputBarState extends State<DmInputBar>
               Expanded(child: Text('Set amount',
                 style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
               Text('\$0.01 – \$5',
-                style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
             ],
           ),
           const SizedBox(height: 12),
@@ -493,7 +493,7 @@ class _DmInputBarState extends State<DmInputBar>
             Column(
               children: [
                 Text('Swipe up or down to adjust',
-                  style: TextStyle(fontFamily: 'DMMono', fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.5))),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.5))),
                 const SizedBox(height: 8),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -554,12 +554,7 @@ class _DmInputBarState extends State<DmInputBar>
                       ),
                       child: Text(
                         '\$${v.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 11,
-                          color: _vibeAmount == v ? zt.textPrimary : zt.textSecondary,
-                          fontWeight: _vibeAmount == v ? FontWeight.w700 : FontWeight.normal,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: _vibeAmount == v ? zt.textPrimary : zt.textSecondary, fontWeight: _vibeAmount == v ? FontWeight.w700 : FontWeight.normal),
                       ),
                     ),
                   )).toList(),
@@ -628,7 +623,7 @@ class _DmInputBarState extends State<DmInputBar>
                 child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
               Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
-              Text('\$${_vibeAmount.toStringAsFixed(2)}', style: TextStyle(fontFamily: 'DMMono', fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
+              Text('\$${_vibeAmount.toStringAsFixed(2)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 10),
@@ -691,7 +686,7 @@ class _DmInputBarState extends State<DmInputBar>
               border: Border.all(color: const Color(0xFFFF6B9D).withValues(alpha: 0.3)),
             ),
             child: Text('\$${_vibeAmount.toStringAsFixed(2)} hidden ✨',
-              style: const TextStyle(fontFamily: 'DMMono', fontSize: 13, color: Color(0xFFFF6B9D), fontWeight: FontWeight.w600)),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0xFFFF6B9D), fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 4),
           Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
@@ -754,7 +749,7 @@ class _DmInputBarState extends State<DmInputBar>
         onTap: () => _onKeypadTap(k),
         child: Container(
           decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.md)),
-          child: Center(child: Text(k, style: TextStyle(fontFamily: 'DMMono', fontSize: 18, color: k == '⌫' ? zt.accent : zt.textPrimary, fontWeight: FontWeight.w600))),
+          child: Center(child: Text(k, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18, color: k == '⌫' ? zt.accent : zt.textPrimary, fontWeight: FontWeight.w600))),
         ),
       )).toList(),
     );

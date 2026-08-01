@@ -366,11 +366,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
           ),
           Text(
             contribution,
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 13,
-              color: zt.textPrimary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary),
           ),
         ],
       ),

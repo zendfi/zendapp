@@ -213,11 +213,7 @@ class _ProfileContent extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '@${profile.zendtag}',
-                style: TextStyle(
-                  fontFamily: 'DMMono',
-                  fontSize: 13,
-                  color: zt.textSecondary,
-                ),
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
               ),
               if (profile.bio?.isNotEmpty == true) ...[
                 const SizedBox(height: 10),
@@ -457,11 +453,7 @@ class _StreakCard extends StatelessWidget {
                 ),
                 Text(
                   'Longest: $longestStreak weeks',
-                  style: TextStyle(
-                    fontFamily: 'DMMono',
-                    fontSize: 11,
-                    color: zt.textSecondary,
-                  ),
+                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
                 ),
               ],
             ),

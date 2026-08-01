@@ -270,7 +270,7 @@ class _PocketScreenState extends State<PocketScreen> {
           '\$${_totalBalance.toStringAsFixed(2)}',
           style: TextStyle(
             fontFamily: 'Satoshi',
-            fontSize: 56,
+            fontSize: 48,
             height: 1.04,
             fontWeight: FontWeight.w700,
             color: zt.textPrimary,
@@ -500,7 +500,7 @@ class _FreeSavingsCard extends StatelessWidget {
             '\$${balance.toStringAsFixed(2)}',
             style: TextStyle(
               fontFamily: 'Satoshi',
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
             ),
@@ -661,11 +661,7 @@ class GoalCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '\$${balance.toStringAsFixed(2)} / \$${target.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontFamily: 'DMMono',
-                          fontSize: 13,
-                          color: zt.textSecondary,
-                        ),
+                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
                       ),
                     ],
                   ),
@@ -799,7 +795,7 @@ class LockCard extends StatelessWidget {
             '\$${pocket.balanceUsd.toStringAsFixed(2)}',
             style: TextStyle(
               fontFamily: 'Satoshi',
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
             ),

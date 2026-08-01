@@ -107,11 +107,7 @@ class _InfoRow extends StatelessWidget {
           ),
           Text(
             value,
-            style: TextStyle(
-              fontFamily: 'DMMono',
-              fontSize: 13,
-              color: zt.textSecondary,
-            ),
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
           ),
         ],
       ),
