@@ -341,6 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     curve: Curves.elasticOut,
                                     builder: (context, value, _) {
                                       return Text(
+                                        key: const Key('zend-hero-balance-text'),
                                         model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
                                         style: TextStyle(
                                           fontFamily: 'Satoshi',
@@ -383,6 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
+                                  key: const Key('zend-hero-balance-collapsed-text'),
                                   model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontFamily: 'Satoshi',

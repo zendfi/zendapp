@@ -101,6 +101,63 @@ class OutlineActionButton extends StatelessWidget {
   }
 }
 
+/// Slim progress bar spanning the entire onboarding journey (not to be
+/// confused with the 2-dot create/confirm indicator inside PinSetupScreen,
+/// which tracks a *sub*-step within a single screen). Placed at the very
+/// top of each onboarding screen, above the scrollable content, so someone
+/// on "What's your name?" can see at a glance how far through signup they
+/// are instead of navigating blind.
+class OnboardingProgressBar extends StatelessWidget {
+  const OnboardingProgressBar({
+    super.key,
+    required this.step,
+    required this.totalSteps,
+    this.trackColor,
+    this.fillColor,
+  });
+
+  /// 1-based index of the current step (e.g. 1 for the first screen).
+  final int step;
+  final int totalSteps;
+
+  /// Optional overrides — onboarding screens with a permanently-dark
+  /// background (SuccessScreen, PinSetupScreen) pass explicit light-on-dark
+  /// colors here instead of relying on [ZendTheme], since those screens
+  /// stay dark regardless of the app's light/dark theme setting.
+  final Color? trackColor;
+  final Color? fillColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final progress = totalSteps <= 0 ? 0.0 : (step / totalSteps).clamp(0.0, 1.0);
+    final track = trackColor ?? zt.border;
+    final fill = fillColor ?? zt.accent;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
+        child: Container(
+          height: 4,
+          width: double.infinity,
+          color: track,
+          alignment: Alignment.centerLeft,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progress),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+            builder: (context, value, _) => FractionallySizedBox(
+              widthFactor: value,
+              child: Container(height: 4, color: fill),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ZendSheetHandle extends StatelessWidget {
   const ZendSheetHandle({super.key});
 

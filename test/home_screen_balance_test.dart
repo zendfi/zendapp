@@ -103,13 +103,12 @@ void main() {
         ),
       ));
 
-      // The hero balance is the 88pt InstrumentSerif Text — distinguish it
-      // from the smaller "$0.00" labels on the Savings/Pools summary cards,
-      // which are unrelated to this bug and legitimately read a real $0.00
-      // for a pool/savings balance that IS zero in this test's model.
-      Finder heroBalance() => find.byWidgetPredicate(
-            (w) => w is Text && w.style?.fontSize == 88,
-          );
+      // The hero balance Text carries a stable Key (set in home_screen.dart)
+      // so this test doesn't depend on font size/family, which are cosmetic
+      // and have already drifted once (88pt InstrumentSerif -> 72pt Satoshi)
+      // independently of this regression test's actual concern: the
+      // post-frame setState fix below.
+      Finder heroBalance() => find.byKey(const Key('zend-hero-balance-text'));
 
       // First frame: _displayedBalance is still 0.0 (the field's initial
       // value) because the post-frame callback hasn't run yet.

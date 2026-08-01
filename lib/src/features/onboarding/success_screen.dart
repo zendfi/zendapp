@@ -70,7 +70,16 @@ class _SuccessScreenState extends State<SuccessScreen> {
     return Scaffold(
       backgroundColor: ZendColors.bgDeep,
       body: SafeArea(
-        child: Center(
+        child: Column(
+          children: [
+            const OnboardingProgressBar(
+              step: 5,
+              totalSteps: 6,
+              trackColor: Color(0x1AE8F4EC),
+              fillColor: ZendColors.accentPop,
+            ),
+            Expanded(
+              child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: Padding(
@@ -104,7 +113,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'Your payment link is live. Share it anywhere.',
+                    "You're set to send money to anyone, anywhere. Share your @ to get paid too.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0x99F0F0F0),
@@ -123,6 +132,9 @@ class _SuccessScreenState extends State<SuccessScreen> {
               ),
             ),
           ),
+              ),
+            ),
+          ],
         ),
       ),
     );

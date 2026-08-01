@@ -368,13 +368,10 @@ class ZendBottomBar extends StatelessWidget {
     final onSendTab = currentIndex == 1;
     final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: ColoredBox(
-      color: onSendTab
-          ? ZendColors.bgDeep.withValues(alpha: 0.82)
-          : const Color(0xFF0D0D0D).withValues(alpha: 0.76),
+    return ColoredBox(
+      // Solid fill — no backdrop blur. Fully opaque so tab content never
+      // shows through underneath.
+      color: onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -418,8 +415,6 @@ class ZendBottomBar extends StatelessWidget {
           ),
         ],
       ),
-        ),  // close ColoredBox
-        ),  // close ClipRect
     );
   }
 }

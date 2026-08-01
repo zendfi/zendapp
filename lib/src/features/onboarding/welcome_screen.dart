@@ -25,7 +25,7 @@ class WelcomeScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 96),
                     Text(
-                      'Money,\neverywhere.',
+                      'Send money,\nanywhere.',
                       style: TextStyle(
                         fontFamily: 'Satoshi',
                         fontSize: 56,
@@ -36,7 +36,7 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'One link. Every country. Instantly.',
+                      'To anyone, in any country, instantly.',
                       style: TextStyle(fontSize: 16, color: zt.textSecondary, height: 1.35),
                     ),
                     const SizedBox(height: 36),

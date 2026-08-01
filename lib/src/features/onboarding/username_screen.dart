@@ -75,7 +75,11 @@ class _UsernameScreenState extends State<UsernameScreen> {
     return Scaffold(
       backgroundColor: zt.bgPrimary,
       body: SafeArea(
-        child: ZendScrollPage(
+        child: Column(
+          children: [
+            const OnboardingProgressBar(step: 4, totalSteps: 6),
+            Expanded(
+              child: ZendScrollPage(
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -102,12 +106,15 @@ class _UsernameScreenState extends State<UsernameScreen> {
                       const SizedBox(height: 6),
                     ],
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      // Centering (rather than end-aligning) keeps the "@"
+                      // prefix and the validation icon vertically centered
+                      // against the TextField's actual rendered box —
+                      // end-alignment was pinning them to the row's bottom
+                      // edge, which sits below the field's underline border
+                      // and made both look misaligned relative to the input text.
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Text('@', style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 18)),
-                        ),
+                        Text('@', style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 18)),
                         Expanded(
                           child: TextField(
                             controller: _controller,
@@ -118,6 +125,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                             style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
                             decoration: InputDecoration(
                               filled: false,
+                              isDense: true,
                               border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
                               enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
                               focusedBorder: const UnderlineInputBorder(borderSide: BorderSide.none),
@@ -127,17 +135,33 @@ class _UsernameScreenState extends State<UsernameScreen> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          child: _available == null
-                              ? const SizedBox(width: 28, height: 28)
-                              : Text(
-                                  _available! ? '✓' : '✗',
-                                  key: ValueKey<bool>(_available!),
-                                  style: TextStyle(color: _available! ? ZendColors.positive : ZendColors.destructive, fontSize: 24),
-                                ),
+                        // Fixed-size box with a centered Icon (rather than a
+                        // raw ✓/✗ glyph) — glyphs carry inconsistent font
+                        // metrics/descent that made them sit off-center even
+                        // with a matching SizedBox placeholder.
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Center(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: _available == null
+                                  ? const SizedBox.shrink()
+                                  : Icon(
+                                      _available! ? SolarIconsBold.checkCircle : SolarIconsBold.closeCircle,
+                                      key: ValueKey<bool>(_available!),
+                                      color: _available! ? ZendColors.positive : ZendColors.destructive,
+                                      size: 22,
+                                    ),
+                            ),
+                          ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "This is how people find you on Zend! — share it to get paid.",
+                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary, height: 1.4),
                     ),
                     const SizedBox(height: 16),
                     _PreviewCard(username: username),
@@ -153,6 +177,9 @@ class _UsernameScreenState extends State<UsernameScreen> {
               ),
             ),
           ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -181,7 +208,7 @@ class _PreviewCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your Zend Link', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              Text('Your Zend! tag', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
               const SizedBox(height: 2),
               Text('zdfi.me/', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
               Text(safeUsername, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),

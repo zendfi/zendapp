@@ -28,7 +28,6 @@ class LoadingOverlay extends StatelessWidget {
               }),
               LoaderScreen(
                 message: model.loadingMessage,
-                showLogo: true,
               ),
             ],
           ],

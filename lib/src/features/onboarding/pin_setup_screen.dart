@@ -156,7 +156,19 @@ class _PinSetupScreenState extends State<PinSetupScreen>
     return Scaffold(
       backgroundColor: ZendColors.bgDeep,
       body: SafeArea(
-        child: Padding(
+        child: Column(
+          children: [
+            // Overall onboarding progress (final step) — distinct from the
+            // 2-dot create/confirm indicator below, which only tracks this
+            // screen's own sub-steps.
+            const OnboardingProgressBar(
+              step: 6,
+              totalSteps: 6,
+              trackColor: Color(0x1AE8F4EC),
+              fillColor: ZendColors.accentPop,
+            ),
+            Expanded(
+              child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
@@ -260,6 +272,9 @@ class _PinSetupScreenState extends State<PinSetupScreen>
               SizedBox(height: compact ? 12 : 24),
             ],
           ),
+              ),
+            ),
+          ],
         ),
       ),
     );

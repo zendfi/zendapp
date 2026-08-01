@@ -7,11 +7,9 @@ class LoaderScreen extends StatelessWidget {
   const LoaderScreen({
     super.key,
     this.message = 'Loading',
-    this.showLogo = true,
   });
 
   final String message;
-  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -24,20 +22,15 @@ class LoaderScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (showLogo)
-                  Column(
-                    children: [
-                      Image.asset(
-                        'assets/logo/Zend.png',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 18),
-                    ],
-                  ),
+                // The spinner is the main event here — sized up from the
+                // usual inline 22px so it reads as the focal point of the
+                // screen, with the status message legible underneath it
+                // rather than competing with a logo above.
+                const ZendLoader(size: 40, strokeWidth: 3),
+                const SizedBox(height: 20),
                 Text(
                   message,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontFamily: 'Satoshi',
                     fontSize: 14,
@@ -45,8 +38,6 @@ class LoaderScreen extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 14),
-                ZendLoader(),
               ],
             ),
           ),

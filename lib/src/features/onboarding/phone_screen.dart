@@ -144,7 +144,11 @@ class _PhoneScreenState extends State<PhoneScreen> {
     return Scaffold(
       backgroundColor: zt.bgPrimary,
       body: SafeArea(
-        child: ZendScrollPage(
+        child: Column(
+          children: [
+            const OnboardingProgressBar(step: 1, totalSteps: 6),
+            Expanded(
+              child: ZendScrollPage(
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -216,6 +220,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
               ),
             ),
           ),
+              ),
+            ),
+          ],
         ),
       ),
     );

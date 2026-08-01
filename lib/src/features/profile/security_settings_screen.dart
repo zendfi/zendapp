@@ -21,9 +21,10 @@ import 'package:solar_icons/solar_icons.dart';
 /// - Biometric unlock (toggle, hidden on unsupported devices)
 /// - Require PIN on every payment (toggle)
 /// - Require PIN above amount (toggle + amount input)
-/// - Export wallet
-///   - Export encrypted backup
-///   - View recovery phrase
+/// - Backup
+///   - Back up my account (encrypted backup, plain-language framing)
+///   - View secret recovery phrase (the underlying crypto-native option,
+///     kept available but no longer the headline action)
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
 
@@ -38,8 +39,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
   bool _pinPerPaymentEnabled = false;
-  bool _pinThresholdEnabled = false;
-  double? _pinThresholdAmount;
+  // Both threshold fields now default to the "PIN above a threshold" ON
+  // state that SigningPolicyService applies for anyone who hasn't
+  // explicitly touched this setting yet.
+  bool _pinThresholdEnabled = true;
+  double _pinThresholdAmount = SigningPolicyService.defaultPinThresholdAmount;
   bool _loading = true;
   bool _hasRecoveryBackup = false;
 
@@ -76,10 +80,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       _pinThresholdEnabled = snapshot.pinThresholdEnabled;
       _pinThresholdAmount = snapshot.pinThresholdAmount;
       _hasRecoveryBackup = hasRecovery;
-      if (snapshot.pinThresholdAmount != null) {
-        _thresholdController.text =
-            snapshot.pinThresholdAmount!.toStringAsFixed(0);
-      }
+      _thresholdController.text = snapshot.pinThresholdAmount.toStringAsFixed(0);
       _loading = false;
     });
   }
@@ -177,14 +178,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   Future<void> _togglePinThreshold(bool value) async {
     if (value) {
-      // Enabling — use existing amount if set, otherwise default to 500
-      final amount = _pinThresholdAmount ?? 500.0;
-      await _policy.setPinThreshold(amount: amount);
+      // Enabling — use existing amount if set, otherwise default
+      await _policy.setPinThreshold(amount: _pinThresholdAmount);
       if (!mounted) return;
       setState(() {
         _pinThresholdEnabled = true;
-        _pinThresholdAmount = amount;
-        _thresholdController.text = amount.toStringAsFixed(0);
+        _thresholdController.text = _pinThresholdAmount.toStringAsFixed(0);
       });
     } else {
       await _policy.disablePinThreshold();
@@ -298,9 +297,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         ),
                         _ToggleTile(
                           icon: SolarIconsBold.billCheck,
-                          label: 'Require PIN above amount',
-                          subtitle: _pinThresholdEnabled && _pinThresholdAmount != null
-                              ? 'PIN required for sends over \$${_pinThresholdAmount!.toStringAsFixed(0)}'
+                          label: 'Require PIN for larger sends',
+                          subtitle: _pinThresholdEnabled
+                              ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
                               : 'PIN required for sends over a set amount',
                           value: _pinThresholdEnabled,
                           zt: zt,
@@ -324,9 +323,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         child: Text(
                           _pinPerPaymentEnabled
                               ? 'PIN is required before every send.'
-                              : _pinThresholdEnabled && _pinThresholdAmount != null
-                                  ? 'Sends below \$${_pinThresholdAmount!.toStringAsFixed(0)} use session signing. PIN required above.'
-                                  : 'Sends use session signing after app unlock. No extra PIN needed.',
+                              : _pinThresholdEnabled
+                                  ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
+                                  : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
                           style: TextStyle(
                             fontFamily: 'Satoshi',
                             fontSize: 12,
@@ -336,8 +335,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Recovery section ─────────────────────────────
-                      _SectionLabel('PIN Recovery', zt),
+                      // ── Forgot-PIN recovery section ───────────────────
+                      _SectionLabel('If you forget your PIN', zt),
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
@@ -345,7 +344,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               ? SolarIconsBold.verifiedCheck
                               : SolarIconsBold.shieldMinimalistic,
                           label: _hasRecoveryBackup
-                              ? 'Update recovery backup'
+                              ? 'Update ID verification'
                               : 'Set up PIN recovery',
                           zt: zt,
                           onTap: () {
@@ -366,8 +365,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
                           _hasRecoveryBackup
-                              ? 'Recovery backup is active. If you forget your PIN, you can recover using your government ID.'
-                              : 'Set up recovery so you can regain wallet access if you forget your PIN.',
+                              ? "PIN recovery is set up. If you forget your PIN, you can verify your ID to get back in."
+                              : "Set this up once so you're never locked out if you forget your PIN.",
                           style: TextStyle(
                             fontFamily: 'Satoshi',
                             fontSize: 12,
@@ -377,20 +376,20 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // ── Export wallet section ────────────────────────
-                      _SectionLabel('Export wallet', zt),
+                      // ── Backup section ────────────────────────────────
+                      _SectionLabel('Backup', zt),
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
                           icon: SolarIconsBold.download,
-                          label: 'Export encrypted backup',
+                          label: 'Back up my account',
                           zt: zt,
                           onTap: () => pushZendSlide(
                               context, const ExportBackupScreen()),
                         ),
                         _Tile(
                           icon: SolarIconsBold.key,
-                          label: 'View recovery phrase',
+                          label: 'View secret recovery phrase',
                           zt: zt,
                           onTap: () => pushZendSlide(
                               context, const RecoveryPhraseScreen()),
@@ -400,7 +399,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
-                          'Back up your wallet before switching devices.',
+                          "Save a backup before switching phones so you don't lose access to your money.",
                           style: TextStyle(
                             fontFamily: 'Satoshi',
                             fontSize: 12,

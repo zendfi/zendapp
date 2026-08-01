@@ -47,17 +47,32 @@ class SigningPolicyService {
 
   // ── Amount threshold ───────────────────────────────────────────────────────
 
-  /// Returns true if the user has enabled PIN above a threshold amount.
+  /// Default threshold amount (USDC) used the first time a user ever sees
+  /// this setting — i.e. when nothing has been persisted yet.
+  static const double defaultPinThresholdAmount = 500.0;
+
+  /// Returns true if PIN-above-amount is active.
+  ///
+  /// Defaults to ON for anyone who has never touched this setting — a money
+  /// app should require a PIN above some threshold out of the box, matching
+  /// what banking/Venmo-style users already expect. Once the user has
+  /// explicitly toggled it (on or off), that choice is persisted and always
+  /// wins over the default.
   Future<bool> get pinThresholdEnabled async {
     final v = await _storage.read(key: _pinThresholdEnabledKey);
+    if (v == null) return true;
     return v == 'true';
   }
 
-  /// Returns the configured threshold amount in USDC, or null if not set.
-  Future<double?> get pinThresholdAmount async {
+  /// Returns the configured threshold amount in USDC.
+  ///
+  /// Falls back to [defaultPinThresholdAmount] when nothing has been saved
+  /// yet, so the default-on threshold above actually has a value to compare
+  /// against before the user ever opens Settings.
+  Future<double> get pinThresholdAmount async {
     final v = await _storage.read(key: _pinThresholdAmountKey);
-    if (v == null) return null;
-    return double.tryParse(v);
+    if (v == null) return defaultPinThresholdAmount;
+    return double.tryParse(v) ?? defaultPinThresholdAmount;
   }
 
   /// Enables the amount threshold with the given [amount] in USDC.
@@ -86,7 +101,7 @@ class SigningPolicyService {
     // 2. Amount threshold
     if (await pinThresholdEnabled) {
       final threshold = await pinThresholdAmount;
-      if (threshold != null && amount >= threshold) return true;
+      if (amount >= threshold) return true;
     }
 
     // 3. Session signing — no PIN needed
@@ -96,16 +111,21 @@ class SigningPolicyService {
   // ── Snapshot ───────────────────────────────────────────────────────────────
 
   /// Reads all settings in a single pass for use in Settings UI.
+  ///
+  /// Goes through the [pinThresholdEnabled]/[pinThresholdAmount] getters
+  /// (rather than reading storage directly) so the default-on threshold
+  /// and its default amount are reflected here too, not just in the
+  /// send-time decision in [requiresPinForAmount].
   Future<SigningPolicySnapshot> snapshot() async {
     final values = await Future.wait([
-      _storage.read(key: _pinPerPaymentKey),
-      _storage.read(key: _pinThresholdEnabledKey),
-      _storage.read(key: _pinThresholdAmountKey),
+      pinPerPaymentEnabled,
+      pinThresholdEnabled,
+      pinThresholdAmount,
     ]);
     return SigningPolicySnapshot(
-      pinPerPaymentEnabled: values[0] == 'true',
-      pinThresholdEnabled: values[1] == 'true',
-      pinThresholdAmount: values[2] != null ? double.tryParse(values[2]!) : null,
+      pinPerPaymentEnabled: values[0] as bool,
+      pinThresholdEnabled: values[1] as bool,
+      pinThresholdAmount: values[2] as double,
     );
   }
 
@@ -145,5 +165,9 @@ class SigningPolicySnapshot {
 
   final bool pinPerPaymentEnabled;
   final bool pinThresholdEnabled;
-  final double? pinThresholdAmount;
+
+  /// Always has a value now — defaults to
+  /// [SigningPolicyService.defaultPinThresholdAmount] when the user has
+  /// never set one explicitly.
+  final double pinThresholdAmount;
 }

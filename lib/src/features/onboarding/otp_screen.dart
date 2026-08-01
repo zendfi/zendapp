@@ -233,7 +233,11 @@ class _OtpScreenState extends State<OtpScreen> {
     return Scaffold(
       backgroundColor: zt.bgPrimary,
       body: SafeArea(
-        child: ZendScrollPage(
+        child: Column(
+          children: [
+            const OnboardingProgressBar(step: 2, totalSteps: 6),
+            Expanded(
+              child: ZendScrollPage(
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -306,6 +310,9 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
           ),
+              ),
+            ),
+          ],
         ),
       ),
     );
