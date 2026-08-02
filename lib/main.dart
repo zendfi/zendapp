@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'app.dart';
@@ -28,7 +29,17 @@ import 'src/services/email_intent_service.dart';
 const kApiBaseUrl = 'https://api-v2.zendfi.tech';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Keep the native (pre-Flutter-engine) splash on screen past Flutter's
+  // first frame — normally it's dismissed the instant Flutter paints
+  // anything, which used to hand off to our separate Dart SplashScreen
+  // widget. That handoff is an uncontrollable hard cut (Flutter dropped the
+  // old crossfade mechanism), so instead we hold the *native* splash in
+  // place for the whole session-restore sequence and call
+  // FlutterNativeSplash.remove() once _SplashWithSessionRestore in app.dart
+  // has actually decided where to navigate. Net effect: one splash, not two.
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Catch any Flutter framework errors and log them instead of crashing silently
   FlutterError.onError = (FlutterErrorDetails details) {

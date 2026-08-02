@@ -395,14 +395,6 @@ class ZendBottomBar extends StatelessWidget {
         : zt.textSecondary.withValues(alpha: 0.7);
     final badgeBorderColor = barColor;
 
-    // Pill background for the balance chip — gives it the same visual mass
-    // as the icon glyphs beside it instead of floating as bare text. Tints
-    // toward the accent color when active, same as the active dot below it.
-    final pillFill = onSendTab ? const Color(0x14F0F0F0) : zt.bgSecondary;
-    final pillBorder = onSendTab ? const Color(0x22F0F0F0) : zt.border;
-    final activePillFill = activeColor.withValues(alpha: onSendTab ? 0.18 : 0.14);
-    final activePillBorder = activeColor.withValues(alpha: onSendTab ? 0.35 : 0.30);
-
     return ColoredBox(
       // Solid fill — no backdrop blur. Fully opaque so tab content never
       // shows through underneath.
@@ -425,10 +417,6 @@ class ZendBottomBar extends StatelessWidget {
                     onTap: () => onChanged(0),
                     activeColor: activeColor,
                     inactiveColor: inactiveColor,
-                    pillFill: pillFill,
-                    pillBorder: pillBorder,
-                    activePillFill: activePillFill,
-                    activePillBorder: activePillBorder,
                   ),
                   _BottomNavIcon(
                     icon: SolarIconsBold.dollar,
@@ -569,12 +557,12 @@ class _BottomNavIcon extends StatelessWidget {
   }
 }
 
-/// Home-tab item — shows the user's current spendable balance as a pill
-/// chip (e.g. "$10", "$0.16") instead of a static wallet icon, Cash
-/// App-style. The pill background gives it the same visual mass as the
-/// icon glyphs beside it, and it swaps to an eye-closed glyph — rather than
-/// bare "••••" text — when the user has hidden their balance, so the
-/// hidden state still reads as an icon rather than a masked label.
+/// Home-tab item — shows the user's current spendable balance as text
+/// (e.g. "$10", "$0.16") instead of a static wallet icon, Cash App-style.
+/// No pill/chip background — sits bare like the icon glyphs beside it. It
+/// swaps to an eye-closed glyph — rather than bare "••••" text — when the
+/// user has hidden their balance, so the hidden state still reads as an
+/// icon rather than a masked label.
 class _BalanceNavItem extends StatelessWidget {
   const _BalanceNavItem({
     required this.balance,
@@ -583,10 +571,6 @@ class _BalanceNavItem extends StatelessWidget {
     required this.onTap,
     required this.activeColor,
     required this.inactiveColor,
-    required this.pillFill,
-    required this.pillBorder,
-    required this.activePillFill,
-    required this.activePillBorder,
   });
 
   final double balance;
@@ -595,16 +579,10 @@ class _BalanceNavItem extends StatelessWidget {
   final VoidCallback onTap;
   final Color activeColor;
   final Color inactiveColor;
-  final Color pillFill;
-  final Color pillBorder;
-  final Color activePillFill;
-  final Color activePillBorder;
 
   @override
   Widget build(BuildContext context) {
     final color = active ? activeColor : inactiveColor;
-    final fill = active ? activePillFill : pillFill;
-    final border = active ? activePillBorder : pillBorder;
 
     return GestureDetector(
       onTap: onTap,
@@ -614,45 +592,41 @@ class _BalanceNavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Pill chip — same 34px height as the icon box on the other
-            // three nav items, so the row stays visually aligned.
-            Container(
+            // Same 34px box as the icon glyphs on the other three nav
+            // items, so the row stays visually aligned — but no
+            // background/border here, matching their bare-glyph look.
+            SizedBox(
               height: 34,
-              constraints: const BoxConstraints(minWidth: 34, maxWidth: 64),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: fill,
-                borderRadius: BorderRadius.circular(17),
-                border: Border.all(color: border),
-              ),
-              alignment: Alignment.center,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: hidden
-                      ? Icon(
-                          SolarIconsBold.eyeClosed,
-                          key: const ValueKey('hidden-icon'),
-                          size: 18,
-                          color: color,
-                        )
-                      : Text(
-                          _formatNavBalance(balance),
-                          key: ValueKey(balance.toStringAsFixed(2)),
-                          style: ZendTextStyles.tabularNumeric.copyWith(
-                            // Slightly larger than the original 16px — the
-                            // 26px icon glyphs on the other three tabs read
-                            // heavier than plain 16px digits at the same
-                            // fontWeight, so bumping to 17px + tabular
-                            // figures keeps the balance chip's optical
-                            // weight in the same range as its siblings.
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
+              width: 64,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: hidden
+                        ? Icon(
+                            SolarIconsBold.eyeClosed,
+                            key: const ValueKey('hidden-icon'),
+                            size: 26,
                             color: color,
-                            height: 1.0,
+                          )
+                        : Text(
+                            _formatNavBalance(balance),
+                            key: ValueKey(balance.toStringAsFixed(2)),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              // Slightly larger than the original 16px — the
+                              // 26px icon glyphs on the other three tabs read
+                              // heavier than plain 16px digits at the same
+                              // fontWeight, so bumping to 17px + tabular
+                              // figures keeps the balance text's optical
+                              // weight in the same range as its siblings.
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                              height: 1.0,
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),

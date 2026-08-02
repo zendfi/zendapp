@@ -142,11 +142,16 @@ dependencies:
   # Solar Icons — Bold style (7000+ icons, drop-in replacement for Material Icons)
   solar_icons: ^0.1.0
 
+  # Keeps the native (pre-Flutter-engine) splash screen on-screen through
+  # session restore via FlutterNativeSplash.preserve()/.remove() in
+  # main.dart/app.dart — moved out of dev_dependencies since it's now called
+  # at runtime, not just as a build-time asset generator.
+  flutter_native_splash: ^2.4.7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.7
   drift_dev: ^2.18.0
   build_runner: ^2.4.0
 
@@ -174,6 +179,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/logo/Zend.png
+    - assets/logo/Zend-splash.png
     - assets/sounds/
     - assets/countries/
     - assets/countries/flags/
@@ -243,16 +249,25 @@ flutter_launcher_icons:
 # not the brand deep-green (ZendColors.bgDeep), so the dark-green logo
 # always has contrast to pop against instead of nearly disappearing into a
 # same-hued green backdrop.
+#
+# Uses Zend-splash.png (a padded/centered version of the icon), NOT the raw
+# Zend.png — the raw icon fills ~98% of its canvas edge-to-edge (that's
+# correct for an app icon, which is itself masked/inset by the OS), so
+# using it directly as the splash image renders a logo that fills the
+# entire screen. Zend-splash.png centers the same logo on a much larger
+# transparent canvas so it renders at roughly the same visual size as the
+# logo in the Dart SplashScreen widget, avoiding a visible size jump
+# between the native splash and the Dart splash that follows it.
 flutter_native_splash:
   color: "#FAFAF7"
   color_dark: "#0D0D0D"
-  image: assets/logo/Zend.png
-  image_dark: assets/logo/Zend.png
+  image: assets/logo/Zend-splash.png
+  image_dark: assets/logo/Zend-splash.png
   android_12:
     color: "#FAFAF7"
     color_dark: "#0D0D0D"
-    image: assets/logo/Zend.png
-    image_dark: assets/logo/Zend.png
+    image: assets/logo/Zend-splash.png
+    image_dark: assets/logo/Zend-splash.png
   android: true
   ios: true
   web: false

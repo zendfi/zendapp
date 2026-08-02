@@ -1,16 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
+import 'src/design/zend_tokens.dart';
 import 'src/services/auth_service.dart' show SessionValidation;
 import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
-import 'src/features/onboarding/splash_screen.dart';
 import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
@@ -561,7 +561,7 @@ class _SplashWithSessionRestoreState
     if (!mounted) return;
 
     if (validation == SessionValidation.invalid) {
-      pushReplacementZendSlide(context, const WelcomeScreen());
+      _finishSplashAndNavigate(const WelcomeScreen());
       return;
     }
 
@@ -580,22 +580,38 @@ class _SplashWithSessionRestoreState
       final needsMigration = await widget.model.walletService.needsMigration();
       if (!mounted) return;
       if (needsMigration) {
-        pushReplacementZendSlide(context, const PinMigrationScreen());
+        _finishSplashAndNavigate(const PinMigrationScreen());
       } else {
-        pushReplacementZendSlide(context, const DeviceUnlockScreen());
+        _finishSplashAndNavigate(const DeviceUnlockScreen());
       }
     } else if (hasLocalKeypair) {
       // Keypair generated but PIN not yet set — do NOT arm lock
       widget.model.appLockService.pinIsAvailable = false;
-      pushReplacementZendSlide(context, const PinSetupScreen());
+      _finishSplashAndNavigate(const PinSetupScreen());
     } else {
       // No keypair at all — do NOT arm lock
       widget.model.appLockService.pinIsAvailable = false;
-      pushReplacementZendSlide(context, const PinRestoreScreen());
+      _finishSplashAndNavigate(const PinRestoreScreen());
     }
   }
+
+  /// Removes the native splash screen (held on-screen since main() via
+  /// FlutterNativeSplash.preserve()) and navigates to [page] in the same
+  /// beat — so the native splash is the only splash the user ever sees;
+  /// there's no separate Dart SplashScreen widget to hand off to first.
+  void _finishSplashAndNavigate(Widget page) {
+    FlutterNativeSplash.remove();
+    pushReplacementZendSlide(context, page);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const SplashScreen();
+    // Rendered only for the brief window between the native splash being
+    // removed (see _finishSplashAndNavigate) and the replacement route's
+    // push animation completing — kept as a plain themed surface (no logo,
+    // no text) since the native splash is what the user actually perceives
+    // as "the splash screen" for the whole session-restore duration.
+    final zt = ZendTheme.of(context);
+    return Scaffold(backgroundColor: zt.bgPrimary);
   }
 }
