@@ -53,6 +53,18 @@ class E2eeService {
   // Cache derived symmetric keys per room to avoid re-deriving on every message
   final _keyCache = <String, SecretKey>{};
 
+  /// Cache of counterparty Ed25519 pubkeys by user ID.
+  ///
+  /// A wallet's pubkey never changes once registered, so this is safe to
+  /// cache for the lifetime of the session. Only successful lookups are
+  /// cached — a counterparty who genuinely hasn't registered a key yet (or
+  /// a transient network failure) is retried on the next call instead of
+  /// being remembered as permanently unavailable. This matters most for the
+  /// DM list preview, which resolves this for every encrypted thread on
+  /// every load — without it, opening the Chats tab would re-fetch the same
+  /// pubkeys over the network every single time.
+  final _pubkeyCache = <String, String>{};
+
   /// Set once [registerPubkey] has succeeded for the current session, so
   /// repeated calls (every unlock, every DM thread open) short-circuit
   /// instead of re-hitting the network for a key that's already published.
@@ -124,10 +136,15 @@ class E2eeService {
   /// (they're on an old app version or haven't opened the app since E2EE launch),
   /// or if the request keeps failing after one retry (transient network blip).
   Future<String?> fetchCounterpartyPubkey(String userId) async {
+    final cached = _pubkeyCache[userId];
+    if (cached != null) return cached;
+
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final resp = await _apiClient.dio.get('/api/zend/users/$userId/pubkey');
-        return resp.data['ed25519_public_key'] as String?;
+        final pubkey = resp.data['ed25519_public_key'] as String?;
+        if (pubkey != null) _pubkeyCache[userId] = pubkey;
+        return pubkey;
       } catch (_) {
         if (attempt == 0) {
           await Future.delayed(const Duration(milliseconds: 400));
@@ -294,6 +311,7 @@ class E2eeService {
   /// user may sign in on the same app instance and must publish their own key.
   void clearCache() {
     _keyCache.clear();
+    _pubkeyCache.clear();
     _pubkeyRegisteredThisSession = false;
   }
 

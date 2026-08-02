@@ -306,17 +306,27 @@ class _SendScreenState extends State<SendScreen>
 
                               AnimatedSwitcher(
                                 duration: ZendMotion.amountTick,
+                                // Key only on _inputMode (not _digits) so
+                                // typing a digit doesn't tear down and
+                                // rebuild the whole display via
+                                // AnimatedSwitcher's cross-fade — that would
+                                // replay the bounce on every already-settled
+                                // digit, not just the newly typed one.
+                                // _UsdAmountDisplay keeps its identity across
+                                // keystrokes and each digit inside animates
+                                // independently via keyed _BouncyDigit
+                                // children (see _BouncyDigits below).
                                 child: _inputMode == _InputMode.usd
                                     ? _UsdAmountDisplay(
-                                        key: ValueKey('$_digits$_inputMode'),
+                                        key: const ValueKey('usd-amount'),
                                         wholePart: _wholePart,
                                         decimalPart: _decimalPart,
                                         hasDecimal: _hasDecimal,
                                         compact: compact,
                                       )
-                                    : Text(
-                                        _primaryDisplay,
-                                        key: ValueKey<String>(_primaryDisplay),
+                                    : _BouncyDigits(
+                                        key: const ValueKey('ngn-amount'),
+                                        text: _primaryDisplay,
                                         style: TextStyle(
                                           fontFamily: 'Satoshi',
                                           fontWeight: FontWeight.w700,
@@ -864,8 +874,12 @@ class _UsdAmountDisplay extends StatelessWidget {
           padding: EdgeInsets.only(top: wholeSize * 0.08),
           child: Text('\$', style: currencyStyle),
         ),
-        // Whole part
-        Text(wholePart.isEmpty ? '0' : wholePart, style: wholeStyle),
+        // Whole part — each digit gets its own bouncy pop-in animation
+        // rather than the whole string appearing flatly.
+        _BouncyDigits(
+          text: wholePart.isEmpty ? '0' : wholePart,
+          style: wholeStyle,
+        ),
         // Decimal part — shown top-right when decimal is active
         if (hasDecimal) ...[
           const SizedBox(width: 2),
@@ -889,8 +903,8 @@ class _UsdAmountDisplay extends StatelessWidget {
                       height: 1.0,
                     ),
                   ),
-                  Text(
-                    decimalPart == null || decimalPart!.isEmpty ? '—' : decimalPart!,
+                  _BouncyDigits(
+                    text: decimalPart == null || decimalPart!.isEmpty ? '—' : decimalPart!,
                     style: decStyle,
                   ),
                 ],
@@ -899,6 +913,86 @@ class _UsdAmountDisplay extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Renders [text] one character at a time, each in its own [_BouncyDigit]
+/// keyed by its position + character so that newly-typed digits play a
+/// spring-in animation while already-settled digits stay put instead of
+/// replaying the animation on every keystroke.
+class _BouncyDigits extends StatelessWidget {
+  const _BouncyDigits({super.key, required this.text, required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < text.length; i++)
+          _BouncyDigit(
+            // Keying on index+char means a digit that's replaced (e.g. the
+            // leading zero swapped for a typed digit) still re-triggers the
+            // bounce, while digits that just shift position because a new
+            // one was appended after them do not replay.
+            key: ValueKey('$i-${text[i]}'),
+            char: text[i],
+            style: style,
+          ),
+      ],
+    );
+  }
+}
+
+/// A single character that pops in with a slight overshoot ("bouncy") scale
+/// + fade when it first mounts, using Curves.elasticOut — the same bouncy
+/// precedent already used for the success checkmark in
+/// send_flow_sheet.dart's email-intent success stage.
+class _BouncyDigit extends StatefulWidget {
+  const _BouncyDigit({super.key, required this.char, required this.style});
+
+  final String char;
+  final TextStyle style;
+
+  @override
+  State<_BouncyDigit> createState() => _BouncyDigitState();
+}
+
+class _BouncyDigitState extends State<_BouncyDigit>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      alignment: Alignment.bottomCenter,
+      child: FadeTransition(
+        opacity: _controller.drive(CurveTween(curve: Curves.easeOut)),
+        child: Text(widget.char, style: widget.style),
+      ),
     );
   }
 }

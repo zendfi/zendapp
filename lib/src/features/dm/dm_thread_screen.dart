@@ -61,6 +61,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _loadError = false;
   bool _theyAreTyping = false;
   bool _theyAreRecording = false;  // "recording audio..." indicator
+  // WS connection banner state — mirrors mission_room.dart's pattern.
+  // Previously the DM thread never surfaced any of this even though
+  // PoolWebSocketService (which DmWebSocketService wraps) already exposes
+  // a connectionState notifier: a WS that silently dropped and started
+  // backing off gave the user zero indication that live delivery had
+  // stopped, and after 5 consecutive failures it stops retrying entirely
+  // until the next app resume — with nothing telling the user why messages
+  // stopped arriving.
+  bool _hasConnectedOnce = false;
+  bool _showReconnecting = false;
   // Counterparty presence
   bool? _counterpartyOnline;        // null = unknown, true = online, false = offline
   DateTime? _counterpartyLastSeen;  // null = hidden by privacy setting
@@ -78,6 +88,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   String? _nextCursor;
   bool _loadingMore = false;
   bool _showScrollToBottom = false;
+  // Count of counterparty messages that arrived while the user was scrolled
+  // away from the bottom. Previously the scroll-to-bottom button was purely
+  // scroll-position-driven — it gave zero indication that new content had
+  // actually arrived below versus just "you happen to be scrolled up",
+  // unlike most chat apps' "N new messages ↓" badge. Reset to 0 whenever
+  // the user scrolls back near the bottom or taps the button.
+  int _unseenWhileScrolledUp = 0;
   bool _showTimestamps = false;      // revealed by left-edge swipe
   DmMessage? _replyingTo;           // the message being replied to
 
@@ -164,6 +181,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       getToken: () => model.walletService.apiClient.getToken(),
       apiClient: model.walletService.apiClient,
     );
+    _ws.connectionState.addListener(_onConnectionStateChanged);
     _ws.connect();
 
     _wsSub = _ws.frames.listen((frame) {
@@ -176,6 +194,24 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           if (model.dmService.isRoomCleared(widget.roomId) &&
               msg.senderUserId != model.currentUserId) {
             model.dmService.unmarkCleared(widget.roomId);
+          }
+          // Defensively clear the typing indicator when the counterparty's
+          // message actually arrives. The server sends "typing: false" and
+          // "message" as two separate frames — if the "stopped typing"
+          // frame is delayed or dropped relative to the message itself
+          // (plausible under any latency jitter), the indicator would
+          // otherwise sit there next to the now-delivered message until
+          // its 4s auto-clear timeout expires.
+          if (msg.senderUserId != model.currentUserId && _theyAreTyping) {
+            _typingClearTimer?.cancel();
+            setState(() => _theyAreTyping = false);
+          }
+          // If the counterparty's message arrives while the user is
+          // scrolled away from the bottom, bump the unseen counter so the
+          // scroll-to-bottom button can surface it as a "N new" badge
+          // instead of leaving the user unaware anything new landed.
+          if (msg.senderUserId != model.currentUserId && _showScrollToBottom) {
+            _unseenWhileScrolledUp++;
           }
           // Decrypt E2EE content inline before displaying
           if (msg.content != null && msg.content!.startsWith('e2ee:')) {
@@ -311,6 +347,29 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     });
   }
 
+  void _onConnectionStateChanged() {
+    if (!mounted) return;
+    final state = _ws.connectionState.value;
+    final shouldShow = _hasConnectedOnce &&
+        (state == WsConnectionState.reconnecting ||
+            state == WsConnectionState.disconnected);
+    if (shouldShow != _showReconnecting) {
+      setState(() => _showReconnecting = shouldShow);
+    }
+    if (state == WsConnectionState.connected) {
+      final wasReconnect = _hasConnectedOnce;
+      _hasConnectedOnce = true;
+      if (_showReconnecting) setState(() => _showReconnecting = false);
+      // Resync on every successful (re)connect, not just on app resume.
+      // Previously a WS that dropped and reconnected while the app stayed
+      // foregrounded (a plain transient blip, well under the 5-failure
+      // give-up threshold) never re-triggered _loadMessages() — any
+      // messages the counterparty sent during that gap were simply never
+      // fetched until the next full app resume or thread reopen.
+      if (wasReconnect) _loadMessages();
+    }
+  }
+
   Future<void> _loadMessages({bool more = false}) async {
     // If the user cleared this room, don't reload from server — show empty.
     // New incoming WS messages will populate it naturally and unmark the clear.
@@ -352,9 +411,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         await _decryptMessages(_messages);
         if (mounted) setState(() {});
       }
-      // Mark as read
-      if (_messages.isNotEmpty) {
-        model.dmService.markRead(widget.roomId, _messages.first.id);
+      // Mark as read. Must use the newest message with a real server ID —
+      // `_messages.first` can be a locally-pending optimistic message (the
+      // merge above always re-inserts local-only messages at index 0,
+      // ahead of the fetched history) whose `id` is a `local-<uuid>`
+      // string, not a real server message UUID. Sending that as
+      // `last_message_id` to the read-receipt endpoint would either fail
+      // server-side or, worse, silently not advance the read cursor past
+      // the actual latest real message — and the failure was previously
+      // swallowed by markRead's own catch, so this could go unnoticed
+      // indefinitely.
+      final latestReal = _messages.where((m) => !m.id.startsWith('local-')).firstOrNull;
+      if (latestReal != null) {
+        model.dmService.markRead(widget.roomId, latestReal.id);
       }
     } catch (_) {
       if (mounted) {
@@ -381,7 +450,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // Show scroll-to-bottom button when scrolled up more than 200px
     final shouldShow = _scrollController.position.pixels > 200;
     if (shouldShow != _showScrollToBottom) {
-      setState(() => _showScrollToBottom = shouldShow);
+      setState(() {
+        _showScrollToBottom = shouldShow;
+        if (!shouldShow) _unseenWhileScrolledUp = 0;
+      });
     }
   }
 
@@ -720,20 +792,50 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         opacity: _showScrollToBottom ? 1.0 : 0.0,
         duration: const Duration(milliseconds: 180),
         child: GestureDetector(
-          onTap: () => _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          ),
-          child: Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              shape: BoxShape.circle,
-              border: Border.all(color: zt.border),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
-            ),
-            child: Icon(SolarIconsBold.altArrowDown, size: 18, color: zt.textSecondary),
+          onTap: () {
+            setState(() => _unseenWhileScrolledUp = 0);
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: zt.bgSecondary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: zt.border),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Icon(SolarIconsBold.altArrowDown, size: 18, color: zt.textSecondary),
+              ),
+              // "N new" badge — only shown once we know something actually
+              // arrived below, not just because the user happens to be
+              // scrolled up with no new content.
+              if (_unseenWhileScrolledUp > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: BoxDecoration(
+                      color: zt.accent,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                    ),
+                    child: Text(
+                      _unseenWhileScrolledUp > 9 ? '9+' : '$_unseenWhileScrolledUp',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontFamily: 'Satoshi', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -1195,7 +1297,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     //    sending a sticker. The DmLocalStatus.sending state is invisible to
     //    the user (no spinner shown on vibes — it just pops in).
     final optimistic = DmMessage(
-      id: clientId,
+      // Prefixed with 'local-' like every other optimistic message (see
+      // DmMessage.optimistic() and the reply/payment-request send paths).
+      // This one was previously a bare clientId, which meant
+      // _loadMessages()'s merge logic — which preserves pending sends by
+      // checking `id.startsWith('local-')` — silently dropped an in-flight
+      // Vibe if a REST refresh happened to run while it was still sending
+      // (e.g. the app backgrounds/resumes mid-send). The Vibe sticker would
+      // disappear from the thread until the WS echo or next poll arrived.
+      id: 'local-$clientId',
       roomId: widget.roomId,
       senderUserId: model.currentUserId ?? '',
       senderZendtag: model.currentZendtag,
@@ -1339,6 +1449,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
     WidgetsBinding.instance.removeObserver(this);
     _wsSub?.cancel();
+    _ws.connectionState.removeListener(_onConnectionStateChanged);
     _ws.dispose();
     _scrollController.dispose();
     _typingClearTimer?.cancel();
@@ -1484,6 +1595,43 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               ),
             ),
             Divider(height: 1, color: zt.border),
+
+            // ── Reconnecting banner ──
+            if (_showReconnecting)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                color: zt.bgSecondary,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Reconnecting...', style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
+                  ],
+                ),
+              ),
+
+            // ── Could not connect banner — shown once the WS has given up
+            // retrying automatically (5 consecutive failures). Tapping it
+            // resets the failure counter and reconnects.
+            if (!_showReconnecting && _ws.connectionState.value == WsConnectionState.disconnected && _hasConnectedOnce)
+              GestureDetector(
+                onTap: () => _ws.resetAndReconnect(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  color: ZendColors.destructive.withValues(alpha: 0.1),
+                  child: Text(
+                    'Could not connect. Tap to retry.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textPrimary),
+                  ),
+                ),
+              ),
 
             // ── Messages + scroll-to-bottom ───────────────────────────────
             Expanded(
@@ -1674,6 +1822,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               onSendVibe: _onSendVibe,
               onRequestPayment: _onRequestPayment,
               onPayRecipient: _onPayRecipient,
+              initialDraft: model.dmService.getDraft(widget.roomId),
+              onDraftChanged: (text) => model.dmService.setDraft(widget.roomId, text),
             ),
           ],
         ),

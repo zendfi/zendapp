@@ -350,28 +350,55 @@ class _ZendShellState extends State<ZendShell> {
         onChanged: _setTab,
         activityBadgeCount: model.activityUnreadCount,
         dmBadgeCount: model.dmUnreadTotal,
+        balance: model.spendableBalance,
+        balanceHidden: model.balanceHidden,
       ),
     );
   }
 }
 
 class ZendBottomBar extends StatelessWidget {
-  const ZendBottomBar({super.key, required this.currentIndex, required this.onChanged, this.activityBadgeCount = 0, this.dmBadgeCount = 0});
+  const ZendBottomBar({
+    super.key,
+    required this.currentIndex,
+    required this.onChanged,
+    this.activityBadgeCount = 0,
+    this.dmBadgeCount = 0,
+    this.balance = 0.0,
+    this.balanceHidden = false,
+  });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
   final int activityBadgeCount;
   final int dmBadgeCount;
+  /// Spendable balance shown in place of a wallet icon on the Home tab —
+  /// mirrors the Cash App pattern of surfacing the live balance right in
+  /// the tab bar instead of a static icon.
+  final double balance;
+  final bool balanceHidden;
 
   @override
   Widget build(BuildContext context) {
     final onSendTab = currentIndex == 1;
-    final borderColor = onSendTab ? Colors.transparent : const Color(0xFF2A2A2A);
+    final zt = ZendTheme.of(context);
+
+    // The Send tab always stays on the deep-green brand surface regardless
+    // of light/dark theme. Every other tab now follows the app's theme —
+    // light mode gets the same off-white background as the rest of the UI
+    // instead of being hardcoded to near-black.
+    final barColor = onSendTab ? ZendColors.bgDeep : zt.bgPrimary;
+    final borderColor = onSendTab ? Colors.transparent : zt.border;
+    final activeColor = onSendTab ? ZendColors.accentPop : zt.accent;
+    final inactiveColor = onSendTab
+        ? const Color(0x66F0F0F0)
+        : zt.textSecondary.withValues(alpha: 0.7);
+    final badgeBorderColor = barColor;
 
     return ColoredBox(
       // Solid fill — no backdrop blur. Fully opaque so tab content never
       // shows through underneath.
-      color: onSendTab ? ZendColors.bgDeep : const Color(0xFF0D0D0D),
+      color: barColor,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -383,30 +410,38 @@ class ZendBottomBar extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _BottomNavIcon(
-                    icon: SolarIconsBold.wallet,
+                  _BalanceNavItem(
+                    balance: balance,
+                    hidden: balanceHidden,
                     active: currentIndex == 0,
                     onTap: () => onChanged(0),
-                    onDeepBg: onSendTab,
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
                   ),
                   _BottomNavIcon(
                     icon: SolarIconsBold.dollar,
                     active: currentIndex == 1,
                     onTap: () => onChanged(1),
-                    onDeepBg: onSendTab,
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
+                    badgeBorderColor: badgeBorderColor,
                   ),
                   _BottomNavIcon(
                     icon: SolarIconsBold.transferHorizontal,
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
-                    onDeepBg: onSendTab,
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
+                    badgeBorderColor: badgeBorderColor,
                     badgeCount: activityBadgeCount,
                   ),
                   _BottomNavIcon(
                     icon: SolarIconsBold.chatLine,
                     active: currentIndex == 3,
                     onTap: () => onChanged(3),
-                    onDeepBg: onSendTab,
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
+                    badgeBorderColor: badgeBorderColor,
                     badgeCount: dmBadgeCount,
                   ),
                 ],
@@ -419,21 +454,38 @@ class ZendBottomBar extends StatelessWidget {
   }
 }
 
+/// Formats a balance the way we want it to read in the tab bar — whole
+/// dollars with no decimals ("$10"), otherwise 2dp so small amounts like
+/// $0.16 stay legible instead of getting truncated to "$0".
+String _formatNavBalance(double balance) {
+  if (balance == balance.roundToDouble()) {
+    return '\$${balance.toStringAsFixed(0)}';
+  }
+  return '\$${balance.toStringAsFixed(2)}';
+}
+
 class _BottomNavIcon extends StatelessWidget {
-  const _BottomNavIcon({required this.icon, required this.active, required this.onTap, required this.onDeepBg, this.badgeCount = 0});
+  const _BottomNavIcon({
+    required this.icon,
+    required this.active,
+    required this.onTap,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.badgeBorderColor,
+    this.badgeCount = 0,
+  });
 
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
-  final bool onDeepBg;
+  final Color activeColor;
+  final Color inactiveColor;
+  final Color badgeBorderColor;
   /// Unread count to display as a badge. 0 = no badge.
   final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = ZendColors.accentPop;
-    final inactiveColor = const Color(0x66F0F0F0);
-
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -462,7 +514,7 @@ class _BottomNavIcon extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: ZendColors.destructive,
                           borderRadius: BorderRadius.circular(ZendRadii.pill),
-                          border: Border.all(color: const Color(0xFF0D0D0D), width: 1.5),
+                          border: Border.all(color: badgeBorderColor, width: 1.5),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -472,6 +524,76 @@ class _BottomNavIcon extends StatelessWidget {
                       ),
                     ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 3),
+            AnimatedOpacity(
+              opacity: active ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: activeColor, shape: BoxShape.circle),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Home-tab item — shows the user's current spendable balance as text
+/// (e.g. "$10", "$0.16") instead of a static wallet icon, Cash App-style.
+class _BalanceNavItem extends StatelessWidget {
+  const _BalanceNavItem({
+    required this.balance,
+    required this.hidden,
+    required this.active,
+    required this.onTap,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
+
+  final double balance;
+  final bool hidden;
+  final bool active;
+  final VoidCallback onTap;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? activeColor : inactiveColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 64,
+              height: 34,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Text(
+                      hidden ? '••••' : _formatNavBalance(balance),
+                      key: ValueKey(hidden ? 'hidden' : balance.toStringAsFixed(2)),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 3),

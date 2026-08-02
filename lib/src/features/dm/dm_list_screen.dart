@@ -1,12 +1,18 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/dm_message.dart';
 import '../../models/dm_thread.dart';
 import '../../models/notification_category.dart';
 import '../../navigation/zend_routes.dart';
+import '../../services/e2ee_service.dart' show kE2eePrefix;
+import '../../services/wallet_session_cache.dart';
 import 'dm_thread_screen.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -84,6 +90,13 @@ class _DmListScreenState extends State<DmListScreen> {
           model.setDmUnreadTotal(total);
         }
       }
+      // Decrypt any E2EE thread previews in the background rather than
+      // awaiting them here — the list is already fully usable with the
+      // safe "🔒 New message" placeholder (see DmThread.lastMessagePreview),
+      // so there's no reason to make the whole screen wait on a slow
+      // network fetching counterparty keys. Each row silently upgrades to
+      // the real preview text the moment its own decrypt resolves.
+      unawaited(_decryptPreviews(model, threads));
     } catch (_) {
       // Only show the error state when there's nothing cached to fall back
       // on — a pull-to-refresh failure with existing threads on screen
@@ -96,6 +109,97 @@ class _DmListScreenState extends State<DmListScreen> {
           _loadError = _threads.isEmpty;
         });
       }
+    }
+  }
+
+  /// Threads beyond this index are extremely unlikely to be on-screen at
+  /// first paint on any device — this is generously above what even a
+  /// tablet in landscape shows above the fold. Decrypting them gets no
+  /// visible-latency benefit, so they're deferred to the throttled tail
+  /// batches below instead of firing alongside the priority batch.
+  static const _kPriorityBatchSize = 20;
+
+  /// Cap on concurrent decrypt operations for threads outside the priority
+  /// batch. Each operation is a pubkey fetch (network, unless cached) plus
+  /// local ECDH/HKDF/ChaCha20 work — fine to fire a handful at once, but with
+  /// hundreds of threads (say, a heavy pool/community user) firing all of
+  /// them simultaneously would mean hundreds of parallel HTTP requests to
+  /// the pubkey endpoint on first login before any cache is warm.
+  static const _kTailBatchSize = 8;
+
+  /// Decrypts the last-message preview for every E2EE thread, updating the
+  /// list as each one resolves.
+  ///
+  /// Threads are processed in two tiers to bound how much concurrent
+  /// network/crypto work a single list load can trigger:
+  ///   1. The first [_kPriorityBatchSize] threads (the ones actually visible
+  ///      without scrolling, since the list is already sorted by recency)
+  ///      decrypt together immediately — this is the case that matters for
+  ///      perceived speed, so it gets no throttling.
+  ///   2. Everything else decrypts in [_kTailBatchSize]-sized chunks, one
+  ///      chunk at a time, so a huge thread list can't fan out into hundreds
+  ///      of simultaneous pubkey requests on a cold cache.
+  ///
+  /// Deliberately never surfaces failures to the user — a counterparty
+  /// without a registered key, a wallet that's locked, or a flaky network
+  /// all just leave that row showing the generic "🔒 New message" fallback,
+  /// which reads as normal chat-app behavior rather than an error. The
+  /// underlying pubkey/room-key caches in [E2eeService] mean repeat calls
+  /// (pull-to-refresh, returning from a thread) are network-free after the
+  /// first successful resolution per counterparty.
+  Future<void> _decryptPreviews(ZendAppModel model, List<DmThread> threads) async {
+    final keypair = WalletSessionCache.instance.keypair;
+    if (keypair == null) return; // wallet locked — retried on the next load
+    final seed = keypair.length >= 32 ? keypair.sublist(0, 32) : keypair;
+    try {
+      final priority = threads.take(_kPriorityBatchSize);
+      await Future.wait(
+        priority.map((thread) => _decryptThreadPreview(model, thread, seed)),
+      );
+
+      final tail = threads.skip(_kPriorityBatchSize).toList();
+      for (var i = 0; i < tail.length; i += _kTailBatchSize) {
+        if (!mounted) return; // screen left — no point continuing in the background
+        final chunk = tail.skip(i).take(_kTailBatchSize);
+        await Future.wait(
+          chunk.map((thread) => _decryptThreadPreview(model, thread, seed)),
+        );
+      }
+    } finally {
+      for (var i = 0; i < keypair.length; i++) {
+        keypair[i] = 0;
+      }
+    }
+  }
+
+  Future<void> _decryptThreadPreview(
+    ZendAppModel model,
+    DmThread thread,
+    Uint8List mySeed32,
+  ) async {
+    final lastMsg = thread.lastMessage;
+    if (lastMsg == null || lastMsg.type != DmMessageType.text) return;
+    final content = lastMsg.content;
+    if (content == null || !content.startsWith(kE2eePrefix)) return;
+
+    try {
+      final pubkey = await model.e2eeService.fetchCounterpartyPubkey(
+        thread.counterparty.userId,
+      );
+      if (pubkey == null) return; // no key on file — leave the fallback text
+      final decrypted = await model.e2eeService.decrypt(
+        wireContent: content,
+        mySeed32: mySeed32,
+        counterpartyPubkeyB58: pubkey,
+        roomId: thread.roomId,
+      );
+      if (decrypted == null) return; // decryption failed — leave the fallback text
+      lastMsg.content = decrypted;
+      lastMsg.isEncrypted = true;
+      if (mounted) setState(() {});
+    } catch (_) {
+      // Never let a decrypt failure bubble up — the model-level fallback
+      // already covers display safety.
     }
   }
 

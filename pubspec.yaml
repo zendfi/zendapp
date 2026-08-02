@@ -146,6 +146,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.7
   drift_dev: ^2.18.0
   build_runner: ^2.4.0
 
@@ -223,7 +224,35 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  # Zend.png has an alpha channel — Apple's App Store rejects iOS icons with
+  # transparency, so flag removal here rather than shipping a flattened PNG
+  # as the source asset.
+  remove_alpha_ios: true
   image_path: "assets/logo/Zend.png"
   web:
     generate: true
     image_path: "assets/logo/Zend.png"
+
+# Native (pre-Flutter-engine) splash screen — shown by the OS the instant
+# the app process starts, before Flutter has loaded enough to paint the
+# Dart SplashScreen widget. Without this, Android falls back to a plain
+# white (light mode) or solid black (dark mode, via Theme.Black) window
+# background with no logo — that blank window is the "black screen for a
+# few seconds" on startup. Background colors intentionally use the app's
+# own light/dark surface colors (ZendTheme bgPrimary — #FAFAF7 / #0D0D0D),
+# not the brand deep-green (ZendColors.bgDeep), so the dark-green logo
+# always has contrast to pop against instead of nearly disappearing into a
+# same-hued green backdrop.
+flutter_native_splash:
+  color: "#FAFAF7"
+  color_dark: "#0D0D0D"
+  image: assets/logo/Zend.png
+  image_dark: assets/logo/Zend.png
+  android_12:
+    color: "#FAFAF7"
+    color_dark: "#0D0D0D"
+    image: assets/logo/Zend.png
+    image_dark: assets/logo/Zend.png
+  android: true
+  ios: true
+  web: false

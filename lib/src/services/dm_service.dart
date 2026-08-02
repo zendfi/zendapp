@@ -30,6 +30,26 @@ class DmService {
   /// Persists for the lifetime of the DmService instance (i.e. the app session).
   final Set<String> _clearedRooms = {};
 
+  /// Per-room draft text — preserved across navigating away from and back
+  /// to a thread (e.g. backing out to answer a call, or to check another
+  /// chat) within the same app session. Previously the composer's
+  /// TextEditingController was scoped to DmThreadScreen's own State and
+  /// disposed with it, silently discarding whatever the user had typed
+  /// but not sent the moment the screen was popped.
+  final Map<String, String> _drafts = {};
+
+  /// Returns the saved draft text for a room, or an empty string if none.
+  String getDraft(String roomId) => _drafts[roomId] ?? '';
+
+  /// Saves draft text for a room. An empty [text] clears the draft.
+  void setDraft(String roomId, String text) {
+    if (text.isEmpty) {
+      _drafts.remove(roomId);
+    } else {
+      _drafts[roomId] = text;
+    }
+  }
+
   /// Live presence cache keyed by user_id.
   /// Updated by DmThreadScreen when WS presence frames arrive.
   /// Used by DmListScreen to show online dots without needing an open WS.
@@ -54,6 +74,7 @@ class DmService {
     cachedThreads = [];
     _messageCache.clear();
     _clearedRooms.clear();
+    _drafts.clear();
   }
 
   /// Clears the cached messages for a single room and marks it as user-cleared

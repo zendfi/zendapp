@@ -683,7 +683,7 @@ class _TextBubble extends StatelessWidget {
                         message.displayContent!,
                         style: TextStyle(
                           fontFamily: 'Satoshi',
-                          fontSize: 16.5,
+                          fontSize: 15.5,
                           color: isMe ? Colors.white : zt.textPrimary,
                           height: 1.35,
                         ),

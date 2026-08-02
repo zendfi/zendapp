@@ -1,4 +1,5 @@
 import 'dm_message.dart';
+import '../services/e2ee_service.dart' show kE2eePrefix;
 
 class DmCounterparty {
   const DmCounterparty({
@@ -62,11 +63,23 @@ class DmThread {
     );
   }
 
+  /// Defensive fallback shown for an encrypted text preview that hasn't
+  /// been decrypted yet (or couldn't be). This is a UI-safety net, not the
+  /// primary decryption path — DmListScreen decrypts thread previews in the
+  /// background and mutates [DmMessage.content] in place on success, at
+  /// which point this getter naturally starts returning the real text
+  /// instead. The point of keeping this check here (rather than trusting
+  /// callers to always decrypt first) is that the raw `e2ee:<base64>` wire
+  /// string must never be able to reach a Text widget under any code path,
+  /// present or future.
+  static const _lockedPreviewFallback = '🔒 New message';
+
   String get lastMessagePreview {
     if (lastMessage == null) return '';
     switch (lastMessage!.type) {
       case DmMessageType.text:
         final content = lastMessage!.content ?? '';
+        if (content.startsWith(kE2eePrefix)) return _lockedPreviewFallback;
         return content.length > 40 ? '${content.substring(0, 40)}…' : content;
       case DmMessageType.payment:
         final amt = lastMessage!.paymentData?.amountUsdc ?? '0';

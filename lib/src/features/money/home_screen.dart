@@ -624,8 +624,8 @@ class _SavingsCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Satoshi',
                     fontWeight: FontWeight.w700,
-                    fontSize: 50,
-                    height: 0.92,
+                    fontSize: 32,
+                    height: 0.98,
                     color: zt.textPrimary,
                   ),
                 ),
@@ -746,8 +746,8 @@ class _PoolsCard extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: 'Satoshi',
                         fontWeight: FontWeight.w700,
-                        fontSize: 50,
-                        height: 0.92,
+                        fontSize: 32,
+                        height: 0.98,
                         color: zt.textPrimary,
                       ),
                     ),

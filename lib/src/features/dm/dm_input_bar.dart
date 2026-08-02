@@ -26,6 +26,8 @@ class DmInputBar extends StatefulWidget {
     this.onSendVibe,
     this.onRequestPayment,
     this.onPayRecipient,
+    this.initialDraft = '',
+    this.onDraftChanged,
   });
 
   final ValueChanged<String> onSend;
@@ -34,6 +36,13 @@ class DmInputBar extends StatefulWidget {
   final ValueChanged<VibeSendResult>? onSendVibe;
   final OnRequestPayment? onRequestPayment;
   final OnPayRecipient? onPayRecipient;
+  /// Draft text to restore into the composer when this room is (re)opened —
+  /// e.g. from [DmService.getDraft], so a message typed but not sent
+  /// survives navigating away from and back to the thread.
+  final String initialDraft;
+  /// Called on every change so the caller can persist the current draft
+  /// (see [DmService.setDraft]) — cleared automatically on send.
+  final ValueChanged<String>? onDraftChanged;
 
   @override
   State<DmInputBar> createState() => _DmInputBarState();
@@ -41,10 +50,15 @@ class DmInputBar extends StatefulWidget {
 
 class _DmInputBarState extends State<DmInputBar>
     with SingleTickerProviderStateMixin {
-  final _ctrl = TextEditingController();
+  late final _ctrl = TextEditingController(text: widget.initialDraft);
   final _focusNode = FocusNode();
   Timer? _typingDebounce;
   bool _hasText = false;
+  // Tracks whether we've already told the server "typing: true" for the
+  // current burst of keystrokes, so onChanged doesn't send a fresh WS frame
+  // on every single character. Reset to false whenever the "stopped
+  // typing" signal fires (debounce timeout or explicit send/dispose).
+  bool _typingSignalSent = false;
   double _keyboardHeight = 0;
 
   // Panel state
@@ -71,6 +85,7 @@ class _DmInputBarState extends State<DmInputBar>
   @override
   void initState() {
     super.initState();
+    _hasText = widget.initialDraft.trim().isNotEmpty;
     _panelCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
@@ -88,6 +103,12 @@ class _DmInputBarState extends State<DmInputBar>
 
   @override
   void dispose() {
+    // Send an explicit "stopped typing" if the user was mid-type when they
+    // backed out of the thread — otherwise the counterparty's "typing…"
+    // indicator only clears via their own 4s auto-timeout instead of
+    // immediately, since the composer's own 2s debounce timer never gets
+    // to fire once this widget is gone.
+    if (_typingSignalSent) widget.onTyping(false);
     _ctrl.dispose();
     _focusNode.dispose();
     _typingDebounce?.cancel();
@@ -107,9 +128,22 @@ class _DmInputBarState extends State<DmInputBar>
   void _onChanged(String value) {
     final hasText = value.trim().isNotEmpty;
     if (hasText != _hasText) setState(() => _hasText = hasText);
-    widget.onTyping(true);
+    widget.onDraftChanged?.call(value);
+    // Only send the "typing: true" WS frame once per burst of keystrokes,
+    // not on every character — previously this fired unconditionally here,
+    // so a fast typist produced one WS frame per keypress for as long as
+    // they kept typing. The "stopped typing" debounce below already only
+    // fired once (after 2s of inactivity); this mirrors that by gating the
+    // "started typing" signal the same way.
+    if (!_typingSignalSent) {
+      _typingSignalSent = true;
+      widget.onTyping(true);
+    }
     _typingDebounce?.cancel();
-    _typingDebounce = Timer(const Duration(seconds: 2), () => widget.onTyping(false));
+    _typingDebounce = Timer(const Duration(seconds: 2), () {
+      _typingSignalSent = false;
+      widget.onTyping(false);
+    });
   }
 
   void _send() {
@@ -117,8 +151,10 @@ class _DmInputBarState extends State<DmInputBar>
     if (text.isEmpty) return;
     HapticFeedback.lightImpact();
     _ctrl.clear();
+    widget.onDraftChanged?.call('');
     setState(() => _hasText = false);
     widget.onTyping(false);
+    _typingSignalSent = false;
     _typingDebounce?.cancel();
     widget.onSend(text);
   }
