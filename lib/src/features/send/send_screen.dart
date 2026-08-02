@@ -907,9 +907,12 @@ class _BouncyDigits extends StatelessWidget {
 }
 
 /// A single character that pops in with a slight overshoot ("bouncy") scale
-/// + fade when it first mounts, using Curves.elasticOut — the same bouncy
-/// precedent already used for the success checkmark in
-/// send_flow_sheet.dart's email-intent success stage.
+/// + fade when it first mounts. Uses Curves.easeOutBack rather than
+/// Curves.elasticOut — elasticOut oscillates past 1.0 a few times before
+/// settling, which read as too energetic for something that fires on every
+/// keystroke; easeOutBack overshoots once, gently, then settles. The scale
+/// also starts from 0.7 (not 0.0) so the "pop" is a subtle nudge rather
+/// than a full grow-from-nothing.
 class _BouncyDigit extends StatefulWidget {
   const _BouncyDigit({super.key, required this.char, required this.style});
 
@@ -930,9 +933,11 @@ class _BouncyDigitState extends State<_BouncyDigit>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: const Duration(milliseconds: 220),
     );
-    _scale = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
     _controller.forward();
   }
 

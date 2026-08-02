@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
+import '../../services/sse_service.dart';
 import 'contribute_sheet.dart';
 import 'manage_sheet.dart';
 import 'mission_room_sheet.dart';
@@ -31,11 +34,62 @@ class PoolDetailScreen extends StatefulWidget {
 
 class _PoolDetailScreenState extends State<PoolDetailScreen> {
   late Pool _pool;
+  StreamSubscription<SseEvent>? _sseSub;
 
   @override
   void initState() {
     super.initState();
     _pool = widget.pool;
+    // Live-update pool status/gathered amount while this screen is open.
+    // Previously _pool was a static snapshot passed in from the caller with
+    // no live-update mechanism at all — if the pool closed (completed,
+    // expired, or cancelled by the creator) or a contribution landed while
+    // this exact screen was open, the Contribute button stayed visible and
+    // enabled against stale data, and the gathered/target amounts and
+    // progress bar simply never moved until the screen was closed and
+    // reopened. Mirrors the same SSE subscription mission_room.dart
+    // already uses for the pool chat screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final model = ZendScope.of(context);
+      _sseSub = model.sseService.events.listen(_onSseEvent);
+    });
+  }
+
+  void _onSseEvent(SseEvent event) {
+    if (!mounted) return;
+    final data = event.data;
+    final poolId = data['pool_id'] as String?;
+    if (poolId != _pool.id) return;
+
+    switch (event.type) {
+      case SseEventType.poolContribution:
+        final gatheredStr = data['gathered_amount_usdc'] as String?;
+        if (gatheredStr != null) {
+          final gathered = double.tryParse(gatheredStr);
+          if (gathered != null) setState(() => _pool.gathered = gathered);
+        }
+      case SseEventType.poolStatusChanged:
+        final newStatus = data['new_status'] as String?;
+        if (newStatus != null) {
+          const statusMap = {
+            'active': PoolStatus.active,
+            'completed': PoolStatus.completed,
+            'expired': PoolStatus.expired,
+            'cancelled': PoolStatus.cancelled,
+          };
+          final status = statusMap[newStatus];
+          if (status != null) setState(() => _pool.status = status);
+        }
+      default:
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    _sseSub?.cancel();
+    super.dispose();
   }
 
   static const _months = [
