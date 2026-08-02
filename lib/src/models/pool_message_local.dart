@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import '../features/pools/pool.dart';
+import 'dm_message.dart' show DmVibeData;
 
 export '../features/pools/pool.dart' show PoolMessage, PoolMessageType, PoolReactionCount;
+export 'dm_message.dart' show DmVibeData;
 
 enum LocalStatus { sending, delivered, failed }
 
@@ -117,6 +121,24 @@ class PoolMessageLocal {
   PoolMessageType get messageTypeEnum => switch (messageType) {
     'contribution_event' => PoolMessageType.contributionEvent,
     'voice_note' => PoolMessageType.voiceNote,
+    'vibe' => PoolMessageType.vibe,
     _ => PoolMessageType.text,
   };
+
+  /// Parses [content] as the Vibe sticker/amount payload for `vibe`-type
+  /// messages, reusing [DmVibeData]'s JSON shape since both DM and Pool
+  /// vibes share the same `{sticker_id, sticker_slug, sticker_name,
+  /// amount_usdc, ...}` fields. Returns `null` for non-vibe messages or if
+  /// [content] is missing/malformed (e.g. an older row without the field).
+  DmVibeData? get vibeData {
+    if (messageTypeEnum != PoolMessageType.vibe) return null;
+    final raw = content;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return DmVibeData.fromJson(json);
+    } catch (_) {
+      return null;
+    }
+  }
 }

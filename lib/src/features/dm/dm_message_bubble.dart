@@ -585,6 +585,8 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       isMine: widget.isMe,
       createdAt: widget.message.createdAt,
       isDelivering: widget.message.localStatus == DmLocalStatus.sending,
+      isFailed: widget.message.localStatus == DmLocalStatus.failed,
+      onRetry: widget.onRetry,
     );
   }
 }

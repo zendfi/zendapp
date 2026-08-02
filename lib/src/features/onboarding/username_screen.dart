@@ -160,7 +160,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      "This is how people find you on Zend! — share it to get paid.",
+                      "This is how people find you on Zend!",
                       style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary, height: 1.4),
                     ),
                     const SizedBox(height: 16),
@@ -210,7 +210,7 @@ class _PreviewCard extends StatelessWidget {
             children: [
               Text('Your Zend! tag', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
               const SizedBox(height: 2),
-              Text('zdfi.me/', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
+              Text('zdfi.me/@', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
               Text(safeUsername, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
             ],
           ),

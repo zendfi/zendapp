@@ -16,6 +16,28 @@ class _PendingMessage {
   });
 }
 
+/// Emitted whenever [OutboxQueue] resolves a message's delivery outcome.
+///
+/// Previously [OutboxQueue.drain] wrote the resulting [LocalStatus] straight
+/// into [PoolMessageRepository] and stopped there — nothing told a caller's
+/// in-memory message list that a send had actually failed (as opposed to
+/// still "sending"). A message that timed out after the 15s ack window kept
+/// showing a spinner in the UI indefinitely instead of the failed/retry
+/// state, until the next full message reload happened to re-query the DB.
+class OutboxDeliveryResult {
+  const OutboxDeliveryResult({
+    required this.clientId,
+    required this.status,
+    this.serverId,
+    this.serverCreatedAt,
+  });
+
+  final String clientId;
+  final LocalStatus status;
+  final String? serverId;
+  final DateTime? serverCreatedAt;
+}
+
 /// An ordered, in-memory queue of messages pending server acknowledgement.
 ///
 /// - [enqueue] adds a message and triggers [drain] if connected.
@@ -34,6 +56,14 @@ class OutboxQueue {
   final Queue<_PendingMessage> _queue = Queue();
   bool _draining = false;
   bool _disposed = false;
+
+  final _deliveryController = StreamController<OutboxDeliveryResult>.broadcast();
+
+  /// Emits a result each time a queued message is either acked (delivered)
+  /// or times out (failed). Callers should listen to this to keep their own
+  /// message list's [LocalStatus] in sync, rather than relying solely on
+  /// re-reading [PoolMessageRepository].
+  Stream<OutboxDeliveryResult> get deliveryResults => _deliveryController.stream;
 
   OutboxQueue({
     required this.wsService,
@@ -129,17 +159,32 @@ class OutboxQueue {
           // Ack received — mark delivered and advance.
           final serverId = result['server_id'] as String?;
           final createdAtStr = result['created_at'] as String?;
+          final serverCreatedAt =
+              createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
           await repository.updateStatus(
             msg.clientId,
             LocalStatus.delivered,
             serverId: serverId,
-            serverCreatedAt:
-                createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+            serverCreatedAt: serverCreatedAt,
           );
+          if (!_deliveryController.isClosed) {
+            _deliveryController.add(OutboxDeliveryResult(
+              clientId: msg.clientId,
+              status: LocalStatus.delivered,
+              serverId: serverId,
+              serverCreatedAt: serverCreatedAt,
+            ));
+          }
           _queue.removeFirst();
         } else {
           // Timeout — mark failed and continue draining remaining messages.
           await repository.updateStatus(msg.clientId, LocalStatus.failed);
+          if (!_deliveryController.isClosed) {
+            _deliveryController.add(OutboxDeliveryResult(
+              clientId: msg.clientId,
+              status: LocalStatus.failed,
+            ));
+          }
           _queue.removeFirst();
         }
       }
@@ -157,5 +202,6 @@ class OutboxQueue {
   void dispose() {
     _disposed = true;
     wsService.connectionState.removeListener(_onConnectionStateChanged);
+    _deliveryController.close();
   }
 }

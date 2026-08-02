@@ -58,6 +58,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   final _messages = <DmMessage>[];
   bool _loading = true;
+  bool _loadError = false;
   bool _theyAreTyping = false;
   bool _theyAreRecording = false;  // "recording audio..." indicator
   // Counterparty presence
@@ -321,7 +322,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
     if (more && (_loadingMore || _nextCursor == null)) return;
     // Only show the full-screen spinner if we have nothing to display yet
-    if (!more) setState(() => _loading = _messages.isEmpty);
+    if (!more) setState(() { _loading = _messages.isEmpty; _loadError = false; });
     if (more) setState(() => _loadingMore = true);
 
     try {
@@ -360,6 +361,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         setState(() {
           _loading = false;
           _loadingMore = false;
+          // Only surface the error state on a genuinely empty first load —
+          // a failed "load older messages" pagination fetch, or a refresh
+          // that already has cached/optimistic messages on screen, should
+          // just leave the existing history visible rather than replacing
+          // it with an error (the user can still see and send messages).
+          if (!more && _messages.isEmpty) _loadError = true;
         });
       }
     }
@@ -1208,8 +1215,41 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     setState(() => _messages.insert(0, optimistic));
     HapticFeedback.mediumImpact();
 
-    // 2. Everything below happens silently in the background.
-    //    The sticker is already visible — the user has moved on.
+    await _sendVibeBackground(clientId, vibe);
+  }
+
+  /// Retries a previously-failed Vibe send. Reconstructs a [VibeSendResult]
+  /// from the failed message's own [DmVibeData] (stickerId/emoji/label were
+  /// already captured optimistically, so no re-fetch is needed) and re-runs
+  /// the same prepare/sign/submit flow against the existing [clientId] —
+  /// this lets the server's `client_id` idempotency key correctly treat a
+  /// retry-after-actual-success as a no-op rather than double-charging.
+  Future<void> _retryVibe(String clientId) async {
+    final idx = _messages.indexWhere((m) => m.clientId == clientId);
+    if (idx == -1) return;
+    final vd = _messages[idx].vibeData;
+    if (vd == null) return;
+    final amount = double.tryParse(vd.amountUsdc);
+    if (amount == null) return;
+
+    setState(() => _messages[idx].localStatus = DmLocalStatus.sending);
+
+    await _sendVibeBackground(
+      clientId,
+      VibeSendResult(
+        stickerId: vd.stickerId,
+        stickerEmoji: vd.stickerSlug,
+        stickerLabel: vd.stickerName,
+        amountUsdc: amount,
+      ),
+    );
+  }
+
+  /// Runs the prepare -> sign -> submit steps for a Vibe send (used by both
+  /// the initial send and retry-after-failure), updating the optimistic
+  /// message identified by [clientId] to delivered or failed in place.
+  Future<void> _sendVibeBackground(String clientId, VibeSendResult vibe) async {
+    final model = ZendScope.of(context);
     try {
       // Step A: prepare — get blockhash + ATAs
       final prepareData = await model.dmService.prepareVibe(
@@ -1464,6 +1504,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 children: [
                   _loading
                       ? const DmThreadSkeleton()
+                      : _loadError
+                      ? ZendErrorState(
+                          title: "Couldn't load this conversation",
+                          onRetry: () => _loadMessages(),
+                        )
                       : Builder(builder: (ctx) {
                           final displayList = _buildDisplayList();
                           final typingOffset = _theyAreTyping ? 1 : 0;
@@ -1540,7 +1585,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                     onReply: (m) => setState(() => _replyingTo = m),
                                     onReplyTap: (m) => _scrollToReplyOrigin(m),
                                     onRetry: msg.localStatus == DmLocalStatus.failed
-                                        ? () => _onRetry(msg.clientId ?? '')
+                                        ? (msg.type == DmMessageType.vibe
+                                            ? () => _retryVibe(msg.clientId ?? '')
+                                            : () => _onRetry(msg.clientId ?? ''))
                                         : null,
                                     onPayRequest: _onPayRequest,
                                     onLongPress: _showMessageReactions,

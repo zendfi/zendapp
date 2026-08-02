@@ -67,6 +67,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
   List<EdgeReactionCount> _reactions = const [];
   List<EdgeComment> _comments = const [];
   bool _loading = true;
+  bool _loadError = false;
   final TextEditingController _commentController = TextEditingController();
   bool _postingComment = false;
 
@@ -95,6 +96,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
 
   Future<void> _load() async {
     final model = ZendScope.of(context);
+    if (mounted) setState(() => _loadError = false);
     try {
       final results = await Future.wait([
         model.activityDataService.getEdgeReactions(_edgeKindStr, widget.edge.edgeId),
@@ -107,8 +109,12 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
         });
       }
     } catch (_) {
-      // Non-fatal — the sheet still renders the activity tile without
-      // reactions/comments if the fetch fails.
+      // Only surface an error state in the comments section when there's
+      // nothing cached to show (first load) — the activity tile itself
+      // above always renders regardless, since it doesn't depend on this
+      // fetch. A failed reload with existing comments on screen just keeps
+      // showing them rather than replacing them with an error.
+      if (mounted && _comments.isEmpty) setState(() => _loadError = true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -118,6 +124,9 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
     final model = ZendScope.of(context);
     final existing = _reactions.where((r) => r.emoji == emoji).firstOrNull;
     final alreadyReacted = existing?.reactedByMe ?? false;
+    // Snapshot for a guaranteed-local revert on failure — see the catch
+    // block below for why this replaced calling _load() to revert.
+    final preOptimistic = _reactions;
 
     setState(() {
       final updated = List<EdgeReactionCount>.of(_reactions);
@@ -144,7 +153,17 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
         await model.activityDataService.addEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
       }
     } catch (_) {
-      if (mounted) _load();
+      if (mounted) {
+        // Revert to the pre-optimistic snapshot rather than re-calling
+        // _load() — _load()'s own fetch can itself silently fail (e.g.
+        // still offline), which previously left the optimistic tap looking
+        // successful even though the server never received it. A local
+        // revert has no network dependency, so it can't fail the same way.
+        setState(() => _reactions = preOptimistic);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+        );
+      }
     }
   }
 
@@ -224,11 +243,19 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
 
   Future<void> _deleteComment(EdgeComment comment) async {
     final model = ZendScope.of(context);
+    final preOptimistic = _comments;
     setState(() => _comments = _comments.where((c) => c.id != comment.id).toList());
     try {
       await model.activityDataService.deleteEdgeComment(_edgeKindStr, widget.edge.edgeId, comment.id);
     } catch (_) {
-      if (mounted) _load();
+      if (mounted) {
+        // Revert to the pre-optimistic snapshot — see _toggleReaction's
+        // comment above for why this replaced re-calling _load() to revert.
+        setState(() => _comments = preOptimistic);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't delete comment — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+        );
+      }
     }
   }
 
@@ -393,6 +420,11 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           Expanded(
             child: _loading
                 ? _CommentSkeleton()
+                : _loadError
+                ? ZendErrorState(
+                    title: "Couldn't load comments",
+                    onRetry: _load,
+                  )
                 : _comments.isEmpty
                     ? Center(
                         child: Padding(

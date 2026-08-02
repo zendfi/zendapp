@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_thread.dart';
 import '../../models/notification_category.dart';
@@ -19,6 +20,7 @@ class DmListScreen extends StatefulWidget {
 class _DmListScreenState extends State<DmListScreen> {
   List<DmThread> _threads = [];
   bool _loading = true;
+  bool _loadError = false;
   bool _searchActive = false;
   String _searchQuery = '';
   bool _notificationsMuted = false;
@@ -64,7 +66,10 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   Future<void> _loadThreads() async {
-    setState(() => _loading = _threads.isEmpty);
+    setState(() {
+      _loading = _threads.isEmpty;
+      _loadError = false;
+    });
     try {
       final model = ZendScope.of(context);
       final threads = await model.dmService.listThreads();
@@ -72,6 +77,7 @@ class _DmListScreenState extends State<DmListScreen> {
         setState(() {
           _threads = threads;
           _loading = false;
+          _loadError = false;
         });
         final total = threads.fold<int>(0, (sum, t) => sum + t.unreadCount);
         if (model.dmUnreadTotal != total) {
@@ -79,7 +85,17 @@ class _DmListScreenState extends State<DmListScreen> {
         }
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // Only show the error state when there's nothing cached to fall back
+      // on — a pull-to-refresh failure with existing threads on screen
+      // should just silently keep showing the stale list rather than
+      // replacing it with an error, but a *first* load failure previously
+      // looked identical to "you have no chats", which is misleading.
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = _threads.isEmpty;
+        });
+      }
     }
   }
 
@@ -205,7 +221,12 @@ class _DmListScreenState extends State<DmListScreen> {
             Expanded(
               child: _loading
                   ? const DmListSkeleton()
-                  : displayThreads.isEmpty
+                  : _loadError
+                      ? ZendErrorState(
+                          title: "Couldn't load your chats",
+                          onRetry: _loadThreads,
+                        )
+                      : displayThreads.isEmpty
                       ? _searchQuery.isNotEmpty
                           ? Center(
                               child: Text(

@@ -107,7 +107,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'zdfi.me/${widget.username}',
+                    'zdfi.me/@${widget.username}',
                     textAlign: TextAlign.center,
                     style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x80F0F0F0), fontSize: 13),
                   ),

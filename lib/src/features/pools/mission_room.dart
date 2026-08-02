@@ -45,6 +45,7 @@ class _MissionRoomState extends State<MissionRoom> {
   late PoolWebSocketService _wsService;
   late OutboxQueue _outboxQueue;
   StreamSubscription<WsServerFrame>? _wsSub;
+  StreamSubscription<OutboxDeliveryResult>? _outboxSub;
   bool _hasConnectedOnce = false;
   bool _showReconnecting = false;
 
@@ -158,6 +159,13 @@ class _MissionRoomState extends State<MissionRoom> {
       poolId: _pool.id,
     );
 
+    // Keep the in-memory `_messages` list's LocalStatus in sync with what
+    // the outbox actually resolved (delivered/failed) — previously nothing
+    // listened for this, so a message that timed out waiting for an ack
+    // kept showing a "sending" spinner in the UI forever, even though
+    // OutboxQueue.drain() had already written `failed` to the local DB.
+    _outboxSub = _outboxQueue.deliveryResults.listen(_onOutboxDeliveryResult);
+
     // Restore any pending messages from DB into the outbox
     await _outboxQueue.restoreFromDb();
 
@@ -194,6 +202,22 @@ class _MissionRoomState extends State<MissionRoom> {
       // The afterId cursor makes this cheap when nothing was missed.
       unawaited(_onWsReconnected());
     }
+  }
+
+  /// Reflects an [OutboxQueue] delivery outcome (delivered or failed) into
+  /// the in-memory `_messages` list. See the comment where this is
+  /// subscribed in [_init] for why this is needed at all.
+  void _onOutboxDeliveryResult(OutboxDeliveryResult result) {
+    if (!mounted) return;
+    final idx = _messages.indexWhere((m) => m.clientId == result.clientId);
+    if (idx == -1) return;
+    setState(() {
+      _messages[idx] = _messages[idx].copyWith(
+        localStatus: result.status,
+        serverId: result.serverId,
+        createdAt: result.serverCreatedAt,
+      );
+    });
   }
 
   Future<void> _onWsReconnected() async {
@@ -233,8 +257,16 @@ class _MissionRoomState extends State<MissionRoom> {
         if (attempt < 2) {
           await Future<void>.delayed(Duration(seconds: (attempt + 1) * 2));
           if (!mounted) return;
+        } else if (mounted) {
+          // Final attempt failed — messages will be fetched on the next
+          // reconnect (which happens automatically), but the user should
+          // still know this room may be missing recent messages right now,
+          // rather than assuming they're fully caught up because nothing
+          // told them otherwise.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Couldn't sync the latest messages — will retry automatically", style: TextStyle(fontFamily: 'Satoshi'))),
+          );
         }
-        // Final attempt failed — messages will be fetched on next reconnect
       }
     }
   }
@@ -250,6 +282,7 @@ class _MissionRoomState extends State<MissionRoom> {
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _sseSub?.cancel();
     _wsSub?.cancel();
+    _outboxSub?.cancel();
     _wsService.connectionState.removeListener(_onConnectionStateChanged);
     _wsService.dispose();
     _outboxQueue.dispose();
@@ -476,7 +509,17 @@ class _MissionRoomState extends State<MissionRoom> {
         if (localFetched.length < 50) _fullyLoaded = true;
       });
     } catch (_) {
-      if (mounted) setState(() => _loadingOlder = false);
+      // Previously this silently reset _loadingOlder with no feedback —
+      // the scroll listener re-triggers _loadOlderMessages() on the next
+      // scroll-to-top anyway, but until then the user has no way to tell
+      // "a fetch just failed" apart from "you've reached the start of this
+      // pool's history" — both look identical (the spinner just vanishes).
+      if (mounted) {
+        setState(() => _loadingOlder = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load earlier messages', style: TextStyle(fontFamily: 'Satoshi'))),
+        );
+      }
     }
   }
 
@@ -648,7 +691,59 @@ class _MissionRoomState extends State<MissionRoom> {
     setState(() => _messages.add(optimistic));
     _jumpToBottom();
 
-    // Background: prepare → sign → submit
+    await _sendVibeBackground(clientId, optimistic, vibe);
+  }
+
+  /// Retries a previously-failed Vibe send. Reconstructs a [VibeSendResult]
+  /// from the failed message's own parsed content (via
+  /// [PoolMessageLocal.vibeData]) and re-runs the same prepare/sign/submit
+  /// flow against the existing [clientId], so the server's `client_id`
+  /// idempotency key correctly no-ops a retry-after-actual-success instead
+  /// of double-charging.
+  ///
+  /// Deliberately separate from the generic text-retry path wired below
+  /// (`_outboxQueue.enqueue`) — that path re-sends `msg.content` verbatim as
+  /// a plain chat message, which for a failed vibe would have broadcast the
+  /// vibe's raw JSON payload as a visible text message instead of
+  /// resubmitting the underlying transfer.
+  Future<void> _retryVibe(PoolMessageLocal msg) async {
+    final vd = msg.vibeData;
+    final clientId = msg.clientId;
+    if (vd == null || clientId == null) return;
+    final amount = double.tryParse(vd.amountUsdc);
+    if (amount == null) return;
+
+    final sending = msg.copyWith(localStatus: LocalStatus.sending);
+    await _repository.upsertMessage(sending);
+    if (mounted) {
+      setState(() {
+        final i = _messages.indexWhere((m) => m.clientId == clientId);
+        if (i != -1) _messages[i] = sending;
+      });
+    }
+
+    await _sendVibeBackground(
+      clientId,
+      sending,
+      VibeSendResult(
+        stickerId: vd.stickerId,
+        stickerEmoji: vd.stickerSlug,
+        stickerLabel: vd.stickerName,
+        amountUsdc: amount,
+      ),
+    );
+  }
+
+  /// Runs the prepare -> sign -> submit steps for a Vibe send (used by both
+  /// the initial send and retry-after-failure), updating the optimistic
+  /// [PoolMessageLocal] identified by [clientId] to delivered or failed in
+  /// both the local DB and in-memory `_messages` list.
+  Future<void> _sendVibeBackground(
+    String clientId,
+    PoolMessageLocal optimistic,
+    VibeSendResult vibe,
+  ) async {
+    final model = ZendScope.of(context);
     try {
       final prepareData = await model.walletService.apiClient.preparePoolVibe(
         poolId: _pool.id,
@@ -773,6 +868,9 @@ class _MissionRoomState extends State<MissionRoom> {
       if (mounted) {
         _updateReaction(message.id, emoji, model.currentZendtag,
             increment: existing.reactedByMe);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+        );
       }
     }
   }
@@ -1042,7 +1140,9 @@ class _MissionRoomState extends State<MissionRoom> {
                                       : null,
                                   onRetry: msg.localStatus == LocalStatus.failed
                                       ? () {
-                                          if (msg.clientId != null && msg.content != null) {
+                                          if (msg.messageTypeEnum == PoolMessageType.vibe) {
+                                            _retryVibe(msg);
+                                          } else if (msg.clientId != null && msg.content != null) {
                                             _repository.updateStatus(msg.clientId!, LocalStatus.sending);
                                             setState(() {
                                               final idx = _messages.indexWhere((m) => m.id == msg.id);

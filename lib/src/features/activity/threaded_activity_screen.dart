@@ -10,7 +10,6 @@ import '../../models/notification_category.dart';
 import '../../models/payment_request_item.dart';
 import '../../models/qr_payment_intent.dart';
 import '../dm/dm_thread_screen.dart';
-import '../../navigation/zend_shell_controller.dart';
 import '../send/qr_payment_sheet.dart';
 import 'activity_grouping.dart';
 import 'legacy_activity_list_view.dart';
@@ -913,8 +912,14 @@ class _UserThreadTile extends StatelessWidget {
         counterparty: result.counterparty,
       ));
     } catch (_) {
+      // Previously this silently switched to the DM tab with no thread
+      // opened and no explanation — someone tapping a name just landed on
+      // their inbox looking like nothing happened. Tell them the tap
+      // failed instead of routing them somewhere unexplained.
       if (context.mounted) {
-        ZendShellController.instance?.switchToTab(3);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+        );
       }
     }
   }
@@ -1250,11 +1255,13 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
               )
             else if (_error != null)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Text(
-                  'Could not load contributors',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Satoshi', color: zt.textSecondary),
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: ZendErrorState(
+                  title: 'Could not load contributors',
+                  onRetry: () {
+                    setState(() { _error = null; _loading = true; });
+                    _load();
+                  },
                 ),
               )
             else if (_response != null)

@@ -82,6 +82,16 @@ class _RssiTracker {
   void markGattInFlight() => _gattInFlight = true;
 }
 
+/// A scan-level failure — as opposed to a per-device GATT hiccup (which is
+/// expected/recoverable and handled internally via retry, see
+/// [BleScannerService._handleGattFailure]) — that stops discovery entirely
+/// and previously had no way to reach the UI. [DropSheet] listens to
+/// [BleScannerService.errors] and transitions to its error stage on these.
+class BleScanError {
+  const BleScanError({required this.message});
+  final String message;
+}
+
 /// Scans for nearby Zend BLE beacons and exposes a stream of discovered
 /// [DiscoveredReceiver] lists, sorted by RSSI (strongest first).
 ///
@@ -100,6 +110,7 @@ class BleScannerService {
 
   final _receiversController =
       StreamController<List<DiscoveredReceiver>>.broadcast();
+  final _errorController = StreamController<BleScanError>.broadcast();
 
   // deviceId → current in-memory state
   final Map<String, DiscoveredReceiver> _discovered = {};
@@ -113,6 +124,18 @@ class BleScannerService {
   /// The list is re-emitted whenever any receiver's state changes.
   Stream<List<DiscoveredReceiver>> get discoveredReceivers =>
       _receiversController.stream;
+
+  /// Stream of scan-level failures (e.g. the platform scan stream erroring
+  /// out, or `startScan` throwing synchronously). Per-device GATT failures
+  /// are NOT reported here — those are expected transient noise (a nearby
+  /// phone's Bluetooth stack hiccupping) and are already handled by
+  /// resetting that device's tracker and letting the RSSI gate re-trigger.
+  /// This stream is specifically for failures that mean scanning itself has
+  /// stopped working, which the UI has no other way to learn about —
+  /// previously these only appeared in [DropDebugLog], a debug-only ring
+  /// buffer, and the scanning UI carried on rendering its "searching"
+  /// animation forever with no way to actually find anyone.
+  Stream<BleScanError> get errors => _errorController.stream;
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -140,6 +163,7 @@ class BleScannerService {
           _scanning = false;
           _scanSub?.cancel();
           _scanSub = null;
+          _emitError('Scanning stopped unexpectedly. Please try again.');
         },
         cancelOnError: false,
       );
@@ -147,6 +171,7 @@ class BleScannerService {
     } catch (e) {
       DropDebugLog.i.add('SCAN', 'startScan threw: $e', level: DropLogLevel.error);
       _scanning = false;
+      _emitError('Could not start scanning for nearby devices.');
     }
   }
 
@@ -166,6 +191,12 @@ class BleScannerService {
   void dispose() {
     stopScan();
     _receiversController.close();
+    _errorController.close();
+  }
+
+  void _emitError(String message) {
+    if (_errorController.isClosed) return;
+    _errorController.add(BleScanError(message: message));
   }
 
   // ── Private scan handling ──────────────────────────────────────────────────

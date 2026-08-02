@@ -285,6 +285,59 @@ class _ZendLoaderPainter extends CustomPainter {
       oldDelegate.progress != progress || oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
 }
 
+/// Shared error state for a failed data load, with an optional retry action.
+///
+/// Mirrors the icon/title/subtitle column shape already used ad hoc for
+/// empty states across the app (e.g. `dm_list_screen.dart`'s `_EmptyState`),
+/// but for the "the fetch actually failed" case rather than "there's
+/// genuinely nothing here yet" — these look different (title/subtitle
+/// wording, destructive-tinted icon, retry button) so users don't mistake
+/// a network blip for their inbox being empty.
+class ZendErrorState extends StatelessWidget {
+  const ZendErrorState({
+    super.key,
+    this.title = "Couldn't load this",
+    this.subtitle = 'Check your connection and try again',
+    this.onRetry,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(SolarIconsBold.dangerTriangle, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              OutlineActionButton(label: 'Retry', onPressed: onRetry!),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A clean backspace icon for keypads — uses the rounded backspace shape
 /// (left-pointing pentagon) that users universally recognize.
 class ZendBackspaceIcon extends StatelessWidget {

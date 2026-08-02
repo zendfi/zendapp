@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import 'activity_comment_sheet.dart';
@@ -141,11 +142,12 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
               child: _loading
                   ? const PersonActivitySkeleton()
                   : _error != null
-                      ? Center(
-                          child: Text(
-                            'Could not load this person\'s activity',
-                            style: TextStyle(fontFamily: 'Satoshi', color: zt.textSecondary),
-                          ),
+                      ? ZendErrorState(
+                          title: "Couldn't load this person's activity",
+                          onRetry: () {
+                            setState(() { _error = null; _loading = true; });
+                            _load();
+                          },
                         )
                       : _edges.isEmpty
                           ? Center(

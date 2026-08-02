@@ -247,9 +247,7 @@ class SseService {
     // backend sees synchronized reconnection spikes instead of a spread-out
     // trickle. This is the standard "full jitter" strategy (AWS
     // Architecture Blog, "Exponential Backoff And Jitter").
-    final jitteredDelay = Duration(
-      milliseconds: _random.nextInt(_reconnectDelay.inMilliseconds + 1),
-    );
+    final jitteredDelay = jitteredReconnectDelay(_reconnectDelay, _random);
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(jitteredDelay, () {
@@ -260,11 +258,39 @@ class SseService {
 
     // Exponential backoff ceiling: 1s → 2s → 4s → 8s → 16s → 30s (max).
     // This is the ceiling jitter is drawn from, not the delay itself.
-    _reconnectDelay = Duration(
-      seconds: (_reconnectDelay.inSeconds * 2).clamp(
-        _initialReconnectDelay.inSeconds,
-        _maxReconnectDelay.inSeconds,
+    _reconnectDelay = nextBackoffDelay(
+      _reconnectDelay,
+      initial: _initialReconnectDelay,
+      max: _maxReconnectDelay,
+    );
+  }
+
+  /// Pure exponential-backoff step, extracted so it can be unit tested
+  /// without spinning up a real (or fake) SSE connection: doubles [current],
+  /// clamped to [initial, max].
+  ///
+  /// Visible for testing.
+  static Duration nextBackoffDelay(
+    Duration current, {
+    required Duration initial,
+    required Duration max,
+  }) {
+    return Duration(
+      seconds: (current.inSeconds * 2).clamp(
+        initial.inSeconds,
+        max.inSeconds,
       ),
+    );
+  }
+
+  /// Pure "full jitter" draw, extracted so it can be unit tested without a
+  /// real connection: picks a uniformly random duration in
+  /// `[0, delay]` (inclusive), using [random] as the entropy source.
+  ///
+  /// Visible for testing.
+  static Duration jitteredReconnectDelay(Duration delay, Random random) {
+    return Duration(
+      milliseconds: random.nextInt(delay.inMilliseconds + 1),
     );
   }
 }

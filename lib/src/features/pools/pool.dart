@@ -186,7 +186,7 @@ class Pool {
 
 // ── Message types ─────────────────────────────────────────────────────────────
 
-enum PoolMessageType { text, contributionEvent, voiceNote }
+enum PoolMessageType { text, contributionEvent, voiceNote, vibe }
 
 PoolMessageType _messageTypeFromString(String s) {
   switch (s) {
@@ -194,6 +194,8 @@ PoolMessageType _messageTypeFromString(String s) {
       return PoolMessageType.contributionEvent;
     case 'voice_note':
       return PoolMessageType.voiceNote;
+    case 'vibe':
+      return PoolMessageType.vibe;
     default:
       return PoolMessageType.text;
   }

@@ -7,6 +7,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
+import '../vibes/vibe_message_bubble.dart';
 
 // ── Corner radius constants (mirrors dm_message_bubble.dart) ─────────────────
 
@@ -82,6 +83,10 @@ class MissionRoomMessage extends StatelessWidget {
               currentUserId: currentUserId,
               onRetry: onRetry,
               readers: readers),
+          PoolMessageType.vibe => _VibeMessageRow(
+              message: message,
+              currentUserId: currentUserId,
+              onRetry: onRetry),
           PoolMessageType.voiceNote => _VoiceNoteRow(
               message: message,
               onLongPress: () => onLongPress(context),
@@ -422,6 +427,58 @@ class _TextMessageRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Vibe message row ──────────────────────────────────────────────────────────
+//
+// Renders a pool chat Vibe using the same [VibeMessageBubble] widget DM
+// threads use — previously pool Vibes had no case in the message-type
+// switch above at all and fell through to `_TextMessageRow`, which rendered
+// the raw JSON metadata string (`{"sticker_slug":"...","amount_usdc":...}`)
+// as plain chat text instead of the sticker/reveal UI.
+
+class _VibeMessageRow extends StatelessWidget {
+  const _VibeMessageRow({
+    required this.message,
+    required this.currentUserId,
+    this.onRetry,
+  });
+
+  final PoolMessageLocal message;
+  final String? currentUserId;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = message.senderUserId != null && message.senderUserId == currentUserId;
+    final vd = message.vibeData;
+    if (vd == null) {
+      // Malformed/legacy payload — fail closed with a neutral placeholder
+      // rather than crashing or rendering a raw JSON blob.
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: EdgeInsets.only(left: isMe ? 60 : 8, right: isMe ? 8 : 60),
+          child: Text(
+            'Vibe unavailable',
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 12,
+              color: ZendTheme.of(context).textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return VibeMessageBubble(
+      emoji: vd.displayEmoji,
+      amountUsdc: double.tryParse(vd.amountUsdc) ?? 0.0,
+      isMine: isMe,
+      createdAt: message.createdAt,
+      isDelivering: message.localStatus == LocalStatus.sending,
+      isFailed: message.localStatus == LocalStatus.failed,
+      onRetry: onRetry,
     );
   }
 }

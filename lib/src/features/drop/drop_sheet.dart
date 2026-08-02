@@ -77,6 +77,7 @@ class _DropSheetState extends State<DropSheet>
   late final DropService _dropService;
 
   StreamSubscription<List<DiscoveredReceiver>>? _scanSub;
+  StreamSubscription<BleScanError>? _scanErrorSub;
 
   DiscoveredReceiver? _confirmedReceiver;
   List<DiscoveredReceiver> _candidates = []; // for disambiguation
@@ -162,6 +163,7 @@ class _DropSheetState extends State<DropSheet>
     _resumeDiscoverability();
     _previewTimeoutTimer?.cancel();
     _scanSub?.cancel();
+    _scanErrorSub?.cancel();
     _bleScannerService.stopScan();
     _bleScannerService.dispose();
     _noteController.dispose();
@@ -174,6 +176,24 @@ class _DropSheetState extends State<DropSheet>
   void _startScanning() {
     _bleScannerService.startScan();
     _scanSub = _bleScannerService.discoveredReceivers.listen(_onReceivers);
+    // Previously scan-level failures (the platform scan stream erroring, or
+    // startScan() throwing) only reached DropDebugLog — a debug-only ring
+    // buffer — so a real user saw the scanning ripple animation spin
+    // forever with no way to know discovery had actually stopped working.
+    _scanErrorSub = _bleScannerService.errors.listen(_onScanError);
+  }
+
+  void _onScanError(BleScanError error) {
+    if (!mounted) return;
+    if (_stage == DropStage.processing ||
+        _stage == DropStage.success ||
+        _stage == DropStage.error) {
+      return;
+    }
+    setState(() {
+      _errorMessage = error.message;
+      _stage = DropStage.error;
+    });
   }
 
   /// Check Bluetooth state before starting, prompt user if it's off.

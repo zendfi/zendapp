@@ -249,6 +249,9 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     final model = ZendScope.of(context);
     final existing = _reactions.where((r) => r.emoji == emoji).firstOrNull;
     final alreadyReacted = existing?.reactedByMe ?? false;
+    // Snapshot for a guaranteed-local revert on failure — see the catch
+    // block below for why this replaced calling _loadReactions() to revert.
+    final preOptimistic = _reactions;
 
     // Optimistic update
     setState(() {
@@ -276,7 +279,20 @@ class _PublicPostRowState extends State<_PublicPostRow> {
         await model.activityDataService.addEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
       }
     } catch (_) {
-      if (mounted) _loadReactions(); // revert on error
+      if (mounted) {
+        // Revert to the pre-optimistic snapshot. Previously this called
+        // _loadReactions() to revert, but that fetch is itself wrapped in
+        // its own silent catch — if it ALSO failed (e.g. still offline),
+        // the optimistic tap stuck around looking successful even though
+        // the server never got the reaction. Reverting from a local
+        // snapshot has no network dependency, so it can't fail the same
+        // way; the toast then tells the user their tap didn't land, same
+        // convention as the existing comment-post failure toast.
+        setState(() => _reactions = preOptimistic);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+        );
+      }
     }
   }
 

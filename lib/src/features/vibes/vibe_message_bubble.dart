@@ -22,6 +22,8 @@ class VibeMessageBubble extends StatefulWidget {
     required this.isMine,
     this.createdAt,
     this.isDelivering = false,
+    this.isFailed = false,
+    this.onRetry,
   });
 
   final String emoji;
@@ -29,6 +31,16 @@ class VibeMessageBubble extends StatefulWidget {
   final bool isMine;
   final DateTime? createdAt;
   final bool isDelivering;
+  /// True when the send (transaction signing/submission) failed. Renders a
+  /// distinct error pill with a retry affordance instead of the normal
+  /// hidden/delivering state — mirrors the failed-state treatment already
+  /// used for text messages (see dm_message_bubble.dart's `_StatusIcon` and
+  /// mission_room_message.dart's `_DeliveryStatus`), which vibes previously
+  /// had no equivalent of.
+  final bool isFailed;
+  /// Called when the user taps the failed pill to retry sending. Only
+  /// relevant when [isFailed] and [isMine] are both true.
+  final VoidCallback? onRetry;
 
   @override
   State<VibeMessageBubble> createState() => _VibeMessageBubbleState();
@@ -151,7 +163,14 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
     final zt = ZendTheme.of(context);
 
     Widget body;
-    if (!_revealed || _exploding) {
+    if (widget.isFailed) {
+      body = _FailedVibe(
+        emoji: widget.emoji,
+        isMine: widget.isMine,
+        onRetry: widget.isMine ? widget.onRetry : null,
+        zt: zt,
+      );
+    } else if (!_revealed || _exploding) {
       // Show hidden state during explosion too — revealed state shows after
       body = _HiddenVibe(
         emoji: widget.emoji,
@@ -182,6 +201,67 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
           bottom: 4,
         ),
         child: body,
+      ),
+    );
+  }
+}
+
+// ── Failed state: error pill with retry ───────────────────────────────────────
+
+class _FailedVibe extends StatelessWidget {
+  const _FailedVibe({
+    required this.emoji,
+    required this.isMine,
+    required this.zt,
+    this.onRetry,
+  });
+
+  final String emoji;
+  final bool isMine;
+  final ZendTheme zt;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onRetry,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 90, maxWidth: 160),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: ZendColors.destructive.withValues(alpha: 0.4),
+            width: 0.8,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Opacity(
+              opacity: 0.4,
+              child: Text(emoji, style: const TextStyle(fontSize: 30)),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 12, color: ZendColors.destructive),
+                const SizedBox(width: 4),
+                Text(
+                  isMine ? 'Failed \u2022 Retry' : 'Vibe failed',
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 10,
+                    color: ZendColors.destructive,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
