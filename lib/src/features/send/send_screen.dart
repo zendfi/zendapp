@@ -109,13 +109,6 @@ class _SendScreenState extends State<SendScreen>
   String get _currencyLabel =>
       _inputMode == _InputMode.usd ? 'USD' : 'NGN';
 
-  String _balanceFormatted(double balance) {
-    if (balance == balance.roundToDouble()) {
-      return '\$${balance.toStringAsFixed(0)}';
-    }
-    return '\$${balance.toStringAsFixed(2)}';
-  }
-
   @override
   void initState() {
     super.initState();
@@ -227,56 +220,21 @@ class _SendScreenState extends State<SendScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _IconPill(icon: SolarIconsBold.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
-                          // Balance + profile — right-aligned, tap balance to toggle hide
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Balance pill — same height as profile button (36px)
-                              GestureDetector(
-                                onTap: ZendScope.of(context).toggleBalanceHidden,
-                                child: Container(
-                                  height: 36,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0x1AF0F0F0),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: const Color(0x26F0F0F0)),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Text(
-                                      ZendScope.of(context).balanceHidden
-                                          ? '••••'
-                                          : _balanceFormatted(ZendScope.of(context).spendableBalance),
-                                      key: ValueKey(ZendScope.of(context).balanceHidden
-                                          ? 'hidden'
-                                          : ZendScope.of(context).spendableBalance.toStringAsFixed(2)),
-                                      style: const TextStyle(
-                                        fontFamily: 'Satoshi',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                        color: Color(0xCCF0F0F0),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              GestureDetector(
-                                onTap: () => pushZendSlide(context, const ProfileScreen()),
-                                child: ZendAvatar(
-                                  radius: 18,
-                                  photoUrl: ZendScope.of(context).currentAvatarUrl,
-                                  initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
-                                      ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
-                                      : ZendScope.of(context).username.isNotEmpty
-                                          ? ZendScope.of(context).username[0].toUpperCase()
-                                          : null,
-                                  backgroundColor: const Color(0x3095D5B2),
-                                ),
-                              ),
-                            ],
+                          // Profile — balance is now surfaced in the navbar
+                          // (see ZendBottomBar's _BalanceNavItem), so it no
+                          // longer needs its own pill here.
+                          GestureDetector(
+                            onTap: () => pushZendSlide(context, const ProfileScreen()),
+                            child: ZendAvatar(
+                              radius: 18,
+                              photoUrl: ZendScope.of(context).currentAvatarUrl,
+                              initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
+                                  ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
+                                  : ZendScope.of(context).username.isNotEmpty
+                                      ? ZendScope.of(context).username[0].toUpperCase()
+                                      : null,
+                              backgroundColor: const Color(0x3095D5B2),
+                            ),
                           ),
                         ],
                       ),
