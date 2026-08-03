@@ -40,6 +40,15 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
+      // Previously this kept ticking down even while the native
+      // biometric (Face ID/fingerprint) prompt was open and awaiting the
+      // user — a slow Face ID retry or a moment's hesitation on the OS
+      // dialog could let the timer hit zero mid-prompt and silently
+      // cancel the whole Drop out from under someone who was actively
+      // engaging with it, not idle. Pausing here doesn't affect the
+      // "auto-cancels in Ns" label shown to the user, since it simply
+      // stops decrementing rather than resetting.
+      if (_biometricInProgress) return;
       setState(() => _secondsRemaining--);
       if (_secondsRemaining <= 0) {
         _timer?.cancel();

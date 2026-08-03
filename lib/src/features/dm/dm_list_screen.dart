@@ -27,7 +27,6 @@ class _DmListScreenState extends State<DmListScreen> {
   List<DmThread> _threads = [];
   bool _loading = true;
   bool _loadError = false;
-  bool _searchActive = false;
   String _searchQuery = '';
   bool _notificationsMuted = false;
   final TextEditingController _searchController = TextEditingController();
@@ -210,18 +209,6 @@ class _DmListScreenState extends State<DmListScreen> {
     ).then((_) => _loadThreads());
   }
 
-  void _toggleSearch() {
-    setState(() {
-      _searchActive = !_searchActive;
-      if (!_searchActive) {
-        _searchController.clear();
-        _searchFocus.unfocus();
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -271,54 +258,40 @@ class _DmListScreenState extends State<DmListScreen> {
                     ),
                     tooltip: _notificationsMuted ? 'Unmute chat notifications' : 'Mute chat notifications',
                   ),
-                  // Search toggle
-                  IconButton(
-                    onPressed: _toggleSearch,
-                    icon: Icon(
-                      _searchActive
-                          ? PhosphorIconsBold.magnifyingGlassMinus
-                          : PhosphorIconsBold.magnifyingGlass,
-                      color: _searchActive ? zt.accent : zt.textSecondary,
-                      size: 24,
-                    ),
-                    tooltip: _searchActive ? 'Close search' : 'Search chats',
-                  ),
                 ],
               ),
             ),
 
-            // ── Inline search bar ──
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: _searchActive
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocus,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'Search chats…',
-                          hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? GestureDetector(
-                                  onTap: () => _searchController.clear(),
-                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: zt.bgSecondary,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(ZendRadii.pill),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+            // ── Persistent search pill ──
+            // Always visible, WhatsApp-style, rather than hidden behind an
+            // icon toggle — an always-present search invites use and gives
+            // the header something to anchor visually against, instead of
+            // costing the user an extra tap to even find it.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Search chats',
+                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
+                  prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () => _searchController.clear(),
+                          child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: zt.bgSecondary,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
             ),
 
             // ── Thread list ──

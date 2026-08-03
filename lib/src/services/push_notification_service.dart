@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Rect, Offset, Paint, Path, Canvas;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../firebase_options.dart';
@@ -131,44 +134,14 @@ class PushNotificationService {
   static const _kBadgeClearNotificationId = -1;
 
   Future<void> _setupLocalNotifications() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-    const initSettings = InitializationSettings(
-      android: androidInit,
-      iOS: iosInit,
-    );
-
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
+    await _initLocalNotificationsCore(
+      _localNotifications,
+      onTap: _onNotificationTap,
     );
 
     final androidImpl = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-
-    // One Android channel per category, matching the backend's
-    // NotificationCategory::android_channel_id() exactly (see
-    // src/push_notifications.rs and notification_category.dart). Previously
-    // every notification — DMs, pool chat, activity reactions, savings
-    // progress, and actual money transfers — shared a single
-    // "zend_transfers" channel, so muting any one of them via Android's own
-    // per-channel notification settings silently muted all of them.
-    for (final category in NotificationCategoryKind.values) {
-      await androidImpl?.createNotificationChannel(
-        AndroidNotificationChannel(
-          category.androidChannelId,
-          category.androidChannelName,
-          description: category.androidChannelDescription,
-          importance: Importance.high,
-          playSound: true,
-        ),
-      );
-    }
 
     // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+).
     // Without this grant, notifications will not appear in the status bar
@@ -263,67 +236,9 @@ class PushNotificationService {
   void _listenForForegroundMessages() {
     _foregroundMessageSub?.cancel();
     _foregroundMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // With 'notification' field in the FCM payload, the system bar shows
-      // the notification automatically when the app is backgrounded.
-      // When the app is FOREGROUND, Android suppresses the system notification
-      // so we show a local one here — but only for messages the user needs to see.
-      final title = message.data['title'] as String? ??
-          message.notification?.title ??
-          'Zend';
-      final body = message.data['body'] as String? ??
-          message.notification?.body ??
-          '';
+      _showLocalNotificationForMessage(_localNotifications, message.data);
+
       final type = message.data['type'] as String? ?? '';
-
-      if (body.isEmpty) return;
-
-      // Don't show foreground notification for drop_confirmed on the sender's side
-      // — they're already seeing the success animation in the Drop sheet.
-      // Do show it for the receiver (role = 'receiver') and all other types.
-      final role = message.data['role'] as String? ?? '';
-      if (type == 'drop_confirmed' && role == 'sender') return;
-
-      // Route-aware suppression: don't pop a local notification for the
-      // exact DM thread or pool chat the user is already looking at. This
-      // previously fired unconditionally — receiving a status-bar
-      // notification for the message you're actively reading on screen is
-      // the single most jarring case of a notification "lying" about
-      // needing your attention.
-      if (type == 'dm_message') {
-        final roomId = message.data['room_id'] as String?;
-        if (roomId != null && roomId == activeDmRoomId) return;
-      }
-      if (type == 'pool_message') {
-        final poolId = message.data['pool_id'] as String?;
-        if (poolId != null && poolId == activePoolId) return;
-      }
-
-      final category = NotificationCategoryKindX.fromType(type);
-
-      _localNotifications.show(
-        _notificationIdFor(message.data, type),
-        title,
-        body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            category.androidChannelId,
-            category.androidChannelName,
-            channelDescription: category.androidChannelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-            playSound: true,
-            styleInformation: BigTextStyleInformation(body, contentTitle: title),
-          ),
-          iOS: const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        payload: jsonEncode(message.data),
-      );
-
       // Pool message badge — mark pool as having new messages. Previously
       // only wired from the background-tap/terminated path via
       // _handleNotificationData; a foreground pool message never updated the
@@ -333,30 +248,6 @@ class PushNotificationService {
         if (poolId != null) onPoolMessageReceived?.call(poolId);
       }
     });
-  }
-
-  /// Derives a stable local-notification ID from the notification's own
-  /// identity (a room/edge/transfer/pool ID from its data payload), falling
-  /// back to a hash of the title+body only if no such ID is present.
-  ///
-  /// The previous implementation used `message.hashCode` — Dart's default
-  /// `Object.hashCode`, which is only guaranteed consistent for the
-  /// lifetime of that single `RemoteMessage` instance and has no
-  /// relationship to the notification's actual content. Two independent
-  /// deliveries of "logically the same" notification (e.g. a duplicate FCM
-  /// delivery, or the same DM room notified twice in quick succession)
-  /// could get different IDs and stack as separate status-bar entries
-  /// instead of one being replaced/updated by the other; conversely two
-  /// unrelated notifications could collide on the same ID by coincidence.
-  /// A content-derived ID makes "the same underlying thing" collapse to one
-  /// notification slot deterministically.
-  int _notificationIdFor(Map<String, dynamic> data, String type) {
-    final identity = data['room_id'] as String? ??
-        data['pool_id'] as String? ??
-        data['edge_id'] as String? ??
-        data['transfer_id'] as String? ??
-        '$type:${data['title']}:${data['body']}';
-    return identity.hashCode & 0x7fffffff; // keep it a positive 32-bit int
   }
 
   Future<void> _sendTokenToBackend(String token) async {
@@ -392,6 +283,16 @@ class PushNotificationService {
 
 /// Top-level handler for background/terminated FCM messages.
 /// Must be a top-level function (not a class method) — Flutter requirement.
+///
+/// The backend now sends every Android push as a DATA-ONLY FCM message (see
+/// `send_push_notification` in src/push_notifications.rs) — there's no
+/// `notification` block for Android itself to auto-display, so this handler
+/// is now responsible for actually building and showing the local
+/// notification for background/killed app states, not just re-initializing
+/// Firebase. Previously this was a no-op because the OS displayed the
+/// `notification` payload automatically; that auto-display had no way to
+/// show a per-sender circular avatar (`largeIcon`), which is the whole
+/// reason for the data-only switch.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
@@ -400,4 +301,224 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
     debugPrint('PushNotifications: background message received: ${message.messageId}');
   }
+
+  // A fresh plugin instance — this handler runs in its own background
+  // isolate on Android, so it can't reuse the running app's
+  // FlutterLocalNotificationsPlugin instance (or its channel registrations,
+  // which is why channels are (re-)created here too via
+  // _initLocalNotificationsCore — createNotificationChannel is idempotent,
+  // so re-creating an already-existing channel is a harmless no-op).
+  final localNotifications = FlutterLocalNotificationsPlugin();
+  await _initLocalNotificationsCore(localNotifications);
+  await _showLocalNotificationForMessage(localNotifications, message.data);
+}
+
+/// Registers Android notification channels (one per [NotificationCategoryKind],
+/// matching the backend's channel_id exactly) and initializes the plugin.
+/// Shared between the foreground service instance and the standalone
+/// background-isolate handler above, since both need working channels
+/// before they can call `.show()`.
+Future<void> _initLocalNotificationsCore(
+  FlutterLocalNotificationsPlugin plugin, {
+  void Function(NotificationResponse)? onTap,
+}) async {
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const iosInit = DarwinInitializationSettings(
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
+  );
+  const initSettings = InitializationSettings(
+    android: androidInit,
+    iOS: iosInit,
+  );
+
+  await plugin.initialize(
+    initSettings,
+    onDidReceiveNotificationResponse: onTap,
+  );
+
+  final androidImpl = plugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+
+  // One Android channel per category, matching the backend's
+  // NotificationCategory::android_channel_id() exactly (see
+  // src/push_notifications.rs and notification_category.dart). Previously
+  // every notification — DMs, pool chat, activity reactions, savings
+  // progress, and actual money transfers — shared a single
+  // "zend_transfers" channel, so muting any one of them via Android's own
+  // per-channel notification settings silently muted all of them.
+  for (final category in NotificationCategoryKind.values) {
+    await androidImpl?.createNotificationChannel(
+      AndroidNotificationChannel(
+        category.androidChannelId,
+        category.androidChannelName,
+        description: category.androidChannelDescription,
+        importance: Importance.high,
+        playSound: true,
+      ),
+    );
+  }
+}
+
+/// Builds and shows the local notification for a push's `data` payload,
+/// including downloading the sender/actor's avatar (if present) as a
+/// circular `largeIcon` — the WhatsApp-style avatar-next-to-sender-name
+/// look. Used by both the foreground listener (app open) and the
+/// background-isolate handler (app backgrounded/killed) so the notification
+/// looks identical regardless of app state.
+Future<void> _showLocalNotificationForMessage(
+  FlutterLocalNotificationsPlugin plugin,
+  Map<String, dynamic> data,
+) async {
+  final title = data['title'] as String? ?? 'Zend';
+  final body = data['body'] as String? ?? '';
+  final type = data['type'] as String? ?? '';
+
+  if (body.isEmpty) return;
+
+  // Don't show a notification for drop_confirmed on the sender's side —
+  // they're already seeing the success animation in the Drop sheet.
+  // Do show it for the receiver (role = 'receiver') and all other types.
+  final role = data['role'] as String? ?? '';
+  if (type == 'drop_confirmed' && role == 'sender') return;
+
+  // Route-aware suppression: don't pop a local notification for the exact
+  // DM thread or pool chat the user is already looking at. Only meaningful
+  // in the foreground (activeDmRoomId/activePoolId are only ever set while
+  // the app is running), but harmless to check unconditionally — both are
+  // simply null while backgrounded/killed.
+  if (type == 'dm_message') {
+    final roomId = data['room_id'] as String?;
+    if (roomId != null && roomId == PushNotificationService.activeDmRoomId) return;
+  }
+  if (type == 'pool_message') {
+    final poolId = data['pool_id'] as String?;
+    if (poolId != null && poolId == PushNotificationService.activePoolId) return;
+  }
+
+  final category = NotificationCategoryKindX.fromType(type);
+  final avatarUrl = data['avatar_url'] as String?;
+  final largeIcon = await _downloadAvatarAsCircularBitmap(avatarUrl);
+
+  await plugin.show(
+    _notificationIdForData(data, type),
+    title,
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        category.androidChannelId,
+        category.androidChannelName,
+        channelDescription: category.androidChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        largeIcon: largeIcon,
+        playSound: true,
+        styleInformation: BigTextStyleInformation(body, contentTitle: title),
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        // iOS: cached_network_image's downloaded avatar file doubles as a
+        // DarwinNotificationAttachment for the foreground/local-notification
+        // path — this does NOT apply to a true background/killed FCM
+        // "alert" push (that's still rendered by iOS itself with no
+        // attachment, since we deliberately left iOS's FCM payload
+        // alert-based rather than data-only — see push_notifications.rs).
+        attachments: avatarUrl != null && avatarUrl.isNotEmpty
+            ? await _iosAttachmentFor(avatarUrl)
+            : null,
+      ),
+    ),
+    payload: jsonEncode(data),
+  );
+}
+
+/// Downloads [avatarUrl] (via the same cache manager `cached_network_image`
+/// uses elsewhere in the app — `zend_avatar.dart` — so a previously-seen
+/// avatar is served from disk cache instead of re-fetched every
+/// notification) and crops it to a circle in memory, matching the circular
+/// `ZendAvatar` widget look used throughout the rest of the app rather than
+/// a plain square thumbnail. Returns null (falls back to the static app
+/// icon) if there's no avatar URL or the download/decode fails for any
+/// reason — a broken avatar must never prevent the notification itself
+/// from showing.
+Future<AndroidBitmap<Object>?> _downloadAvatarAsCircularBitmap(String? avatarUrl) async {
+  if (avatarUrl == null || avatarUrl.isEmpty) return null;
+  try {
+    final file = await DefaultCacheManager().getSingleFile(avatarUrl);
+    final circularBytes = await _cropToCircle(await file.readAsBytes());
+    return ByteArrayAndroidBitmap(circularBytes);
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('PushNotifications: avatar download/crop failed: $e');
+    }
+    return null;
+  }
+}
+
+/// iOS local-notification attachment for the downloaded avatar. Unlike
+/// Android's largeIcon, DarwinNotificationAttachment needs an actual file
+/// path (not raw bytes), so this reuses the same cached file directly
+/// rather than re-encoding a cropped copy — iOS's own notification UI
+/// already masks attachment thumbnails to a rounded shape.
+Future<List<DarwinNotificationAttachment>?> _iosAttachmentFor(String avatarUrl) async {
+  try {
+    final file = await DefaultCacheManager().getSingleFile(avatarUrl);
+    return [DarwinNotificationAttachment(file.path)];
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('PushNotifications: iOS avatar attachment failed: $e');
+    }
+    return null;
+  }
+}
+
+/// Crops raw image [bytes] to a circle (transparent corners) at a fixed
+/// notification-appropriate resolution, matching the circular avatar look
+/// used everywhere else in the app (`ZendAvatar`) rather than Android's
+/// default square largeIcon corners.
+Future<Uint8List> _cropToCircle(Uint8List bytes) async {
+  const size = 256;
+  final codec = await ui.instantiateImageCodec(bytes, targetWidth: size, targetHeight: size);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  final rect = Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
+  final path = Path()..addOval(rect);
+  canvas.clipPath(path);
+  canvas.drawImage(image, Offset.zero, Paint());
+
+  final picture = recorder.endRecording();
+  final circularImage = await picture.toImage(size, size);
+  final pngBytes = await circularImage.toByteData(format: ui.ImageByteFormat.png);
+  return pngBytes!.buffer.asUint8List();
+}
+
+/// Derives a stable local-notification ID from the notification's own
+/// identity (a room/edge/transfer/pool ID from its data payload), falling
+/// back to a hash of the title+body only if no such ID is present.
+///
+/// The previous implementation used `message.hashCode` — Dart's default
+/// `Object.hashCode`, which is only guaranteed consistent for the lifetime
+/// of that single `RemoteMessage` instance and has no relationship to the
+/// notification's actual content. Two independent deliveries of "logically
+/// the same" notification (e.g. a duplicate FCM delivery, or the same DM
+/// room notified twice in quick succession) could get different IDs and
+/// stack as separate status-bar entries instead of one being
+/// replaced/updated by the other; conversely two unrelated notifications
+/// could collide on the same ID by coincidence. A content-derived ID makes
+/// "the same underlying thing" collapse to one notification slot
+/// deterministically.
+int _notificationIdForData(Map<String, dynamic> data, String type) {
+  final identity = data['room_id'] as String? ??
+      data['pool_id'] as String? ??
+      data['edge_id'] as String? ??
+      data['transfer_id'] as String? ??
+      '$type:${data['title']}:${data['body']}';
+  return identity.hashCode & 0x7fffffff; // keep it a positive 32-bit int
 }

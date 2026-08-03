@@ -1521,7 +1521,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final cp = widget.counterparty;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // Distinct chat-canvas colour (not the app-wide scaffold background) —
+      // gives bubbles a surface to visibly sit on top of, matching the
+      // WhatsApp/iMessage "canvas vs. bubble" depth.
+      backgroundColor: zt.chatBg,
       body: SafeArea(
         child: Column(
           children: [

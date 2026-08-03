@@ -159,6 +159,14 @@ class _ZendShellState extends State<ZendShell> {
     final model = ZendScope.of(context);
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
+    final pendingComment = model.pendingActivityComment;
+    // Suppress the reaction/comment banners while the Activity tab is
+    // already active — mirrors the DM banner's own `_tabIndex != 3` check.
+    // Computed once here (rather than inline at each Positioned site) so
+    // the top-offset math for the banner stack and the visibility checks
+    // can't drift out of sync with each other.
+    final showReactionBanner = pendingReaction != null && _tabIndex != 2;
+    final showCommentBanner = pendingComment != null && _tabIndex != 2;
 
     // DM banner logic — show when dmUnreadTotal increases and we're not on DM tab
     // The SSE data is carried via model.lastDmBannerData
@@ -205,7 +213,6 @@ class _ZendShellState extends State<ZendShell> {
       _lastReactionBannerKey = null;
     }
 
-    final pendingComment = model.pendingActivityComment;
     if (pendingComment != null) {
       final key = '${pendingComment.edgeKind}:${pendingComment.edgeId}:${pendingComment.body}';
       if (key != _lastCommentBannerKey) {
@@ -282,7 +289,12 @@ class _ZendShellState extends State<ZendShell> {
             ),
           // In-app "someone reacted to your activity" banner — stacked
           // below the payment-request banner if both are present.
-          if (pendingReaction != null)
+          // Suppressed while the Activity tab is already active — mirrors
+          // the DM banner's `_tabIndex != 3` check below. Previously this
+          // had no such check, so a reaction/comment banner would pop up
+          // and steal attention even while the user was already sitting on
+          // the Activity screen watching that exact update land live.
+          if (showReactionBanner)
             Positioned(
               top: pending != null ? 78 : 0,
               left: 0,
@@ -294,10 +306,11 @@ class _ZendShellState extends State<ZendShell> {
               ),
             ),
           // In-app "someone commented on your activity" banner — stacked
-          // below whichever of the above banners are present.
-          if (pendingComment != null)
+          // below whichever of the above banners are present. Same
+          // active-tab suppression as the reaction banner above.
+          if (showCommentBanner)
             Positioned(
-              top: (pending != null ? 78 : 0) + (pendingReaction != null ? 78 : 0),
+              top: (pending != null ? 78 : 0) + (showReactionBanner ? 78 : 0),
               left: 0,
               right: 0,
               child: _ActivityCommentBanner(
@@ -310,8 +323,8 @@ class _ZendShellState extends State<ZendShell> {
           if (_pendingDmBanner != null && _tabIndex != 3)
             Positioned(
               top: (pending != null ? 78 : 0) +
-                  (pendingReaction != null ? 78 : 0) +
-                  (pendingComment != null ? 78 : 0),
+                  (showReactionBanner ? 78 : 0) +
+                  (showCommentBanner ? 78 : 0),
               left: 0,
               right: 0,
               child: _DmMessageBanner(

@@ -118,6 +118,12 @@ dependencies:
   # Network image caching (profile photos)
   cached_network_image: ^3.4.1
 
+  # Direct dependency on cached_network_image's underlying cache manager —
+  # used to download+cache push-notification sender avatars for the
+  # Android largeIcon / iOS attachment (see push_notification_service.dart).
+  # Previously only pulled in transitively via cached_network_image.
+  flutter_cache_manager: ^3.4.1
+
   # Camera / gallery access (avatar upload)
   image_picker: ^1.1.2
 

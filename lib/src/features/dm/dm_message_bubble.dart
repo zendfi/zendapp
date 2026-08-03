@@ -7,196 +7,53 @@ import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
+//
+// Modern WhatsApp/iMessage bubbles no longer use a protruding "beak" tail —
+// grouping is communicated purely through asymmetric corner radii: the outer
+// (far) corners stay fully rounded, while the inner (joining) corner between
+// two bubbles from the same sender tightens up to visually fuse the group
+// together. This is both simpler to render (a single RoundedRectangleBorder,
+// no CustomPainter/Path math) and closer to what the reference apps actually
+// look like today — see the WhatsApp/iMessage screenshots this was checked
+// against, neither has a beak anymore.
 
 /// Outer (far) corner — large, fully rounded.
 const double _kOuter = 18.0;
 
 /// Inner (joining) corner — tight, visually fuses grouped bubbles together.
-const double _kInner = 4.0;
+const double _kInner = 5.0;
 
-/// Tail protrusion dimensions.
-const double _kTailW = 8.0;   // horizontal extent of the beak triangle
-const double _kTailH = 7.0;   // vertical height — shorter = subtler beak
-
-// ── CustomPainter that draws a bubble with a real protruding beak ─────────────
-//
-// Design rules (from WhatsApp reference + analysis):
-//
-// 1. Tail position: LAST bubble in a run for BOTH sender and receiver.
-//    The tail sits closest to the compose bar — newest message in a turn.
-//
-// 2. Per-corner radii respond to grouping:
-//    Sender (right side):
-//      first-in-group: TL=outer, TR=outer (tail here on non-last, inner on non-first)
-//      middle: TL=outer, TR=inner, BL=outer, BR=inner
-//      last-in-group (tail): TL=outer, TR=inner, BL=outer, BR=0 (tail corner, no arc)
-//    Receiver (left side):
-//      first-in-group: TL=outer, TR=outer, BL=inner, BR=outer
-//      middle: TL=inner, TR=outer, BL=inner, BR=outer
-//      last-in-group (tail): TL=inner, TR=outer, BL=0 (tail corner, no arc), BR=outer
-//
-// 3. Self-intersection fix: the tail corner uses radius 0 (no arc). This
-//    prevents the path from drawing an arc and then overlapping it with the
-//    beak lines, which produced a faint seam / zero-winding artifact in Skia.
-
-class _BubblePainter extends CustomPainter {
-  const _BubblePainter({
-    required this.color,
-    required this.isMe,
-    required this.isFirst,
-    required this.isLast,
-    this.gradient,
-    this.borderColor,
-    this.borderWidth = 0,
-  });
-
-  final Color color;
-  final bool isMe, isFirst, isLast;
-  final Gradient? gradient;
-  final Color? borderColor;
-  final double borderWidth;
-
-  // In a reversed ListView (index 0 = newest = visually BOTTOM):
-  // • isFirst = newest in group = visually BOTTOM of the group
-  // • isLast  = oldest in group = visually TOP of the group
-  //
-  // Sender beak: top of the group → isLast (oldest = top)
-  // Receiver beak: bottom of the group (next to avatar) → isFirst (newest = bottom)
-  bool get _showTail => isMe ? isLast : isFirst;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final showTail = _showTail;
-
-    // The bubble body occupies [bL, bR] horizontally.
-    // The gutter (_kTailW) is ALWAYS reserved on the tail side, even on non-tail
-    // bubbles — this keeps body edges flush across the whole group.
-    // The beak triangle is only drawn when showTail is true; otherwise that
-    // strip is left transparent.
-    final double bL = !isMe ? _kTailW : 0.0;
-    final double bR = isMe  ? w - _kTailW : w;
-
-    // Per-corner radii — inner side tightens for grouped bubbles.
-    final double rTL, rTR, rBL, rBR;
-    if (isMe) {
-      // Sent: right side is the "inner" side.
-      // Tail (beak) is on isLast = oldest = visually topmost sent bubble.
-      rTL = _kOuter;
-      rTR = isLast ? 0.0 : _kInner; // tail corner = 0 on last (top), inner on rest
-      rBL = _kOuter;
-      rBR = isFirst ? _kOuter : _kInner; // bottom of group stays outer
-    } else {
-      // Received: left side is the inner side.
-      // Tail (beak) is on isFirst = newest = visually bottommost, where avatar is.
-      rTL = isLast ? _kOuter : _kInner;  // top of group stays outer
-      rTR = _kOuter;
-      rBL = isFirst ? 0.0 : _kInner; // tail corner = 0 on first (bottom)
-      rBR = _kOuter;
-    }
-
-    final path = Path();
-
-    if (isMe) {
-      // ── Sent bubble (right-aligned) ──────────────────────────────────
-      // Traverse clockwise from top-left:
-      path.moveTo(bL + rTL, 0);
-      // Top edge →
-      path.lineTo(bR - rTR, 0);
-      // rTR == 0 when this is the tail bubble — no arc, straight into beak
-      if (showTail) {
-        // Beak at top-right: protrudes rightward from the top corner
-        path.lineTo(bR, 0);        // top-right corner (square, rTR==0)
-        path.lineTo(w, 0);         // beak tip at very top-right
-        path.lineTo(bR, _kTailH);  // back down to bubble right edge
-      } else if (rTR > 0) {
-        path.arcToPoint(Offset(bR, rTR),
-            radius: Radius.circular(rTR), clockwise: true);
-      }
-      // Right edge ↓ (starts at _kTailH if tail, else rTR)
-      path.lineTo(bR, h - rBR);
-      if (rBR > 0) {
-        path.arcToPoint(Offset(bR - rBR, h),
-            radius: Radius.circular(rBR), clockwise: true);
-      }
-      // Bottom edge ←
-      path.lineTo(bL + rBL, h);
-      if (rBL > 0) {
-        path.arcToPoint(Offset(bL, h - rBL),
-            radius: Radius.circular(rBL), clockwise: true);
-      }
-      // Left edge ↑
-      path.lineTo(bL, rTL);
-      if (rTL > 0) {
-        path.arcToPoint(Offset(bL + rTL, 0),
-            radius: Radius.circular(rTL), clockwise: true);
-      }
-      path.close();
-    } else {
-      // ── Received bubble (left-aligned) ──────────────────────────────
-      // Traverse clockwise from top-left:
-      path.moveTo(bL + rTL, 0);
-      // Top edge →
-      path.lineTo(bR - rTR, 0);
-      if (rTR > 0) {
-        path.arcToPoint(Offset(bR, rTR),
-            radius: Radius.circular(rTR), clockwise: true);
-      }
-      // Right edge ↓
-      path.lineTo(bR, h - rBR);
-      if (rBR > 0) {
-        path.arcToPoint(Offset(bR - rBR, h),
-            radius: Radius.circular(rBR), clockwise: true);
-      }
-      // Bottom edge ←
-      path.lineTo(bL, h);
-
-      if (showTail) {
-        // Tail at bottom-left: beak protrudes leftward from bL
-        path.lineTo(bL, h);              // bottom of bubble left edge
-        path.lineTo(0, h);               // beak tip (bottom-left)
-        path.lineTo(bL, h - _kTailH);   // back up to where beak starts
-      }
-
-      // Left edge ↑
-      path.lineTo(bL, rTL);
-      if (rTL > 0) {
-        path.arcToPoint(Offset(bL + rTL, 0),
-            radius: Radius.circular(rTL), clockwise: true);
-      }
-      path.close();
-    }
-
-    // Fill
-    final fillRect = Rect.fromLTRB(bL, 0, bR, h);
-    final paint = Paint()..style = PaintingStyle.fill;
-    if (gradient != null) {
-      paint.shader = gradient!.createShader(fillRect);
-    } else {
-      paint.color = color;
-    }
-    canvas.drawPath(path, paint);
-
-    // Optional border
-    if (borderColor != null && borderWidth > 0) {
-      canvas.drawPath(path, Paint()
-        ..style = PaintingStyle.stroke
-        ..color = borderColor!
-        ..strokeWidth = borderWidth);
-    }
+/// Returns the per-corner [BorderRadius] for a bubble at a given position in
+/// its sender group.
+///
+/// In the reversed ListView (index 0 = newest = visually BOTTOM):
+///  • isFirst = newest in the group = visually BOTTOM
+///  • isLast  = oldest in the group = visually TOP
+///
+/// The inner corner (the one facing the *next* bubble from the same sender)
+/// tightens for any bubble that isn't alone at that edge of the group.
+BorderRadius _groupedBorderRadius({required bool isMe, required bool isFirst, required bool isLast}) {
+  if (isMe) {
+    // Sent: right side is the "inner" side (facing the screen edge is outer
+    // on the left, tightened grouping shows on the right).
+    return BorderRadius.only(
+      topLeft: const Radius.circular(_kOuter),
+      topRight: Radius.circular(isLast ? _kOuter : _kInner),
+      bottomLeft: const Radius.circular(_kOuter),
+      bottomRight: Radius.circular(isFirst ? _kOuter : _kInner),
+    );
   }
-
-  @override
-  bool shouldRepaint(_BubblePainter old) =>
-      old.color != color || old.isMe != isMe ||
-      old.isFirst != isFirst || old.isLast != isLast ||
-      old.gradient != gradient;
+  // Received: left side is the inner side.
+  return BorderRadius.only(
+    topLeft: Radius.circular(isLast ? _kOuter : _kInner),
+    topRight: const Radius.circular(_kOuter),
+    bottomLeft: Radius.circular(isFirst ? _kOuter : _kInner),
+    bottomRight: const Radius.circular(_kOuter),
+  );
 }
 
-/// Wraps [child] in a painted bubble with a protruding beak on the correct side.
-/// Expands the layout by [_kTailW] on the tail side so the protrusion doesn't
-/// overlap the content or get clipped.
+/// Wraps [child] in a bubble shape with grouped corner radii. No tail/beak —
+/// see the note above [_kOuter].
 class _BubbleShape extends StatelessWidget {
   const _BubbleShape({
     required this.isMe,
@@ -218,20 +75,17 @@ class _BubbleShape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Gutter is ALWAYS reserved on the tail side for every bubble — not just
-    // the tailed one — so all body edges line up flush. The painter only draws
-    // the actual beak triangle when showTail is true.
-    final leftPad  = !isMe ? _kTailW : 0.0;
-    final rightPad = isMe  ? _kTailW : 0.0;
-    return CustomPaint(
-      painter: _BubblePainter(
-        color: color, isMe: isMe, isFirst: isFirst, isLast: isLast,
-        gradient: gradient, borderColor: borderColor, borderWidth: borderWidth,
+    final radius = _groupedBorderRadius(isMe: isMe, isFirst: isFirst, isLast: isLast);
+    return Container(
+      decoration: BoxDecoration(
+        color: gradient == null ? color : null,
+        gradient: gradient,
+        borderRadius: radius,
+        border: borderColor != null && borderWidth > 0
+            ? Border.all(color: borderColor!, width: borderWidth)
+            : null,
       ),
-      child: Padding(
-        padding: EdgeInsets.only(left: leftPad, right: rightPad),
-        child: child,
-      ),
+      child: child,
     );
   }
 }
@@ -478,10 +332,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // to its non-positioned child only.
     //
     // Horizontal anchoring: this widget's own coordinate space starts at its
-    // Row's leading gap (4px) then the bubble's tail gutter (_kTailW, 8px)
-    // before the visible rounded body — it does NOT include the avatar
-    // gutter, which lives in a sibling widget one level up. So both sides
-    // use the same `_kTailW + 4` inset from their respective edge.
+    // Row's leading gap (4px) — the bubble no longer reserves a tail gutter
+    // (see _BubbleShape), so that's the only inset needed before the visible
+    // rounded body. It does NOT include the avatar gutter, which lives in a
+    // sibling widget one level up.
     if (hasReactions) {
       child = Stack(
         clipBehavior: Clip.none,
@@ -489,10 +343,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           child,
           Positioned(
             bottom: -10,
-            // Anchor to the tail-side corner — bottom-right for sent
+            // Anchor to the group-facing corner — bottom-right for sent
             // messages, bottom-left for received.
-            right: widget.isMe ? _kTailW + 4 : null,
-            left:  widget.isMe ? null : _kTailW + 4,
+            right: widget.isMe ? 4 : null,
+            left:  widget.isMe ? null : 4,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
@@ -657,7 +511,7 @@ class _TextBubble extends StatelessWidget {
               isMe: isMe,
               isFirst: isFirst,
               isLast: isLast,
-              color: isMe ? zt.accent : zt.bgSecondary,
+              color: isMe ? zt.accent : zt.bubbleReceived,
               gradient: isMe ? sentGradient : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -679,42 +533,47 @@ class _TextBubble extends StatelessWidget {
                       const SizedBox(height: 5),
                     ],
                     if (message.displayContent?.isNotEmpty == true)
-                      Text(
-                        message.displayContent!,
-                        style: TextStyle(
-                          fontFamily: 'Satoshi',
-                          fontSize: 15.5,
-                          color: isMe ? Colors.white : zt.textPrimary,
-                          height: 1.35,
+                      // Timestamp + status float inline at the end of the
+                      // text via a trailing WidgetSpan (WhatsApp/iMessage
+                      // pattern) instead of always reserving their own row
+                      // below the message — a one-line message now stays a
+                      // genuinely compact one-line bubble; the meta only
+                      // drops to its own line when the text doesn't leave
+                      // room on the last line.
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: message.displayContent!,
+                              style: TextStyle(
+                                fontFamily: 'Satoshi',
+                                fontSize: 15.5,
+                                color: isMe ? Colors.white : zt.textPrimary,
+                                height: 1.35,
+                              ),
+                            ),
+                            const WidgetSpan(child: SizedBox(width: 8)),
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: _MessageMeta(
+                                message: message,
+                                isMe: isMe,
+                                showNotEncrypted: _showNotEncryptedBadge,
+                                onRetry: onRetry,
+                              ),
+                            ),
+                          ],
                         ),
+                      )
+                    else
+                      // No text content (edge case) — meta still needs
+                      // somewhere to render.
+                      _MessageMeta(
+                        message: message,
+                        isMe: isMe,
+                        showNotEncrypted: _showNotEncryptedBadge,
+                        onRetry: onRetry,
                       ),
-                    const SizedBox(height: 3),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_showNotEncryptedBadge) ...[
-                          Icon(
-                            PhosphorIconsBold.lockKeyOpen,
-                            size: 10,
-                            color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            'Not encrypted',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(
-                          _formatTime(message.createdAt),
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary),
-                        ),
-                        if (isMe) ...[
-                          const SizedBox(width: 4),
-                          _StatusIcon(status: message.localStatus, onRetry: onRetry),
-                        ],
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -722,6 +581,56 @@ class _TextBubble extends StatelessWidget {
           ),
         ),
         if (isMe) const SizedBox(width: 4),
+      ],
+    );
+  }
+}
+
+/// Timestamp + encryption badge + delivery status — rendered as a compact
+/// inline cluster. Embedded as a trailing [WidgetSpan] inside the message
+/// text (see [_TextBubble.build]) so it floats at the end of the last line
+/// instead of forcing every bubble to reserve a full extra row, matching how
+/// WhatsApp/iMessage keep single-line messages genuinely single-line.
+class _MessageMeta extends StatelessWidget {
+  const _MessageMeta({
+    required this.message,
+    required this.isMe,
+    required this.showNotEncrypted,
+    this.onRetry,
+  });
+
+  final DmMessage message;
+  final bool isMe;
+  final bool showNotEncrypted;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showNotEncrypted) ...[
+          Icon(
+            PhosphorIconsBold.lockKeyOpen,
+            size: 10,
+            color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'Not encrypted',
+            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Text(
+          _formatTime(message.createdAt),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary),
+        ),
+        if (isMe) ...[
+          const SizedBox(width: 4),
+          _StatusIcon(status: message.localStatus, onRetry: onRetry),
+        ],
       ],
     );
   }
@@ -879,9 +788,11 @@ class DmPaymentBubble extends StatelessWidget {
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
 
     // Monochromatic: sent uses the accent surface with a hairline accent border,
-    // received uses bgSecondary. The border on sent creates clear visual
-    // separation even when bgAccentSurface is very dark in dark mode.
-    final bg = isMe ? zt.bgAccentSurface : zt.bgSecondary;
+    // received uses the same elevated bubbleReceived fill as text bubbles so
+    // payment bubbles pop off the chat canvas exactly like text ones. The
+    // border on sent creates clear visual separation even when
+    // bgAccentSurface is very dark in dark mode.
+    final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;
     final sentBorder = isMe
         ? Border.all(color: zt.accent.withValues(alpha: 0.25), width: 0.8)
         : null;
@@ -979,7 +890,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
     final isPending = rd?.isPending ?? true;
 
-    final bg = isMe ? zt.bgAccentSurface : zt.bgSecondary;
+    final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;
     final hasBorder = isMe;
     final amountColor = zt.textPrimary;
     final labelColor = zt.textSecondary;
@@ -1118,7 +1029,9 @@ class _ReactionRow extends StatelessWidget {
     final isSingle = reactions.length == 1 && totalCount == 1;
 
     final badgeDecoration = BoxDecoration(
-      color: zt.bgPrimary,
+      // Matches the chat canvas (not the app-wide bgPrimary) so the badge
+      // reads as "punched into" the wallpaper behind the bubble.
+      color: zt.chatBg,
       borderRadius: BorderRadius.circular(ZendRadii.pill),
       border: Border.all(
         color: reactedByMe

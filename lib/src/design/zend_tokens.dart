@@ -24,6 +24,8 @@ class ZendTheme {
     required this.bgCard,
     required this.bgElevated,
     required this.bgAccentSurface,
+    required this.chatBg,
+    required this.bubbleReceived,
     required this.textPrimary,
     required this.textSecondary,
     required this.border,
@@ -40,6 +42,18 @@ class ZendTheme {
   final Color bgCard;
   final Color bgElevated;
   final Color bgAccentSurface;
+  /// Chat-thread canvas colour — deliberately distinct from [bgPrimary] (the
+  /// app-wide scaffold background) and from [bubbleReceived], so a message
+  /// thread reads as its own surface with bubbles sitting visibly *on* it
+  /// rather than blending into a near-identical background. Mirrors the
+  /// WhatsApp/iMessage pattern where the chat canvas and the bubble fill are
+  /// always a few percent apart in luminance.
+  final Color chatBg;
+  /// Fill colour for incoming (received) text/payment bubbles. Kept separate
+  /// from [bgSecondary] — which is reused all over the app for cards, input
+  /// fills, sheets, etc — so bumping bubble contrast never risks regressing
+  /// any of those unrelated surfaces.
+  final Color bubbleReceived;
   final Color textPrimary;
   final Color textSecondary;
   final Color border;
@@ -56,6 +70,11 @@ class ZendTheme {
     bgCard: Color(0xFFF2F0EA),
     bgElevated: Color(0xFFFFFFFF),
     bgAccentSurface: Color(0xFFF2F0EA),
+    // Warm beige canvas (WhatsApp-style wallpaper tone) with a crisp white
+    // bubble on top — the ~7% luminance gap is what makes bubbles read as
+    // distinct objects instead of blending into the page.
+    chatBg: Color(0xFFEDE8DC),
+    bubbleReceived: Color(0xFFFFFFFF),
     textPrimary: Color(0xFF1A1A1A),
     textSecondary: Color(0xFF6B7A6E),
     border: Color(0xFFE5E2DA),
@@ -73,6 +92,11 @@ class ZendTheme {
     bgCard: Color(0xFF1E1E1E),
     bgElevated: Color(0xFF252525),
     bgAccentSurface: Color(0xFF0A1A0D),
+    // Near-black canvas with a clearly lighter, elevated bubble fill —
+    // matches iMessage/WhatsApp dark mode's "bubble sits above the canvas"
+    // depth instead of the ~3% gap bgPrimary/bgSecondary gave it before.
+    chatBg: Color(0xFF101010),
+    bubbleReceived: Color(0xFF262626),
     textPrimary: Color(0xFFF0F0F0),
     textSecondary: Color(0xFF8A8A8A),
     border: Color(0xFF2A2A2A),
