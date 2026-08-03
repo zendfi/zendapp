@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_tokens.dart';
 
 /// A single, non-functional, "coming soon" carousel card styled to resemble
@@ -93,7 +93,7 @@ class DebitCardTeaser extends StatelessWidget {
               onTap: onDismiss,
               child: const Padding(
                 padding: EdgeInsets.all(4),
-                child: Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x99F0F0F0)),
+                child: Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x99F0F0F0)),
               ),
             ),
           ),

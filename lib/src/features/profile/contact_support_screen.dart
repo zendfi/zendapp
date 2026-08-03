@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
@@ -35,7 +35,7 @@ class ContactSupportScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(SolarIconsBold.lightning,
+                          Icon(PhosphorIconsBold.lightning,
                               size: 16, color: zt.accentBright),
                           const SizedBox(width: 8),
                           Text(
@@ -57,7 +57,7 @@ class ContactSupportScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ContactTile(
-                        icon: SolarIconsBold.mailbox,
+                        icon: PhosphorIconsBold.mailbox,
                         label: 'Email support',
                         subtitle: 'support@zendfi.com',
                         onTap: () async {
@@ -78,13 +78,13 @@ class ContactSupportScreen extends StatelessWidget {
                         },
                       ),
                       _ContactTile(
-                        icon: SolarIconsBold.chatDots,
+                        icon: PhosphorIconsBold.chatDots,
                         label: 'Live chat',
                         subtitle: 'Start a conversation',
                         onTap: () {},
                       ),
                       _ContactTile(
-                        icon: SolarIconsBold.clipboard,
+                        icon: PhosphorIconsBold.clipboard,
                         label: 'Help centre',
                         subtitle: 'Browse guides and FAQs',
                         onTap: () async {
@@ -163,7 +163,7 @@ class _ContactTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(SolarIconsBold.altArrowRight,
+              Icon(PhosphorIconsBold.caretRight,
                   size: 16, color: zt.textSecondary),
             ],
           ),
@@ -239,7 +239,7 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(

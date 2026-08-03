@@ -8,7 +8,7 @@ import 'create_pool_drawer.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'pool_info_card.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Opens the Pool List Drawer as a modal bottom sheet.
 Future<void> showPoolListDrawer(BuildContext context) {
@@ -88,7 +88,7 @@ class PoolListDrawer extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(SolarIconsBold.addCircle, size: 18, color: zt.accentBright),
+                  Icon(PhosphorIconsBold.plusCircle, size: 18, color: zt.accentBright),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Create Pool',
@@ -177,7 +177,17 @@ class PoolListDrawer extends StatelessWidget {
     addSection('Expired', expired);
     addSection('Cancelled', cancelled);
 
-    return ListView(children: items);
+    // Previously there was no way to refresh this list short of closing and
+    // reopening the drawer — pool status/gathered amounts change from other
+    // participants' actions all the time, so a manual refresh affordance
+    // matters here even though individual open pools live-update via SSE
+    // (mission_room.dart/pool_detail_screen.dart) once you're actually
+    // inside one.
+    return RefreshIndicator(
+      onRefresh: model.fetchPools,
+      color: zt.accentBright,
+      child: ListView(children: items),
+    );
   }
 }
 

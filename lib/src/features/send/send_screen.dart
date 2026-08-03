@@ -11,7 +11,7 @@ import '../drop/drop_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
 import 'qr_scanner_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum _InputMode { usd, ngn }
 
@@ -219,7 +219,7 @@ class _SendScreenState extends State<SendScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconPill(icon: SolarIconsBold.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
+                          _IconPill(icon: PhosphorIconsBold.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
                           // Profile — balance is now surfaced in the navbar
                           // (see ZendBottomBar's _BalanceNavItem), so it no
                           // longer needs its own pill here.
@@ -323,7 +323,7 @@ class _SendScreenState extends State<SendScreen>
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
-                                            SolarIconsBold.transferVertical,
+                                            PhosphorIconsBold.arrowsDownUp,
                                             color: Color(0x66F0F0F0),
                                             size: 14,
                                           ),
@@ -344,7 +344,7 @@ class _SendScreenState extends State<SendScreen>
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
-                                        SolarIconsBold.transferVertical,
+                                        PhosphorIconsBold.arrowsDownUp,
                                         color: Color(0x44F0F0F0),
                                         size: 12,
                                       ),
@@ -553,7 +553,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            SolarIconsBold.bolt,
+                            PhosphorIconsBold.lightning,
                             size: 14,
                             color: fill > 0
                                 ? ZendColors.accentBright

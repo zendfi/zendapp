@@ -8,7 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/pocket_models.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum _GoalStage { nameEmoji, targetDeadline, mode, confirm }
 
@@ -440,7 +440,7 @@ class _TargetDeadlineStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -491,7 +491,7 @@ class _TargetDeadlineStage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(SolarIconsBold.calendar,
+                  Icon(PhosphorIconsBold.calendar,
                       size: 16, color: zt.textSecondary),
                   const SizedBox(width: ZendSpacing.xs),
                   Expanded(
@@ -511,7 +511,7 @@ class _TargetDeadlineStage extends StatelessWidget {
                   if (deadline != null)
                     GestureDetector(
                       onTap: onClearDeadline,
-                      child: Icon(SolarIconsBold.closeCircle, size: 16, color: zt.textSecondary),
+                      child: Icon(PhosphorIconsBold.xCircle, size: 16, color: zt.textSecondary),
                     ),
                 ],
               ),
@@ -559,7 +559,7 @@ class _ModeStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -577,7 +577,7 @@ class _ModeStage extends StatelessWidget {
           _ModeOption(
             title: 'Flexible',
             description: 'Withdraw anytime, even before you hit your goal.',
-            icon: SolarIconsBold.cardSend,
+            icon: PhosphorIconsBold.handCoins,
             isSelected: selectedMode == 'flexible',
             onTap: () => onModeSelected('flexible'),
             zt: zt,
@@ -586,7 +586,7 @@ class _ModeStage extends StatelessWidget {
           _ModeOption(
             title: 'Strict',
             description: 'Locked until you reach your target. Keeps you on track.',
-            icon: SolarIconsBold.lockKeyhole,
+            icon: PhosphorIconsBold.lockKey,
             isSelected: selectedMode == 'strict',
             onTap: () => onModeSelected('strict'),
             zt: zt,
@@ -679,7 +679,7 @@ class _ModeOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(SolarIconsBold.checkCircle, color: ZendColors.accentBright, size: 20),
+              const Icon(PhosphorIconsBold.checkCircle, color: ZendColors.accentBright, size: 20),
           ],
         ),
       ),
@@ -734,7 +734,7 @@ class _ConfirmStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),

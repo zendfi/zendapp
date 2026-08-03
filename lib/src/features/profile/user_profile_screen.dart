@@ -14,7 +14,7 @@ import '../dm/dm_thread_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../../models/qr_payment_intent.dart';
 import 'account_information_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Public user profile screen — reachable from search results, activity
 /// threads, DM headers, and zdfi.me/@username deep links.
@@ -106,7 +106,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft,
+                    icon: Icon(PhosphorIconsBold.caretLeft,
                         color: zt.textPrimary),
                   ),
                 ],
@@ -250,7 +250,7 @@ class _ProfileContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _ActionButton(
-                        icon: SolarIconsBold.dollar,
+                        icon: PhosphorIconsBold.currencyDollar,
                         label: 'Send',
                         onTap: () {
                           Navigator.of(context).pop();
@@ -264,7 +264,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ActionButton(
-                        icon: SolarIconsBold.squareArrowRightUp,
+                        icon: PhosphorIconsBold.arrowSquareUp,
                         label: 'Request',
                         onTap: () {
                           Navigator.of(context).pop();
@@ -278,7 +278,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ActionButton(
-                        icon: SolarIconsBold.chatDots,
+                        icon: PhosphorIconsBold.chatDots,
                         label: 'Message',
                         onTap: () => _openDm(context, profile),
                       ),
@@ -402,7 +402,7 @@ class _MutualContextCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(SolarIconsBold.transferHorizontal,
+          Icon(PhosphorIconsBold.arrowsLeftRight,
               size: 16, color: zt.accentBright),
           const SizedBox(width: 10),
           Text(

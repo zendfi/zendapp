@@ -20,7 +20,7 @@ import '../money/home_screen.dart';
 import '../dm/dm_list_screen.dart';
 import '../dm/dm_thread_screen.dart';
 import '../../navigation/zend_routes.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ZendShell extends StatefulWidget {
   const ZendShell({super.key});
@@ -419,7 +419,7 @@ class ZendBottomBar extends StatelessWidget {
                     inactiveColor: inactiveColor,
                   ),
                   _BottomNavIcon(
-                    icon: SolarIconsBold.dollar,
+                    imageAsset: 'assets/icons/zend-icon-navbar.png',
                     active: currentIndex == 1,
                     onTap: () => onChanged(1),
                     activeColor: activeColor,
@@ -427,7 +427,7 @@ class ZendBottomBar extends StatelessWidget {
                     badgeBorderColor: badgeBorderColor,
                   ),
                   _BottomNavIcon(
-                    icon: SolarIconsBold.transferHorizontal,
+                    icon: PhosphorIconsBold.arrowsLeftRight,
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
                     activeColor: activeColor,
@@ -436,7 +436,7 @@ class ZendBottomBar extends StatelessWidget {
                     badgeCount: activityBadgeCount,
                   ),
                   _BottomNavIcon(
-                    icon: SolarIconsBold.chatLine,
+                    icon: PhosphorIconsBold.chatCircleText,
                     active: currentIndex == 3,
                     onTap: () => onChanged(3),
                     activeColor: activeColor,
@@ -480,16 +480,23 @@ String _formatNavBalance(double balance) {
 
 class _BottomNavIcon extends StatelessWidget {
   const _BottomNavIcon({
-    required this.icon,
+    this.icon,
+    this.imageAsset,
     required this.active,
     required this.onTap,
     required this.activeColor,
     required this.inactiveColor,
     required this.badgeBorderColor,
     this.badgeCount = 0,
-  });
+  }) : assert(icon != null || imageAsset != null, 'Provide either icon or imageAsset');
 
-  final IconData icon;
+  /// Font-icon glyph (Solar Icons) — used for most tabs.
+  final IconData? icon;
+  /// Path to a flat PNG glyph (e.g. the Zend "Z" mark) used instead of
+  /// [icon]. Tinted via ColorFiltered/BlendMode.srcIn so it recolors
+  /// between active/inactive + light/dark exactly like a font icon would,
+  /// rather than showing its own baked-in white/green artwork.
+  final String? imageAsset;
   final bool active;
   final VoidCallback onTap;
   final Color activeColor;
@@ -500,6 +507,8 @@ class _BottomNavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = active ? activeColor : inactiveColor;
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -516,7 +525,17 @@ class _BottomNavIcon extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Center(
-                    child: Icon(icon, color: active ? activeColor : inactiveColor, size: 26),
+                    child: imageAsset != null
+                        ? ColorFiltered(
+                            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                            child: Image.asset(
+                              imageAsset!,
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.contain,
+                            ),
+                          )
+                        : Icon(icon, color: color, size: 26),
                   ),
                   if (badgeCount > 0 && !active)
                     Positioned(
@@ -605,7 +624,7 @@ class _BalanceNavItem extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     child: hidden
                         ? Icon(
-                            SolarIconsBold.eyeClosed,
+                            PhosphorIconsBold.eyeClosed,
                             key: const ValueKey('hidden-icon'),
                             size: 26,
                             color: color,
@@ -714,7 +733,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      SolarIconsBold.dollar,
+                      PhosphorIconsBold.currencyDollar,
                       size: 20,
                       color: ZendColors.accentPop,
                     ),
@@ -779,7 +798,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                   GestureDetector(
                     onTap: widget.onDismiss,
                     child: const Icon(
-                      SolarIconsBold.closeCircle,
+                      PhosphorIconsBold.xCircle,
                       size: 16,
                       color: Color(0x66F0F0F0),
                     ),
@@ -863,7 +882,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),
@@ -930,7 +949,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                     height: 36,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                    child: const Icon(SolarIconsBold.chatDots, size: 16, color: ZendColors.accentPop),
+                    child: const Icon(PhosphorIconsBold.chatDots, size: 16, color: ZendColors.accentPop),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -956,7 +975,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(SolarIconsBold.closeCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),
@@ -1029,7 +1048,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                       width: 36, height: 36,
                       decoration: const BoxDecoration(
                         color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                      child: const Icon(SolarIconsBold.chatDots,
+                      child: const Icon(PhosphorIconsBold.chatDots,
                           size: 18, color: ZendColors.accentPop),
                     ),
                     const SizedBox(width: 10),
@@ -1062,7 +1081,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: widget.onDismiss,
-                      child: const Icon(SolarIconsBold.closeCircle,
+                      child: const Icon(PhosphorIconsBold.xCircle,
                           size: 16, color: Color(0x66F0F0F0)),
                     ),
                   ],

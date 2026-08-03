@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Universal avatar widget.
 ///
@@ -141,7 +141,7 @@ class _FallbackCircle extends StatelessWidget {
               ),
             )
           : Icon(
-              SolarIconsBold.userCircle,
+              PhosphorIconsBold.userCircle,
               size: radius * 1.1,
               color: zt.textSecondary,
             ),

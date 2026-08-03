@@ -23,7 +23,7 @@ import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_pin_prompt.dart';
 import 'dm_message_bubble.dart';
 import 'dm_input_bar.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// State of the E2EE key exchange for the currently open room.
 enum _E2eeStatus {
@@ -811,7 +811,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   border: Border.all(color: zt.border),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
                 ),
-                child: Icon(SolarIconsBold.altArrowDown, size: 18, color: zt.textSecondary),
+                child: Icon(PhosphorIconsBold.caretDown, size: 18, color: zt.textSecondary),
               ),
               // "N new" badge — only shown once we know something actually
               // arrived below, not just because the user happens to be
@@ -1533,7 +1533,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 26),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 26),
                   ),
                   GestureDetector(
                     onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
@@ -1563,7 +1563,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               ),
                               if (_e2eeReady) ...[
                                 const SizedBox(width: 5),
-                                Icon(SolarIconsBold.lockPassword, size: 13, color: ZendColors.positive),
+                                Icon(PhosphorIconsBold.lockSimple, size: 13, color: ZendColors.positive),
                               ],
                             ],
                           ),
@@ -1575,7 +1575,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   ),
                   // ── Overflow menu ─────────────────────────────────────
                   PopupMenuButton<_ChatMenuAction>(
-                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: 24),
+                    icon: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary, size: 24),
                     color: zt.bgSecondary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xl)),
                     elevation: 1,
@@ -1583,12 +1583,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     popUpAnimationStyle: AnimationStyle.noAnimation,
                     onSelected: (action) => _handleMenuAction(context, zt, cp, action),
                     itemBuilder: (ctx) => [
-                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, SolarIconsBold.user, 'View contact'),
-                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, SolarIconsBold.magnifier, 'Search in chat', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, SolarIconsBold.clockCircle, 'Disappearing messages', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, SolarIconsBold.trashBinMinimalistic, 'Clear chat'),
+                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, PhosphorIconsBold.user, 'View contact'),
+                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, PhosphorIconsBold.magnifyingGlass, 'Search in chat', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, PhosphorIconsBold.clock, 'Disappearing messages', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, PhosphorIconsBold.trash, 'Clear chat'),
                       const PopupMenuDivider(),
-                      _popupItem(ctx, zt, _ChatMenuAction.block, SolarIconsBold.userBlock, 'Block @${cp.zendtag}', isDestructive: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.block, PhosphorIconsBold.prohibit, 'Block @${cp.zendtag}', isDestructive: true),
                     ],
                   ),
                 ],
@@ -1944,10 +1944,10 @@ class _ReplyStrip extends StatelessWidget {
 
     // Icon + preview text per message type
     final (IconData typeIcon, String preview) = switch (message.type) {
-      DmMessageType.payment        => (SolarIconsBold.transferHorizontal, '💸 Payment'),
-      DmMessageType.vibe           => (SolarIconsBold.star,              '✨ Vibe'),
-      DmMessageType.paymentRequest => (SolarIconsBold.bill,               '↙ Payment request'),
-      _                            => (SolarIconsBold.chatRound,          message.displayContent ?? ''),
+      DmMessageType.payment        => (PhosphorIconsBold.arrowsLeftRight, '💸 Payment'),
+      DmMessageType.vibe           => (PhosphorIconsBold.star,              '✨ Vibe'),
+      DmMessageType.paymentRequest => (PhosphorIconsBold.receipt,               '↙ Payment request'),
+      _                            => (PhosphorIconsBold.chatCircle,          message.displayContent ?? ''),
     };
     final previewShort = preview.length > 60
         ? '${preview.substring(0, 60)}…'
@@ -1984,7 +1984,7 @@ class _ReplyStrip extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(SolarIconsBold.reply, size: 11, color: zt.accent),
+                        Icon(PhosphorIconsBold.arrowBendUpLeft, size: 11, color: zt.accent),
                         const SizedBox(width: 4),
                         Text(
                           isMe
@@ -2021,7 +2021,7 @@ class _ReplyStrip extends StatelessWidget {
               // Cancel button
               IconButton(
                 onPressed: onCancel,
-                icon: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                icon: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),

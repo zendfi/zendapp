@@ -14,7 +14,7 @@ import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum SendStage {
   recipient,
@@ -913,7 +913,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                             ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
                             : _resolvedDisplayName != null
                                 ? Icon(
-                                    SolarIconsBold.checkCircle,
+                                    PhosphorIconsBold.checkCircle,
                                     size: 16,
                                     color: zt.accentBright,
                                   )
@@ -1218,12 +1218,12 @@ class _EmailIntentStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           // ── Recipient label ─────────────────────────────────────────
-          Icon(SolarIconsBold.mailbox, color: zt.accent, size: 28),
+          Icon(PhosphorIconsBold.mailbox, color: zt.accent, size: 28),
           const SizedBox(height: 8),
           Text(
             maskedEmail,
@@ -1373,7 +1373,7 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),

@@ -11,7 +11,7 @@ import '../../services/signing_policy_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 Future<void> showContributeSheet(
   BuildContext context, {
@@ -523,7 +523,7 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -627,7 +627,7 @@ class _SuccessStage extends StatelessWidget {
                 color: ZendColors.positive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
@@ -687,7 +687,7 @@ class _ErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(SolarIconsBold.closeCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(

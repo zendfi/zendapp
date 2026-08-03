@@ -25,7 +25,7 @@ import 'drop_processing_stage.dart';
 import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
 import '../send/send_shared_widgets.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum DropStage {
   scanning,
@@ -912,7 +912,7 @@ class _NoteField extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(SolarIconsBold.penNewRound, size: 16, color: zt.textSecondary),
+            Icon(PhosphorIconsBold.notePencil, size: 16, color: zt.textSecondary),
             const SizedBox(width: 4),
             Text(
               hasNote ? preview! : 'Add note',
@@ -983,7 +983,7 @@ class _NoteField extends StatelessWidget {
               onTap: onToggle,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(SolarIconsBold.altArrowUp,
+                child: Icon(PhosphorIconsBold.caretUp,
                     size: 18, color: zt.textSecondary),
               ),
             ),

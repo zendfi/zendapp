@@ -4,7 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'mission_room.dart';
 import 'pool.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 Future<void> showMissionRoomSheet(
   BuildContext context, {
@@ -62,7 +62,7 @@ class _MissionRoomSheet extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(SolarIconsBold.closeCircle, color: ZendTheme.of(context).textSecondary, size: 20),
+                          icon: Icon(PhosphorIconsBold.xCircle, color: ZendTheme.of(context).textSecondary, size: 20),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],

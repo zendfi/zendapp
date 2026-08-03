@@ -12,7 +12,7 @@ import 'manage_sheet.dart';
 import 'mission_room_sheet.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Full-screen detail view for a single [Pool].
 ///
@@ -126,14 +126,14 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const Spacer(),
                   // Share link — only when pool has a short code
                   if (_pool.shortCode != null)
                     IconButton(
-                      icon: Icon(SolarIconsBold.share, color: zt.textSecondary),
+                      icon: Icon(PhosphorIconsBold.share, color: zt.textSecondary),
                       tooltip: 'Share pool link',
                       onPressed: () {
                         Share.share(
@@ -267,7 +267,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                             subject: _pool.name,
                           );
                         },
-                        icon: const Icon(SolarIconsBold.link, size: 16),
+                        icon: const Icon(PhosphorIconsBold.link, size: 16),
                         label: const Text(
                           'Share contribution link',
                           style: TextStyle(
@@ -348,7 +348,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () =>
                               showMissionRoomSheet(context, pool: _pool),
-                          icon: const Icon(SolarIconsBold.chatDots, size: 16),
+                          icon: const Icon(PhosphorIconsBold.chatDots, size: 16),
                           label: const Text(
                             'Message',
                             style: TextStyle(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ZendScrollPage extends StatelessWidget {
   const ZendScrollPage({super.key, required this.child, this.controller});
@@ -314,7 +314,7 @@ class ZendErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(SolarIconsBold.dangerTriangle, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
+            Icon(PhosphorIconsBold.warning, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
             const SizedBox(height: 12),
             Text(
               title,
@@ -353,7 +353,7 @@ class ZendBackspaceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(
-      SolarIconsBold.backspace,
+      PhosphorIconsBold.backspace,
       color: color,
       size: size,
     );

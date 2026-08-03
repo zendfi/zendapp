@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
@@ -516,7 +516,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
               opacity: (_swipeDx / 56.0).clamp(0.0, 1.0),
               child: Center(
                 child: Icon(
-                  SolarIconsBold.reply,
+                  PhosphorIconsBold.arrowBendUpLeft,
                   size: 18,
                   color: _replyTriggered
                       ? ZendTheme.of(context).accent
@@ -694,7 +694,7 @@ class _TextBubble extends StatelessWidget {
                       children: [
                         if (_showNotEncryptedBadge) ...[
                           Icon(
-                            SolarIconsBold.lockKeyholeUnlocked,
+                            PhosphorIconsBold.lockKeyOpen,
                             size: 10,
                             color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
                           ),
@@ -839,13 +839,13 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case DmLocalStatus.sending:
-        return Icon(SolarIconsBold.clockCircle, size: 11, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(PhosphorIconsBold.clock, size: 11, color: Colors.white.withValues(alpha: 0.6));
       case DmLocalStatus.delivered:
-        return Icon(SolarIconsBold.checkCircle, size: 11, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(PhosphorIconsBold.checkCircle, size: 11, color: Colors.white.withValues(alpha: 0.6));
       case DmLocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,
-          child: const Icon(SolarIconsBold.closeCircle, size: 11, color: ZendColors.destructive),
+          child: const Icon(PhosphorIconsBold.xCircle, size: 11, color: ZendColors.destructive),
         );
     }
   }
@@ -916,7 +916,7 @@ class DmPaymentBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isMe ? SolarIconsBold.squareArrowRightUp : SolarIconsBold.squareArrowRightDown,
+                          isMe ? PhosphorIconsBold.arrowSquareUp : PhosphorIconsBold.arrowSquareDown,
                           size: 11, color: iconColor,
                         ),
                         const SizedBox(width: 3),
@@ -1009,7 +1009,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isMe ? SolarIconsBold.billCheck : SolarIconsBold.bill, size: 11, color: accentColor),
+                      Icon(isMe ? PhosphorIconsBold.receiptX : PhosphorIconsBold.receipt, size: 11, color: accentColor),
                       const SizedBox(width: 3),
                       Text(isMe ? 'you requested' : 'payment request',
                           style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4)),
@@ -1037,13 +1037,13 @@ class DmPaymentRequestBubble extends StatelessWidget {
                       )
                     else if (isMe && isPending)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(SolarIconsBold.clockCircle, size: 11, color: labelColor),
+                        Icon(PhosphorIconsBold.clock, size: 11, color: labelColor),
                         const SizedBox(width: 4),
                         Text('Waiting…', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
                       ])
                     else if (!isPending)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(SolarIconsBold.checkCircle, size: 13, color: ZendColors.positive),
+                        Icon(PhosphorIconsBold.checkCircle, size: 13, color: ZendColors.positive),
                         const SizedBox(width: 4),
                         Text('Paid', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
                       ]),

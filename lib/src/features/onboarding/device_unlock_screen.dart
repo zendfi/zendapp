@@ -15,7 +15,7 @@ import '../profile/profile_screen.dart';
 import '../shell/zend_shell.dart';
 import 'welcome_screen.dart';
 import 'forgot_pin_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DeviceUnlockScreen extends StatefulWidget {
   const DeviceUnlockScreen({super.key});
@@ -273,7 +273,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
               if (_biometricAvailable && _biometricFailures < _maxBiometricFailures && !_loading && !_isLockedOut) ...[
                 TextButton.icon(
                   onPressed: _tryBiometricUnlock,
-                  icon: const Icon(SolarIconsBold.faceScanCircle, size: 20),
+                  icon: const Icon(PhosphorIconsBold.fingerprint, size: 20),
                   label: const Text('Use biometrics'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0x99E8F4EC),

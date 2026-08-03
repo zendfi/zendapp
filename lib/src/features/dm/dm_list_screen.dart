@@ -14,7 +14,7 @@ import '../../navigation/zend_routes.dart';
 import '../../services/e2ee_service.dart' show kE2eePrefix;
 import '../../services/wallet_session_cache.dart';
 import 'dm_thread_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DmListScreen extends StatefulWidget {
   const DmListScreen({super.key});
@@ -264,8 +264,8 @@ class _DmListScreenState extends State<DmListScreen> {
                     onPressed: _toggleMute,
                     icon: Icon(
                       _notificationsMuted
-                          ? SolarIconsBold.bellOff
-                          : SolarIconsBold.bell,
+                          ? PhosphorIconsBold.bellSlash
+                          : PhosphorIconsBold.bell,
                       color: _notificationsMuted ? zt.accent : zt.textSecondary,
                       size: 24,
                     ),
@@ -276,8 +276,8 @@ class _DmListScreenState extends State<DmListScreen> {
                     onPressed: _toggleSearch,
                     icon: Icon(
                       _searchActive
-                          ? SolarIconsBold.magnifierZoomOut
-                          : SolarIconsBold.magnifier,
+                          ? PhosphorIconsBold.magnifyingGlassMinus
+                          : PhosphorIconsBold.magnifyingGlass,
                       color: _searchActive ? zt.accent : zt.textSecondary,
                       size: 24,
                     ),
@@ -301,11 +301,11 @@ class _DmListScreenState extends State<DmListScreen> {
                         decoration: InputDecoration(
                           hintText: 'Search chats…',
                           hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
+                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _searchController.clear(),
-                                  child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,
@@ -484,7 +484,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(SolarIconsBold.chatLine, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
+          Icon(PhosphorIconsBold.chatCircleText, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text(
             'No chats yet',

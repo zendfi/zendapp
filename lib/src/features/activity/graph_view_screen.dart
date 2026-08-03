@@ -10,7 +10,7 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'graph_model.dart';
 import 'person_activity_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Phase 3 Graph_View — an opt-in node/edge visualization of the same
 /// visibility-authorized `ActivityEdge` data the Threaded_Activity_View
@@ -141,7 +141,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                   ),
                   IconButton(
                     onPressed: widget.onToggleView,
-                    icon: Icon(SolarIconsBold.listArrowDown, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsBold.listBullets, color: zt.textSecondary),
                     tooltip: 'Switch to threaded view',
                   ),
                 ],
@@ -416,7 +416,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.accent.withValues(alpha: 0.18),
-            child: Icon(SolarIconsBold.usersGroupRounded, color: zt.accent, size: radius * 0.9),
+            child: Icon(PhosphorIconsBold.usersThree, color: zt.accent, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.others:
@@ -426,7 +426,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.border,
-            child: Icon(SolarIconsBold.menuDots, color: zt.textSecondary, size: radius * 0.9),
+            child: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.user:

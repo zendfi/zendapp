@@ -4,7 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'national_id_entry_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Shown after onboarding and accessible from Settings → Security.
 ///
@@ -43,7 +43,7 @@ class RecoverySetupScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     icon: Icon(
-                      isFirstTime ? SolarIconsBold.closeCircle : SolarIconsBold.altArrowLeft,
+                      isFirstTime ? PhosphorIconsBold.xCircle : PhosphorIconsBold.caretLeft,
                       color: zt.textPrimary,
                     ),
                     onPressed: () => _skip(context),
@@ -62,7 +62,7 @@ class RecoverySetupScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    SolarIconsBold.shieldMinimalistic,
+                    PhosphorIconsBold.shield,
                     size: 36,
                     color: zt.accent,
                   ),
@@ -95,19 +95,19 @@ class RecoverySetupScreen extends StatelessWidget {
 
               // Benefits list
               _BulletItem(
-                icon: SolarIconsBold.cloudSun,
+                icon: PhosphorIconsBold.cloudSun,
                 text: 'Your recovery file is saved to your Google Drive or iCloud — Zend never sees it.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: SolarIconsBold.faceScanCircle,
+                icon: PhosphorIconsBold.fingerprint,
                 text: 'Your government ID number is the only key — we can\'t decrypt it for you.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: SolarIconsBold.lockKeyhole,
+                icon: PhosphorIconsBold.lockKey,
                 text: 'Even if your phone is lost, your money stays recoverable.',
                 zt: zt,
               ),

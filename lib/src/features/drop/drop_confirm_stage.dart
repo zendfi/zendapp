@@ -6,7 +6,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DropConfirmStage extends StatefulWidget {
   const DropConfirmStage({
@@ -176,7 +176,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (widget.requiresBiometric) ...[
-                          const Icon(SolarIconsBold.faceScanCircle, color: Colors.white, size: 18),
+                          const Icon(PhosphorIconsBold.fingerprint, color: Colors.white, size: 18),
                           const SizedBox(width: 6),
                         ],
                         Text(

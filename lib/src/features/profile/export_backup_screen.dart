@@ -6,7 +6,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/wallet_export_service.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Settings > Security > Export encrypted backup
 ///
@@ -92,7 +92,7 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+          icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text('Export backup',
@@ -186,7 +186,7 @@ class _WarningStage extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Icon(SolarIconsBold.infoCircle, color: ZendColors.destructive, size: 40),
+                const Icon(PhosphorIconsBold.warningCircle, color: ZendColors.destructive, size: 40),
                 const SizedBox(height: 12),
                 Text('Store this file safely.',
                   textAlign: TextAlign.center,
@@ -241,7 +241,7 @@ class _DoneStage extends StatelessWidget {
           Container(
             width: 64, height: 64,
             decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-            child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
+            child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
           ),
           const SizedBox(height: 20),
           Text('Backup exported',

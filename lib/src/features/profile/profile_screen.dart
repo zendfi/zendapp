@@ -19,7 +19,7 @@ import 'security_settings_screen.dart';
 import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
 import '../request/payment_requests_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -46,7 +46,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                   ),
                   Expanded(
                     child: Text(
@@ -106,7 +106,7 @@ class ProfileScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Icon(SolarIconsBold.altArrowRight,
+                              Icon(PhosphorIconsBold.caretRight,
                                   size: 18, color: zt.textSecondary),
                             ],
                           ),
@@ -121,17 +121,17 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: SolarIconsBold.banknote,
+                        icon: PhosphorIconsBold.bank,
                         label: 'Connected banks',
                         onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
                       ),
                       _Tile(
-                        icon: SolarIconsBold.link,
+                        icon: PhosphorIconsBold.link,
                         label: 'Connected apps',
                         onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
                       ),
                       _Tile(
-                        icon: SolarIconsBold.bill,
+                        icon: PhosphorIconsBold.receipt,
                         label: 'Payment requests',
                         onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
                       ),
@@ -158,7 +158,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ToggleTile(
-                        icon: SolarIconsBold.moon,
+                        icon: PhosphorIconsBold.moon,
                         label: 'Dark mode',
                         value: model.isDarkMode,
                         onChanged: (_) => model.toggleDarkMode(),
@@ -172,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ToggleTile(
-                        icon: SolarIconsBold.bell,
+                        icon: PhosphorIconsBold.bell,
                         label: 'Notify network when I share',
                         value: model.notifyMutualsOnShare,
                         onChanged: (_) => unawaited(model.toggleNotifyMutualsOnShare()),
@@ -186,17 +186,17 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: SolarIconsBold.shieldCheck,
+                        icon: PhosphorIconsBold.shieldCheck,
                         label: 'Security settings',
                         onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
                       ),
                       _Tile(
-                        icon: SolarIconsBold.lockPassword,
+                        icon: PhosphorIconsBold.lockSimple,
                         label: 'Change PIN',
                         onTap: () => pushZendSlide(context, const ChangePinScreen()),
                       ),
                       _Tile(
-                        icon: SolarIconsBold.shieldUser,
+                        icon: PhosphorIconsBold.identificationBadge,
                         label: 'Identity verification',
                         onTap: () => pushZendSlide(context, const BridgeKycScreen()),
                       ),
@@ -209,7 +209,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: SolarIconsBold.userSpeak,
+                        icon: PhosphorIconsBold.headset,
                         label: 'Contact support',
                         onTap: () => pushZendSlide(context, const ContactSupportScreen()),
                       ),
@@ -229,7 +229,7 @@ class ProfileScreen extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(SolarIconsBold.logout,
+                              Icon(PhosphorIconsBold.signOut,
                                   size: 18, color: ZendColors.destructive),
                               const SizedBox(width: 8),
                               const Text(
@@ -313,7 +313,7 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
-                  Icon(SolarIconsBold.eyeClosed, size: 20, color: zt.textSecondary),
+                  Icon(PhosphorIconsBold.eyeClosed, size: 20, color: zt.textSecondary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -348,7 +348,7 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
                         ),
                       ),
                       if (_visibility == option.$1)
-                        Icon(SolarIconsBold.checkCircle, size: 18, color: zt.accent),
+                        Icon(PhosphorIconsBold.checkCircle, size: 18, color: zt.accent),
                     ],
                   ),
                 ),
@@ -455,7 +455,7 @@ class _Tile extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
+              Icon(PhosphorIconsBold.caretRight, size: 16, color: zt.textSecondary),
             ],
           ),
         ),
@@ -569,18 +569,18 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               ),
               const SizedBox(height: 12),
               _PickerRow(
-                icon: SolarIconsBold.camera,
+                icon: PhosphorIconsBold.camera,
                 label: 'Take photo',
                 onTap: () => Navigator.pop(ctx, 'camera'),
               ),
               _PickerRow(
-                icon: SolarIconsBold.galleryAdd,
+                icon: PhosphorIconsBold.imageSquare,
                 label: 'Choose from library',
                 onTap: () => Navigator.pop(ctx, 'gallery'),
               ),
               if (hasPhoto)
                 _PickerRow(
-                  icon: SolarIconsBold.trashBinMinimalistic,
+                  icon: PhosphorIconsBold.trash,
                   label: 'Remove photo',
                   onTap: () => Navigator.pop(ctx, 'remove'),
                   destructive: true,
@@ -675,7 +675,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                   color: ZendColors.accentBright,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(SolarIconsBold.pen2, size: 9, color: Colors.white),
+                child: const Icon(PhosphorIconsBold.pencilSimple, size: 9, color: Colors.white),
               ),
             ),
         ],
@@ -868,7 +868,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Icon(
-                        SolarIconsBold.bluetoothWave,
+                        PhosphorIconsBold.bluetoothConnected,
                         size: 20,
                         color: isOn ? zt.accentBright : zt.textSecondary,
                       ),
@@ -920,7 +920,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 17),
                       child: Row(
                         children: [
-                          Icon(SolarIconsBold.recordCircle,
+                          Icon(PhosphorIconsBold.record,
                               size: 10, color: zt.accentBright),
                           const SizedBox(width: 4),
                           Text(
@@ -947,7 +947,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(SolarIconsBold.infoCircle,
+                            Icon(PhosphorIconsBold.warningCircle,
                                 size: 14, color: ZendColors.destructive),
                             const SizedBox(width: 6),
                             Expanded(

@@ -12,7 +12,7 @@ import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 const _kReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
 
@@ -287,7 +287,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               ),
               const SizedBox(height: 16),
               _ShareOption(
-                icon: SolarIconsBold.shareCircle,
+                icon: PhosphorIconsBold.shareNetwork,
                 title: 'Share with amount',
                 subtitle: 'Mutuals can see who you paid and how much',
                 onTap: () {
@@ -297,7 +297,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
               ),
               const SizedBox(height: 8),
               _ShareOption(
-                icon: SolarIconsBold.eyeClosed,
+                icon: PhosphorIconsBold.eyeClosed,
                 title: 'Share (amount hidden)',
                 subtitle: 'Mutuals can see who you paid, not the amount',
                 onTap: () {
@@ -385,7 +385,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                   ),
                   GestureDetector(
                     onTap: () => pushZendSlide(
@@ -432,7 +432,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                         counterparty: result.counterparty,
                       ));
                     },
-                    icon: Icon(SolarIconsBold.chatLine, color: zt.textSecondary, size: 22),
+                    icon: Icon(PhosphorIconsBold.chatCircleText, color: zt.textSecondary, size: 22),
                     tooltip: 'Open chat',
                   ),
                 ],
@@ -688,7 +688,7 @@ class _FeedPost extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 15, color: zt.textSecondary),
+                              child: Icon(PhosphorIconsBold.smiley, size: 15, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -709,7 +709,7 @@ class _FeedPost extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(SolarIconsBold.shareCircle, size: 12, color: zt.textSecondary.withValues(alpha: 0.7)),
+                          Icon(PhosphorIconsBold.shareNetwork, size: 12, color: zt.textSecondary.withValues(alpha: 0.7)),
                           const SizedBox(width: 3),
                           Text(
                             'Public',

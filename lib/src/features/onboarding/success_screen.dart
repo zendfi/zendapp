@@ -6,7 +6,7 @@ import '../../navigation/zend_routes.dart';
 import '../../core/zend_state.dart';
 import 'pin_setup_screen.dart';
 import 'username_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class SuccessScreen extends StatefulWidget {
   const SuccessScreen({super.key, required this.username});
@@ -91,7 +91,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   const CircleAvatar(
                     radius: 34,
                     backgroundColor: Color(0x33E8F4EC),
-                    child: Icon(SolarIconsBold.userCircle, color: ZendColors.textOnDeep),
+                    child: Icon(PhosphorIconsBold.userCircle, color: ZendColors.textOnDeep),
                   ),
                   const SizedBox(height: 24),
                   Text(

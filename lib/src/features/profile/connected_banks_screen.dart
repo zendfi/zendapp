@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ConnectedBanksScreen extends StatelessWidget {
   const ConnectedBanksScreen({super.key});
@@ -31,7 +31,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          SolarIconsBold.banknote,
+                          PhosphorIconsBold.bank,
                           size: 30,
                           color: zt.textSecondary,
                         ),
@@ -82,7 +82,7 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(

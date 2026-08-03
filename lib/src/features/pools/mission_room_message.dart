@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
@@ -127,11 +127,11 @@ class _DeliveryStatus extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.6)
         : ZendTheme.of(context).textSecondary.withValues(alpha: 0.5);
     return switch (status) {
-      LocalStatus.sending  => Icon(SolarIconsBold.clockCircle,  size: 11, color: color),
-      LocalStatus.delivered => Icon(SolarIconsBold.checkCircle,  size: 11, color: color),
+      LocalStatus.sending  => Icon(PhosphorIconsBold.clock,  size: 11, color: color),
+      LocalStatus.delivered => Icon(PhosphorIconsBold.checkCircle,  size: 11, color: color),
       LocalStatus.failed   => GestureDetector(
         onTap: onRetry,
-        child: const Icon(SolarIconsBold.infoCircle, size: 11, color: ZendColors.destructive),
+        child: const Icon(PhosphorIconsBold.warningCircle, size: 11, color: ZendColors.destructive),
       ),
     };
   }
@@ -598,7 +598,7 @@ class _VoiceNoteRow extends StatelessWidget {
               ZendLoader(size: 22, strokeWidth: 2, color: isMe ? Colors.white : zt.accent)
             else
               Icon(
-                isPlaying ? SolarIconsBold.pauseCircle : SolarIconsBold.playCircle,
+                isPlaying ? PhosphorIconsBold.pauseCircle : PhosphorIconsBold.playCircle,
                 size: 26,
                 color: isMe ? Colors.white : zt.accent,
               ),

@@ -5,7 +5,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CustomisationPanel extends StatefulWidget {
   const CustomisationPanel({
@@ -164,7 +164,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
                           : null,
                     ),
                     child: isSelected
-                        ? const Icon(SolarIconsBold.checkCircle, size: 16, color: Colors.white)
+                        ? const Icon(PhosphorIconsBold.checkCircle, size: 16, color: Colors.white)
                         : null,
                   ),
                 ),

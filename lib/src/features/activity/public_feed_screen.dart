@@ -7,7 +7,7 @@ import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
 import '../profile/user_profile_screen.dart';
 import 'activity_grouping.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 const _kPublicFeedEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
 
@@ -101,7 +101,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                   ),
                   Expanded(
                     child: Column(
@@ -122,7 +122,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
+                      _filterActive ? PhosphorIconsBold.magnifyingGlassMinus : PhosphorIconsBold.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter feed',
@@ -145,11 +145,11 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                         decoration: InputDecoration(
                           hintText: 'Filter by @handle or note…',
                           hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
+                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,

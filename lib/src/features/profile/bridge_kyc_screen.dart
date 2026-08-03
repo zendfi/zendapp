@@ -5,7 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class BridgeKycScreen extends StatefulWidget {
   const BridgeKycScreen({super.key});
@@ -109,7 +109,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
               trailing: _loading
                   ? null
                   : IconButton(
-                      icon: Icon(SolarIconsBold.refresh, color: zt.textSecondary, size: 20),
+                      icon: Icon(PhosphorIconsBold.arrowsClockwise, color: zt.textSecondary, size: 20),
                       onPressed: _loadStatus,
                     ),
             ),
@@ -153,7 +153,7 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                             ),
                             child: const Row(
                               children: [
-                                Icon(SolarIconsBold.shieldUser, color: ZendColors.positive, size: 24),
+                                Icon(PhosphorIconsBold.identificationBadge, color: ZendColors.positive, size: 24),
                                 SizedBox(width: 12),
                                 Expanded(child: Text('Your identity is verified. Local payment rails are enabled.', style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: ZendColors.positive, fontWeight: FontWeight.w500))),
                               ],
@@ -204,7 +204,7 @@ class _ScreenHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(
@@ -247,7 +247,7 @@ class _StatusCard extends StatelessWidget {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(ZendRadii.md)),
-              child: Icon(isApproved ? SolarIconsBold.shieldUser : SolarIconsBold.shieldMinimalistic, color: statusColor, size: 22),
+              child: Icon(isApproved ? PhosphorIconsBold.identificationBadge : PhosphorIconsBold.shield, color: statusColor, size: 22),
             ),
             const SizedBox(width: 14),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

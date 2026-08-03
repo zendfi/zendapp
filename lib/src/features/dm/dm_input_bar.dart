@@ -8,7 +8,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_sticker_catalog.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 typedef OnRequestPayment = void Function();
 typedef OnPayRecipient = void Function();
@@ -309,7 +309,7 @@ class _DmInputBarState extends State<DmInputBar>
                         duration: const Duration(milliseconds: 180),
                         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
                         child: Icon(
-                          _panelOpen ? SolarIconsBold.closeCircle : SolarIconsBold.addSquare,
+                          _panelOpen ? PhosphorIconsBold.xCircle : PhosphorIconsBold.plusSquare,
                           key: ValueKey(_panelOpen),
                           size: 22,
                           color: _panelOpen ? zt.accent : zt.textSecondary,
@@ -386,7 +386,7 @@ class _DmInputBarState extends State<DmInputBar>
                                         width: 32, height: 32,
                                         margin: const EdgeInsets.only(right: 6, bottom: 6),
                                         decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
-                                        child: const Icon(SolarIconsBold.plain, size: 16, color: Colors.white),
+                                        child: const Icon(PhosphorIconsBold.paperPlaneTilt, size: 16, color: Colors.white),
                                       ),
                                     )
                                   : GestureDetector(
@@ -395,7 +395,7 @@ class _DmInputBarState extends State<DmInputBar>
                                       child: Padding(
                                         padding: const EdgeInsets.only(right: 10, bottom: 11),
                                         child: Icon(
-                                          SolarIconsBold.microphone,
+                                          PhosphorIconsBold.microphone,
                                           size: 20,
                                           color: zt.textSecondary.withValues(alpha: 0.6),
                                         ),
@@ -468,21 +468,21 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               _MonoActionTile(
-                icon: SolarIconsBold.squareArrowRightDown,
+                icon: PhosphorIconsBold.arrowSquareDown,
                 label: 'Request',
                 zt: zt,
                 onTap: () { _closePanel(); widget.onRequestPayment?.call(); },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
-                icon: SolarIconsBold.dollar,
+                icon: PhosphorIconsBold.currencyDollar,
                 label: 'Pay',
                 zt: zt,
                 onTap: () { _closePanel(); widget.onPayRecipient?.call(); },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
-                icon: SolarIconsBold.gift,
+                icon: PhosphorIconsBold.gift,
                 label: 'Vibe',
                 zt: zt,
                 onTap: _enterVibeFlow,
@@ -513,7 +513,7 @@ class _DmInputBarState extends State<DmInputBar>
             children: [
               GestureDetector(
                 onTap: () => _setMode(_PanelMode.actions),
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20),
               ),
               const SizedBox(width: 8),
               Expanded(child: Text('Set amount',
@@ -550,7 +550,7 @@ class _DmInputBarState extends State<DmInputBar>
                     child: Column(
                       children: [
                         // Up chevron
-                        Icon(SolarIconsBold.altArrowUp, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(PhosphorIconsBold.caretUp, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
                         const SizedBox(height: 4),
                         Text(
                           displayAmount,
@@ -564,7 +564,7 @@ class _DmInputBarState extends State<DmInputBar>
                         ),
                         const SizedBox(height: 4),
                         // Down chevron
-                        Icon(SolarIconsBold.altArrowDown, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(PhosphorIconsBold.caretDown, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
                       ],
                     ),
                   ),
@@ -656,7 +656,7 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeAmount),
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20)),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
               Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
               Text('\$${_vibeAmount.toStringAsFixed(2)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
@@ -706,7 +706,7 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeSticker),
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20)),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
               Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
             ],

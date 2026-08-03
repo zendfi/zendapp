@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -87,7 +87,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+          icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(

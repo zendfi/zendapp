@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
@@ -304,7 +304,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 ),
                 TextButton.icon(
                   onPressed: widget.onViewReceipt,
-                  icon: Icon(SolarIconsBold.bill, size: 16, color: zt.accent),
+                  icon: Icon(PhosphorIconsBold.receipt, size: 16, color: zt.accent),
                   label: Text('Receipt', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
                 ),
               ],
@@ -403,7 +403,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(SolarIconsBold.emojiFunnyCircle, size: 16, color: zt.textSecondary),
+                              child: Icon(PhosphorIconsBold.smiley, size: 16, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -525,7 +525,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                               padding: const EdgeInsets.all(8),
                               child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                             )
-                          : const Icon(SolarIconsBold.plain, size: 17, color: Colors.white),
+                          : const Icon(PhosphorIconsBold.paperPlaneTilt, size: 17, color: Colors.white),
                     ),
                   ),
                 ),

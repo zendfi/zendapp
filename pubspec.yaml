@@ -139,8 +139,10 @@ dependencies:
   # UUID generation for client-side message IDs
   uuid: ^4.4.0
 
-  # Solar Icons — Bold style (7000+ icons, drop-in replacement for Material Icons)
-  solar_icons: ^0.1.0
+  # Phosphor Icons — Bold/Fill style icon set, replaces solar_icons for far
+  # broader icon coverage (avoids the "closest available" compromises solar_icons
+  # forced in a handful of screens).
+  phosphor_flutter: ^2.1.0
 
   # Keeps the native (pre-Flutter-engine) splash screen on-screen through
   # session restore via FlutterNativeSplash.preserve()/.remove() in
@@ -180,6 +182,7 @@ flutter:
   assets:
     - assets/logo/Zend.png
     - assets/logo/Zend-splash.png
+    - assets/icons/zend-icon-navbar.png
     - assets/sounds/
     - assets/countries/
     - assets/countries/flags/

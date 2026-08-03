@@ -11,7 +11,7 @@ import '../../services/sound_service.dart';
 import 'payment_request.dart';
 import 'request_qr_sheet.dart';
 import 'request_utils.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 Future<void> showRequestDrawer(
   BuildContext context, {
@@ -411,7 +411,7 @@ class _FormStage extends StatelessWidget {
                         suffixIcon: resolving
                             ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
                             : (resolvedZendtag != null || recipientEmail != null)
-                                ? Icon(SolarIconsBold.checkCircle, size: 16, color: zt.accentBright)
+                                ? Icon(PhosphorIconsBold.checkCircle, size: 16, color: zt.accentBright)
                                 : null,
                       ),
                     ),
@@ -564,7 +564,7 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
             child: Container(
               width: 64, height: 64,
               decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-              child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
             ),
           ),
           const SizedBox(height: 20),

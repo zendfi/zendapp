@@ -9,7 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// The branded Zend! QR card — a printable, shareable payment card.
 ///
@@ -134,7 +134,7 @@ class ZendQrCardState extends State<ZendQrCard> {
           children: [
             Expanded(
               child: _CardButton(
-                icon: SolarIconsBold.share,
+                icon: PhosphorIconsBold.share,
                 label: 'Share card',
                 loading: _saving,
                 onTap: shareCard,
@@ -143,7 +143,7 @@ class ZendQrCardState extends State<ZendQrCard> {
             const SizedBox(width: 10),
             Expanded(
               child: _CardButton(
-                icon: SolarIconsBold.download,
+                icon: PhosphorIconsBold.download,
                 label: _saving ? 'Saving…' : 'Download card',
                 loading: _saving,
                 onTap: downloadCard,

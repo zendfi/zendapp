@@ -6,7 +6,7 @@ import '../../design/zend_tokens.dart';
 import '../../core/zend_state.dart';
 import '../../navigation/zend_routes.dart';
 import 'success_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class UsernameScreen extends StatefulWidget {
   const UsernameScreen({super.key});
@@ -148,7 +148,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                               child: _available == null
                                   ? const SizedBox.shrink()
                                   : Icon(
-                                      _available! ? SolarIconsBold.checkCircle : SolarIconsBold.closeCircle,
+                                      _available! ? PhosphorIconsBold.checkCircle : PhosphorIconsBold.xCircle,
                                       key: ValueKey<bool>(_available!),
                                       color: _available! ? ZendColors.positive : ZendColors.destructive,
                                       size: 22,
@@ -202,7 +202,7 @@ class _PreviewCard extends StatelessWidget {
           Container(
             width: 42, height: 42,
             decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(12)),
-            child: Icon(SolarIconsBold.user, color: zt.textSecondary),
+            child: Icon(PhosphorIconsBold.user, color: zt.textSecondary),
           ),
           const SizedBox(width: 12),
           Column(
@@ -218,7 +218,7 @@ class _PreviewCard extends StatelessWidget {
           Container(
             width: 34, height: 34,
             decoration: const BoxDecoration(color: ZendColors.accentPop, shape: BoxShape.circle),
-            child: const Icon(SolarIconsBold.checkCircle, size: 18, color: ZendColors.textPrimary),
+            child: const Icon(PhosphorIconsBold.checkCircle, size: 18, color: ZendColors.textPrimary),
           ),
         ],
       ),

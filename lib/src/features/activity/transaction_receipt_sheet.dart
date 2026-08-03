@@ -5,7 +5,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_models.dart';
 import '../send/send_flow_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
@@ -68,10 +68,10 @@ class _ReceiptSheet extends StatelessWidget {
             ? ZendColors.accentPop
             : ZendColors.destructive;
     final statusIcon = isConfirmed
-        ? SolarIconsBold.checkCircle
+        ? PhosphorIconsBold.checkCircle
         : isPending
-            ? SolarIconsBold.hourglass
-            : SolarIconsBold.closeCircle;
+            ? PhosphorIconsBold.hourglass
+            : PhosphorIconsBold.xCircle;
     final statusLabel = isConfirmed
         ? 'Confirmed'
         : isPending
@@ -351,10 +351,10 @@ class _BankSendReceiptSheet extends StatelessWidget {
             ? ZendColors.destructive
             : ZendColors.accentPop;
     final statusIcon = isSent
-        ? SolarIconsBold.checkCircle
+        ? PhosphorIconsBold.checkCircle
         : status == 'failed'
-            ? SolarIconsBold.closeCircle
-            : SolarIconsBold.hourglass;
+            ? PhosphorIconsBold.xCircle
+            : PhosphorIconsBold.hourglass;
     final statusLabel = switch (status) {
       'completed' => 'Delivered',
       'paid' => 'Sent',

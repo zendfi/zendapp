@@ -8,7 +8,7 @@ import '../../navigation/zend_routes.dart';
 import '../../services/cloud_backup_service.dart';
 import '../../services/recovery_service.dart';
 import 'recovery_new_pin_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Asks for the National ID number to decrypt the recovery packet.
 ///
@@ -125,7 +125,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(SolarIconsBold.altArrowLeft,
+                  icon: const Icon(PhosphorIconsBold.caretLeft,
                       color: ZendColors.textOnDeep),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
@@ -208,7 +208,7 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               const SizedBox(height: 8),
               const Row(
                 children: [
-                  Icon(SolarIconsBold.lockKeyhole,
+                  Icon(PhosphorIconsBold.lockKey,
                       size: 13, color: textOnDeepMuted),
                   SizedBox(width: 6),
                   Expanded(

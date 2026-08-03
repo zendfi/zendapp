@@ -10,7 +10,7 @@ import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Opened by tapping a person node in the "Your Mutuals" Graph_View —
 /// shows that person's full authorized activity: the viewer's own edges
@@ -120,7 +120,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                   ),
                   ZendAvatar(
                     radius: 18,

@@ -3,7 +3,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Full-screen NFC tag writer.
 ///
@@ -135,7 +135,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(SolarIconsBold.altArrowLeft, color: ZendColors.textOnDeep),
+          icon: const Icon(PhosphorIconsBold.caretLeft, color: ZendColors.textOnDeep),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -196,7 +196,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
                 ),
               ),
               child: const Icon(
-                SolarIconsBold.bluetooth,
+                PhosphorIconsBold.bluetooth,
                 size: 56,
                 color: ZendColors.accentPop,
               ),
@@ -223,7 +223,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               color: ZendColors.positive,
             ),
             child: const Icon(
-              SolarIconsBold.checkCircle,
+              PhosphorIconsBold.checkCircle,
               size: 52,
               color: Colors.white,
             ),
@@ -241,7 +241,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               border: Border.all(color: ZendColors.destructive, width: 2),
             ),
             child: const Icon(
-              SolarIconsBold.infoCircle,
+              PhosphorIconsBold.warningCircle,
               size: 52,
               color: ZendColors.destructive,
             ),
@@ -251,7 +251,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       case _WriteState.unavailable:
         return const Center(
           child: Icon(
-            SolarIconsBold.bluetooth,
+            PhosphorIconsBold.bluetooth,
             size: 80,
             color: Color(0x44E8F4EC),
           ),

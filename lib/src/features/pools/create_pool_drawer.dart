@@ -7,7 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/recent_contact.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 Future<void> showCreatePoolDrawer(
   BuildContext context, {
@@ -461,7 +461,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 decoration: InputDecoration(
                   hintText: 'Add @username',
                   hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(SolarIconsBold.userPlusRounded, size: 18, color: zt.textSecondary),
+                  prefixIcon: Icon(PhosphorIconsBold.userPlus, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -487,7 +487,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 decoration: InputDecoration(
                   hintText: 'Email or phone number',
                   hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(SolarIconsBold.mailbox, size: 18, color: zt.textSecondary),
+                  prefixIcon: Icon(PhosphorIconsBold.mailbox, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -527,7 +527,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                         p.displayName,
                         style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textPrimary),
                       ),
-                      deleteIcon: Icon(SolarIconsBold.closeCircle, size: 16, color: zt.textSecondary),
+                      deleteIcon: Icon(PhosphorIconsBold.xCircle, size: 16, color: zt.textSecondary),
                       onDeleted: () => _removeParticipant(index),
                       backgroundColor: p.isExternal
                           ? zt.bgSecondary
@@ -554,7 +554,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 label: _deadline != null
                     ? 'Deadline: ${_formatDate(_deadline!)}'
                     : 'Set deadline',
-                trailing: Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
+                trailing: Icon(PhosphorIconsBold.caretRight, size: 18, color: zt.textSecondary),
                 onTap: _pickDeadline,
               ),
               if (_deadlineError != null) ...[
@@ -701,7 +701,7 @@ class _SelectableContactTile extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary))),
-            if (selected) Icon(SolarIconsBold.checkCircle, size: 20, color: zt.accentBright),
+            if (selected) Icon(PhosphorIconsBold.checkCircle, size: 20, color: zt.accentBright),
           ],
         ),
       ),

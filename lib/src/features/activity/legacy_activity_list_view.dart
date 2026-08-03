@@ -16,7 +16,7 @@ import '../send/qr_payment_sheet.dart';
 import 'search_screen.dart';
 import 'transaction_receipt_sheet.dart';
 import '../../navigation/zend_routes.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 // ── Unified activity item ─────────────────────────────────────────────────────
 
@@ -205,20 +205,20 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                   if (widget.onToggleView != null)
                     IconButton(
                       onPressed: widget.onToggleView,
-                      icon: Icon(SolarIconsBold.shareCircle, color: zt.textSecondary),
+                      icon: Icon(PhosphorIconsBold.shareNetwork, color: zt.textSecondary),
                       tooltip: 'Switch to threaded view',
                     ),
                   IconButton(
                     onPressed: () => pushZendSlide(context, const SearchScreen()),
-                    icon: Icon(SolarIconsBold.magnifier, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsBold.magnifyingGlass, color: zt.textSecondary),
                     tooltip: 'Search',
                   ),
                   IconButton(
                     onPressed: _toggleNotificationMute,
                     icon: Icon(
                       _notificationsMuted
-                          ? SolarIconsBold.bellOff
-                          : SolarIconsBold.bell,
+                          ? PhosphorIconsBold.bellSlash
+                          : PhosphorIconsBold.bell,
                       color: _notificationsMuted
                           ? zt.textSecondary.withValues(alpha: 0.5)
                           : zt.textSecondary,
@@ -643,7 +643,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(SolarIconsBold.copy, size: 14, color: zt.accent),
+                    Icon(PhosphorIconsBold.copy, size: 14, color: zt.accent),
                   ],
                 ),
               ),

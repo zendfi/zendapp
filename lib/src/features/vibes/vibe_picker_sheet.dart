@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import 'vibe_sticker_catalog.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class VibeSendResult {
   const VibeSendResult({
@@ -182,7 +182,7 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
                   if (_step != _VibeStep.amount)
                     GestureDetector(
                       onTap: () => _goToStep(_VibeStep.values[_step.index - 1]),
-                      child: Icon(SolarIconsBold.altArrowLeft, color: zt.textSecondary, size: 20),
+                      child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20),
                     ),
                   if (_step != _VibeStep.amount) const SizedBox(width: 8),
                   Expanded(
@@ -305,7 +305,7 @@ class _AmountStep extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(SolarIconsBold.minusCircle, size: 22, color: zt.textSecondary),
+                  child: Icon(PhosphorIconsBold.minusCircle, size: 22, color: zt.textSecondary),
                 ),
               ),
               const SizedBox(width: 24),
@@ -331,7 +331,7 @@ class _AmountStep extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(SolarIconsBold.addCircle, size: 22, color: zt.accent),
+                  child: Icon(PhosphorIconsBold.plusCircle, size: 22, color: zt.accent),
                 ),
               ),
             ],

@@ -143,7 +143,7 @@ class _RailTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(SolarIconsBold.altArrowRight, size: 18, color: zt.textSecondary),
+            Icon(PhosphorIconsBold.caretRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),
@@ -204,7 +204,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -254,7 +254,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                       ),
                     ),
                   ),
-                  Icon(SolarIconsBold.altArrowDown, color: zt.textSecondary),
+                  Icon(PhosphorIconsBold.caretDown, color: zt.textSecondary),
                 ],
               ),
             ),
@@ -361,7 +361,7 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
@@ -382,7 +382,7 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               hintText: 'Search banks...',
-              prefixIcon: Icon(SolarIconsBold.magnifier, size: 20, color: zt.textSecondary),
+              prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 20, color: zt.textSecondary),
               filled: true,
               fillColor: zt.bgSecondary,
               border: OutlineInputBorder(
@@ -423,7 +423,7 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                             color: zt.textPrimary,
                           ),
                         ),
-                        trailing: Icon(SolarIconsBold.altArrowRight,
+                        trailing: Icon(PhosphorIconsBold.caretRight,
                             size: 18, color: zt.textSecondary),
                         onTap: () => widget.onSelect(bank),
                       );
@@ -464,7 +464,7 @@ class _IntlAccountStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
@@ -485,7 +485,7 @@ class _IntlAccountStage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(SolarIconsBold.banknote,
+                    Icon(PhosphorIconsBold.bank,
                         size: 48, color: zt.textSecondary),
                     const SizedBox(height: 16),
                     Text(
@@ -549,7 +549,7 @@ class _IntlAccountStage extends StatelessWidget {
                         color: zt.bgSecondary,
                         borderRadius: BorderRadius.circular(ZendRadii.md),
                       ),
-                      child: Icon(SolarIconsBold.banknote,
+                      child: Icon(PhosphorIconsBold.bank,
                           size: 20, color: zt.textSecondary),
                     ),
                     title: Text(
@@ -567,7 +567,7 @@ class _IntlAccountStage extends StatelessWidget {
                           fontSize: 12,
                           color: zt.textSecondary),
                     ),
-                    trailing: Icon(SolarIconsBold.altArrowRight, color: zt.textSecondary),
+                    trailing: Icon(PhosphorIconsBold.caretRight, color: zt.textSecondary),
                     onTap: () => onSelect(acct),
                   );
                 },
@@ -658,7 +658,7 @@ class _ConfirmationStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
@@ -825,7 +825,7 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 8),
@@ -1119,7 +1119,7 @@ class _SuccessStageState extends State<_SuccessStage>
                 height: 64,
                 decoration: const BoxDecoration(
                     color: ZendColors.positive, shape: BoxShape.circle),
-                child: const Icon(SolarIconsBold.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
@@ -1187,7 +1187,7 @@ class _ErrorStage extends StatelessWidget {
               height: 64,
               decoration: const BoxDecoration(
                   color: ZendColors.destructive, shape: BoxShape.circle),
-              child: const Icon(SolarIconsBold.closeCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
@@ -1347,7 +1347,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(

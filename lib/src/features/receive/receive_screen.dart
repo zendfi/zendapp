@@ -5,7 +5,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'nfc_write_screen.dart';
 import 'zend_qr_card.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ReceiveScreen extends StatelessWidget {
   const ReceiveScreen({super.key, required this.username});
@@ -35,7 +35,7 @@ class ReceiveScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(

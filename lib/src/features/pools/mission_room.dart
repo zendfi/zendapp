@@ -20,7 +20,7 @@ import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_pin_prompt.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 const _curatedEmojis = [
   '🔥', '💰', '🙏', '👑', '😭', '⚡',
@@ -204,6 +204,23 @@ class _MissionRoomState extends State<MissionRoom> {
     }
   }
 
+  /// Re-fetches this pool's real status from the server. Used when a WS
+  /// `POOL_NOT_ACTIVE` error arrives — that error code alone doesn't
+  /// distinguish completed/expired/cancelled, so guessing at any single
+  /// status would often be wrong (see the WsFrameType.error case above).
+  Future<void> _refreshPoolStatus() async {
+    if (!mounted) return;
+    try {
+      final model = ZendScope.of(context);
+      final fresh = await model.walletService.apiClient.getPool(_pool.id);
+      if (mounted) setState(() => _pool.status = fresh.status);
+    } catch (_) {
+      // Fetch failed — leave status as-is rather than guessing wrong.
+      // The contribute/send-message paths are still correctly blocked by
+      // the server itself even if the client's cached status is stale.
+    }
+  }
+
   /// Reflects an [OutboxQueue] delivery outcome (delivered or failed) into
   /// the in-memory `_messages` list. See the comment where this is
   /// subscribed in [_init] for why this is needed at all.
@@ -361,7 +378,14 @@ class _MissionRoomState extends State<MissionRoom> {
       case WsFrameType.error:
         final code = frame.data['code'] as String?;
         if (code == 'POOL_NOT_ACTIVE') {
-          setState(() => _pool.status = PoolStatus.cancelled);
+          // The server sends this same error code whether the pool
+          // completed, expired, or was cancelled — it doesn't say which.
+          // This previously just hardcoded PoolStatus.cancelled regardless
+          // of the actual reason, so a pool that had simply been completed
+          // (reached its target) or expired would incorrectly show the
+          // "Cancelled" badge/banner. Re-fetch the real pool to get the
+          // actual status instead of guessing it.
+          unawaited(_refreshPoolStatus());
         }
 
       case WsFrameType.readReceipt:
@@ -474,10 +498,8 @@ class _MissionRoomState extends State<MissionRoom> {
       // Check local cache first
       final localOlder = await _repository.getOlderMessages(poolId, oldestCreatedAt);
       if (localOlder.isNotEmpty) {
-        setState(() {
-          _messages.insertAll(0, localOlder);
-          _loadingOlder = false;
-        });
+        _insertOlderMessagesPreservingScroll(localOlder);
+        setState(() => _loadingOlder = false);
         return;
       }
 
@@ -503,8 +525,8 @@ class _MissionRoomState extends State<MissionRoom> {
         await _repository.upsertCursor(poolId, oldestFetchedServerId: localFetched.first.serverId);
       }
 
+      _insertOlderMessagesPreservingScroll(localFetched);
       setState(() {
-        _messages.insertAll(0, localFetched);
         _loadingOlder = false;
         if (localFetched.length < 50) _fullyLoaded = true;
       });
@@ -967,6 +989,37 @@ class _MissionRoomState extends State<MissionRoom> {
     });
   }
 
+  /// Prepends [older] to `_messages` while keeping the currently visible
+  /// content anchored in place.
+  ///
+  /// This list is NOT reversed (oldest at top, newest at bottom) — unlike
+  /// `dm_thread_screen.dart`'s reversed list, prepending items at index 0
+  /// here changes what's ABOVE the viewport, not below it. Without
+  /// compensating the scroll offset by however much taller the list just
+  /// became, the framework preserves `position.pixels` (the same absolute
+  /// distance from the top) rather than the same absolute distance from
+  /// the bottom — so the viewport visually jumps to show a different part
+  /// of the list the instant the older page loads, exactly while the user
+  /// is mid-scroll reading history. `maxScrollExtent` conveniently already
+  /// reflects the list's total height, so its delta before/after gives the
+  /// exact compensation needed.
+  void _insertOlderMessagesPreservingScroll(List<PoolMessageLocal> older) {
+    if (!_scrollController.hasClients) {
+      setState(() => _messages.insertAll(0, older));
+      return;
+    }
+    final beforeExtent = _scrollController.position.maxScrollExtent;
+    setState(() => _messages.insertAll(0, older));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      final afterExtent = _scrollController.position.maxScrollExtent;
+      final delta = afterExtent - beforeExtent;
+      if (delta > 0) {
+        _scrollController.jumpTo(_scrollController.position.pixels + delta);
+      }
+    });
+  }
+
   bool get _isActive => _pool.status == PoolStatus.active;
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -1387,7 +1440,7 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
             shape: BoxShape.circle,
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
           ),
-          child: const Icon(SolarIconsBold.altArrowDown, color: Colors.white, size: 22),
+          child: const Icon(PhosphorIconsBold.caretDown, color: Colors.white, size: 22),
         ),
       ),
     );
@@ -1490,7 +1543,7 @@ class _InputBarState extends State<_InputBar> {
       child: widget.isRecording
           ? Row(
               children: [
-                const Icon(SolarIconsBold.recordCircle, color: ZendColors.destructive, size: 14),
+                const Icon(PhosphorIconsBold.record, color: ZendColors.destructive, size: 14),
                 const SizedBox(width: ZendSpacing.xs),
                 Text('Recording ${widget.recordingSeconds}s / 30s',
                     style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
@@ -1522,7 +1575,7 @@ class _InputBarState extends State<_InputBar> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                        child: Icon(SolarIconsBold.gift, size: 18, color: zt.textSecondary),
+                        child: Icon(PhosphorIconsBold.gift, size: 18, color: zt.textSecondary),
                       ),
                     ),
                   ),
@@ -1538,7 +1591,7 @@ class _InputBarState extends State<_InputBar> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                      child: Icon(SolarIconsBold.microphone, size: 18, color: zt.textSecondary),
+                      child: Icon(PhosphorIconsBold.microphone, size: 18, color: zt.textSecondary),
                     ),
                   ),
                 ),
@@ -1600,7 +1653,7 @@ class _InputBarState extends State<_InputBar> {
                               child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                             )
                           : Icon(
-                              SolarIconsBold.plain,
+                              PhosphorIconsBold.paperPlaneTilt,
                               size: 17,
                               color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
                             ),

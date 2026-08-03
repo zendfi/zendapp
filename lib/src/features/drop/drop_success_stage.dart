@@ -5,7 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DropSuccessStage extends StatefulWidget {
   const DropSuccessStage({
@@ -147,7 +147,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                         border: Border.all(color: zt.accentBright, width: 1.5),
                       ),
                       child: Icon(
-                        SolarIconsBold.checkCircle,
+                        PhosphorIconsBold.checkCircle,
                         color: zt.accentBright,
                         size: 28,
                       ),

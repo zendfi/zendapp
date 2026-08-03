@@ -17,7 +17,7 @@ import 'public_feed_screen.dart';
 import 'search_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.
@@ -128,7 +128,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   ),
                 ),
                 _OverflowItem(
-                  icon: SolarIconsBold.earth,
+                  icon: PhosphorIconsBold.globe,
                   label: 'Public feed',
                   subtitle: 'Activities your mutuals have shared',
                   onTap: () {
@@ -139,7 +139,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 if (widget.onOpenGraphView != null) ...[
                   Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                   _OverflowItem(
-                    icon: SolarIconsBold.usersGroupTwoRounded,
+                    icon: PhosphorIconsBold.usersFour,
                     label: 'Your mutuals',
                     subtitle: 'Your activity relationship graph',
                     onTap: () {
@@ -150,7 +150,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 ],
                 Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                 _OverflowItem(
-                  icon: SolarIconsBold.magnifier,
+                  icon: PhosphorIconsBold.magnifyingGlass,
                   label: 'Search all',
                   subtitle: 'Transactions, requests, pools, users',
                   onTap: () {
@@ -160,7 +160,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 ),
                 Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                 _OverflowItem(
-                  icon: _notificationsMuted ? SolarIconsBold.bellOff : SolarIconsBold.bell,
+                  icon: _notificationsMuted ? PhosphorIconsBold.bellSlash : PhosphorIconsBold.bell,
                   label: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
                   subtitle: _notificationsMuted ? 'Activity alerts are off' : 'Activity alerts are on',
                   onTap: () {
@@ -331,7 +331,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? SolarIconsBold.magnifierZoomOut : SolarIconsBold.magnifier,
+                      _filterActive ? PhosphorIconsBold.magnifyingGlassMinus : PhosphorIconsBold.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
@@ -339,7 +339,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   // ── Overflow menu (niche actions) ──
                   IconButton(
                     onPressed: () => _showOverflowMenu(context),
-                    icon: Icon(SolarIconsBold.menuDots, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary),
                     tooltip: 'More',
                   ),
                 ],
@@ -360,11 +360,11 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                         decoration: InputDecoration(
                           hintText: 'Filter by person or note…',
                           hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(SolarIconsBold.magnifier, size: 18, color: zt.textSecondary),
+                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(SolarIconsBold.closeCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,
@@ -540,7 +540,7 @@ class _RequestsThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: ZendColors.destructive.withValues(alpha: 0.12),
-                child: Icon(SolarIconsBold.bill, color: ZendColors.destructive, size: 20),
+                child: Icon(PhosphorIconsBold.receipt, color: ZendColors.destructive, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -572,7 +572,7 @@ class _RequestsThreadTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(SolarIconsBold.altArrowRight, color: zt.textSecondary),
+              Icon(PhosphorIconsBold.caretRight, color: zt.textSecondary),
             ],
           ),
         ),
@@ -831,7 +831,7 @@ class _UserThreadTile extends StatelessWidget {
                     color: zt.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(SolarIconsBold.chatLine, size: 18, color: zt.accent),
+                  child: Icon(PhosphorIconsBold.chatCircleText, size: 18, color: zt.accent),
                 ),
                 title: Text(
                   'Message @${counterparty.displayLabel}',
@@ -862,7 +862,7 @@ class _UserThreadTile extends StatelessWidget {
                     color: zt.bgPrimary,
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(SolarIconsBold.transferHorizontal, size: 18, color: zt.textSecondary),
+                  child: Icon(PhosphorIconsBold.arrowsLeftRight, size: 18, color: zt.textSecondary),
                 ),
                 title: Text(
                   'View activity',
@@ -1115,7 +1115,7 @@ class _PoolThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: zt.accent.withValues(alpha: 0.15),
-                child: Icon(SolarIconsBold.usersGroupRounded, color: zt.accent, size: 20),
+                child: Icon(PhosphorIconsBold.usersThree, color: zt.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(

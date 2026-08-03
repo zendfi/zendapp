@@ -14,7 +14,7 @@ import 'goal_detail_screen.dart';
 import 'lock_creation_sheet.dart';
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class PocketScreen extends StatefulWidget {
   const PocketScreen({super.key});
@@ -154,7 +154,7 @@ class _PocketScreenState extends State<PocketScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(
@@ -208,7 +208,7 @@ class _PocketScreenState extends State<PocketScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(SolarIconsBold.infoCircle, size: 48, color: zt.textSecondary),
+            Icon(PhosphorIconsBold.warningCircle, size: 48, color: zt.textSecondary),
             const SizedBox(height: ZendSpacing.md),
             Text(
               'Something went wrong',
@@ -342,7 +342,7 @@ class _PocketScreenState extends State<PocketScreen> {
         const SizedBox(height: ZendSpacing.sm),
         OutlinedButton.icon(
           onPressed: _openGoalCreation,
-          icon: const Icon(SolarIconsBold.addCircle, size: 18),
+          icon: const Icon(PhosphorIconsBold.plusCircle, size: 18),
           label: const Text(
             'New goal',
             style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600),
@@ -368,7 +368,7 @@ class _PocketScreenState extends State<PocketScreen> {
             action: _freePocket != null && (_freePocket!.balanceUsd > 0)
                 ? TextButton.icon(
                     onPressed: _openLockCreation,
-                    icon: const Icon(SolarIconsBold.lockKeyhole, size: 18),
+                    icon: const Icon(PhosphorIconsBold.lockKey, size: 18),
                     label: const Text(
                       'Lock savings',
                       style: TextStyle(
@@ -652,7 +652,7 @@ class GoalCard extends StatelessWidget {
                           ),
                           if (isLocked)
                             Icon(
-                              SolarIconsBold.lockKeyhole,
+                              PhosphorIconsBold.lockKey,
                               size: 16,
                               color: zt.textSecondary,
                             ),
@@ -774,7 +774,7 @@ class LockCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isExpired ? SolarIconsBold.lockKeyholeUnlocked : SolarIconsBold.lockKeyhole,
+                isExpired ? PhosphorIconsBold.lockKeyOpen : PhosphorIconsBold.lockKey,
                 size: 20,
                 color: isExpired ? ZendColors.accentBright : zt.textSecondary,
               ),

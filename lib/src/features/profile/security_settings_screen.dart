@@ -12,7 +12,7 @@ import '../onboarding/recovery_setup_screen.dart';
 import 'change_pin_screen.dart';
 import 'export_backup_screen.dart';
 import 'recovery_phrase_screen.dart';
-import 'package:solar_icons/solar_icons.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Settings > Security screen.
 ///
@@ -137,7 +137,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(SolarIconsBold.faceScanCircle, size: 22, color: zt.accent),
+                    child: Icon(PhosphorIconsBold.fingerprint, size: 22, color: zt.accent),
                   ),
                   const SizedBox(width: 14),
                   Text(
@@ -217,7 +217,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(SolarIconsBold.altArrowLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
                   ),
                   Text(
                     'Security',
@@ -248,7 +248,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
-                          icon: SolarIconsBold.lockPassword,
+                          icon: PhosphorIconsBold.lockSimple,
                           label: 'Change PIN',
                           zt: zt,
                           onTap: () =>
@@ -264,7 +264,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         _SettingsGroup(zt: zt, tiles: [
                           if (_biometricEnabled)
                             _ToggleTile(
-                              icon: SolarIconsBold.faceScanCircle,
+                              icon: PhosphorIconsBold.fingerprint,
                               label: 'Biometric unlock',
                               subtitle: 'Tap to disable biometric unlock',
                               value: true,
@@ -273,7 +273,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                             )
                           else
                             _Tile(
-                              icon: SolarIconsBold.faceScanCircle,
+                              icon: PhosphorIconsBold.fingerprint,
                               label: 'Biometric unlock',
                               zt: zt,
                               onTap: () => _showBiometricSetupGuide(context),
@@ -287,7 +287,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _ToggleTile(
-                          icon: SolarIconsBold.lockKeyhole,
+                          icon: PhosphorIconsBold.lockKey,
                           label: 'Require PIN on every payment',
                           subtitle:
                               'Re-enter PIN before every send, regardless of amount',
@@ -296,7 +296,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                           onChanged: _togglePinPerPayment,
                         ),
                         _ToggleTile(
-                          icon: SolarIconsBold.billCheck,
+                          icon: PhosphorIconsBold.receiptX,
                           label: 'Require PIN for larger sends',
                           subtitle: _pinThresholdEnabled
                               ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
@@ -341,8 +341,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
                           icon: _hasRecoveryBackup
-                              ? SolarIconsBold.verifiedCheck
-                              : SolarIconsBold.shieldMinimalistic,
+                              ? PhosphorIconsBold.sealCheck
+                              : PhosphorIconsBold.shield,
                           label: _hasRecoveryBackup
                               ? 'Update ID verification'
                               : 'Set up PIN recovery',
@@ -381,14 +381,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
-                          icon: SolarIconsBold.download,
+                          icon: PhosphorIconsBold.download,
                           label: 'Back up my account',
                           zt: zt,
                           onTap: () => pushZendSlide(
                               context, const ExportBackupScreen()),
                         ),
                         _Tile(
-                          icon: SolarIconsBold.key,
+                          icon: PhosphorIconsBold.key,
                           label: 'View secret recovery phrase',
                           zt: zt,
                           onTap: () => pushZendSlide(
@@ -613,7 +613,7 @@ class _Tile extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(SolarIconsBold.altArrowRight, size: 16, color: zt.textSecondary),
+              Icon(PhosphorIconsBold.caretRight, size: 16, color: zt.textSecondary),
             ],
           ),
         ),
