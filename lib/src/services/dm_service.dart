@@ -4,10 +4,23 @@ import '../models/dm_message.dart';
 import '../models/dm_thread.dart';
 import 'api_client.dart';
 
+/// Sent/read timestamps for a single message — backs the message-info sheet.
+class DmMessageInfo {
+  const DmMessageInfo({required this.sentAt, this.readAt});
+  final DateTime sentAt;
+  /// Null if the counterparty hasn't read up to this message yet.
+  final DateTime? readAt;
+}
+
 class DmMessagesResult {
-  const DmMessagesResult({required this.messages, this.nextCursor});
+  const DmMessagesResult({required this.messages, this.nextCursor, this.counterpartyLastReadMessageId});
   final List<DmMessage> messages;
   final String? nextCursor;
+  /// The counterparty's current read cursor — the id of the last message
+  /// they've read in this room. Used to hydrate "read" (double-tick) status
+  /// on the current user's own sent messages when a thread is (re)opened,
+  /// not just from live WS read_receipt frames.
+  final String? counterpartyLastReadMessageId;
 }
 
 /// HTTP client for the DM REST endpoints.
@@ -25,10 +38,26 @@ class DmService {
   /// so there's never a spinner for rooms the user has visited before.
   final Map<String, List<DmMessage>> _messageCache = {};
 
-  /// Rooms the user has explicitly cleared — messages won't be reloaded
-  /// from the server until the user navigates away and back (or restarts).
-  /// Persists for the lifetime of the DmService instance (i.e. the app session).
-  final Set<String> _clearedRooms = {};
+  /// Per-room "clear chat" boundary — the moment the user cleared history
+  /// for that room. Persists for the lifetime of the DmService instance
+  /// (i.e. the app session).
+  ///
+  /// This used to be a bare `Set<String> _clearedRooms` (a boolean "is this
+  /// room cleared" flag) that blocked re-fetching from the server entirely
+  /// until ANY new message arrived, at which point the flag was dropped via
+  /// `unmarkCleared()` — and the very next full reload fetched the
+  /// COMPLETE unfiltered server history, bringing back everything the user
+  /// had just cleared. That's the exact bug this timestamp model fixes:
+  /// instead of refusing to fetch, [DmThreadScreen] now always fetches
+  /// normally and filters out any message at or before this boundary. A
+  /// message arriving after the clear simply passes the filter — it no
+  /// longer un-clears the *entire* room and floods old history back in.
+  final Map<String, DateTime> _clearedBefore = {};
+
+  /// Returns the clear-chat boundary for [roomId], or `null` if the room
+  /// has never been cleared this session. Messages with `createdAt` at or
+  /// before this timestamp should be hidden.
+  DateTime? getClearedBefore(String roomId) => _clearedBefore[roomId];
 
   /// Per-room draft text — preserved across navigating away from and back
   /// to a thread (e.g. backing out to answer a call, or to check another
@@ -55,9 +84,6 @@ class DmService {
   /// Used by DmListScreen to show online dots without needing an open WS.
   final Map<String, bool> presenceCache = {};
 
-  /// Returns true if the user has cleared this room in the current session.
-  bool isRoomCleared(String roomId) => _clearedRooms.contains(roomId);
-
   /// Returns cached messages for a room, or empty list if not yet loaded.
   List<DmMessage> getCachedMessages(String roomId) =>
       List.unmodifiable(_messageCache[roomId] ?? const []);
@@ -65,29 +91,22 @@ class DmService {
   /// Updates the message cache for a room.
   void _updateMessageCache(String roomId, List<DmMessage> messages) {
     _messageCache[roomId] = List.of(messages);
-    // Note: do NOT unmark cleared rooms here. Clearing is only undone when
-    // the counterparty sends a new message (handled in DmThreadScreen._initWs).
   }
 
   /// Clears the cache (e.g. on sign-out).
   void clearCaches() {
     cachedThreads = [];
     _messageCache.clear();
-    _clearedRooms.clear();
+    _clearedBefore.clear();
     _drafts.clear();
   }
 
-  /// Clears the cached messages for a single room and marks it as user-cleared
-  /// so the screen doesn't refetch from the server on reopen.
+  /// Clears the cached messages for a single room and records the current
+  /// moment as that room's clear-chat boundary — every future fetch filters
+  /// out anything at or before it (see [_clearedBefore]'s doc comment).
   void clearRoomCache(String roomId) {
     _messageCache.remove(roomId);
-    _clearedRooms.add(roomId);
-  }
-
-  /// Unclears a room — called when new incoming messages arrive so the room
-  /// becomes active again after a clear.
-  void unmarkCleared(String roomId) {
-    _clearedRooms.remove(roomId);
+    _clearedBefore[roomId] = DateTime.now();
   }
 
   /// Lists all DM threads for the current user, sorted by recency.
@@ -157,12 +176,16 @@ class DmService {
     return DmMessagesResult(
       messages: messages,
       nextCursor: response.data['next_cursor'] as String?,
+      counterpartyLastReadMessageId: response.data['counterparty_last_read_message_id'] as String?,
     );
   }
 
   /// Sends a text message via HTTP (WebSocket fallback path).
   /// [replyToContent] and [replyToSenderZendtag] are optional reply metadata
   /// stored in the message's JSON metadata so they survive server round-trips.
+  /// [forwarded] marks this as a forwarded message — the server stores a
+  /// `forwarded: true` flag in metadata so the bubble can render a
+  /// "Forwarded" label.
   Future<DmMessage> sendMessage(
     String roomId,
     String content,
@@ -170,10 +193,12 @@ class DmService {
     String? replyToContent,
     String? replyToSenderZendtag,
     String? replyToMessageId,
+    bool forwarded = false,
   }) async {
     final data = <String, dynamic>{
       'content': content,
       'client_id': clientId,
+      if (forwarded) 'forwarded': true,
     };
     if (replyToContent != null || replyToSenderZendtag != null || replyToMessageId != null) {
       data['metadata'] = {
@@ -198,7 +223,29 @@ class DmService {
       'reply_to_content': replyToContent,
       'reply_to_sender_zendtag': replyToSenderZendtag,
       'reply_to_message_id': replyToMessageId,
+      'metadata': {if (forwarded) 'forwarded': true},
     });
+  }
+
+  /// Soft-deletes a message the current user sent. Throws on failure (e.g.
+  /// not the sender, already deleted, network error) — caller should catch
+  /// this and revert any optimistic UI removal rather than assuming success.
+  Future<void> deleteMessage(String roomId, String messageId) async {
+    await _apiClient.dio.delete('/api/zend/dm/$roomId/messages/$messageId');
+  }
+
+  /// Fetches sent/read timestamps for a single message — backs the
+  /// message-info sheet (mirrors WhatsApp's "Message info" screen).
+  Future<DmMessageInfo> getMessageInfo(String roomId, String messageId) async {
+    final response = await _apiClient.dio.get(
+      '/api/zend/dm/$roomId/messages/$messageId/info',
+    );
+    return DmMessageInfo(
+      sentAt: DateTime.tryParse(response.data['sent_at'] as String? ?? '') ?? DateTime.now(),
+      readAt: response.data['read_at'] != null
+          ? DateTime.tryParse(response.data['read_at'] as String)
+          : null,
+    );
   }
 
   /// Marks all messages in the room as read.

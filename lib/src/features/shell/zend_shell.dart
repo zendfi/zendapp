@@ -50,9 +50,17 @@ class _ZendShellState extends State<ZendShell> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _tabIndex, keepPage: true);
-    // Register this shell with the controller so notification taps can switch tabs.
+    // Register this shell with the controller so notification taps can
+    // switch tabs. Route through _setTab (not a bare setState) so this
+    // matches every other way of switching tabs exactly — including
+    // actually moving the PageView via jumpToPage and clearing the
+    // relevant unread badge. Previously this only updated _tabIndex, which
+    // moves the bottom bar's highlighted icon but leaves the PageView
+    // showing whatever page it was already on — tapping a notification to
+    // "go to Activity" would show the Activity tab as selected while the
+    // actual visible content stayed on Home/Send/DM.
     ZendShellController.activate((index) {
-      if (mounted) setState(() => _tabIndex = index);
+      if (mounted) _setTab(index);
     });
     // Consume any pending deep link that was stored before the user
     // completed device unlock (PIN screen).

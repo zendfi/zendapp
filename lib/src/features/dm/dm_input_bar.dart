@@ -73,6 +73,9 @@ class _DmInputBarState extends State<DmInputBar>
   List<VibeSticker> _stickers = [];
   bool _stickersLoading = true;
   VibeSticker? _selectedSticker;
+  // See _sendVibe()'s doc comment — guards against a fast double-tap
+  // sending two Vibes.
+  bool _sendingVibe = false;
 
   void _setMode(_PanelMode next) {
     setState(() {
@@ -220,7 +223,18 @@ class _DmInputBarState extends State<DmInputBar>
   }
 
   void _sendVibe() {
+    // Guards against a fast double-tap on "Send Vibe": the button stays
+    // mounted during _closePanel()'s reverse animation (it only actually
+    // leaves the tree once that animation finishes), and this method
+    // resets _vibeAmount/_selectedSticker via setState before that
+    // animation completes — so a second tap landing in that window would
+    // previously re-enter this method using the just-reset state (amount
+    // snapped back to $1.00, sticker reset to the first in the list) and
+    // fire a second, different Vibe send. Mirrors the _confirmInFlight
+    // guard already used for the same class of bug in contribute_sheet.dart.
+    if (_sendingVibe) return;
     if (_selectedSticker == null || widget.onSendVibe == null) return;
+    _sendingVibe = true;
     // Strong satisfying thud when Vibe is sent
     HapticFeedback.heavyImpact();
     Future.delayed(const Duration(milliseconds: 60), HapticFeedback.mediumImpact);
@@ -240,6 +254,10 @@ class _DmInputBarState extends State<DmInputBar>
     _closePanel();
     Future.delayed(const Duration(milliseconds: 80), () {
       if (mounted) widget.onSendVibe!(result);
+      // Reset once the panel has fully closed (matches the panel's own
+      // reverse-animation duration via _closePanel), so re-opening the
+      // Vibe flow for a genuinely new send isn't permanently blocked.
+      _sendingVibe = false;
     });
   }
 

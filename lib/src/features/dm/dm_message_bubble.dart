@@ -116,7 +116,10 @@ class DmMessageBubble extends StatefulWidget {
   final bool isLast;
   final VoidCallback? onRetry;
   final void Function(DmPaymentRequestData)? onPayRequest;
-  final void Function(BuildContext, DmMessage, Offset)? onLongPress;
+  /// Called on long-press with the bubble's own on-screen bounds (global
+  /// coordinates) — used by the caller to anchor the long-press action
+  /// overlay's "lift and bounce" animation at the bubble's actual position.
+  final void Function(BuildContext, DmMessage, Rect)? onLongPress;
   /// Called when the user swipes right to reply to this message.
   final void Function(DmMessage)? onReply;
   /// Called when the user taps a reaction chip directly — carries the emoji
@@ -277,7 +280,11 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       },
       onLongPressStart: (details) {
         HapticFeedback.mediumImpact();
-        widget.onLongPress?.call(context, widget.message, details.globalPosition);
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final origin = renderBox.localToGlobal(Offset.zero);
+        final rect = Rect.fromLTWH(origin.dx, origin.dy, renderBox.size.width, renderBox.size.height);
+        widget.onLongPress?.call(context, widget.message, rect);
       },
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
@@ -519,6 +526,52 @@ class _TextBubble extends StatelessWidget {
                   crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (message.isForwarded && !message.isDeleted)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              PhosphorIconsBold.arrowBendUpRight,
+                              size: 11,
+                              color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Forwarded',
+                              style: TextStyle(
+                                fontFamily: 'Satoshi',
+                                fontSize: 11.5,
+                                fontStyle: FontStyle.italic,
+                                color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (message.isDeleted)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            PhosphorIconsBold.prohibitInset,
+                            size: 13,
+                            color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'This message was deleted',
+                            style: TextStyle(
+                              fontFamily: 'Satoshi',
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                              color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
                     if (_hasReply) ...[
                       _QuoteBlock(
                         senderZendtag: message.replyToSenderZendtag,
@@ -574,6 +627,7 @@ class _TextBubble extends StatelessWidget {
                         showNotEncrypted: _showNotEncryptedBadge,
                         onRetry: onRetry,
                       ),
+                    ], // close the `else` branch of `if (message.isDeleted)`
                   ],
                 ),
               ),
@@ -670,69 +724,66 @@ class _QuoteBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bar = Container(width: 3, color: barColor);
     final textAlign = isMe ? TextAlign.right : TextAlign.left;
     final crossAlign = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
-    final content_ = Container(
-      color: bgColor,
-      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
-      child: Column(
-        crossAxisAlignment: crossAlign,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (senderZendtag != null && senderZendtag!.isNotEmpty)
-            Text(
-              '@$senderZendtag',
-              textAlign: textAlign,
-              style: TextStyle(
-                fontFamily: 'Satoshi',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: labelColor,
-                height: 1.2,
-              ),
-            ),
-          if (content != null && content!.isNotEmpty) ...[
-            if (senderZendtag != null && senderZendtag!.isNotEmpty)
-              const SizedBox(height: 1),
-            Text(
-              content!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: textAlign,
-              style: TextStyle(
-                fontFamily: 'Satoshi',
-                fontSize: 13,
-                color: textColor,
-                height: 1.3,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-
+    // Accent bar is drawn as a Border side on the Container itself rather
+    // than as a separate Row child sized via IntrinsicHeight. The previous
+    // IntrinsicHeight + Row(mainAxisSize: min) combination measured the
+    // Text child during an *unconstrained* intrinsic-width pass — since
+    // nothing gave it an explicit max width (no Expanded/Flexible), a long
+    // quote line would report its natural single-line width, which could
+    // be wider than the bubble itself, causing the whole quote block (and
+    // the bubble around it) to overflow past the screen edge before
+    // `maxLines: 2` ever got a chance to wrap it — maxLines caps line
+    // *count*, not width. A plain Container naturally inherits the width
+    // constraint already imposed by the ambient bubble ConstrainedBox in
+    // _TextBubble, so Text wraps and ellipsizes correctly within it.
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: IntrinsicHeight(
-          child: Row(
-            // MainAxisSize.min is the key fix here — without it, a Row
-            // always reports its OWN width as the full incoming max width
-            // regardless of whether its children use Expanded, which forced
-            // every reply quote (and therefore the whole bubble, since the
-            // bubble's Column sizes to its widest child) to stretch to the
-            // maximum allowed bubble width even for short messages. With
-            // `min`, the Row (and its non-flex Container child below) sizes
-            // to its actual text content instead, capped by the same ambient
-            // max-width constraint so long quotes still ellipsize correctly.
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            // Mirror the bar to the trailing edge for the sender's own bubble.
-            children: isMe ? [content_, bar] : [bar, content_],
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(6),
+          border: Border(
+            left: isMe ? BorderSide.none : BorderSide(color: barColor, width: 3),
+            right: isMe ? BorderSide(color: barColor, width: 3) : BorderSide.none,
           ),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+        child: Column(
+          crossAxisAlignment: crossAlign,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (senderZendtag != null && senderZendtag!.isNotEmpty)
+              Text(
+                '@$senderZendtag',
+                textAlign: textAlign,
+                style: TextStyle(
+                  fontFamily: 'Satoshi',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: labelColor,
+                  height: 1.2,
+                ),
+              ),
+            if (content != null && content!.isNotEmpty) ...[
+              if (senderZendtag != null && senderZendtag!.isNotEmpty)
+                const SizedBox(height: 1),
+              Text(
+                content!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: textAlign,
+                style: TextStyle(
+                  fontFamily: 'Satoshi',
+                  fontSize: 13,
+                  color: textColor,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -750,7 +801,15 @@ class _StatusIcon extends StatelessWidget {
       case DmLocalStatus.sending:
         return Icon(PhosphorIconsBold.clock, size: 11, color: Colors.white.withValues(alpha: 0.6));
       case DmLocalStatus.delivered:
-        return Icon(PhosphorIconsBold.checkCircle, size: 11, color: Colors.white.withValues(alpha: 0.6));
+        // Single check — sent/delivered but not yet read. WhatsApp/iMessage
+        // both use a single tick for this state, reserving the double tick
+        // for "read".
+        return Icon(PhosphorIconsBold.check, size: 12, color: Colors.white.withValues(alpha: 0.6));
+      case DmLocalStatus.read:
+        // Double tick, tinted — the read-receipt state. Uses the app's
+        // accentPop colour (not WhatsApp's blue) so it still reads as
+        // "seen" while staying on-brand.
+        return const Icon(PhosphorIconsBold.checks, size: 13, color: ZendColors.accentPop);
       case DmLocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,

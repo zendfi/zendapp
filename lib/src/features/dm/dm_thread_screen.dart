@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/zend_state.dart';
@@ -23,6 +24,9 @@ import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_pin_prompt.dart';
 import 'dm_message_bubble.dart';
 import 'dm_input_bar.dart';
+import 'dm_message_action_overlay.dart';
+import 'dm_forward_sheet.dart';
+import 'dm_message_info_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// State of the E2EE key exchange for the currently open room.
@@ -98,7 +102,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _showTimestamps = false;      // revealed by left-edge swipe
   DmMessage? _replyingTo;           // the message being replied to
 
-  final _scrollController = ScrollController();
+  // Index-based scroll control (scrollable_positioned_list) instead of a
+  // plain ScrollController — this is what lets _scrollToReplyOrigin jump
+  // straight to a target index even when that message is far outside the
+  // currently-built/visible region. A plain ListView.builder only builds
+  // items near the viewport, so a GlobalKey-based Scrollable.ensureVisible
+  // approach silently no-ops for any reply whose original message isn't
+  // already mounted — exactly the "doesn't scroll when it's far away" bug.
+  final _itemScrollController = ItemScrollController();
+  final _itemPositionsListener = ItemPositionsListener.create();
 
   @override
   void initState() {
@@ -119,7 +131,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
     _initWs();
     _loadMessages();
-    _scrollController.addListener(_onScroll);
+    _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _fetchCounterpartyPubkey();
   }
 
@@ -189,12 +201,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       switch (frame.type) {
         case WsFrameType.message:
           final msg = DmMessage.fromJson(frame.data);
-          // Unmark the room as cleared when new messages arrive from the other party,
-          // so reopening the chat will show history again.
-          if (model.dmService.isRoomCleared(widget.roomId) &&
-              msg.senderUserId != model.currentUserId) {
-            model.dmService.unmarkCleared(widget.roomId);
-          }
           // Defensively clear the typing indicator when the counterparty's
           // message actually arrives. The server sends "typing: false" and
           // "message" as two separate frames — if the "stopped typing"
@@ -309,6 +315,42 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               }
             });
           }
+        case WsFrameType.readReceipt:
+          final readerUserId = frame.data['reader_user_id'] as String?;
+          final lastReadId = frame.data['last_read_message_id'] as String?;
+          // Ignore our own read receipts echoed back — only the
+          // counterparty reading our messages should flip our sent bubbles
+          // to "read".
+          if (readerUserId != null && readerUserId != model.currentUserId && lastReadId != null) {
+            final readIdx = _messages.indexWhere((m) => m.id == lastReadId);
+            if (readIdx != -1) {
+              setState(() {
+                // _messages is newest-first — everything from the read
+                // message onward (i.e. index >= readIdx, meaning
+                // equally-old-or-older) that I sent and isn't already
+                // failed gets upgraded to "read".
+                for (var i = readIdx; i < _messages.length; i++) {
+                  final m = _messages[i];
+                  if (m.senderUserId == model.currentUserId &&
+                      m.localStatus != DmLocalStatus.failed &&
+                      m.localStatus != DmLocalStatus.read) {
+                    m.localStatus = DmLocalStatus.read;
+                  }
+                }
+              });
+            }
+          }
+        case WsFrameType.messageDeleted:
+          final deletedId = frame.data['message_id'] as String?;
+          if (deletedId != null) {
+            final idx = _messages.indexWhere((m) => m.id == deletedId);
+            if (idx != -1) {
+              setState(() {
+                _messages[idx].isDeleted = true;
+                _messages[idx].content = null;
+              });
+            }
+          }
         default:
           // Handle presence + recording frames
           if (frame.type == WsFrameType.presenceUpdate) {
@@ -371,15 +413,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   Future<void> _loadMessages({bool more = false}) async {
-    // If the user cleared this room, don't reload from server — show empty.
-    // New incoming WS messages will populate it naturally and unmark the clear.
     final model = ZendScope.of(context);
-    if (!more && model.dmService.isRoomCleared(widget.roomId)) {
-      // Make sure we're not stuck in loading state
-      if (_loading) setState(() => _loading = false);
+    if (more && (_loadingMore || _nextCursor == null)) return;
+    // If everything left to paginate is at or before the clear boundary,
+    // there's nothing older worth fetching — stop here instead of hitting
+    // the server for a page that will be filtered down to nothing.
+    final clearedBefore = model.dmService.getClearedBefore(widget.roomId);
+    if (more && clearedBefore != null && _messages.isNotEmpty &&
+        !_messages.last.createdAt.isAfter(clearedBefore)) {
       return;
     }
-    if (more && (_loadingMore || _nextCursor == null)) return;
     // Only show the full-screen spinner if we have nothing to display yet
     if (!more) setState(() { _loading = _messages.isEmpty; _loadError = false; });
     if (more) setState(() => _loadingMore = true);
@@ -391,20 +434,51 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         cursor: more ? _nextCursor : null,
       );
       if (!mounted) return;
+      // Apply this room's clear-chat boundary, if any — hides messages at
+      // or before the moment the user cleared history, on every fetch
+      // (first load, pagination, and reconnect-triggered resyncs alike),
+      // rather than the old approach of blocking the fetch outright and
+      // un-blocking it wholesale the instant any new message arrived.
+      final clearedBefore = model.dmService.getClearedBefore(widget.roomId);
+      final fetched = clearedBefore == null
+          ? result.messages
+          : result.messages.where((m) => m.createdAt.isAfter(clearedBefore)).toList();
       setState(() {
         if (more) {
-          _messages.addAll(result.messages);
+          _messages.addAll(fetched);
         } else {
           // Merge: keep any optimistic messages (local-only) and replace the rest
           final localOnly = _messages.where((m) => m.id.startsWith('local-')).toList();
           _messages
             ..clear()
-            ..addAll(result.messages)
+            ..addAll(fetched)
             ..insertAll(0, localOnly);
         }
-        _nextCursor = result.nextCursor;
+        // Once we've fetched a page that reaches back to (or past) the
+        // clear boundary, there's nothing older left to show — stop
+        // paginating even if the server still has more/an older cursor.
+        _nextCursor = (clearedBefore != null && fetched.length < result.messages.length)
+            ? null
+            : result.nextCursor;
         _loading = false;
         _loadingMore = false;
+        // Hydrate "read" status on our own sent messages from the
+        // counterparty's read cursor — without this, reopening a thread the
+        // counterparty had already fully read would show single ticks
+        // until the next live read_receipt frame arrives.
+        final cpReadId = result.counterpartyLastReadMessageId;
+        if (cpReadId != null) {
+          final readIdx = _messages.indexWhere((m) => m.id == cpReadId);
+          if (readIdx != -1) {
+            for (var i = readIdx; i < _messages.length; i++) {
+              final m = _messages[i];
+              if (m.senderUserId == model.currentUserId &&
+                  m.localStatus != DmLocalStatus.failed) {
+                m.localStatus = DmLocalStatus.read;
+              }
+            }
+          }
+        }
       });
       // Decrypt E2EE messages after loading
       if (_e2eeReady) {
@@ -441,14 +515,24 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
   }
 
-  void _onScroll() {
-    // Load more when near the bottom (reversed list, bottom = old messages)
-    if (_scrollController.position.pixels >
-        _scrollController.position.maxScrollExtent - 200) {
+  /// Replaces the old pixel-offset-based `_onScroll` — scrollable_positioned_list
+  /// reports visible item *indices* instead of a ScrollController position,
+  /// so paginating and toggling the scroll-to-bottom button both key off the
+  /// max visible index now instead of `pixels`/`maxScrollExtent`.
+  void _onItemPositionsChanged() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+    final maxIndex = positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+    final totalCount = _lastBuiltItemCount;
+
+    // Load more when near the end of the built list (reversed list, end = oldest)
+    if (totalCount > 0 && maxIndex >= totalCount - 5) {
       _loadMessages(more: true);
     }
-    // Show scroll-to-bottom button when scrolled up more than 200px
-    final shouldShow = _scrollController.position.pixels > 200;
+
+    // Show scroll-to-bottom button once index 0 (newest) is no longer visible.
+    final minIndex = positions.map((p) => p.index).reduce((a, b) => a < b ? a : b);
+    final shouldShow = minIndex > 0;
     if (shouldShow != _showScrollToBottom) {
       setState(() {
         _showScrollToBottom = shouldShow;
@@ -457,17 +541,17 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
   }
 
+  /// Item count of the most recently built list — set at the top of the
+  /// ScrollablePositionedList.builder call in build(). Used by
+  /// _onItemPositionsChanged to know when the visible window is nearing the
+  /// end of what's currently loaded.
+  int _lastBuiltItemCount = 0;
+
   void _onSend(String text) {
     if (text.isEmpty) return;
     HapticFeedback.lightImpact();
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
-
-    // Sending a new message means the user is actively chatting again —
-    // unmark the room as cleared so history reloads on the next open.
-    if (model.dmService.isRoomCleared(widget.roomId)) {
-      model.dmService.unmarkCleared(widget.roomId);
-    }
 
     final optimistic = DmMessage.optimistic(
       roomId: widget.roomId,
@@ -538,9 +622,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     HapticFeedback.lightImpact();
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
-    if (model.dmService.isRoomCleared(widget.roomId)) {
-      model.dmService.unmarkCleared(widget.roomId);
-    }
 
     // Build the quoted preview — use the actual message ID for reliable lookup
     final quoteContent = switch (quotedMsg.type) {
@@ -726,50 +807,103 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   // message ID in the metadata yet. If the message is off-screen we scroll to
   // it and flash the bubble to confirm.
 
-  // Keys for each message row — used by _scrollToReplyOrigin to find and
-  // flash-highlight the original message without estimating pixel offsets.
-  final _msgItemKeys = <String, GlobalKey>{};
   String? _flashingMsgId;
+  // Guards against overlapping _scrollToReplyOrigin calls triggering
+  // multiple concurrent "load more" chains if the user taps several quotes
+  // in quick succession.
+  bool _resolvingReplyJump = false;
 
-  void _scrollToReplyOrigin(DmMessage replyMsg) {
+  /// Finds the index of the original message a reply quotes, within
+  /// [_messages] (newest-first, matching how the display list is built).
+  /// Returns -1 if not currently loaded.
+  int _findReplyOriginIndex(DmMessage replyMsg) {
     final replyContent = replyMsg.replyToContent;
     final replySender = replyMsg.replyToSenderZendtag;
     final replyMsgId = replyMsg.replyToMessageId;
 
-    int idx = -1;
-
     // Prefer ID-based lookup (exact, works for all message types including
     // payment/vibe which have null content)
     if (replyMsgId != null) {
-      idx = _messages.indexWhere((m) => m.id == replyMsgId);
+      final idx = _messages.indexWhere((m) => m.id == replyMsgId);
+      if (idx != -1) return idx;
     }
 
     // Fallback: content+sender match for messages sent before ID tracking
-    if (idx == -1 && replyContent != null) {
-      idx = _messages.indexWhere((m) =>
+    if (replyContent != null) {
+      return _messages.indexWhere((m) =>
           m.content == replyContent &&
           (replySender == null || m.senderZendtag == replySender));
     }
+    return -1;
+  }
 
-    if (idx == -1) return;
+  /// Scrolls to the original message a reply quotes and flashes it.
+  ///
+  /// Unlike a GlobalKey + Scrollable.ensureVisible approach, this uses
+  /// ScrollablePositionedList's index-based ItemScrollController, which can
+  /// jump straight to any built list index regardless of whether it's
+  /// currently near the viewport — fixing the bug where tapping a reply to
+  /// a message far above the current scroll position (but already loaded)
+  /// silently did nothing.
+  ///
+  /// If the original message hasn't been paginated into [_messages] yet
+  /// (older than what's loaded so far), this fetches older pages — up to a
+  /// bounded number of attempts — before giving up and telling the user,
+  /// rather than silently no-oping either way.
+  Future<void> _scrollToReplyOrigin(DmMessage replyMsg) async {
+    if (_resolvingReplyJump) return;
+    _resolvingReplyJump = true;
+    try {
+      var idx = _findReplyOriginIndex(replyMsg);
 
-    final targetId = _messages[idx].id;
-    final key = _msgItemKeys[targetId];
-    if (key?.currentContext == null) return;
+      // Original not loaded yet — try paginating further back. Bounded to
+      // avoid an unbounded fetch loop if the message was deleted server-side
+      // or the reply metadata is stale/corrupt.
+      var attempts = 0;
+      while (idx == -1 && _nextCursor != null && attempts < 8) {
+        await _loadMessages(more: true);
+        idx = _findReplyOriginIndex(replyMsg);
+        attempts++;
+      }
 
-    Scrollable.ensureVisible(
-      key!.currentContext!,
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.easeOutCubic,
-      alignment: 0.3,
-    ).then((_) {
+      if (idx == -1) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Original message not found', style: TextStyle(fontFamily: 'Satoshi')),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      final targetId = _messages[idx].id;
+      // Map the _messages index to the display-list index (which interleaves
+      // date separators) — this is what the ScrollablePositionedList's
+      // itemBuilder actually indexes into.
+      final displayList = _buildDisplayList();
+      final displayIdx = displayList.indexWhere(
+        (item) => item is _DmMessageItem && item.message.id == targetId,
+      );
+      if (displayIdx == -1 || !_itemScrollController.isAttached) return;
+
+      await _itemScrollController.scrollTo(
+        index: displayIdx,
+        alignment: 0.3,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+      );
+
       if (mounted) {
         setState(() => _flashingMsgId = targetId);
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) setState(() => _flashingMsgId = null);
         });
       }
-    });
+    } finally {
+      _resolvingReplyJump = false;
+    }
   }
 
   String _formatLastSeen(DateTime dt) {
@@ -794,11 +928,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         child: GestureDetector(
           onTap: () {
             setState(() => _unseenWhileScrolledUp = 0);
-            _scrollController.animateTo(
-              0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
+            if (_itemScrollController.isAttached) {
+              _itemScrollController.scrollTo(
+                index: 0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
           },
           child: Stack(
             clipBehavior: Clip.none,
@@ -842,135 +978,160 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 
-  void _showMessageReactions(BuildContext ctx, DmMessage msg, Offset globalPos) {
-    const emojis = ['🔥', '❤️', '😂', '👏', '🙏', '😭', '💸', '✅', '👑', '🚀', '💯', '👀'];
-    final zt = ZendTheme.of(context);
-    final model = ZendScope.of(context);
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
+  /// Long-press entry point — shows the iMessage/WhatsApp-style action
+  /// overlay: the bubble lifts and bounces into a focused position, the
+  /// background blurs, a quick-reaction row appears above it, and an
+  /// action menu (Reply / Forward / Copy / Info / Delete) appears below.
+  void _showMessageActions(BuildContext ctx, DmMessage msg, Rect originRect) {
+    final isMe = msg.senderUserId == ZendScope.of(context).currentUserId;
+    final isTextMessage = msg.type == DmMessageType.text && !msg.isDeleted;
 
-    // Position the tray just above or below the tap point
-    final trayHeight = 56.0;
-    final trayWidth = screenWidth - 32;
-    double top = globalPos.dy - trayHeight - 12;
-    if (top < 80) top = globalPos.dy + 20; // flip below if near top
-    top = top.clamp(80.0, screenHeight - trayHeight - 80);
-
-    // Find the message index so we can update its reactions in place
-    final msgIdx = _messages.indexWhere((m) => m.id == msg.id);
-
-    entry = OverlayEntry(builder: (overlayCtx) => Stack(children: [
-      Positioned.fill(child: GestureDetector(
-        onTap: () => entry.remove(),
-        behavior: HitTestBehavior.opaque,
-        child: const ColoredBox(color: Color(0x22000000)),
-      )),
-      Positioned(
-        top: top,
-        left: 16,
-        width: trayWidth,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            decoration: BoxDecoration(
-              color: zt.bgElevated,
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-              boxShadow: [BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              )],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: emojis.take(8).map((e) {
-                // Check if the current user already reacted with this emoji
-                final alreadyReacted = msgIdx != -1
-                    ? _messages[msgIdx].reactions.any((r) => r.emoji == e && r.reactedByMe)
-                    : false;
-
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    entry.remove();
-
-                    if (msgIdx == -1) return;
-                    final targetMsg = _messages[msgIdx];
-
-                    if (alreadyReacted) {
-                      // Toggle off — remove the reaction optimistically
-                      setState(() {
-                        final updatedReactions = targetMsg.reactions
-                            .map((r) {
-                              if (r.emoji != e) return r;
-                              if (r.count <= 1) return null; // remove entirely
-                              return r.copyWith(count: r.count - 1, reactedByMe: false);
-                            })
-                            .whereType<DmReaction>()
-                            .toList();
-                        _messages[msgIdx].reactions = updatedReactions;
-                      });
-                      unawaited(model.dmService.removeMessageReaction(
-                        widget.roomId,
-                        messageId: targetMsg.id,
-                        emoji: e,
-                      ));
-                    } else {
-                      // Add the reaction optimistically
-                      setState(() {
-                        final existing = targetMsg.reactions.indexWhere((r) => r.emoji == e);
-                        final updated = List<DmReaction>.from(targetMsg.reactions);
-                        if (existing != -1) {
-                          updated[existing] = updated[existing].copyWith(
-                            count: updated[existing].count + 1,
-                            reactedByMe: true,
-                          );
-                        } else {
-                          updated.add(DmReaction(emoji: e, count: 1, reactedByMe: true));
-                        }
-                        _messages[msgIdx].reactions = updated;
-                      });
-                      // The persisted endpoint broadcasts to the other
-                      // connected participant; this client already updated
-                      // its own reaction optimistically.
-                      unawaited(model.dmService.sendMessageReaction(
-                        widget.roomId,
-                        messageId: targetMsg.id,
-                        emoji: e,
-                      ));
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 120),
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-                    decoration: alreadyReacted
-                        ? BoxDecoration(
-                            color: zt.accent.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(ZendRadii.pill),
-                          )
-                        : null,
-                    child: Text(
-                      e,
-                      style: TextStyle(
-                        fontSize: alreadyReacted ? 24 : 26,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
+    showMessageActionOverlay(
+      context,
+      message: msg,
+      isMe: isMe,
+      originRect: originRect,
+      previewBuilder: (previewCtx) => _buildBubbleFor(msg, forPreview: true),
+      onReactionTap: (emoji) => _onToggleReaction(msg, emoji),
+      actions: DmMessageActions(
+        onReply: msg.isDeleted ? null : () => setState(() => _replyingTo = msg),
+        onForward: msg.isDeleted ? null : () => _forwardMessage(msg),
+        onCopy: isTextMessage && (msg.displayContent?.isNotEmpty ?? false)
+            ? () => _copyMessage(msg)
+            : null,
+        // Read receipts only make sense from the sender's side — matches
+        // WhatsApp, which doesn't offer "Info" on messages you received.
+        onInfo: isMe && !msg.isDeleted ? () => _showMessageInfo(msg) : null,
+        onDelete: isMe && !msg.isDeleted ? () => _deleteMessage(msg) : null,
       ),
-    ]));
-    overlay.insert(entry);
+    );
+  }
 
-    // Also handle incoming reaction frames from the WS while the tray is open
-    // (these arrive in _wsSub listener in _initWs)
+  void _copyMessage(DmMessage msg) {
+    final text = msg.displayContent;
+    if (text == null || text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.selectionClick();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'Satoshi')),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _forwardMessage(DmMessage msg) async {
+    // Only text messages are forwardable for now — payment/vibe messages
+    // carry transfer-specific state (transfer_id, on-chain references) that
+    // can't be meaningfully re-sent as a copy without re-triggering an
+    // actual transfer, which is a materially different action from a plain
+    // "forward this content" the menu implies.
+    if (msg.type != DmMessageType.text) return;
+    final text = msg.displayContent;
+    if (text == null || text.isEmpty) return;
+
+    final target = await showDmForwardSheet(context);
+    if (target == null || !mounted) return;
+
+    final model = ZendScope.of(context);
+    final clientId = const Uuid().v4();
+    try {
+      await model.dmService.sendMessage(
+        target.roomId,
+        text,
+        clientId,
+        forwarded: true,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'Satoshi')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'Satoshi')),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showMessageInfo(DmMessage msg) {
+    showDmMessageInfoSheet(
+      context,
+      roomId: widget.roomId,
+      message: msg,
+      previewBuilder: (previewCtx) => _buildBubbleFor(msg, forPreview: true),
+    );
+  }
+
+  Future<void> _deleteMessage(DmMessage msg) async {
+    final zt = ZendTheme.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: zt.bgElevated,
+        title: const Text('Delete message?', style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700)),
+        content: const Text(
+          'This message will be deleted for everyone in this chat.',
+          style: TextStyle(fontFamily: 'Satoshi'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Satoshi')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Satoshi', color: ZendColors.destructive)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final idx = _messages.indexWhere((m) => m.id == msg.id);
+    if (idx == -1) return;
+
+    // Optimistic — flip to deleted immediately, revert on failure.
+    setState(() => _messages[idx].isDeleted = true);
+    final model = ZendScope.of(context);
+    try {
+      await model.dmService.deleteMessage(widget.roomId, msg.id);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _messages[idx].isDeleted = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'Satoshi')),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Builds a standalone [DmMessageBubble] for [msg] with no wiring back
+  /// into this screen's interactive callbacks — used by the long-press
+  /// overlay and message-info sheet, both of which just need to render the
+  /// bubble's visuals, not react to further taps/gestures on it.
+  Widget _buildBubbleFor(DmMessage msg, {required bool forPreview}) {
+    final model = ZendScope.of(context);
+    final isMe = msg.senderUserId == model.currentUserId;
+    final msgIdx = _messages.indexWhere((m) => m.id == msg.id);
+    final isFirst = msgIdx >= 0 ? _isFirstInGroup(msgIdx) : true;
+    final isLast = msgIdx >= 0 ? _isLastInGroup(msgIdx) : true;
+    return DmMessageBubble(
+      message: msg,
+      isMe: isMe,
+      isFirst: isFirst,
+      isLast: isLast,
+      showTimestamp: _showTimestamps,
+    );
   }
 
   void _onToggleReaction(DmMessage msg, String emoji) {
@@ -1174,9 +1335,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
     final myZendtag = model.currentZendtag ?? '';
-    if (model.dmService.isRoomCleared(widget.roomId)) {
-      model.dmService.unmarkCleared(widget.roomId);
-    }
 
     // Optimistic message
     final optimistic = DmMessage(
@@ -1277,7 +1435,15 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       case _ChatMenuAction.disappearing:
         break; // coming soon
       case _ChatMenuAction.clearChat:
-        setState(() => _messages.clear());
+        setState(() {
+          _messages.clear();
+          // Nothing left to paginate against right after a clear — the
+          // fetch-time boundary filter in _loadMessages would eventually
+          // stop pagination anyway, but resetting the cursor here means a
+          // stray "load more" trigger firing in the same frame (e.g. from
+          // scroll position listeners) can't kick off a pointless fetch.
+          _nextCursor = null;
+        });
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'Satoshi')), backgroundColor: zt.bgSecondary),
@@ -1451,7 +1617,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _wsSub?.cancel();
     _ws.connectionState.removeListener(_onConnectionStateChanged);
     _ws.dispose();
-    _scrollController.dispose();
+    _itemPositionsListener.itemPositions.removeListener(_onItemPositionsChanged);
     _typingClearTimer?.cancel();
     _recordingClearTimer?.cancel();
     super.dispose();
@@ -1665,9 +1831,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           final typingOffset = _theyAreTyping ? 1 : 0;
                           final moreOffset  = _loadingMore ? 1 : 0;
                           final totalCount  = displayList.length + typingOffset + moreOffset;
+                          _lastBuiltItemCount = totalCount;
 
-                          return ListView.builder(
-                          controller: _scrollController,
+                          return ScrollablePositionedList.builder(
+                          itemScrollController: _itemScrollController,
+                          itemPositionsListener: _itemPositionsListener,
                           reverse: true,
                           padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                           itemCount: totalCount,
@@ -1693,12 +1861,6 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
                             final msgItem = item as _DmMessageItem;
                             final msg = msgItem.message;
-
-                            // Stable per-message key for scroll-to-reply
-                            final itemKey = _msgItemKeys.putIfAbsent(
-                              msg.id,
-                              () => GlobalKey(),
-                            );
 
                             // Map back to _messages index for grouping helpers
                             final msgIdx = _messages.indexWhere((m) => m.id == msg.id || (m.clientId != null && m.clientId == msg.clientId));
@@ -1741,7 +1903,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                             : () => _onRetry(msg.clientId ?? ''))
                                         : null,
                                     onPayRequest: _onPayRequest,
-                                    onLongPress: _showMessageReactions,
+                                    onLongPress: _showMessageActions,
                                     onReactionTap: _onToggleReaction,
                                   ),
                                 ),
@@ -1776,7 +1938,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             // fades in and out when tapping a reply to jump
                             // back to the original message.
                             return _FlashHighlight(
-                              key: itemKey,
+                              key: ValueKey(msg.id),
                               isFlashing: isFlashing,
                               child: itemContent,
                             );

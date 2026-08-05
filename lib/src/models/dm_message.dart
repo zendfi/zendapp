@@ -22,7 +22,14 @@ class DmReaction {
 
 enum DmMessageType { text, payment, vibe, paymentRequest }
 
-enum DmLocalStatus { sending, delivered, failed }
+/// Delivery/read status for the current user's own outgoing messages.
+/// `read` is a strict upgrade from `delivered` — set once a `readReceipt`
+/// WS frame (or the HTTP mark_read fallback) confirms the counterparty has
+/// seen a message at or after this one. Mirrors WhatsApp/iMessage's
+/// single-tick (sent) → double-tick (delivered) → blue double-tick (read)
+/// progression, collapsed here to sending → delivered → read since there's
+/// no separate "delivered to device" signal in this transport.
+enum DmLocalStatus { sending, delivered, read, failed }
 
 class DmPaymentData {
   const DmPaymentData({
@@ -152,6 +159,8 @@ class DmMessage {
     this.replyToContent,
     this.replyToSenderZendtag,
     this.replyToMessageId,
+    this.isForwarded = false,
+    this.isDeleted = false,
   });
 
   final String id;
@@ -173,6 +182,14 @@ class DmMessage {
   final String? replyToSenderZendtag;
   /// UUID of the original message being replied to — used for accurate scroll-to-original.
   final String? replyToMessageId;
+  /// True when this message was forwarded from another chat — renders a
+  /// "Forwarded" label above the bubble, matching WhatsApp/iMessage. The
+  /// original sender/room is deliberately not carried over.
+  final bool isForwarded;
+  /// Set once the server confirms this message was soft-deleted (by its
+  /// sender). Deleted messages render a "message deleted" placeholder
+  /// instead of their original content.
+  bool isDeleted;
   /// True when the content was encrypted at rest and has been decrypted for display.
   bool isEncrypted = false;
 
@@ -188,6 +205,7 @@ class DmMessage {
   /// replaced with a 🔒 placeholder string), content no longer starts with
   /// `e2ee:` and this simply returns it unchanged.
   String? get displayContent {
+    if (isDeleted) return null; // bubble renders its own placeholder text
     final c = content;
     if (c != null && c.startsWith('e2ee:')) {
       return '🔒 (decrypting…)';
@@ -240,6 +258,8 @@ class DmMessage {
           ?? meta['reply_to_sender_zendtag'] as String?,
       replyToMessageId: json['reply_to_message_id'] as String?
           ?? meta['reply_to_message_id'] as String?,
+      isForwarded: meta['forwarded'] as bool? ?? false,
+      isDeleted: json['deleted_at'] != null,
     );
   }
 
