@@ -229,6 +229,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 _messages.removeWhere((m) =>
                     m.clientId != null && m.clientId == msg.clientId);
                 _messages.insert(0, msg);
+                _markMessagesStructureChanged();
               });
             });
           } else {
@@ -237,6 +238,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               _messages.removeWhere((m) =>
                   m.clientId != null && m.clientId == msg.clientId);
               _messages.insert(0, msg);
+              _markMessagesStructureChanged();
             });
           }
           if (msg.senderUserId != model.currentUserId) {
@@ -454,6 +456,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             ..addAll(fetched)
             ..insertAll(0, localOnly);
         }
+        _markMessagesStructureChanged();
         // Once we've fetched a page that reaches back to (or past) the
         // clear boundary, there's nothing older left to show — stop
         // paginating even if the server still has more/an older cursor.
@@ -562,7 +565,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       clientId: clientId,
     );
 
-    setState(() => _messages.insert(0, optimistic));
+    setState(() {
+      _messages.insert(0, optimistic);
+      _markMessagesStructureChanged();
+    });
 
     // Wait for the E2EE key exchange to settle (bounded — see
     // _awaitE2eeResolution) before encrypting, so the first message(s) of a
@@ -623,11 +629,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final model = ZendScope.of(context);
     final clientId = const Uuid().v4();
 
-    // Build the quoted preview — use the actual message ID for reliable lookup
+    // Build the quoted preview — use the actual message ID for reliable lookup.
+    // Payment/vibe/payment_request previews include the actual amount
+    // (parsed from the quoted message's own paymentData/vibeData/
+    // paymentRequestData, already resolved client-side) instead of a bare
+    // generic label — otherwise every quoted payment reads as "💸 Payment"
+    // regardless of amount.
     final quoteContent = switch (quotedMsg.type) {
-      DmMessageType.payment        => '💸 Payment',
-      DmMessageType.vibe           => '✨ Vibe',
-      DmMessageType.paymentRequest => '↙ Payment request',
+      DmMessageType.payment => '💸 \$${(double.tryParse(quotedMsg.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.vibe => '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.paymentRequest => '💬 Payment request · \$${(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
       // Use displayContent, not content — if the quoted message hasn't
       // finished decrypting yet, content still holds the raw `e2ee:` blob
       // and we must never let that leak into the reply-quote metadata.
@@ -652,7 +663,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       replyToMessageId: replyToId,
     );
 
-    setState(() => _messages.insert(0, optimistic));
+    setState(() {
+      _messages.insert(0, optimistic);
+      _markMessagesStructureChanged();
+    });
 
     _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((wireContent) {
       if (mounted) {
@@ -1122,6 +1136,21 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   Widget _buildBubbleFor(DmMessage msg, {required bool forPreview}) {
     final model = ZendScope.of(context);
     final isMe = msg.senderUserId == model.currentUserId;
+    // Preview contexts (long-press overlay, message-info sheet) always use
+    // the bubble's default, fully-rounded shape — isFirst/isLast both true —
+    // regardless of where this message actually sits within a sender group
+    // in the thread. Showing the grouping-derived shape (tight inner
+    // corners fused to a neighbor that isn't even present here) reads as a
+    // rendering glitch once the bubble is isolated on its own.
+    if (forPreview) {
+      return DmMessageBubble(
+        message: msg,
+        isMe: isMe,
+        isFirst: true,
+        isLast: true,
+        showTimestamp: _showTimestamps,
+      );
+    }
     final msgIdx = _messages.indexWhere((m) => m.id == msg.id);
     final isFirst = msgIdx >= 0 ? _isFirstInGroup(msgIdx) : true;
     final isLast = msgIdx >= 0 ? _isLastInGroup(msgIdx) : true;
@@ -1353,7 +1382,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       createdAt: DateTime.now(),
       localStatus: DmLocalStatus.sending,
     );
-    setState(() => _messages.insert(0, optimistic));
+    setState(() {
+      _messages.insert(0, optimistic);
+      _markMessagesStructureChanged();
+    });
     HapticFeedback.lightImpact();
 
     // Send to server
@@ -1437,6 +1469,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       case _ChatMenuAction.clearChat:
         setState(() {
           _messages.clear();
+          _markMessagesStructureChanged();
           // Nothing left to paginate against right after a clear — the
           // fetch-time boundary filter in _loadMessages would eventually
           // stop pagination anyway, but resetting the cursor here means a
@@ -1488,7 +1521,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       createdAt: DateTime.now(),
       localStatus: DmLocalStatus.sending,
     );
-    setState(() => _messages.insert(0, optimistic));
+    setState(() {
+      _messages.insert(0, optimistic);
+      _markMessagesStructureChanged();
+    });
     HapticFeedback.mediumImpact();
 
     await _sendVibeBackground(clientId, vibe);
@@ -1659,8 +1695,40 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   // ListView — exactly the same order as _messages but with separator items
   // interspersed.
 
+  // Memoization for the display list — see _markMessagesStructureChanged()
+  // doc comment for why this exists.
+  List<_DmDisplayItem>? _cachedDisplayList;
+  bool _displayListDirty = true;
+
+  /// Call this from inside any `setState` that inserts, removes, clears, or
+  /// reorders [_messages] (NOT for in-place mutations to an existing
+  /// message's fields, like reactions or localStatus — those don't change
+  /// which items exist or their order, so the cached display list is still
+  /// valid for them).
+  ///
+  /// Without this, [_buildDisplayList] previously reconstructed the entire
+  /// chronological + date-separated list — a full reverse, iterate, and
+  /// second reverse over every message — on EVERY build() call, including
+  /// ones triggered by things that never change the message list at all
+  /// (typing-indicator ticks, presence updates, WS reconnect banners). For
+  /// any thread with real history this was real, wasted synchronous work
+  /// landing on the UI thread right as the thread screen slides in — a
+  /// major contributor to the DM-list → DM-thread transition feeling
+  /// janky, since that's exactly when a burst of WS connect/typing/presence
+  /// frames tends to arrive and trigger rebuilds.
+  void _markMessagesStructureChanged() {
+    _displayListDirty = true;
+  }
+
   List<_DmDisplayItem> _buildDisplayList() {
-    if (_messages.isEmpty) return const [];
+    if (!_displayListDirty && _cachedDisplayList != null) {
+      return _cachedDisplayList!;
+    }
+    if (_messages.isEmpty) {
+      _cachedDisplayList = const [];
+      _displayListDirty = false;
+      return _cachedDisplayList!;
+    }
 
     // _messages is newest-first. Iterate oldest-first to build chronologically.
     final chronological = _messages.reversed.toList();
@@ -1677,7 +1745,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
 
     // Reverse so newest is at index 0 — matches the reversed ListView
-    return items.reversed.toList();
+    _cachedDisplayList = items.reversed.toList();
+    _displayListDirty = false;
+    return _cachedDisplayList!;
   }
 
   @override
@@ -2107,12 +2177,22 @@ class _ReplyStrip extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final isMe = message.senderUserId == currentUserId;
 
-    // Icon + preview text per message type
+    // Icon + preview text per message type — payment/vibe/payment_request
+    // show the actual amount rather than a bare generic label.
     final (IconData typeIcon, String preview) = switch (message.type) {
-      DmMessageType.payment        => (PhosphorIconsBold.arrowsLeftRight, '💸 Payment'),
-      DmMessageType.vibe           => (PhosphorIconsBold.star,              '✨ Vibe'),
-      DmMessageType.paymentRequest => (PhosphorIconsBold.receipt,               '↙ Payment request'),
-      _                            => (PhosphorIconsBold.chatCircle,          message.displayContent ?? ''),
+      DmMessageType.payment => (
+          PhosphorIconsBold.arrowsLeftRight,
+          '💸 \$${(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        ),
+      DmMessageType.vibe => (
+          PhosphorIconsBold.star,
+          '${message.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        ),
+      DmMessageType.paymentRequest => (
+          PhosphorIconsBold.receipt,
+          '💬 Payment request · \$${(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        ),
+      _ => (PhosphorIconsBold.chatCircle, message.displayContent ?? ''),
     };
     final previewShort = preview.length > 60
         ? '${preview.substring(0, 60)}…'
@@ -2356,6 +2436,11 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
 // ── Date separator ─────────────────────────────────────────────────────────────
 
+/// Telegram/WhatsApp-style date pill — a solid rounded badge floating
+/// centered on the chat canvas, with no divider lines through it. Replaces
+/// the previous "Divider — text — Divider" layout, which read as a plain
+/// section rule rather than the sticker-like date chip both reference apps
+/// use.
 class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.date});
   final DateTime date;
@@ -2376,19 +2461,24 @@ class _DateSeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Expanded(child: Divider(color: zt.border.withValues(alpha: 0.5))),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              _label(),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.6)),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: zt.isDark ? zt.bgElevated : Colors.black.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+          ),
+          child: Text(
+            _label(),
+            style: TextStyle(
+              fontFamily: 'Satoshi',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),
             ),
           ),
-          Expanded(child: Divider(color: zt.border.withValues(alpha: 0.5))),
-        ],
+        ),
       ),
     );
   }

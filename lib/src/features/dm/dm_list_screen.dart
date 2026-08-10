@@ -423,6 +423,12 @@ class _DmThreadTile extends StatelessWidget {
                           Container(
                             constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            // Without this, a single-digit count (e.g. "1")
+                            // doesn't naturally fill the 20px minWidth, and
+                            // with no alignment set the digit sits off-center
+                            // inside the wider forced box — looked like
+                            // uneven/wrong padding around the number.
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: zt.accent,
                               borderRadius: BorderRadius.circular(ZendRadii.pill),

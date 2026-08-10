@@ -47,6 +47,11 @@ class DmThread {
     if (lastMsgJson != null) {
       lastMsg = DmMessage.fromJson({
         ...lastMsgJson,
+        // 'id' is intentionally not sent by list_threads (DmLastMessage has
+        // no id field) — supply a placeholder so DmMessage.fromJson doesn't
+        // silently produce an empty id. This message is only ever used for
+        // its preview text, never looked up by id.
+        'id': lastMsgJson['id'] as String? ?? 'preview',
         'room_id': json['room_id'] as String? ?? '',
       });
     }
@@ -82,14 +87,19 @@ class DmThread {
         if (content.startsWith(kE2eePrefix)) return _lockedPreviewFallback;
         return content.length > 40 ? '${content.substring(0, 40)}…' : content;
       case DmMessageType.payment:
-        final amt = lastMessage!.paymentData?.amountUsdc ?? '0';
-        return '💸 \$$amt';
+        // paymentData is parsed from the message's metadata JSON — see
+        // DmMessage.fromJson. Falls back to '0.00' only if metadata was
+        // genuinely empty/missing (shouldn't happen for real payment
+        // messages), rather than always showing $0.
+        final amt = double.tryParse(lastMessage!.paymentData?.amountUsdc ?? '') ?? 0.0;
+        return '💸 \$${amt.toStringAsFixed(2)}';
       case DmMessageType.vibe:
-        final name = lastMessage!.vibeData?.stickerName ?? 'Vibe';
-        final amt = lastMessage!.vibeData?.amountUsdc ?? '0';
-        return '🎁 $name · \$$amt';
+        final vd = lastMessage!.vibeData;
+        final amt = double.tryParse(vd?.amountUsdc ?? '') ?? 0.0;
+        return '${vd?.displayEmoji ?? '✨'} Vibe · \$${amt.toStringAsFixed(2)}';
       case DmMessageType.paymentRequest:
-        return '💬 Payment request';
+        final amt = double.tryParse(lastMessage!.paymentRequestData?.amountUsdc ?? '') ?? 0.0;
+        return '💬 Payment request · \$${amt.toStringAsFixed(2)}';
     }
   }
 }

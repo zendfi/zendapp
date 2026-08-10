@@ -1073,6 +1073,15 @@ String _weekday(int w) {
 /// The badge uses the chat background colour (not the bubble colour) with a
 /// thin border and soft shadow, so it reads as "punched into" the wallpaper
 /// behind the bubble — the same visual trick WhatsApp uses.
+///
+/// Redesigned to match Telegram's reaction pattern: each distinct emoji
+/// gets its OWN small pill chip (not one combined pill listing up to 3
+/// emoji + a total count) — a chip shows the emoji alone when only one
+/// person reacted with it, or "emoji count" once 2+ people share that
+/// reaction. Chips the current user has reacted with get a tinted
+/// accent-colored fill; everyone else's get a neutral fill. Multiple
+/// distinct emojis lay out as a horizontal row of chips (wrapping if the
+/// bubble is narrow), all still anchored to the bubble's bottom corner.
 class _ReactionRow extends StatelessWidget {
   const _ReactionRow({required this.reactions, required this.onTap});
 
@@ -1083,77 +1092,65 @@ class _ReactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (reactions.isEmpty) return const SizedBox.shrink();
     final zt = ZendTheme.of(context);
-    final totalCount = reactions.fold<int>(0, (sum, r) => sum + r.count);
-    final reactedByMe = reactions.any((r) => r.reactedByMe);
-    final isSingle = reactions.length == 1 && totalCount == 1;
-
-    final badgeDecoration = BoxDecoration(
-      // Matches the chat canvas (not the app-wide bgPrimary) so the badge
-      // reads as "punched into" the wallpaper behind the bubble.
-      color: zt.chatBg,
-      borderRadius: BorderRadius.circular(ZendRadii.pill),
-      border: Border.all(
-        color: reactedByMe
-            ? zt.accent.withValues(alpha: 0.55)
-            : zt.border.withValues(alpha: 0.5),
-        width: reactedByMe ? 1.2 : 1.0,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.18),
-          blurRadius: 3,
-          offset: const Offset(0, 1),
-        ),
-      ],
-    );
 
     void handleTap(String emoji) {
       HapticFeedback.selectionClick();
       onTap(emoji);
     }
 
-    if (isSingle) {
-      final r = reactions.first;
-      return GestureDetector(
-        onTap: () => handleTap(r.emoji),
-        child: Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: badgeDecoration,
-          child: Text(
-            r.emoji,
-            style: const TextStyle(fontSize: 14, decoration: TextDecoration.none),
+    return Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: reactions.map((r) {
+        final decoration = BoxDecoration(
+          color: r.reactedByMe
+              ? zt.accent.withValues(alpha: zt.isDark ? 0.28 : 0.16)
+              : zt.chatBg,
+          borderRadius: BorderRadius.circular(ZendRadii.pill),
+          border: Border.all(
+            color: r.reactedByMe
+                ? zt.accent.withValues(alpha: 0.6)
+                : zt.border.withValues(alpha: 0.5),
+            width: r.reactedByMe ? 1.2 : 1.0,
           ),
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: () => handleTap(reactions.first.emoji),
-      child: Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: badgeDecoration,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final r in reactions.take(3))
-              Padding(
-                padding: const EdgeInsets.only(right: 1),
-                child: Text(
-                  r.emoji,
-                  style: const TextStyle(fontSize: 13, decoration: TextDecoration.none),
-                ),
-              ),
-            const SizedBox(width: 3),
-            Text(
-              '$totalCount',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w700, color: reactedByMe ? zt.accent : zt.textSecondary),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
           ],
-        ),
-      ),
+        );
+
+        return GestureDetector(
+          onTap: () => handleTap(r.emoji),
+          child: Container(
+            height: 24,
+            padding: EdgeInsets.symmetric(horizontal: r.count > 1 ? 7 : 6),
+            decoration: decoration,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  r.emoji,
+                  style: const TextStyle(fontSize: 13, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                ),
+                if (r.count > 1) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    '${r.count}',
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

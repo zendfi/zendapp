@@ -359,7 +359,14 @@ class _DmInputBarState extends State<DmInputBar>
                             // Text field fills the pill
                             Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(14, 11, 4, 11),
+                                // Right padding was previously just 4px — far
+                                // less than the 14px on the left, which left
+                                // typed text crowding right up against the
+                                // send/mic button with almost no breathing
+                                // room. 10px gives a more even gap while the
+                                // button's own margin still handles the rest
+                                // of the visual separation.
+                                padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
                                 child: TextField(
                                   controller: _ctrl,
                                   focusNode: _focusNode,

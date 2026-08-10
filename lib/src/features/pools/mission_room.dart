@@ -1340,6 +1340,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   }
 }
 
+/// Telegram/WhatsApp-style date pill — matches the DM thread's
+/// _DateSeparator (see dm_thread_screen.dart) so date dividers look
+/// consistent across pools and DMs: a solid rounded badge floating
+/// centered on the chat canvas, no divider lines through it.
 class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.date});
   final DateTime date;
@@ -1361,19 +1365,24 @@ class _DateSeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Expanded(child: Divider(color: zt.border)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              _label(),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary, letterSpacing: 0.4),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: zt.isDark ? zt.bgElevated : Colors.black.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+          ),
+          child: Text(
+            _label(),
+            style: TextStyle(
+              fontFamily: 'Satoshi',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),
             ),
           ),
-          Expanded(child: Divider(color: zt.border)),
-        ],
+        ),
       ),
     );
   }

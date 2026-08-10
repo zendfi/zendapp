@@ -300,7 +300,20 @@ class _ReactionPickerRow extends StatelessWidget {
                 decoration: alreadyReacted
                     ? BoxDecoration(color: zt.accent.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(ZendRadii.pill))
                     : null,
-                child: Text(e, style: TextStyle(fontSize: alreadyReacted ? 22 : 24)),
+                // decoration: TextDecoration.none + transparent decorationColor
+                // is required on raw emoji glyphs — without it some platforms
+                // render a stray yellow underline under emoji text (same fix
+                // already applied to emoji Text widgets in mission_room.dart,
+                // vibe_message_bubble.dart, dm_message_bubble.dart's own
+                // reaction row).
+                child: Text(
+                  e,
+                  style: TextStyle(
+                    fontSize: alreadyReacted ? 22 : 24,
+                    decoration: TextDecoration.none,
+                    decorationColor: Colors.transparent,
+                  ),
+                ),
               ),
             );
           }).toList(),
