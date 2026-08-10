@@ -165,10 +165,26 @@ class DmService {
         'limit': limit,
       },
     );
-    final messages = (response.data['messages'] as List<dynamic>? ?? [])
+    final rawMessages = (response.data['messages'] as List<dynamic>? ?? [])
         .cast<Map<String, dynamic>>()
         .map(DmMessage.fromJson)
         .toList();
+    // Apply this room's own clear-chat boundary BEFORE caching or returning.
+    // Previously this filtering only happened in DmThreadScreen at display
+    // time, while this method cached the server's raw, unfiltered response
+    // via _updateMessageCache — so a room cleared mid-session, then fetched
+    // again for any reason (a new message arriving, pagination, reconnect
+    // resync), would re-cache the pre-clear history too. The next time that
+    // room was opened, getCachedMessages() would seed the screen with that
+    // raw cache (which the screen's initState never re-filters — it trusts
+    // the cache), briefly showing cleared messages until _loadMessages()'s
+    // own fetch resolved and clobbered the list. Filtering here means the
+    // cache itself can never contain anything at or before the clear
+    // boundary, closing that race at the source.
+    final clearedBefore = _clearedBefore[roomId];
+    final messages = clearedBefore == null
+        ? rawMessages
+        : rawMessages.where((m) => m.createdAt.isAfter(clearedBefore)).toList();
     // Populate cache for first page (no cursor = fresh load)
     if (cursor == null) {
       _updateMessageCache(roomId, messages);

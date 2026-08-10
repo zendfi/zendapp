@@ -509,13 +509,35 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           return locale;
         },
         builder: (context, child) {
-          return Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) =>
-                widget.model.appLockService.recordActivity(),
-            child: AppLockOverlay(
-              lockService: widget.model.appLockService,
-              child: LoadingOverlay(child: child ?? const SizedBox()),
+          // Clamp the OS-level text scale factor to a fixed range. The app's
+          // layouts throughout (message bubbles, nav bar, badges, chat list
+          // rows, etc.) use a mix of font-relative text and many hardcoded
+          // pixel dimensions (SizedBox/Container sizes, icon sizes, fixed
+          // paddings) that do NOT grow alongside text. Without a clamp,
+          // Flutter fully inherits the OS "Larger Text"/accessibility font
+          // scale setting with no ceiling — on a device where the user has
+          // that setting turned up, every piece of text renders larger while
+          // the fixed-size containers around it stay the same, which is
+          // exactly the "looks correct on some devices, oversized/broken on
+          // others" symptom being investigated. Clamping to a modest range
+          // (0.9x–1.15x) keeps the app usable and consistent across devices
+          // without fully ignoring the user's accessibility preference —
+          // text still scales somewhat, just not enough to break layouts
+          // that were never built to accommodate large-print scaling.
+          final clampedScaler = MediaQuery.textScalerOf(context).clamp(
+            minScaleFactor: 0.9,
+            maxScaleFactor: 1.15,
+          );
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: clampedScaler),
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) =>
+                  widget.model.appLockService.recordActivity(),
+              child: AppLockOverlay(
+                lockService: widget.model.appLockService,
+                child: LoadingOverlay(child: child ?? const SizedBox()),
+              ),
             ),
           );
         },

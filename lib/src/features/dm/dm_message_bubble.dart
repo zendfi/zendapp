@@ -350,10 +350,11 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           child,
           Positioned(
             bottom: -10,
-            // Anchor to the group-facing corner — bottom-right for sent
-            // messages, bottom-left for received.
-            right: widget.isMe ? 4 : null,
-            left:  widget.isMe ? null : 4,
+            // Anchor to the bottom-left corner regardless of sender — every
+            // bubble is left-aligned now (see the note in
+            // _TextBubble.build()), so the badge's corner anchor no longer
+            // needs to flip based on isMe.
+            left: 4,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
@@ -394,28 +395,21 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       );
     }
 
-    // Timestamp reveal — shown when parent sets showTimestamp = true
+    // Timestamp reveal — shown when parent sets showTimestamp = true.
+    // Left-aligned regardless of sender — see the note on _kAllLeftAligned
+    // near _TextBubble for why every bubble now sits on the left.
     if (widget.showTimestamp) {
       child = Row(
-        mainAxisAlignment: widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          if (widget.isMe)
-            Padding(
-              padding: const EdgeInsets.only(right: 8, bottom: 2),
-              child: Text(
-                _exactTime(widget.message.createdAt),
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
-              ),
-            ),
           Flexible(child: child),
-          if (!widget.isMe)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 2),
-              child: Text(
-                _exactTime(widget.message.createdAt),
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
-              ),
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 2),
+            child: Text(
+              _exactTime(widget.message.createdAt),
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
             ),
+          ),
         ],
       );
     }
@@ -506,11 +500,17 @@ class _TextBubble extends StatelessWidget {
         ? Colors.black.withValues(alpha: 0.28)
         : zt.border.withValues(alpha: 0.5);
 
+    // Every bubble sits on the left regardless of sender — colour/gradient
+    // (accent fill for sent, bubbleReceived fill for received) is now the
+    // only visual cue distinguishing "me" from "them", per an explicit
+    // product decision to abandon the standard sent-right/received-left
+    // chat convention. mainAxisAlignment/crossAxisAlignment below are
+    // deliberately NOT keyed on isMe anymore.
     return Row(
-      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (!isMe) const SizedBox(width: 4),
+        const SizedBox(width: 4),
         Flexible(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.74),
@@ -523,7 +523,7 @@ class _TextBubble extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 child: Column(
-                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (message.isForwarded && !message.isDeleted)
@@ -603,6 +603,13 @@ class _TextBubble extends StatelessWidget {
                                 fontSize: 15.5,
                                 color: isMe ? Colors.white : zt.textPrimary,
                                 height: 1.35,
+                                // Message content is arbitrary user text and
+                                // can be pure emoji (e.g. "🔥🔥🔥") — without
+                                // an explicit decoration/decorationColor,
+                                // some platforms render a stray underline
+                                // under emoji glyphs.
+                                decoration: TextDecoration.none,
+                                decorationColor: Colors.transparent,
                               ),
                             ),
                             const WidgetSpan(child: SizedBox(width: 8)),
@@ -716,16 +723,17 @@ class _QuoteBlock extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
   final Color labelColor;
-  /// When true (this is the sender's own bubble), the quote mirrors to the
-  /// right: accent bar on the right edge, text right-aligned — matching the
-  /// sent-bubble's own right alignment instead of always defaulting to left.
+  /// Kept for API compatibility with callers, but no longer used to flip
+  /// alignment — the quote block is always left-aligned with the accent
+  /// bar on the left edge, matching every bubble's now-uniform left
+  /// alignment (see the note in _TextBubble.build()).
   final bool isMe;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textAlign = isMe ? TextAlign.right : TextAlign.left;
-    final crossAlign = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    const textAlign = TextAlign.left;
+    const crossAlign = CrossAxisAlignment.start;
 
     // Accent bar is drawn as a Border side on the Container itself rather
     // than as a separate Row child sized via IntrinsicHeight. The previous
@@ -745,10 +753,7 @@ class _QuoteBlock extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(6),
-          border: Border(
-            left: isMe ? BorderSide.none : BorderSide(color: barColor, width: 3),
-            right: isMe ? BorderSide(color: barColor, width: 3) : BorderSide.none,
-          ),
+          border: Border(left: BorderSide(color: barColor, width: 3)),
         ),
         padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
         child: Column(
@@ -780,6 +785,11 @@ class _QuoteBlock extends StatelessWidget {
                   fontSize: 13,
                   color: textColor,
                   height: 1.3,
+                  // Quoted content often starts with a raw emoji (💸/✨/💬
+                  // preview prefixes) — guard against the stray-underline
+                  // rendering artifact the same way message body text does.
+                  decoration: TextDecoration.none,
+                  decorationColor: Colors.transparent,
                 ),
               ),
             ],
@@ -860,11 +870,12 @@ class DmPaymentBubble extends StatelessWidget {
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
     final iconColor = isMe ? zt.accent : zt.textSecondary;
 
+    // Left-aligned regardless of sender — see the note in _TextBubble.build().
     return Row(
-      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (!isMe) const SizedBox(width: 4),
+        const SizedBox(width: 4),
         Flexible(
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -903,7 +914,12 @@ class DmPaymentBubble extends StatelessWidget {
                     ),
                     if (note != null && note.isNotEmpty && note != 'vibe') ...[
                       const SizedBox(height: 3),
-                      Text(note, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(
+                        note,
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                     const SizedBox(height: 4),
                     Align(
@@ -956,11 +972,12 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
     final accentColor = zt.accent;
 
+    // Left-aligned regardless of sender — see the note in _TextBubble.build().
     return Row(
-      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (!isMe) const SizedBox(width: 4),
+        const SizedBox(width: 4),
         Flexible(
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -989,7 +1006,12 @@ class DmPaymentRequestBubble extends StatelessWidget {
                         style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(rd.note!, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(
+                        rd.note!,
+                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                     const SizedBox(height: 8),
                     if (!isMe && isPending && onPay != null)

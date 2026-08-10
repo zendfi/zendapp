@@ -226,17 +226,32 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               msg.content = plain ?? msg.content;
               msg.isEncrypted = true;
               setState(() {
+                // Remove any prior copy of this exact message — matching on
+                // EITHER clientId (covers our own optimistic message being
+                // replaced by its server-confirmed echo) OR server id
+                // (covers this same message having already been inserted
+                // by a REST fetch — e.g. _loadMessages() resolving around
+                // the same time a WS frame for it arrives on first open of
+                // a thread). Matching on clientId alone missed the second
+                // case, since an incoming message from the counterparty
+                // has no clientId that matches anything we generated,
+                // producing a visible duplicate bubble until the thread was
+                // closed and reopened.
                 _messages.removeWhere((m) =>
-                    m.clientId != null && m.clientId == msg.clientId);
+                    (m.clientId != null && m.clientId == msg.clientId) ||
+                    (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
                 _messages.insert(0, msg);
                 _markMessagesStructureChanged();
               });
             });
           } else {
             setState(() {
-              // Remove any optimistic version of this message
+              // Remove any optimistic version of this message — see the
+              // comment in the branch above for why both clientId and id
+              // are checked.
               _messages.removeWhere((m) =>
-                  m.clientId != null && m.clientId == msg.clientId);
+                  (m.clientId != null && m.clientId == msg.clientId) ||
+                  (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
               _messages.insert(0, msg);
               _markMessagesStructureChanged();
             });
@@ -754,7 +769,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           if (streak != null && streak.isActive)
             Padding(
               padding: const EdgeInsets.only(left: 6),
-              child: Text('🔥 ${streak.streakWeeks}w', style: const TextStyle(fontSize: 11)),
+              child: Text(
+                '🔥 ${streak.streakWeeks}w',
+                style: const TextStyle(fontSize: 11, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+              ),
             ),
         ],
       );
@@ -997,6 +1015,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   /// background blurs, a quick-reaction row appears above it, and an
   /// action menu (Reply / Forward / Copy / Info / Delete) appears below.
   void _showMessageActions(BuildContext ctx, DmMessage msg, Rect originRect) {
+    // Dismiss the keyboard before the overlay opens — otherwise the
+    // backdrop blur and lifted bubble render with the keyboard still up,
+    // which looks wrong and eats a big chunk of the vertical space the
+    // overlay needs to lay out the reaction row + action menu.
+    FocusScope.of(context).unfocus();
     final isMe = msg.senderUserId == ZendScope.of(context).currentUserId;
     final isTextMessage = msg.type == DmMessageType.text && !msg.isDeleted;
 
@@ -1756,7 +1779,21 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final model = ZendScope.of(context);
     final cp = widget.counterparty;
 
-    return Scaffold(
+    return PopScope(
+      // Intercept both the in-app back caret AND the system back
+      // button/gesture with the exact same logic: if there's in-screen
+      // state to back out of first (an active reply draft, or the
+      // timestamp-reveal swipe still held open), clear that instead of
+      // immediately leaving the thread. Only pop the route once there's
+      // nothing left to back out of — matches the pattern most chat apps
+      // use where "back" backs out of a mode before it backs out of the
+      // screen.
+      canPop: _replyingTo == null && !_showTimestamps,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPressed();
+      },
+      child: Scaffold(
       // Distinct chat-canvas colour (not the app-wide scaffold background) —
       // gives bubbles a surface to visibly sit on top of, matching the
       // WhatsApp/iMessage "canvas vs. bubble" depth.
@@ -1771,7 +1808,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _handleBackPressed,
                     icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 26),
                   ),
                   GestureDetector(
@@ -2063,7 +2100,25 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           ],
         ),
       ),
+      ),
     );
+  }
+
+  /// Shared "back" handler for both the in-app caret and the system back
+  /// button/gesture (wired via [PopScope] in build()) — backs out of any
+  /// active in-screen mode first (reply draft, timestamp-reveal swipe)
+  /// before actually leaving the thread, rather than always immediately
+  /// popping the route regardless of what's currently open.
+  void _handleBackPressed() {
+    if (_replyingTo != null) {
+      setState(() => _replyingTo = null);
+      return;
+    }
+    if (_showTimestamps) {
+      setState(() => _showTimestamps = false);
+      return;
+    }
+    Navigator.of(context).pop();
   }
 }
 
@@ -2255,6 +2310,11 @@ class _ReplyStrip extends StatelessWidget {
                               fontSize: 13,
                               color: zt.textSecondary,
                               height: 1.2,
+                              // previewShort embeds raw emoji prefixes
+                              // (💸/✨/💬) — guard against the stray
+                              // underline artifact.
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
                             ),
                           ),
                         ),
