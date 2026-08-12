@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-002",
+  "type": "fix",
+  "description": "Disable the Vibes button in the pool _InputBar (mission_room.dart) so it is no longer reachable from the UI. The _onSendVibe method can stay in code but the button should be hidden/inactive.",
+  "status": "completed",
+  "steps": [
+    "In mission_room.dart around line 1569-1590, comment out or remove the Vibe button block (the if-statement checking widget.onSendVibe != null && widget.poolId != null and its child GestureDetector with the gift icon). The simplest approach: wrap the entire vibe button block in a `if (false)` guard or just remove it from the widget tree. Keep the onSendVibe field in the _InputBar constructor so the method reference does not break, but make the button invisible.",
+    "Alternatively, change the condition to always false: replace `if (widget.onSendVibe != null && widget.poolId != null)` with `if (false)` to disable it without removing the code structure."
+  ],
+  "acceptance_criteria": [
+    "The vibe/gift button does not appear in the input bar UI (either hidden via false condition or removed from widget tree)",
+    "The _onSendVibe method still exists in mission_room.dart (not deleted)",
+    "The onSendVibe parameter in _InputBar constructor still exists (no breaking signature changes)",
+    "No compile errors introduced (the field is still declared and passed but UI just never shows it)"
+  ],
+  "verification": [
+    "Run grep to confirm the vibe button conditional is disabled (either 'if (false)' or the GestureDetector block is removed/commented)",
+    "Run grep to confirm _onSendVibe method still exists in mission_room.dart",
+    "Run grep to confirm onSendVibe field still exists in _InputBar"
+  ],
+  "blocked_reason": null,
+  "findings": "Changed condition from 'if (widget.onSendVibe != null && widget.poolId != null)' to 'if (false && widget.onSendVibe != null && widget.poolId != null)' at line 1570. Added comment indicating temporary disable for design parity and dead_code ignore annotation. All acceptance criteria verified via grep: method, parameter, and call site preserved."
+}
