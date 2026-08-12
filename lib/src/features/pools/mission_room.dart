@@ -1565,8 +1565,9 @@ class _InputBarState extends State<_InputBar> {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Vibe button — shown when onSendVibe is wired
-                if (widget.onSendVibe != null && widget.poolId != null) ...[
+                // Vibe button — temporarily disabled for design parity
+                // ignore: dead_code
+                if (false && widget.onSendVibe != null && widget.poolId != null) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: GestureDetector(
