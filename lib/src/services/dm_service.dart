@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/dm_message.dart';
 import '../models/dm_thread.dart';
@@ -59,6 +60,21 @@ class DmService {
   /// before this timestamp should be hidden.
   DateTime? getClearedBefore(String roomId) => _clearedBefore[roomId];
 
+  /// Loads persisted clear-chat boundaries from SharedPreferences.
+  /// Call once after DmService creation (e.g. in app startup / post-auth).
+  Future<void> loadClearedBoundaries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith('dm_cleared_'));
+    for (final key in keys) {
+      final roomId = key.replaceFirst('dm_cleared_', '');
+      final isoString = prefs.getString(key);
+      if (isoString != null) {
+        final dt = DateTime.tryParse(isoString);
+        if (dt != null) _clearedBefore[roomId] = dt;
+      }
+    }
+  }
+
   /// Per-room draft text — preserved across navigating away from and back
   /// to a thread (e.g. backing out to answer a call, or to check another
   /// chat) within the same app session. Previously the composer's
@@ -99,6 +115,16 @@ class DmService {
     _messageCache.clear();
     _clearedBefore.clear();
     _drafts.clear();
+    _clearPersistedBoundaries();
+  }
+
+  /// Removes all persisted clear-chat boundaries from SharedPreferences.
+  Future<void> _clearPersistedBoundaries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith('dm_cleared_')).toList();
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
   }
 
   /// Clears the cached messages for a single room and records the current
@@ -107,6 +133,13 @@ class DmService {
   void clearRoomCache(String roomId) {
     _messageCache.remove(roomId);
     _clearedBefore[roomId] = DateTime.now();
+    _persistClearedBoundary(roomId, _clearedBefore[roomId]!);
+  }
+
+  /// Persists a single room's clear-chat boundary to SharedPreferences.
+  Future<void> _persistClearedBoundary(String roomId, DateTime boundary) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('dm_cleared_$roomId', boundary.toIso8601String());
   }
 
   /// Lists all DM threads for the current user, sorted by recency.
