@@ -102,6 +102,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _showTimestamps = false;      // revealed by left-edge swipe
   DmMessage? _replyingTo;           // the message being replied to
 
+  // Tracks clientIds for which we have already received the WS echo frame
+  // (our own message echoed back by the server). This is recorded
+  // synchronously as soon as the echo frame arrives -- BEFORE any async
+  // decryption -- so the delayed HTTP fallback can check it and skip the
+  // redundant HTTP send even when the decrypt hasn't finished yet.
+  final Set<String> _wsEchoReceived = {};
+
   // Index-based scroll control (scrollable_positioned_list) instead of a
   // plain ScrollController — this is what lets _scrollToReplyOrigin jump
   // straight to a target index even when that message is far outside the
@@ -219,6 +226,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           if (msg.senderUserId != model.currentUserId && _showScrollToBottom) {
             _unseenWhileScrolledUp++;
           }
+          // Track the echo synchronously BEFORE any async decrypt work so
+          // the HTTP fallback timer can see it immediately and skip the
+          // redundant send. Only record for our own messages (echoes).
+          if (msg.senderUserId == model.currentUserId && msg.clientId != null) {
+            _wsEchoReceived.add(msg.clientId!);
+          }
           // Decrypt E2EE content inline before displaying
           if (msg.content != null && msg.content!.startsWith('e2ee:')) {
             _decryptIfNeeded(msg.content).then((plain) {
@@ -242,6 +255,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
                 _messages.insert(0, msg);
                 _markMessagesStructureChanged();
+                // Cleanup: echo fully processed, remove from tracking set.
+                if (msg.clientId != null) _wsEchoReceived.remove(msg.clientId);
               });
             });
           } else {
@@ -254,6 +269,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
               _messages.insert(0, msg);
               _markMessagesStructureChanged();
+              // Cleanup: echo fully processed, remove from tracking set.
+              if (msg.clientId != null) _wsEchoReceived.remove(msg.clientId);
             });
           }
           if (msg.senderUserId != model.currentUserId) {
@@ -602,6 +619,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       // or a WS that went silent without closing cleanly.
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (!mounted) return;
+        // If the WS echo for this message was already received (even if
+        // async decrypt is still in progress), skip the HTTP fallback to
+        // avoid sending a duplicate that the server treats as a new message.
+        if (_wsEchoReceived.contains(clientId)) return;
         final idx =
             _messages.indexWhere((m) => m.clientId == clientId);
         if (idx != -1 &&
@@ -701,6 +722,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       // HTTP fallback after 1.5s (also carries reply metadata via DmService)
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (!mounted) return;
+        // If the WS echo for this message was already received (even if
+        // async decrypt is still in progress), skip the HTTP fallback to
+        // avoid sending a duplicate that the server treats as a new message.
+        if (_wsEchoReceived.contains(clientId)) return;
         final idx = _messages.indexWhere((m) => m.clientId == clientId);
         if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
           model.dmService.sendMessage(
