@@ -1452,6 +1452,9 @@ class ZendAppModel extends ChangeNotifier {
     unawaited(fetchSavingsSnapshot());
     // Restore Drop discoverability preference (non-blocking)
     unawaited(dropDiscoverabilityService.init());
+    // Restore persisted DM clear-chat boundaries so cleared rooms stay
+    // cleared across app restarts.
+    unawaited(dmService.loadClearedBoundaries());
   }
 
   Future<void> recordTransfer({
