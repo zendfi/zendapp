@@ -144,6 +144,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   double _swipeDx = 0.0;
   bool _replyTriggered = false;
   OverlayEntry? _heartOverlay;
+  DateTime? _lastTapTime;
 
   void _showHeartPop(BuildContext ctx) {
     _heartOverlay?.remove();
@@ -229,6 +230,16 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       duration: const Duration(milliseconds: 380),
       curve: Curves.elasticOut,
     );
+    // Manual double-tap detection — replaces onDoubleTap to avoid
+    // gesture arena delay that made swipe-to-reply feel stuck.
+    final now = DateTime.now();
+    if (_lastTapTime != null && now.difference(_lastTapTime!).inMilliseconds < 300) {
+      HapticFeedback.lightImpact();
+      _showHeartPop(context);
+      _lastTapTime = null;
+    } else {
+      _lastTapTime = now;
+    }
   }
 
   void _onTapCancel() {
@@ -298,12 +309,8 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       );
     }
 
-    // Press feedback + double-tap heart + long-press → full reactions
+    // Press feedback + long-press → full reactions
     child = GestureDetector(
-      onDoubleTap: () {
-        HapticFeedback.lightImpact();
-        _showHeartPop(context);
-      },
       onLongPressStart: (details) {
         HapticFeedback.mediumImpact();
         final renderBox = context.findRenderObject() as RenderBox?;
