@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create GitHub Releases
+      pull-requests: write  # needed to comment APK link on PRs
 
     steps:
       # ── Checkout ─────────────────────────────────────────────────────────────
@@ -72,10 +73,14 @@ jobs:
              build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk
 
       # ── Upload artifact (all branches) ────────────────────────────────────────
+      - name: Sanitize ref name
+        id: slug
+        run: echo "ref_slug=${GITHUB_REF_NAME//\//-}" >> $GITHUB_OUTPUT
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zendapp-${{ github.ref_name }}-build${{ github.run_number }}
+          name: zendapp-${{ steps.slug.outputs.ref_slug }}-build${{ github.run_number }}
           path: build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk
           retention-days: 30
 

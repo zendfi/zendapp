@@ -178,9 +178,11 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
     final safeBottom = MediaQuery.of(context).padding.bottom;
     final target = _targetRect(screenSize, safeTop, safeBottom);
 
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, _) {
+    return Material(
+      type: MaterialType.transparency,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, _) {
         final t = _entrance.value;
         final rect = Rect.lerp(widget.originRect, target, t)!;
         // Slight overshoot scale for the "bounce" feel — peaks just before
@@ -231,7 +233,6 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
               left: rect.left,
               top: rect.top,
               width: rect.width,
-              height: rect.height,
               child: Transform.scale(
                 scale: bounce,
                 child: IgnorePointer(child: widget.previewBuilder(context)),
@@ -259,6 +260,7 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
           ],
         );
       },
+    ),
     );
   }
 }
