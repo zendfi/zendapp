@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "refactor",
   "description": "Rework mission_room_message.dart to achieve full parity with the DM bubble design: unify bubble geometry (outer 18, inner 5), remove dual layout mode (feed style), align sent right/received left, convert contribution events to proper message bubbles, match DM bubble internals (inline timestamp WidgetSpan, text sizing, padding), and rework the voice note row similarly.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Replace _kInner = 4.0 with _kInner = 5.0 and replace _bubbleRadius function with _groupedBorderRadius matching dm_message_bubble.dart exactly (using isFirst/isLast semantics where isFirst=bottom of group in reversed list, isLast=top of group).",
     "Remove the _isCompact getter and the isCompact parameter from _TextMessageRow, _VoiceNoteRow. Remove the participantCount field and _isCompact from MissionRoomMessage widget entirely.",
@@ -34,5 +34,5 @@
     "Run grep to confirm 'ZendRadii.pill' is NOT used in _ContributionEventRow (no longer a pill)"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All acceptance criteria verified via grep. Removed participantCount from mission_room.dart call site as well. No Flutter SDK available so verification is limited to structural grep checks. ZendRadii.pill correctly retained only in _ReactionRow and voice note progress bar (not in contribution events)."
 }
