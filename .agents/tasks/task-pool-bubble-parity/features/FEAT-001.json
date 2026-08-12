@@ -1,0 +1,38 @@
+{
+  "id": "FEAT-001",
+  "type": "refactor",
+  "description": "Rework mission_room_message.dart to achieve full parity with the DM bubble design: unify bubble geometry (outer 18, inner 5), remove dual layout mode (feed style), align sent right/received left, convert contribution events to proper message bubbles, match DM bubble internals (inline timestamp WidgetSpan, text sizing, padding), and rework the voice note row similarly.",
+  "status": "in_progress",
+  "steps": [
+    "Replace _kInner = 4.0 with _kInner = 5.0 and replace _bubbleRadius function with _groupedBorderRadius matching dm_message_bubble.dart exactly (using isFirst/isLast semantics where isFirst=bottom of group in reversed list, isLast=top of group).",
+    "Remove the _isCompact getter and the isCompact parameter from _TextMessageRow, _VoiceNoteRow. Remove the participantCount field and _isCompact from MissionRoomMessage widget entirely.",
+    "Rewrite _TextMessageRow to ALWAYS use the bubble chat layout (no feed mode). Pattern: (1) Sender label above bubble for non-self, non-continuation. (2) Row with avatar slot (26px wide, ZendAvatar radius 13, only on !isContinuation for received). (3) Flexible Container bubble with: sent gradient decoration, received zt.bubbleReceived fill, _groupedBorderRadius, maxWidth 0.74*screen, padding horizontal:12 vertical:7. (4) Inside bubble: CrossAxisAlignment.start column with Text.rich containing message text (Satoshi 15.5px, height 1.35) plus trailing WidgetSpan for timestamp+status (10px tabularNumeric, inline like DM). (5) Reactions and read receipts below.",
+    "Rewrite _ContributionEventRow to render as a proper system message bubble instead of centered pill. Use a centered bubble with accent-tinted border (zt.accent.withValues(alpha: 0.22)), zt.bubbleReceived fill, rounded corners (full 18px all sides since no grouping), the event text inside (Satoshi 12px, w600, zt.accent color), and inline timestamp as trailing WidgetSpan.",
+    "Rewrite _VoiceNoteRow to remove the feed/compact dual mode. Always use the bubble layout: sent right-aligned, received left-aligned with avatar slot. Voice note pill sits inside a bubble container with the same gradient/fill as text messages, using _groupedBorderRadius. Include inline timestamp WidgetSpan after the playback controls.",
+    "Ensure the sender label for non-self messages uses: Text style Satoshi 11px, fontWeight w600, color from _senderColor(), positioned with padding only(left: avatar_slot_width + 8, bottom: 2) above the bubble row.",
+    "Add isFirst and isLast parameters to MissionRoomMessage (or compute them internally from isContinuation -- isLast can be true always for now as the grouping only tracks continuation, matching how DM does it with isContinuation mapping to !isFirst and isLast always true)."
+  ],
+  "acceptance_criteria": [
+    "_kInner constant is 5.0, not 4.0",
+    "_groupedBorderRadius function matches dm_message_bubble.dart signature and logic",
+    "No references to isCompact or _isCompact or participantCount remain in mission_room_message.dart",
+    "No feed-style layout code remains (the Row with avatar radius 18 + Expanded column pattern is gone)",
+    "_TextMessageRow always renders bubble-style with right-alignment for sent and left-alignment for received",
+    "_ContributionEventRow renders as a bubble element (Container with BoxDecoration, borderRadius) not a centered pill",
+    "All text inside bubbles uses CrossAxisAlignment.start",
+    "Timestamps are inline trailing WidgetSpan (not a separate Row below text)",
+    "Font size for message text is 15.5, height 1.35, fontFamily Satoshi",
+    "Bubble padding is EdgeInsets.symmetric(horizontal: 12, vertical: 7)",
+    "Max bubble width is 0.74 * MediaQuery.of(context).size.width"
+  ],
+  "verification": [
+    "Run grep to confirm _kInner = 5.0 in mission_room_message.dart",
+    "Run grep to confirm no 'isCompact' or 'participantCount' references remain in mission_room_message.dart",
+    "Run grep to confirm _groupedBorderRadius function exists",
+    "Run grep to confirm 'fontSize: 15.5' is used for message text",
+    "Run grep to confirm WidgetSpan is used for inline timestamps",
+    "Run grep to confirm 'ZendRadii.pill' is NOT used in _ContributionEventRow (no longer a pill)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1180,7 +1180,6 @@ class _MissionRoomState extends State<MissionRoom> {
                                   message: msg,
                                   currentUserId: currentUserId,
                                   isContinuation: msgItem.isContinuation,
-                                  participantCount: _pool.participants.length,
                                   onLongPress: (ctx) => _showReactionPicker(msg, ctx),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
                                   // Read receipts only on the last message in a run.

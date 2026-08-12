@@ -12,28 +12,32 @@ import '../vibes/vibe_message_bubble.dart';
 // ── Corner radius constants (mirrors dm_message_bubble.dart) ─────────────────
 
 const double _kOuter = 18.0;
-const double _kInner = 4.0;
+const double _kInner = 5.0;
 
-/// Per-corner bubble radius matching the dm_message_bubble spec:
-/// - Tail (sharp inner) on the LAST bubble for BOTH sender and receiver.
-/// - Inner side corners tighten to _kInner on grouped (non-first/non-last) bubbles.
-/// - Tail corner uses 0 radius so the beak emerges cleanly.
-BorderRadius _bubbleRadius({required bool isMe, required bool isFirst, required bool isLast}) {
+/// Returns the per-corner [BorderRadius] for a bubble at a given position in
+/// its sender group.
+///
+/// In the reversed ListView (index 0 = newest = visually BOTTOM):
+///  - isFirst = newest in the group = visually BOTTOM
+///  - isLast  = oldest in the group = visually TOP
+///
+/// The inner corner (the one facing the *next* bubble from the same sender)
+/// tightens for any bubble that isn't alone at that edge of the group.
+BorderRadius _groupedBorderRadius({required bool isMe, required bool isFirst, required bool isLast}) {
   if (isMe) {
     return BorderRadius.only(
-      topLeft:     const Radius.circular(_kOuter),
-      topRight:    Radius.circular(isFirst ? _kOuter : _kInner),
-      bottomLeft:  const Radius.circular(_kOuter),
-      bottomRight: Radius.circular(isLast ? _kInner : _kInner),
-    );
-  } else {
-    return BorderRadius.only(
-      topLeft:    Radius.circular(isFirst ? _kOuter : _kInner),
-      topRight:   const Radius.circular(_kOuter),
-      bottomLeft: Radius.circular(isLast ? _kInner : _kInner),
-      bottomRight: const Radius.circular(_kOuter),
+      topLeft: const Radius.circular(_kOuter),
+      topRight: Radius.circular(isLast ? _kOuter : _kInner),
+      bottomLeft: const Radius.circular(_kOuter),
+      bottomRight: Radius.circular(isFirst ? _kOuter : _kInner),
     );
   }
+  return BorderRadius.only(
+    topLeft: Radius.circular(isLast ? _kOuter : _kInner),
+    topRight: const Radius.circular(_kOuter),
+    bottomLeft: Radius.circular(isFirst ? _kOuter : _kInner),
+    bottomRight: const Radius.circular(_kOuter),
+  );
 }
 
 // ── Public widget ─────────────────────────────────────────────────────────────
@@ -49,7 +53,6 @@ class MissionRoomMessage extends StatelessWidget {
     required this.onLongPress,
     required this.onReactionTap,
     this.isContinuation = false,
-    this.participantCount = 0,
     this.onRetry,
     this.readers = const {},
     this.player,
@@ -61,13 +64,10 @@ class MissionRoomMessage extends StatelessWidget {
   final void Function(BuildContext ctx) onLongPress;
   final ValueChanged<String> onReactionTap;
   final bool isContinuation;
-  final int participantCount;
   final VoidCallback? onRetry;
   final Map<String, String?> readers;
   final AudioPlayer? player;
   final VoidCallback? onPlayTap;
-
-  bool get _isCompact => participantCount <= 3;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +93,6 @@ class MissionRoomMessage extends StatelessWidget {
               onReactionTap: onReactionTap,
               currentUserId: currentUserId,
               isContinuation: isContinuation,
-              isCompact: _isCompact,
               onRetry: onRetry,
               player: player,
               onPlayTap: onPlayTap,
@@ -104,7 +103,6 @@ class MissionRoomMessage extends StatelessWidget {
               onReactionTap: onReactionTap,
               currentUserId: currentUserId,
               isContinuation: isContinuation,
-              isCompact: _isCompact,
               onRetry: onRetry,
               readers: readers),
         },
@@ -253,7 +251,6 @@ class _TextMessageRow extends StatelessWidget {
     required this.onReactionTap,
     required this.currentUserId,
     this.isContinuation = false,
-    this.isCompact = false,
     this.onRetry,
     this.readers = const {},
   });
@@ -263,7 +260,6 @@ class _TextMessageRow extends StatelessWidget {
   final ValueChanged<String> onReactionTap;
   final String? currentUserId;
   final bool isContinuation;
-  final bool isCompact;
   final VoidCallback? onRetry;
   final Map<String, String?> readers;
 
@@ -275,157 +271,114 @@ class _TextMessageRow extends StatelessWidget {
     final isMe     = message.senderUserId != null && message.senderUserId == currentUserId;
     final labelColor = _senderColor(sender, zt);
 
-    // ── Compact (≤ 3 people): iMessage-style bubbles ──────────────────────
-    if (isCompact) {
-      final decoration = isMe
-          ? BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
-              ),
-              borderRadius: _bubbleRadius(isMe: true, isFirst: !isContinuation, isLast: true),
-            )
-          : BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: _bubbleRadius(isMe: false, isFirst: !isContinuation, isLast: true),
-            );
-      final textColor  = isMe ? Colors.white : zt.textPrimary;
-      final timeColor  = isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary;
-
-      return Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          // Sender label — only on first bubble in a run, for other people
-          if (!isContinuation && !isMe)
-            Padding(
-              padding: const EdgeInsets.only(left: 40, bottom: 2),
-              child: Text(
-                '@$sender',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor),
-              ),
+    final decoration = isMe
+        ? BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
             ),
-          Row(
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Avatar slot — 32px wide, avatar only on group-end
-              if (!isMe) SizedBox(
-                width: 32,
-                child: !isContinuation
-                    ? ZendAvatar(radius: 13, photoUrl: message.senderAvatarUrl, initials: initial)
-                    : null,
-              ),
-              // Bubble
-              Flexible(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.74,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                  decoration: decoration,
-                  child: Column(
-                    crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        message.content ?? '',
-                        style: TextStyle(
-                          fontFamily: 'Satoshi',
-                          fontSize: 15,
-                          color: textColor,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+            borderRadius: _groupedBorderRadius(isMe: true, isFirst: !isContinuation, isLast: true),
+          )
+        : BoxDecoration(
+            color: zt.bubbleReceived,
+            borderRadius: _groupedBorderRadius(isMe: false, isFirst: !isContinuation, isLast: true),
+          );
+    final textColor  = isMe ? Colors.white : zt.textPrimary;
+    final timeColor  = isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary;
+
+    return Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        // Sender label — only on first bubble in a run, for other people
+        if (!isContinuation && !isMe)
+          Padding(
+            padding: const EdgeInsets.only(left: 40, bottom: 2),
+            child: Text(
+              '@$sender',
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor),
+            ),
+          ),
+        Row(
+          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Avatar slot — 32px wide, avatar only on group-start
+            if (!isMe) SizedBox(
+              width: 32,
+              child: !isContinuation
+                  ? ZendAvatar(radius: 13, photoUrl: message.senderAvatarUrl, initials: initial)
+                  : null,
+            ),
+            // Bubble
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.74,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: decoration,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text.rich(
+                      TextSpan(
                         children: [
-                          Text(
-                            _formatTime(message.createdAt),
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+                          TextSpan(
+                            text: message.content ?? '',
+                            style: TextStyle(
+                              fontFamily: 'Satoshi',
+                              fontSize: 15.5,
+                              color: textColor,
+                              height: 1.35,
+                              decoration: TextDecoration.none,
+                              decorationColor: Colors.transparent,
+                            ),
                           ),
-                          if (isMe) ...[
-                            const SizedBox(width: 4),
-                            _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: true),
-                          ],
+                          const WidgetSpan(child: SizedBox(width: 8)),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _formatTime(message.createdAt),
+                                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+                                ),
+                                if (isMe) ...[
+                                  const SizedBox(width: 4),
+                                  _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: true),
+                                ],
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              if (isMe) const SizedBox(width: 4),
-            ],
-          ),
-          // Read receipts
-          if (readers.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(
-                right: isMe ? 8 : 0,
-                left: isMe ? 0 : 36,
-                top: 2,
-              ),
-              child: _ReadReceiptAvatars(readers: readers),
             ),
-          // Reaction chips
-          if (message.reactions.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 36, right: isMe ? 8 : 0),
-              child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
-            ),
-        ],
-      );
-    }
-
-    // ── Feed style (> 3 people): left-aligned, avatar + label above ───────
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isContinuation)
-          const SizedBox(width: 40)
-        else
-          ZendAvatar(radius: 18, photoUrl: message.senderAvatarUrl, initials: initial),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isContinuation) ...[
-                Row(children: [
-                  Text(
-                    '@$sender',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: labelColor),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _formatTime(message.createdAt),
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
-                  ),
-                ]),
-                const SizedBox(height: 2),
-              ],
-              Text(
-                message.content ?? '',
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary, height: 1.4),
-              ),
-              if (isMe || readers.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (isMe) _DeliveryStatus(status: message.localStatus, onRetry: onRetry),
-                  if (readers.isNotEmpty) ...[
-                    if (isMe) const SizedBox(width: 4),
-                    _ReadReceiptAvatars(readers: readers),
-                  ],
-                ]),
-              ],
-              if (message.reactions.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
-              ],
-            ],
-          ),
+            if (isMe) const SizedBox(width: 4),
+          ],
         ),
+        // Read receipts
+        if (readers.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(
+              right: isMe ? 8 : 0,
+              left: isMe ? 0 : 36,
+              top: 2,
+            ),
+            child: _ReadReceiptAvatars(readers: readers),
+          ),
+        // Reaction chips
+        if (message.reactions.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 36, right: isMe ? 8 : 0),
+            child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
+          ),
       ],
     );
   }
@@ -484,8 +437,8 @@ class _VibeMessageRow extends StatelessWidget {
 }
 
 // ── Contribution event row ────────────────────────────────────────────────────
-// Displayed as a centered pill — contribution events are system notices,
-// not user messages, so they don't get a bubble or sender label.
+// Displayed as a proper centered bubble with accent-tinted border, matching
+// the DM bubble styling rather than a minimal pill.
 
 class _ContributionEventRow extends StatelessWidget {
   const _ContributionEventRow({
@@ -507,24 +460,46 @@ class _ContributionEventRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final timeColor = zt.textSecondary;
+
     return Column(
       children: [
-        Center(
+        Align(
+          alignment: Alignment.center,
           child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.74,
+            ),
             margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: zt.accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
+              color: zt.bubbleReceived,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: zt.accent.withValues(alpha: 0.22), width: 0.8),
             ),
-            child: Text(
-              message.content ?? '',
-              style: TextStyle(
-                fontFamily: 'Satoshi',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: zt.accent,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: message.content ?? '',
+                    style: TextStyle(
+                      fontFamily: 'Satoshi',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: zt.accent,
+                      decoration: TextDecoration.none,
+                      decorationColor: Colors.transparent,
+                    ),
+                  ),
+                  const WidgetSpan(child: SizedBox(width: 8)),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Text(
+                      _formatTime(message.createdAt),
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -550,7 +525,6 @@ class _VoiceNoteRow extends StatelessWidget {
     required this.onReactionTap,
     required this.currentUserId,
     this.isContinuation = false,
-    this.isCompact = false,
     this.onRetry,
     this.player,
     this.onPlayTap,
@@ -562,7 +536,6 @@ class _VoiceNoteRow extends StatelessWidget {
   final ValueChanged<String> onReactionTap;
   final String? currentUserId;
   final bool isContinuation;
-  final bool isCompact;
   final VoidCallback? onRetry;
   final AudioPlayer? player;
   final VoidCallback? onPlayTap;
@@ -581,93 +554,123 @@ class _VoiceNoteRow extends StatelessWidget {
     final total      = Duration(seconds: dur);
     final progress   = dur > 0 ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0) : 0.0;
     final timeLabel  = isPlaying ? _formatDuration(total - position) : _formatDuration(total);
+    final timeColor  = isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary;
 
-    // The playback pill — same in both compact and feed layouts
-    final pill = GestureDetector(
-      onTap: message.localStatus == LocalStatus.sending ? null : onPlayTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isMe ? zt.accent : zt.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.pill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (message.localStatus == LocalStatus.sending)
-              ZendLoader(size: 22, strokeWidth: 2, color: isMe ? Colors.white : zt.accent)
-            else
-              Icon(
-                isPlaying ? PhosphorIconsBold.pauseCircle : PhosphorIconsBold.playCircle,
-                size: 26,
-                color: isMe ? Colors.white : zt.accent,
-              ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 72,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(ZendRadii.pill),
-                child: LinearProgressIndicator(
-                  value: progress.toDouble(),
-                  minHeight: 3,
-                  backgroundColor: (isMe ? Colors.white : zt.accent).withValues(alpha: 0.25),
-                  valueColor: AlwaysStoppedAnimation<Color>(isMe ? Colors.white : zt.accent),
-                ),
-              ),
+    final decoration = isMe
+        ? BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
             ),
-            const SizedBox(width: 8),
-            Text(
-              timeLabel,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: isMe ? Colors.white.withValues(alpha: 0.8) : zt.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
+            borderRadius: _groupedBorderRadius(isMe: true, isFirst: !isContinuation, isLast: true),
+          )
+        : BoxDecoration(
+            color: zt.bubbleReceived,
+            borderRadius: _groupedBorderRadius(isMe: false, isFirst: !isContinuation, isLast: true),
+          );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: isCompact && isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+    // The playback controls inside the bubble
+    final playbackContent = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (!(isCompact && isMe)) ...[
-          if (isContinuation)
-            const SizedBox(width: 40)
-          else
-            ZendAvatar(radius: 18, photoUrl: message.senderAvatarUrl, initials: initial),
-          const SizedBox(width: 8),
-        ],
-        Flexible(
-          child: Column(
-            crossAxisAlignment: isCompact && isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-              if (!isContinuation && !(isCompact && isMe))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(children: [
-                    Text(
-                      '@$sender',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: _senderColor(sender, zt)),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-                  ]),
-                ),
-              pill,
-              if (isMe || readers.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (isMe) _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: isMe),
-                  if (readers.isNotEmpty) ...[if (isMe) const SizedBox(width: 4), _ReadReceiptAvatars(readers: readers)],
-                ]),
-              ],
-              if (message.reactions.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
-              ],
-            ],
+        if (message.localStatus == LocalStatus.sending)
+          ZendLoader(size: 22, strokeWidth: 2, color: isMe ? Colors.white : zt.accent)
+        else
+          GestureDetector(
+            onTap: onPlayTap,
+            child: Icon(
+              isPlaying ? PhosphorIconsBold.pauseCircle : PhosphorIconsBold.playCircle,
+              size: 26,
+              color: isMe ? Colors.white : zt.accent,
+            ),
+          ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 72,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+            child: LinearProgressIndicator(
+              value: progress.toDouble(),
+              minHeight: 3,
+              backgroundColor: (isMe ? Colors.white : zt.accent).withValues(alpha: 0.25),
+              valueColor: AlwaysStoppedAnimation<Color>(isMe ? Colors.white : zt.accent),
+            ),
           ),
         ),
-        if (isCompact && isMe) const SizedBox(width: 4),
+        const SizedBox(width: 8),
+        Text(
+          timeLabel,
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: isMe ? Colors.white.withValues(alpha: 0.8) : zt.textSecondary),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          _formatTime(message.createdAt),
+          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+        ),
+        if (isMe) ...[
+          const SizedBox(width: 4),
+          _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: true),
+        ],
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        // Sender label — only on first bubble in a run, for other people
+        if (!isContinuation && !isMe)
+          Padding(
+            padding: const EdgeInsets.only(left: 40, bottom: 2),
+            child: Text(
+              '@$sender',
+              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: _senderColor(sender, zt)),
+            ),
+          ),
+        Row(
+          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Avatar slot — 32px wide, avatar only on group-start
+            if (!isMe) SizedBox(
+              width: 32,
+              child: !isContinuation
+                  ? ZendAvatar(radius: 13, photoUrl: message.senderAvatarUrl, initials: initial)
+                  : null,
+            ),
+            // Bubble
+            Flexible(
+              child: GestureDetector(
+                onTap: message.localStatus == LocalStatus.sending ? null : onPlayTap,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.74,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: decoration,
+                  child: playbackContent,
+                ),
+              ),
+            ),
+            if (isMe) const SizedBox(width: 4),
+          ],
+        ),
+        // Read receipts
+        if (readers.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(
+              right: isMe ? 8 : 0,
+              left: isMe ? 0 : 36,
+              top: 2,
+            ),
+            child: _ReadReceiptAvatars(readers: readers),
+          ),
+        // Reaction chips
+        if (message.reactions.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 36, right: isMe ? 8 : 0),
+            child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
+          ),
       ],
     );
   }
