@@ -350,11 +350,9 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           child,
           Positioned(
             bottom: -10,
-            // Anchor to the bottom-left corner regardless of sender — every
-            // bubble is left-aligned now (see the note in
-            // _TextBubble.build()), so the badge's corner anchor no longer
-            // needs to flip based on isMe.
-            left: 4,
+            // Anchor to the bubble's near corner: left for received, right for sent.
+            left: widget.isMe ? null : 4,
+            right: widget.isMe ? 4 : null,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
@@ -396,11 +394,9 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     }
 
     // Timestamp reveal — shown when parent sets showTimestamp = true.
-    // Left-aligned regardless of sender — see the note on _kAllLeftAligned
-    // near _TextBubble for why every bubble now sits on the left.
     if (widget.showTimestamp) {
       child = Row(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Flexible(child: child),
           Padding(
@@ -500,14 +496,9 @@ class _TextBubble extends StatelessWidget {
         ? Colors.black.withValues(alpha: 0.28)
         : zt.border.withValues(alpha: 0.5);
 
-    // Every bubble sits on the left regardless of sender — colour/gradient
-    // (accent fill for sent, bubbleReceived fill for received) is now the
-    // only visual cue distinguishing "me" from "them", per an explicit
-    // product decision to abandon the standard sent-right/received-left
-    // chat convention. mainAxisAlignment/crossAxisAlignment below are
-    // deliberately NOT keyed on isMe anymore.
+    // Sender bubbles align right, recipient bubbles align left.
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         const SizedBox(width: 4),
@@ -870,9 +861,9 @@ class DmPaymentBubble extends StatelessWidget {
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
     final iconColor = isMe ? zt.accent : zt.textSecondary;
 
-    // Left-aligned regardless of sender — see the note in _TextBubble.build().
+    // Sender bubbles align right, recipient bubbles align left.
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         const SizedBox(width: 4),
@@ -972,9 +963,9 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
     final accentColor = zt.accent;
 
-    // Left-aligned regardless of sender — see the note in _TextBubble.build().
+    // Sender bubbles align right, recipient bubbles align left.
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         const SizedBox(width: 4),
