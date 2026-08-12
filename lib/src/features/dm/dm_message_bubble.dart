@@ -266,11 +266,37 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       _ => _TextBubble(
           message: widget.message, isMe: widget.isMe,
           isFirst: widget.isFirst, isLast: widget.isLast,
-          onRetry: widget.onRetry,
-          onReplyTap: widget.onReplyTap != null
-              ? () => widget.onReplyTap!(widget.message)
-              : null),
+          onRetry: widget.onRetry),
     };
+
+    // ── Reply context (header + quote pill) rendered OUTSIDE/ABOVE the
+    // bubble in a vertical stack when the message is a reply.
+    final hasReply =
+        (widget.message.replyToContent?.isNotEmpty ?? false) ||
+        (widget.message.replyToSenderZendtag?.isNotEmpty ?? false);
+    if (hasReply) {
+      child = Column(
+        crossAxisAlignment:
+            widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ReplyHeader(
+            senderZendtag: widget.message.replyToSenderZendtag,
+            isMe: widget.isMe,
+          ),
+          const SizedBox(height: 8),
+          _QuotePill(
+            content: widget.message.replyToContent,
+            isMe: widget.isMe,
+            onTap: widget.onReplyTap != null
+                ? () => widget.onReplyTap!(widget.message)
+                : null,
+          ),
+          const SizedBox(height: 4),
+          child,
+        ],
+      );
+    }
 
     // Press feedback + double-tap heart + long-press → full reactions
     child = GestureDetector(
@@ -449,17 +475,11 @@ class _TextBubble extends StatelessWidget {
     required this.message, required this.isMe,
     required this.isFirst, required this.isLast,
     this.onRetry,
-    this.onReplyTap,
   });
 
   final DmMessage message;
   final bool isMe, isFirst, isLast;
   final VoidCallback? onRetry;
-  final VoidCallback? onReplyTap;
-
-  bool get _hasReply =>
-      (message.replyToContent?.isNotEmpty ?? false) ||
-      (message.replyToSenderZendtag?.isNotEmpty ?? false);
 
   /// Whether to show the "Not encrypted" badge. This flags genuinely
   /// plaintext messages — either historical messages from before E2EE
@@ -488,13 +508,6 @@ class _TextBubble extends StatelessWidget {
       end: Alignment.bottomCenter,
       colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
     );
-
-    // Accent bar colour: white on sent, theme accent on received
-    final barColor = isMe ? Colors.white.withValues(alpha: 0.55) : zt.accent;
-    // Quote block background
-    final quoteBg = isMe
-        ? Colors.black.withValues(alpha: 0.28)
-        : zt.border.withValues(alpha: 0.5);
 
     // Sender bubbles align right, recipient bubbles align left.
     return Row(
@@ -563,19 +576,6 @@ class _TextBubble extends StatelessWidget {
                         ],
                       )
                     else ...[
-                    if (_hasReply) ...[
-                      _QuoteBlock(
-                        senderZendtag: message.replyToSenderZendtag,
-                        content: message.replyToContent,
-                        barColor: barColor,
-                        bgColor: quoteBg,
-                        textColor: isMe ? Colors.white.withValues(alpha: 0.85) : zt.textPrimary,
-                        labelColor: isMe ? Colors.white.withValues(alpha: 0.7) : zt.accent,
-                        isMe: isMe,
-                        onTap: onReplyTap,
-                      ),
-                      const SizedBox(height: 5),
-                    ],
                     if (message.displayContent?.isNotEmpty == true)
                       // Timestamp + status float inline at the end of the
                       // text via a trailing WidgetSpan (WhatsApp/iMessage
@@ -688,103 +688,105 @@ class _MessageMeta extends StatelessWidget {
   }
 }
 
-// ── Quote block — WhatsApp-style in-bubble reply ──────────────────────────────
-//
-// Design goals (from the screenshot feedback):
-// - Fills the full bubble width — no narrow card floating on the left
-// - Subtle background tint, not a heavy opaque box
-// - Left accent bar is the main visual indicator of "this is a quote"
-// - Compact: sender label + 1-2 lines preview, no excessive padding
+// ── Reply header — "↩ @bolu replied to you" line above the quote pill ────────
 
-class _QuoteBlock extends StatelessWidget {
-  const _QuoteBlock({
+class _ReplyHeader extends StatelessWidget {
+  const _ReplyHeader({
     required this.senderZendtag,
+    required this.isMe,
+  });
+
+  final String? senderZendtag;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final tag = senderZendtag ?? '';
+
+    // Sent: "You replied to @{zendtag}", Received: "@{zendtag} replied to you"
+    final label = isMe
+        ? 'You replied to @$tag'
+        : '@$tag replied to you';
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            PhosphorIconsBold.arrowBendUpLeft,
+            size: 12,
+            color: zt.textSecondary,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Satoshi',
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: zt.textSecondary,
+                decoration: TextDecoration.none,
+                decorationColor: Colors.transparent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Quote pill — outline-only rounded rect showing the original message ──────
+
+class _QuotePill extends StatelessWidget {
+  const _QuotePill({
     required this.content,
-    required this.barColor,
-    required this.bgColor,
-    required this.textColor,
-    required this.labelColor,
     required this.isMe,
     this.onTap,
   });
 
-  final String? senderZendtag;
   final String? content;
-  final Color barColor;
-  final Color bgColor;
-  final Color textColor;
-  final Color labelColor;
-  /// Kept for API compatibility with callers, but no longer used to flip
-  /// alignment — the quote block is always left-aligned with the accent
-  /// bar on the left edge, matching every bubble's now-uniform left
-  /// alignment (see the note in _TextBubble.build()).
   final bool isMe;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    const textAlign = TextAlign.left;
-    const crossAlign = CrossAxisAlignment.start;
+    final zt = ZendTheme.of(context);
 
-    // Accent bar is drawn as a Border side on the Container itself rather
-    // than as a separate Row child sized via IntrinsicHeight. The previous
-    // IntrinsicHeight + Row(mainAxisSize: min) combination measured the
-    // Text child during an *unconstrained* intrinsic-width pass — since
-    // nothing gave it an explicit max width (no Expanded/Flexible), a long
-    // quote line would report its natural single-line width, which could
-    // be wider than the bubble itself, causing the whole quote block (and
-    // the bubble around it) to overflow past the screen edge before
-    // `maxLines: 2` ever got a chance to wrap it — maxLines caps line
-    // *count*, not width. A plain Container naturally inherits the width
-    // constraint already imposed by the ambient bubble ConstrainedBox in
-    // _TextBubble, so Text wraps and ellipsizes correctly within it.
+    final borderColor = isMe
+        ? zt.accent.withValues(alpha: 0.15)
+        : zt.border;
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(6),
-          border: Border(left: BorderSide(color: barColor, width: 3)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.74,
         ),
-        padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
-        child: Column(
-          crossAxisAlignment: crossAlign,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (senderZendtag != null && senderZendtag!.isNotEmpty)
-              Text(
-                '@$senderZendtag',
-                textAlign: textAlign,
-                style: TextStyle(
-                  fontFamily: 'Satoshi',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: labelColor,
-                  height: 1.2,
-                ),
-              ),
-            if (content != null && content!.isNotEmpty) ...[
-              if (senderZendtag != null && senderZendtag!.isNotEmpty)
-                const SizedBox(height: 1),
-              Text(
-                content!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: textAlign,
-                style: TextStyle(
-                  fontFamily: 'Satoshi',
-                  fontSize: 13,
-                  color: textColor,
-                  height: 1.3,
-                  // Quoted content often starts with a raw emoji (💸/✨/💬
-                  // preview prefixes) — guard against the stray-underline
-                  // rendering artifact the same way message body text does.
-                  decoration: TextDecoration.none,
-                  decorationColor: Colors.transparent,
-                ),
-              ),
-            ],
-          ],
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 1.0),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text(
+            content ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Satoshi',
+              fontSize: 14,
+              color: zt.textSecondary,
+              decoration: TextDecoration.none,
+              decorationColor: Colors.transparent,
+            ),
+          ),
         ),
       ),
     );
