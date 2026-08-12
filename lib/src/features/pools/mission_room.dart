@@ -1180,7 +1180,6 @@ class _MissionRoomState extends State<MissionRoom> {
                                   message: msg,
                                   currentUserId: currentUserId,
                                   isContinuation: msgItem.isContinuation,
-                                  participantCount: _pool.participants.length,
                                   onLongPress: (ctx) => _showReactionPicker(msg, ctx),
                                   onReactionTap: (emoji) => _toggleReaction(msg, emoji),
                                   // Read receipts only on the last message in a run.
@@ -1566,8 +1565,9 @@ class _InputBarState extends State<_InputBar> {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Vibe button — shown when onSendVibe is wired
-                if (widget.onSendVibe != null && widget.poolId != null) ...[
+                // Vibe button — temporarily disabled for design parity
+                // ignore: dead_code
+                if (false && widget.onSendVibe != null && widget.poolId != null) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: GestureDetector(
