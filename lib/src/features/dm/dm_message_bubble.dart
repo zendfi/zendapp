@@ -284,7 +284,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
             senderZendtag: widget.message.replyToSenderZendtag,
             isMe: widget.isMe,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           _QuotePill(
             content: widget.message.replyToContent,
             isMe: widget.isMe,
@@ -774,7 +774,7 @@ class _QuotePill extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor, width: 1.0),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Text(
             content ?? '',
             maxLines: 2,
