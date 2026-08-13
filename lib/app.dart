@@ -509,27 +509,25 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           return locale;
         },
         builder: (context, child) {
-          // Clamp the OS-level text scale factor to a fixed range. The app's
-          // layouts throughout (message bubbles, nav bar, badges, chat list
-          // rows, etc.) use a mix of font-relative text and many hardcoded
-          // pixel dimensions (SizedBox/Container sizes, icon sizes, fixed
-          // paddings) that do NOT grow alongside text. Without a clamp,
-          // Flutter fully inherits the OS "Larger Text"/accessibility font
-          // scale setting with no ceiling — on a device where the user has
-          // that setting turned up, every piece of text renders larger while
-          // the fixed-size containers around it stay the same, which is
-          // exactly the "looks correct on some devices, oversized/broken on
-          // others" symptom being investigated. Clamping to a modest range
-          // (0.9x–1.15x) keeps the app usable and consistent across devices
-          // without fully ignoring the user's accessibility preference —
-          // text still scales somewhat, just not enough to break layouts
-          // that were never built to accommodate large-print scaling.
-          final clampedScaler = MediaQuery.textScalerOf(context).clamp(
-            minScaleFactor: 0.9,
-            maxScaleFactor: 1.15,
-          );
+          // Width-relative text scaling: derive a text scale factor from the
+          // device's screen width relative to a 375dp reference (iPhone SE /
+          // standard design frame). This replaces the old OS text-scale clamp
+          // approach. Instead of reacting to the OS accessibility slider, we
+          // Tie text size to the physical width of the device so that text,
+          // spacing, and containers stay proportional across different screen
+          // sizes -- fixing the "looks great on some devices, bulky or
+          // cramped on others" inconsistency. The width-relative factor is
+          // multiplied by the user's OS accessibility text scale preference
+          // (dampened by the width factor) so that accessibility settings are
+          // honoured rather than silently discarded. The combined result is
+          // clamped to 0.85x-1.35x to protect layouts from extremes.
+          final screenWidth = MediaQuery.sizeOf(context).width;
+          final widthScale = screenWidth / 375.0;
+          final osScale = MediaQuery.textScalerOf(context).scale(1.0);
+          final combined = (widthScale * osScale).clamp(0.85, 1.35);
+          final scaler = TextScaler.linear(combined);
           return MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: clampedScaler),
+            data: MediaQuery.of(context).copyWith(textScaler: scaler),
             child: Listener(
               behavior: HitTestBehavior.translucent,
               onPointerDown: (_) =>

@@ -154,3 +154,23 @@ class ZendTextStyles {
     fontFeatures: [FontFeature.tabularFigures()],
   );
 }
+
+class ZendScale {
+  /// Returns a width-relative scale factor based on the device's screen width
+  /// divided by the 375dp reference width (iPhone SE / standard design frame).
+  /// Use this to scale padding, spacing, icon sizes, and other layout values
+  /// so the UI adapts proportionally across different device widths.
+  ///
+  /// The result is clamped to (0.85, 1.3) so that tablets and very narrow
+  /// devices don't produce extreme scaling values that break layouts.
+  static double of(BuildContext context) {
+    return (MediaQuery.sizeOf(context).width / 375.0).clamp(0.85, 1.3);
+  }
+
+  /// Convenience method: returns [base] multiplied by the width-relative scale
+  /// factor. Useful for inline scaled-value lookups in widget trees, e.g.
+  /// `ZendScale.value(context, 16)` for a 16dp reference spacing.
+  static double value(BuildContext context, double base) {
+    return base * of(context);
+  }
+}

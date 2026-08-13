@@ -1,0 +1,22 @@
+{
+  "id": "FEAT-003",
+  "type": "fix",
+  "description": "Address semantic review findings: (1) Fix reply icon opacity divisor from 56.0 to 36.0 to match new trigger threshold, (2) Incorporate OS accessibility text scale preference as a dampened multiplier in app.dart, (3) Clamp ZendScale.of() to (0.85, 1.3) to prevent extreme scaling on tablets.",
+  "status": "completed",
+  "steps": [
+    "In zendapp/lib/src/features/dm/dm_message_bubble.dart line 409, change `(_swipeDx / 56.0)` to `(_swipeDx / 36.0)` so icon reaches full opacity when the haptic fires.",
+    "In zendapp/lib/app.dart (around line 521-523), incorporate OS accessibility preference: get osScale from MediaQuery.textScalerOf(context).scale(1.0), compute combined = (widthScale * osScale).clamp(0.85, 1.35), use TextScaler.linear(combined).",
+    "In zendapp/lib/src/design/zend_tokens.dart, clamp ZendScale.of() result to (0.85, 1.3) and update the docstring to mention the clamp."
+  ],
+  "acceptance_criteria": [
+    "Reply icon opacity uses 36.0 as divisor",
+    "App text scaler incorporates OS accessibility preference as a dampened multiplier, clamped at 1.35",
+    "ZendScale.of() returns a clamped value between 0.85 and 1.3",
+    "Code is syntactically correct Dart"
+  ],
+  "verification": [
+    "cd zendapp && flutter analyze lib/src/features/dm/dm_message_bubble.dart lib/app.dart lib/src/design/zend_tokens.dart"
+  ],
+  "blocked_reason": null,
+  "findings": "Flutter SDK not available in sandbox so flutter analyze could not be run. All three changes are minimal and syntactically verified by code inspection. Matches patterns already used in the codebase."
+}
