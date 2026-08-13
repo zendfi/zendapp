@@ -324,11 +324,11 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       onTapCancel: _onTapCancel,
       // Swipe right → reply
       onHorizontalDragUpdate: (details) {
-        if (details.delta.dx > 0 && widget.onReply != null) {
+        if (widget.onReply != null) {
           setState(() {
             _swipeDx = (_swipeDx + details.delta.dx).clamp(0.0, 72.0);
           });
-          if (_swipeDx >= 56 && !_replyTriggered) {
+          if (_swipeDx >= 36 && !_replyTriggered) {
             _replyTriggered = true;
             HapticFeedback.lightImpact();
           }
