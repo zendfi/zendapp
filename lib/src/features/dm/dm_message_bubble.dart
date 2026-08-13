@@ -406,7 +406,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
             left: 0,
             top: 0, bottom: 0,
             child: Opacity(
-              opacity: (_swipeDx / 56.0).clamp(0.0, 1.0),
+              opacity: (_swipeDx / 36.0).clamp(0.0, 1.0),
               child: Center(
                 child: Icon(
                   PhosphorIconsBold.arrowBendUpLeft,

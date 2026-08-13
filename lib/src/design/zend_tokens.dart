@@ -160,8 +160,11 @@ class ZendScale {
   /// divided by the 375dp reference width (iPhone SE / standard design frame).
   /// Use this to scale padding, spacing, icon sizes, and other layout values
   /// so the UI adapts proportionally across different device widths.
+  ///
+  /// The result is clamped to (0.85, 1.3) so that tablets and very narrow
+  /// devices don't produce extreme scaling values that break layouts.
   static double of(BuildContext context) {
-    return MediaQuery.sizeOf(context).width / 375.0;
+    return (MediaQuery.sizeOf(context).width / 375.0).clamp(0.85, 1.3);
   }
 
   /// Convenience method: returns [base] multiplied by the width-relative scale

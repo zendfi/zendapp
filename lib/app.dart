@@ -513,15 +513,19 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           // device's screen width relative to a 375dp reference (iPhone SE /
           // standard design frame). This replaces the old OS text-scale clamp
           // approach. Instead of reacting to the OS accessibility slider, we
-          // tie text size to the physical width of the device so that text,
+          // Tie text size to the physical width of the device so that text,
           // spacing, and containers stay proportional across different screen
           // sizes -- fixing the "looks great on some devices, bulky or
-          // cramped on others" inconsistency. The result is clamped to
-          // 0.85x-1.15x to avoid extremes on very narrow or very wide
-          // devices.
+          // cramped on others" inconsistency. The width-relative factor is
+          // multiplied by the user's OS accessibility text scale preference
+          // (dampened by the width factor) so that accessibility settings are
+          // honoured rather than silently discarded. The combined result is
+          // clamped to 0.85x-1.35x to protect layouts from extremes.
           final screenWidth = MediaQuery.sizeOf(context).width;
-          final baseScale = (screenWidth / 375.0).clamp(0.85, 1.15);
-          final scaler = TextScaler.linear(baseScale);
+          final widthScale = screenWidth / 375.0;
+          final osScale = MediaQuery.textScalerOf(context).scale(1.0);
+          final combined = (widthScale * osScale).clamp(0.85, 1.35);
+          final scaler = TextScaler.linear(combined);
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: scaler),
             child: Listener(
