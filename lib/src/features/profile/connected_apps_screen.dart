@@ -40,7 +40,7 @@ class ConnectedAppsScreen extends StatelessWidget {
                       Text(
                         'No apps connected',
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary,
@@ -51,7 +51,7 @@ class ConnectedAppsScreen extends StatelessWidget {
                         'Third-party apps you authorise will appear here.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: zt.textSecondary,
                           height: 1.4,
@@ -88,7 +88,7 @@ class _ProfileHeader extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,

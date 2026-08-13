@@ -96,7 +96,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
         SnackBar(
           content: Text(
             newValue ? 'Notifications silenced' : 'Notifications enabled',
-            style: const TextStyle(fontFamily: 'Satoshi'),
+            style: const TextStyle(fontFamily: 'CircularStd'),
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -195,7 +195,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                     child: Text(
                       'Activity',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -254,7 +254,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           color: active
                               ? ZendColors.textOnDeep
                               : zt.textSecondary,
@@ -284,7 +284,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                                   child: Text(
                                     _emptyLabel,
                                     style: TextStyle(
-                                      fontFamily: 'Satoshi',
+                                      fontFamily: 'CircularStd',
                                       fontSize: 14,
                                       color: zt.textSecondary,
                                     ),
@@ -352,7 +352,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                   'Could not load latest activity',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),
@@ -474,7 +474,7 @@ void showPendingIntentDetail(
               SnackBar(
                 content: const Text(
                   'Could not cancel — please try again',
-                  style: TextStyle(fontFamily: 'Satoshi'),
+                  style: TextStyle(fontFamily: 'CircularStd'),
                 ),
                 backgroundColor: ZendColors.destructive,
               ),
@@ -512,7 +512,7 @@ class _OutboundRequestSheet extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Link copied!',
-            style: TextStyle(fontFamily: 'Satoshi')),
+            style: TextStyle(fontFamily: 'CircularStd')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -585,7 +585,7 @@ class _OutboundRequestSheet extends StatelessWidget {
               child: Text(
                 '+${request.formattedAmount}',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 42,
                   color: zt.textPrimary,
@@ -601,7 +601,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                   request.description!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -666,7 +666,7 @@ class _OutboundRequestSheet extends StatelessWidget {
                 child: const Text(
                   'Share link',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -681,7 +681,7 @@ class _OutboundRequestSheet extends StatelessWidget {
               child: Text(
                 'Done',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,
@@ -742,7 +742,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
           title: Text(
             'Cancel this send?',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontWeight: FontWeight.w700,
               fontSize: 17,
               color: zt.textPrimary,
@@ -751,7 +751,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
           content: Text(
             'The reserved funds will be returned to your spendable balance.',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -762,7 +762,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
               child: Text(
                 'Keep',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,
                 ),
@@ -773,7 +773,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
               child: Text(
                 'Cancel send',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w600,
                   color: ZendColors.destructive,
                 ),
@@ -846,7 +846,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
               child: Text(
                 '-${intent.amountFormatted}',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 42,
                   color: zt.textPrimary,
@@ -886,7 +886,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
                     : const Text(
                         'Cancel send',
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
                         ),
@@ -918,7 +918,7 @@ class _DetailRow extends StatelessWidget {
       children: [
         Text(label,
             style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 color: zt.textSecondary)),
         Text(value,
@@ -1022,7 +1022,7 @@ class _ActivityTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary),
@@ -1033,7 +1033,7 @@ class _ActivityTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: zt.textSecondary),
                     ),
@@ -1048,7 +1048,7 @@ class _ActivityTile extends StatelessWidget {
                   Text(
                     amount,
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontWeight: FontWeight.w700,
                       fontSize: 22,
                       color: amountColor ?? zt.textPrimary,

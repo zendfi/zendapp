@@ -211,7 +211,7 @@ class _GeneratingView extends StatelessWidget {
           const Text(
             'Getting ready…',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 15,
               color: Color(0x99E8F4EC),
             ),
@@ -263,7 +263,7 @@ class _ShowingView extends StatelessWidget {
         Text(
           amountFormatted,
           style: const TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontWeight: FontWeight.w700,
             fontSize: 52,
             color: ZendColors.textOnDeep,
@@ -275,7 +275,7 @@ class _ShowingView extends StatelessWidget {
           Text(
             note!,
             style: const TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 15,
               color: Color(0x99E8F4EC),
             ),
@@ -345,7 +345,7 @@ class _ShowingView extends StatelessWidget {
         const Text(
           'Ask them to scan this',
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 14,
             color: Color(0x66E8F4EC),
           ),
@@ -427,7 +427,7 @@ class _ReceivedViewState extends State<_ReceivedView>
             const Text(
               'Received!',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 44,
                 color: ZendColors.textOnDeep,
@@ -444,7 +444,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                 widget.note!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: Color(0x66E8F4EC),
                 ),
@@ -465,7 +465,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                   child: const Text(
                     'Done',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: ZendColors.textOnDeep,
@@ -511,7 +511,7 @@ class _ErrorView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 color: Color(0x99E8F4EC),
                 height: 1.5,
@@ -532,7 +532,7 @@ class _ErrorView extends StatelessWidget {
                   child: const Text(
                     'Try again',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: ZendColors.textOnDeep,
@@ -547,7 +547,7 @@ class _ErrorView extends StatelessWidget {
               child: const Text(
                 'Go back',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: Color(0x66E8F4EC),
                 ),

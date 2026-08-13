@@ -91,7 +91,7 @@ class _EducationalModalSheet extends StatelessWidget {
             Text(
               card.topicTitle ?? '',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -100,7 +100,7 @@ class _EducationalModalSheet extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               resolveModalBody(card.modalBodyContentRef),
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, height: 1.5, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, height: 1.5, color: zt.textSecondary),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -109,7 +109,7 @@ class _EducationalModalSheet extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
                   'Got it',
-                  style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600, color: zt.accent),
+                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: zt.accent),
                 ),
               ),
             ),

@@ -44,7 +44,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
               final option = _countryOptions[index];
               return ListTile(
                 title: Text(option.name,
-                    style: const TextStyle(fontFamily: 'Satoshi')),
+                    style: const TextStyle(fontFamily: 'CircularStd')),
                 subtitle: Text(option.isoCode,
                     style: TextStyle(color: ZendTheme.of(context).textSecondary)),
                 trailing: Text(option.dialCode,
@@ -160,7 +160,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                     const SizedBox(height: 48),
                     Text(
                       _mode == _InputMode.phone ? "What's your number?" : "What's your email?",
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 32, height: 1.08, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 32, height: 1.08, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     const SizedBox(height: 20),
                     if (_mode == _InputMode.phone) ...[
@@ -209,7 +209,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                       }),
                       child: Text(
                         _mode == _InputMode.phone ? 'Use email instead' : 'Use phone number instead',
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.accent, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.accent, fontWeight: FontWeight.w500),
                       ),
                     ),
                     const Spacer(),
@@ -253,7 +253,7 @@ class _CountryPill extends StatelessWidget {
               child: const Center(child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright))),
             ),
             const SizedBox(width: 8),
-            Text(code, style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            Text(code, style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(width: 4),
             Icon(PhosphorIconsBold.caretDown, size: 18, color: zt.textSecondary),
           ],

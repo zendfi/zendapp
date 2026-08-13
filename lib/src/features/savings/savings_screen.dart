@@ -173,7 +173,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               'Something went wrong',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -184,7 +184,7 @@ class _ErrorState extends StatelessWidget {
               'We couldn\'t load your savings. Please try again.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
@@ -234,7 +234,7 @@ class _ZeroState extends StatelessWidget {
           Text(
             '$_apyDisplay a year',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 56,
               height: 1.04,
               fontWeight: FontWeight.w700,
@@ -247,7 +247,7 @@ class _ZeroState extends StatelessWidget {
           Text(
             'Your money works while you sleep',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 17,
               fontWeight: FontWeight.w500,
               color: zt.textPrimary,
@@ -259,7 +259,7 @@ class _ZeroState extends StatelessWidget {
           Text(
             'Earn on your balance with no lock-up. Withdraw anytime.',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               height: 1.45,
               color: zt.textSecondary,
@@ -329,7 +329,7 @@ class _ActiveState extends StatelessWidget {
             child: Text(
               _apyDisplay,
               style: const TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: ZendColors.accentBright,
@@ -343,7 +343,7 @@ class _ActiveState extends StatelessWidget {
         Text(
           'Your savings',
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 13,
             fontWeight: FontWeight.w500,
             letterSpacing: 0.5,
@@ -356,7 +356,7 @@ class _ActiveState extends StatelessWidget {
         Text(
           _formatUsd(position.currentValueUsd),
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 48,
             height: 1.04,
             fontWeight: FontWeight.w700,
@@ -412,7 +412,7 @@ class _ActiveState extends StatelessWidget {
             child: const Text(
               'Cash out',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -452,7 +452,7 @@ class _StatCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: zt.textSecondary,

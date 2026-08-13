@@ -135,7 +135,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     child: Text(
                       _pocket.goalName ?? 'Goal',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -225,7 +225,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             child: Text(
                               'Withdrawals are locked until you reach your target.',
                               style: TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 fontSize: 13,
                                 color: zt.textSecondary,
                               ),
@@ -261,7 +261,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: const Text(
                         'Withdraw',
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -299,7 +299,7 @@ class _StatRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 14,
             color: zt.textSecondary,
           ),

@@ -122,7 +122,7 @@ class _ReceiptSheet extends StatelessWidget {
                     child: Text(
                       amountStr,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 48,
                         height: 1.0,
@@ -137,7 +137,7 @@ class _ReceiptSheet extends StatelessWidget {
                     child: Text(
                       '$directionLabel @$counterparty',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 15,
                         color: zt.textSecondary,
                       ),
@@ -159,7 +159,7 @@ class _ReceiptSheet extends StatelessWidget {
                         child: Text(
                           '"${entry.note}"',
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 13,
                             color: zt.textSecondary,
                           ),
@@ -273,7 +273,7 @@ class _DetailRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -292,7 +292,7 @@ class _DetailRow extends StatelessWidget {
                       color: valueColor ?? zt.textPrimary,
                     )
                   : TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: valueColor ?? zt.textPrimary,
@@ -415,7 +415,7 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     child: Text(
                       amountStr,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 48,
                         height: 1.0,
@@ -444,7 +444,7 @@ class _BankSendReceiptSheet extends StatelessWidget {
                               ? 'Sent to $bankName'
                               : 'Bank transfer',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 15,
                         color: zt.textSecondary,
                       ),

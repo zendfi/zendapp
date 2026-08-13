@@ -150,7 +150,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
                     Text(
                       _formatAmount(widget.request.amount),
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 40,
                         color: zt.textPrimary,
@@ -165,7 +165,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 14,
                           color: zt.textSecondary,
                         ),

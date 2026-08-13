@@ -430,7 +430,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             pool.name,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -459,7 +459,7 @@ class _AmountStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -472,7 +472,7 @@ class _AmountStage extends StatelessWidget {
               amountError ??
                   'Balance: \$${userBalance.toStringAsFixed(2)}',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
@@ -531,7 +531,7 @@ class _PinStage extends StatelessWidget {
             'Contribute \$${amount.toStringAsFixed(2)} to ${pool.name}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -558,7 +558,7 @@ class _PinStage extends StatelessWidget {
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
@@ -590,7 +590,7 @@ class _ProcessingStage extends StatelessWidget {
             'Contributing \$${amount.toStringAsFixed(2)} to ${pool.name}...',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -633,7 +633,7 @@ class _SuccessStage extends StatelessWidget {
             Text(
               'Contributed! 🔥',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
@@ -644,7 +644,7 @@ class _SuccessStage extends StatelessWidget {
               '\$${amount.toStringAsFixed(2)} added to ${pool.name}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -694,7 +694,7 @@ class _ErrorStage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 color: zt.textPrimary,
               ),
@@ -714,7 +714,7 @@ class _ErrorStage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'Satoshi')),
+                        style: TextStyle(fontFamily: 'CircularStd')),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),
@@ -760,7 +760,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

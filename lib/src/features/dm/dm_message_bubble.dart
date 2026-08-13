@@ -552,9 +552,8 @@ class _TextBubble extends StatelessWidget {
                             Text(
                               'Forwarded',
                               style: TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 fontSize: 11.5,
-                                fontStyle: FontStyle.italic,
                                 color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
                               ),
                             ),
@@ -574,9 +573,8 @@ class _TextBubble extends StatelessWidget {
                           Text(
                             'This message was deleted',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 14,
-                              fontStyle: FontStyle.italic,
                               color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
                             ),
                           ),
@@ -597,7 +595,7 @@ class _TextBubble extends StatelessWidget {
                             TextSpan(
                               text: message.displayContent!,
                               style: TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 fontSize: 15.5,
                                 color: isMe ? Colors.white : zt.textPrimary,
                                 height: 1.35,
@@ -733,7 +731,7 @@ class _ReplyHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: zt.textSecondary,
@@ -787,7 +785,7 @@ class _QuotePill extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textSecondary,
               decoration: TextDecoration.none,
@@ -910,13 +908,13 @@ class DmPaymentBubble extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       amountFormatted,
-                      style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
+                      style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
                     ),
                     if (note != null && note.isNotEmpty && note != 'vibe') ...[
                       const SizedBox(height: 3),
                       Text(
                         note,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1003,12 +1001,12 @@ class DmPaymentRequestBubble extends StatelessWidget {
                     ]),
                     const SizedBox(height: 2),
                     Text(amountFormatted,
-                        style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
+                        style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
                         rd.note!,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1024,7 +1022,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w700)),
+                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w700)),
                         ),
                       )
                     else if (isMe && isPending)

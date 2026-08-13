@@ -98,7 +98,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                     "You're in, @${widget.username}",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 28,
                       height: 1.08,
                       color: ZendColors.textOnDeep,

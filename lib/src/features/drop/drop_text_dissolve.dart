@@ -14,7 +14,7 @@ export 'drop_dissolve_painter.dart' show DissolveDirection;
 /// ```dart
 /// DropTextDissolve(
 ///   text: '\$20',
-///   style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 88, ...),
+///   style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 88, ...),
 ///   direction: DissolveDirection.dissolve,   // sender: text → particles
 ///   controller: _animCtrl,
 ///   focalXFraction: 0.5,

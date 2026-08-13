@@ -221,19 +221,23 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   fonts:
-    # Satoshi is the single sans family: Regular/Medium for body & UI,
-    # Bold/Black for display & headline styles. No italics by design.
-    - family: Satoshi
+    # CircularStd is the single sans family: Book/Medium for body & UI,
+    # Bold/Black for display & headline styles. No italics by design —
+    # Circular Std has no Light cut, so the Book asset is registered
+    # twice (300 and 400) to give FontWeight.w300 requests a deterministic,
+    # non-synthesized match instead of falling back to Skia's nearest-weight
+    # matching.
+    - family: CircularStd
       fonts:
-        - asset: assets/fonts/Satoshi-Light.otf
+        - asset: assets/fonts/circular/CircularStd-Book.otf
           weight: 300
-        - asset: assets/fonts/Satoshi-Regular.otf
+        - asset: assets/fonts/circular/CircularStd-Book.otf
           weight: 400
-        - asset: assets/fonts/Satoshi-Medium.otf
+        - asset: assets/fonts/circular/CircularStd-Medium.otf
           weight: 500
-        - asset: assets/fonts/Satoshi-Bold.otf
+        - asset: assets/fonts/circular/CircularStd-Bold.otf
           weight: 700
-        - asset: assets/fonts/Satoshi-Black.otf
+        - asset: assets/fonts/circular/CircularStd-Black.otf
           weight: 900
   # DMMono block removed
 

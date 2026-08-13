@@ -203,7 +203,7 @@ class _ProfileContent extends StatelessWidget {
               Text(
                 profile.displayName,
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 26,
                   color: zt.textPrimary,
@@ -220,7 +220,7 @@ class _ProfileContent extends StatelessWidget {
                 Text(
                   profile.bio!,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 14,
                     color: zt.textSecondary,
                     height: 1.4,
@@ -315,7 +315,7 @@ class _ProfileContent extends StatelessWidget {
               child: Text(
                 '${profile.publicActivityCount} shared activities',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,
@@ -331,7 +331,7 @@ class _ProfileContent extends StatelessWidget {
               child: Text(
                 'Tap Activity to see shared posts',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 13,
                   color: zt.textSecondary,
                 ),
@@ -374,7 +374,7 @@ class _ActionButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -409,7 +409,7 @@ class _MutualContextCard extends StatelessWidget {
             "You've sent each other ${context.transactionCount} time${context.transactionCount == 1 ? '' : 's'}"
             " · \$${context.totalUsdc} total",
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               color: zt.accentBright,
             ),
@@ -445,7 +445,7 @@ class _StreakCard extends StatelessWidget {
                 Text(
                   '$streakWeeks week streak',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: zt.textPrimary,
@@ -478,13 +478,13 @@ class _ErrorState extends StatelessWidget {
         children: [
           Text(message,
               style: TextStyle(
-                  fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary)),
+                  fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 12),
           TextButton(
             onPressed: onRetry,
             child: Text('Retry',
                 style: TextStyle(
-                    fontFamily: 'Satoshi', fontSize: 14, color: zt.accent)),
+                    fontFamily: 'CircularStd', fontSize: 14, color: zt.accent)),
           ),
         ],
       ),

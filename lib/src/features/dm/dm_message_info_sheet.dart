@@ -100,7 +100,7 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                 Expanded(
                   child: Text(
                     'Message info',
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
                 GestureDetector(
@@ -132,7 +132,7 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
                           "Couldn't load message info",
-                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
                         ),
                       )
                     : Column(
@@ -143,7 +143,7 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Text(
                                 'Read receipts are only available for messages you sent.',
-                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary),
+                                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
                               ),
                             ),
                           if (isMe && _info?.readAt != null)
@@ -204,7 +204,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
             ),
           ),
           Text(

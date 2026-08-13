@@ -352,7 +352,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
               Text(
                 'Approve CLI access?',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 26,
                   color: zt.textPrimary,
@@ -362,13 +362,13 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
               Text(
                 _cliDisplayName ?? 'A CLI',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textSecondary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
               ),
               const SizedBox(height: 8),
               Text(
                 'is requesting access to create payment requests on your behalf.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
               ),
               const SizedBox(height: 28),
               SizedBox(
@@ -422,7 +422,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                 const SizedBox(height: 16),
                 Text(
                   'CLI access approved',
-                  style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 24, color: zt.textPrimary),
+                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 24, color: zt.textPrimary),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(width: double.infinity, child: PrimaryButton(label: 'Done', onPressed: _dismiss)),
@@ -441,7 +441,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
               children: [
                 Text(
                   'Access denied',
-                  style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 24, color: zt.textPrimary),
+                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 24, color: zt.textPrimary),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(width: double.infinity, child: PrimaryButton(label: 'Done', onPressed: _dismiss)),
@@ -468,7 +468,7 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                 Text(
                   _errorMessage ?? 'Something went wrong.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                  style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Close', onPressed: _dismiss)),

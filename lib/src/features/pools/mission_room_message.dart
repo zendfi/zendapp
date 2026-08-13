@@ -328,7 +328,7 @@ class _TextMessageRow extends StatelessWidget {
                           TextSpan(
                             text: message.content ?? '',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 15.5,
                               color: textColor,
                               height: 1.35,
@@ -483,7 +483,7 @@ class _ContributionEventRow extends StatelessWidget {
                   TextSpan(
                     text: message.content ?? '',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: zt.accent,

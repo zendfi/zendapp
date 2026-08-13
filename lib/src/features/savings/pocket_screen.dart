@@ -160,7 +160,7 @@ class _PocketScreenState extends State<PocketScreen> {
                   Text(
                     'Savings',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -213,7 +213,7 @@ class _PocketScreenState extends State<PocketScreen> {
             Text(
               'Something went wrong',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -224,7 +224,7 @@ class _PocketScreenState extends State<PocketScreen> {
               "We couldn't load your savings. Please try again.",
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 height: 1.45,
                 color: zt.textSecondary,
@@ -256,7 +256,7 @@ class _PocketScreenState extends State<PocketScreen> {
         Text(
           'Total savings',
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 13,
             fontWeight: FontWeight.w500,
             letterSpacing: 0.5,
@@ -269,7 +269,7 @@ class _PocketScreenState extends State<PocketScreen> {
         Text(
           '\$${_totalBalance.toStringAsFixed(2)}',
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 48,
             height: 1.04,
             fontWeight: FontWeight.w700,
@@ -290,7 +290,7 @@ class _PocketScreenState extends State<PocketScreen> {
             child: Text(
               apyStr,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: zt.accentBright,
@@ -345,7 +345,7 @@ class _PocketScreenState extends State<PocketScreen> {
           icon: const Icon(PhosphorIconsBold.plusCircle, size: 18),
           label: const Text(
             'New goal',
-            style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600),
+            style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600),
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: zt.accentBright,
@@ -372,7 +372,7 @@ class _PocketScreenState extends State<PocketScreen> {
                     label: const Text(
                       'Lock savings',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -405,7 +405,7 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       label,
       style: TextStyle(
-        fontFamily: 'Satoshi',
+        fontFamily: 'CircularStd',
         fontSize: 15,
         fontWeight: FontWeight.w700,
         color: zt.textPrimary,
@@ -437,7 +437,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             message,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -487,7 +487,7 @@ class _FreeSavingsCard extends StatelessWidget {
               Text(
                 'Stash',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: zt.textPrimary,
@@ -499,7 +499,7 @@ class _FreeSavingsCard extends StatelessWidget {
           Text(
             '\$${balance.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -509,7 +509,7 @@ class _FreeSavingsCard extends StatelessWidget {
           Text(
             'Earned \$${yield_.toStringAsFixed(2)} · Withdraw anytime',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               color: zt.textSecondary,
             ),
@@ -538,7 +538,7 @@ class _FreeSavingsCard extends StatelessWidget {
                   child: const Text(
                     'Cash out',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -641,7 +641,7 @@ class GoalCard extends StatelessWidget {
                             child: Text(
                               pocket.goalName ?? 'Goal',
                               style: TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: zt.textPrimary,
@@ -680,7 +680,7 @@ class GoalCard extends StatelessWidget {
                   Text(
                     _deadlineLabel,
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -712,7 +712,7 @@ class GoalCard extends StatelessWidget {
                     child: const Text(
                       'Withdraw',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -782,7 +782,7 @@ class LockCard extends StatelessWidget {
               Text(
                 isExpired ? 'Ready to withdraw' : 'Locked',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: isExpired ? ZendColors.accentBright : zt.textPrimary,
@@ -794,7 +794,7 @@ class LockCard extends StatelessWidget {
           Text(
             '\$${pocket.balanceUsd.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -805,7 +805,7 @@ class LockCard extends StatelessWidget {
             Text(
               'Until $_unlockDateLabel · $daysRemaining days left',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -814,7 +814,7 @@ class LockCard extends StatelessWidget {
             Text(
               'Unlocked on $_unlockDateLabel',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -854,7 +854,7 @@ class _ModeChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: zt.textSecondary,

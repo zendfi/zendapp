@@ -320,7 +320,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     child: Text(
                       'Activity',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -356,10 +356,10 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Filter by person or note…',
-                          hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                           prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
@@ -398,7 +398,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                                         ? 'No matches for "$_filterQuery"'
                                         : 'No activity yet',
                                     style: TextStyle(
-                                      fontFamily: 'Satoshi',
+                                      fontFamily: 'CircularStd',
                                       fontSize: 14,
                                       color: zt.textSecondary,
                                     ),
@@ -442,7 +442,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   'Could not load latest activity',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),
@@ -549,14 +549,14 @@ class _RequestsThreadTile extends StatelessWidget {
                   children: [
                     Text(
                       'Requests',
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       'Money asks between you and others',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -646,7 +646,7 @@ class _RequestsThreadSheet extends StatelessWidget {
             ),
             Text(
               'Requests',
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
@@ -746,7 +746,7 @@ class _PendingRowTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -756,7 +756,7 @@ class _PendingRowTile extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
                     ),
                   ],
                 ),
@@ -764,7 +764,7 @@ class _PendingRowTile extends StatelessWidget {
               Text(
                 amount,
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: zt.textPrimary,
@@ -836,7 +836,7 @@ class _UserThreadTile extends StatelessWidget {
                 title: Text(
                   'Message @${counterparty.displayLabel}',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -845,7 +845,7 @@ class _UserThreadTile extends StatelessWidget {
                 subtitle: Text(
                   'Open DM thread',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),
@@ -867,7 +867,7 @@ class _UserThreadTile extends StatelessWidget {
                 title: Text(
                   'View activity',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -918,7 +918,7 @@ class _UserThreadTile extends StatelessWidget {
       // failed instead of routing them somewhere unexplained.
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'Satoshi'))),
+          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'CircularStd'))),
         );
       }
     }
@@ -972,7 +972,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (isOutgoing) const TextSpan(text: 'You sent a Vibe ✨ to '),
                             if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
@@ -985,7 +985,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (isOutgoing) const TextSpan(text: 'You chipped into '),
                             if (!isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -999,7 +999,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Satoshi', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
                             TextSpan(
@@ -1018,7 +1018,7 @@ class _UserThreadTile extends StatelessWidget {
                         mostRecent.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
                     ],
                     const SizedBox(height: 6),
@@ -1126,7 +1126,7 @@ class _PoolThreadTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14.5, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
                         children: [
                           const TextSpan(text: 'You contributed to '),
                           TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -1285,7 +1285,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
           Text(
             '\$${gathered.toStringAsFixed(2)} of \$${target.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontWeight: FontWeight.w700,
               fontSize: 28,
               color: zt.textPrimary,
@@ -1305,7 +1305,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
           Text(
             'Contributors',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
@@ -1327,7 +1327,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                         PoolContributorExternalAnonymized(aggregateCount: final count) =>
                           '$count external contributor${count == 1 ? '' : 's'}',
                       },
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1389,11 +1389,11 @@ class _OverflowItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
                   ),
                 ],
               ),

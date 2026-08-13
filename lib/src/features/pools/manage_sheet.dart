@@ -80,7 +80,7 @@ class _ManageSheetState extends State<ManageSheet> {
           const Text(
             'Manage pool',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 24,
               fontWeight: FontWeight.w700,
             ),
@@ -122,7 +122,7 @@ class _ManageSheetState extends State<ManageSheet> {
                           const Text(
                             'Cancel pool',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: ZendColors.destructive,
@@ -132,7 +132,7 @@ class _ManageSheetState extends State<ManageSheet> {
                           Text(
                             'Closes the pool and Mission Room',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 12,
                               color: ZendTheme.of(context).textSecondary,
                             ),
@@ -162,7 +162,7 @@ class _ManageSheetState extends State<ManageSheet> {
                   Text(
                     'Cancel this pool?',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: ZendTheme.of(context).textPrimary,
@@ -174,7 +174,7 @@ class _ManageSheetState extends State<ManageSheet> {
                     'Contributors are not automatically refunded — contributions were sent '
                     'directly to your wallet.',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 14,
                       color: ZendTheme.of(context).textSecondary,
                       height: 1.5,
@@ -189,7 +189,7 @@ class _ManageSheetState extends State<ManageSheet> {
               Text(
                 _error!,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -214,7 +214,7 @@ class _ManageSheetState extends State<ManageSheet> {
                     ),
                     child: const Text(
                       'Go back',
-                      style: TextStyle(fontFamily: 'Satoshi'),
+                      style: TextStyle(fontFamily: 'CircularStd'),
                     ),
                   ),
                 ),
@@ -240,7 +240,7 @@ class _ManageSheetState extends State<ManageSheet> {
                         : const Text(
                             'Cancel pool',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontWeight: FontWeight.w600,
                             ),
                           ),

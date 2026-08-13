@@ -41,7 +41,7 @@ class ReceiveScreen extends StatelessWidget {
                   Text(
                     'Receive',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -91,7 +91,7 @@ class ReceiveScreen extends StatelessWidget {
                         child: Text(
                           'Customise your page',
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             color: zt.accent,
                             fontSize: 15,
                           ),

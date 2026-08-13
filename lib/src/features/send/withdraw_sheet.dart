@@ -191,7 +191,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             'Withdraw',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -295,7 +295,7 @@ class _DestinationStage extends StatelessWidget {
           Text(
             'Withdraw $amountFormatted to',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -376,7 +376,7 @@ class _DestinationTile extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -386,7 +386,7 @@ class _DestinationTile extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -424,7 +424,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     final decSize = compact ? 26.0 : 30.0;
 
     final wholeStyle = TextStyle(
-      fontFamily: 'Satoshi',
+      fontFamily: 'CircularStd',
       fontWeight: FontWeight.w700,
       color: zt.textPrimary,
       fontSize: wholeSize,
@@ -432,7 +432,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     );
 
     final currencyStyle = TextStyle(
-      fontFamily: 'Satoshi',
+      fontFamily: 'CircularStd',
       fontWeight: FontWeight.w700,
       color: zt.textSecondary,
       fontSize: wholeSize * 0.5,
@@ -440,7 +440,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     );
 
     final decStyle = TextStyle(
-      fontFamily: 'Satoshi',
+      fontFamily: 'CircularStd',
       fontWeight: FontWeight.w700,
       color: zt.textSecondary,
       fontSize: decSize,
@@ -526,7 +526,7 @@ class _WithdrawKeypad extends StatelessWidget {
                               : Text(
                                   keys[row * 3 + col],
                                   style: TextStyle(
-                                    fontFamily: 'Satoshi',
+                                    fontFamily: 'CircularStd',
                                     fontSize: 22,
                                     color: zt.textPrimary,
                                     fontWeight: FontWeight.w300,

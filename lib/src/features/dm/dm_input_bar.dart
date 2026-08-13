@@ -375,7 +375,7 @@ class _DmInputBarState extends State<DmInputBar>
                                   maxLines: 5,
                                   minLines: 1,
                                   style: TextStyle(
-                                    fontFamily: 'Satoshi',
+                                    fontFamily: 'CircularStd',
                                     fontSize: 15,
                                     color: zt.textPrimary,
                                     height: 1.35,
@@ -383,7 +383,7 @@ class _DmInputBarState extends State<DmInputBar>
                                   decoration: InputDecoration(
                                     hintText: 'Message',
                                     hintStyle: TextStyle(
-                                      fontFamily: 'Satoshi',
+                                      fontFamily: 'CircularStd',
                                       fontSize: 15,
                                       color: zt.textSecondary.withValues(alpha: 0.55),
                                     ),
@@ -542,7 +542,7 @@ class _DmInputBarState extends State<DmInputBar>
               ),
               const SizedBox(width: 8),
               Expanded(child: Text('Set amount',
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
               Text('\$0.01 – \$5',
                 style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
             ],
@@ -580,7 +580,7 @@ class _DmInputBarState extends State<DmInputBar>
                         Text(
                           displayAmount,
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontWeight: FontWeight.w700,
                             fontSize: 52,
                             color: isOverLimit ? ZendColors.destructive : zt.textPrimary,
@@ -630,7 +630,7 @@ class _DmInputBarState extends State<DmInputBar>
                     onTap: () => setState(() { _vibeCustomMode = true; _vibeCustomInput = ''; }),
                     child: Text('Custom',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary, fontWeight: FontWeight.w500)),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary, fontWeight: FontWeight.w500)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -642,7 +642,7 @@ class _DmInputBarState extends State<DmInputBar>
             Text(
               _vibeCustomInput.isEmpty ? '\$—' : '\$$_vibeCustomInput',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 44,
                 color: isOverLimit ? ZendColors.destructive : zt.textPrimary,
@@ -650,7 +650,7 @@ class _DmInputBarState extends State<DmInputBar>
               ),
             ),
             if (isOverLimit)
-              Text('Max \$5.00', style: const TextStyle(fontFamily: 'Satoshi', fontSize: 11, color: ZendColors.destructive)),
+              Text('Max \$5.00', style: const TextStyle(fontFamily: 'CircularStd', fontSize: 11, color: ZendColors.destructive)),
             const SizedBox(height: 8),
             _keypad(zt),
             const SizedBox(height: 8),
@@ -659,7 +659,7 @@ class _DmInputBarState extends State<DmInputBar>
                 child: GestureDetector(
                   onTap: () => setState(() { _vibeCustomMode = false; _vibeCustomInput = ''; }),
                   child: Text('← Dial', textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary)),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -683,7 +683,7 @@ class _DmInputBarState extends State<DmInputBar>
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeAmount),
                 child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
-              Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
+              Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
               Text('\$${_vibeAmount.toStringAsFixed(2)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
             ],
           ),
@@ -733,7 +733,7 @@ class _DmInputBarState extends State<DmInputBar>
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeSticker),
                 child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
-              Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
+              Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
             ],
           ),
           const Spacer(),
@@ -750,7 +750,7 @@ class _DmInputBarState extends State<DmInputBar>
               style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0xFFFF6B9D), fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 4),
-          Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
+          Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
           const Spacer(),
           SizedBox(
             width: double.infinity,
@@ -766,7 +766,7 @@ class _DmInputBarState extends State<DmInputBar>
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(_selectedSticker?.emoji ?? '✨', style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 8),
-                const Text('Send Vibe', style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w700)),
+                const Text('Send Vibe', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700)),
               ]),
             ),
           ),
@@ -793,7 +793,7 @@ class _DmInputBarState extends State<DmInputBar>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
-      child: Text(label, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w700)),
+      child: Text(label, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w700)),
     ),
   );
 
@@ -853,7 +853,7 @@ class _MonoActionTile extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: zt.textPrimary,

@@ -40,7 +40,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                       Text(
                         'No banks connected',
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary,
@@ -51,7 +51,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                         'Bank accounts you use for withdrawals will appear here automatically.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: zt.textSecondary,
                           height: 1.4,
@@ -88,7 +88,7 @@ class _ProfileHeader extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,

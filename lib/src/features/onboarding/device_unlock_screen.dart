@@ -213,7 +213,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
               const Text(
                 'Unlock Zend',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
@@ -224,7 +224,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 'Enter your PIN to unlock this device',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -251,7 +251,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),
@@ -277,7 +277,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                   label: const Text('Use biometrics'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0x99E8F4EC),
-                    textStyle: const TextStyle(fontFamily: 'Satoshi', fontSize: 13),
+                    textStyle: const TextStyle(fontFamily: 'CircularStd', fontSize: 13),
                   ),
                 ),
               ],

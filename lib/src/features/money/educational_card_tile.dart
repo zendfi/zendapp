@@ -35,7 +35,7 @@ class EducationalCardTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,

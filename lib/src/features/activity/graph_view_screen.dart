@@ -132,7 +132,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                     child: Text(
                       'Your Mutuals',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -154,7 +154,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                       ? Center(
                           child: Text(
                             'No relationships to visualize yet',
-                            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                           ),
                         )
                       : LayoutBuilder(
@@ -464,7 +464,7 @@ class _LabeledNode extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Satoshi', fontSize: 10, color: zt.textSecondary),
+            style: TextStyle(fontFamily: 'CircularStd', fontSize: 10, color: zt.textSecondary),
           ),
         ),
       ],
@@ -518,7 +518,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
             Text(
               '${widget.nodes.length} more relationships',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: zt.textSecondary,
@@ -539,7 +539,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                       photoUrl: node.avatarUrl,
                       initials: node.initialLetter,
                     ),
-                    title: Text(node.label, style: TextStyle(fontFamily: 'Satoshi', color: zt.textPrimary)),
+                    title: Text(node.label, style: TextStyle(fontFamily: 'CircularStd', color: zt.textPrimary)),
                   );
                 },
               ),
@@ -550,7 +550,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                 onPressed: () => setState(() => _visibleCount += _pageSize),
                 child: Text(
                   'Load more',
-                  style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600, color: zt.accent),
+                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: zt.accent),
                 ),
               ),
             ],

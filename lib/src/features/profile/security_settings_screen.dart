@@ -142,14 +142,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   const SizedBox(width: 14),
                   Text(
                     'Enable biometric unlock',
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               Text(
                 'Biometrics are linked to your PIN on this device. To enable them:',
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary, height: 1.4),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary, height: 1.4),
               ),
               const SizedBox(height: 20),
               _BiometricStep(number: 1, text: 'Lock the app by pressing the home button or letting the screen time out.', zt: zt),
@@ -222,7 +222,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     'Security',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontWeight: FontWeight.w700,
                       fontSize: 24,
                       color: zt.textPrimary,
@@ -327,7 +327,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                                   ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
                                   : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -368,7 +368,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               ? "PIN recovery is set up. If you forget your PIN, you can verify your ID to get back in."
                               : "Set this up once so you're never locked out if you forget your PIN.",
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -401,7 +401,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         child: Text(
                           "Save a backup before switching phones so you don't lose access to your money.",
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -444,7 +444,7 @@ class _BiometricStep extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary, height: 1.4),
+            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary, height: 1.4),
           ),
         ),
       ],
@@ -478,7 +478,7 @@ class _AmountInput extends StatelessWidget {
           Text(
             'Require PIN above',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -517,7 +517,7 @@ class _AmountInput extends StatelessWidget {
             child: Text(
               'Save',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: zt.accentBright,
@@ -544,7 +544,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -606,7 +606,7 @@ class _Tile extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -653,7 +653,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -662,7 +662,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),

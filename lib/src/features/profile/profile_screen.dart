@@ -52,7 +52,7 @@ class ProfileScreen extends StatelessWidget {
                     child: Text(
                       'Profile',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 24,
                         color: zt.textPrimary,
@@ -90,7 +90,7 @@ class ProfileScreen extends StatelessWidget {
                                     Text(
                                       displayName,
                                       style: TextStyle(
-                                        fontFamily: 'Satoshi',
+                                        fontFamily: 'CircularStd',
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                         color: zt.textPrimary,
@@ -235,7 +235,7 @@ class ProfileScreen extends StatelessWidget {
                               const Text(
                                 'Log out',
                                 style: TextStyle(
-                                  fontFamily: 'Satoshi',
+                                  fontFamily: 'CircularStd',
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: ZendColors.destructive,
@@ -318,7 +318,7 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
                   Expanded(
                     child: Text(
                       'Online status & last seen',
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
                     ),
                   ),
                   if (_saving) ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
@@ -342,8 +342,8 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(option.$2, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                            Text(option.$3, style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
+                            Text(option.$2, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                            Text(option.$3, style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
                           ],
                         ),
                       ),
@@ -376,7 +376,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -448,7 +448,7 @@ class _Tile extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -492,7 +492,7 @@ class _ToggleTile extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: zt.textPrimary,
@@ -561,7 +561,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               Text(
                 'Profile photo',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: zt.textPrimary,
@@ -717,7 +717,7 @@ class _PickerRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: color,
@@ -767,7 +767,7 @@ Future<void> _confirmLogout(BuildContext context) async {
             Text(
               'Log out?',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
                 color: zt.textPrimary,
@@ -777,7 +777,7 @@ Future<void> _confirmLogout(BuildContext context) async {
             Text(
               "You'll need to sign in again to access your account.",
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 color: zt.textSecondary,
                 height: 1.4,
@@ -795,7 +795,7 @@ Future<void> _confirmLogout(BuildContext context) async {
               style: TextButton.styleFrom(foregroundColor: zt.textSecondary),
               child: const Text(
                 'Cancel',
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15),
               ),
             ),
             const SizedBox(height: 4),
@@ -877,7 +877,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         child: Text(
                           'Be Discoverable',
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: zt.textPrimary,
@@ -905,7 +905,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                           ? 'Broadcasting a secure Bluetooth signal. Nearby Zend users can send you money via Drop automatically.'
                           : 'Let nearby Zend users send you money via Drop — no sharing your zendtag needed.',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 12,
                         color: zt.textSecondary,
                         height: 1.4,
@@ -954,7 +954,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                               child: Text(
                                 service.lastError!,
                                 style: const TextStyle(
-                                  fontFamily: 'Satoshi',
+                                  fontFamily: 'CircularStd',
                                   fontSize: 11,
                                   color: ZendColors.destructive,
                                   height: 1.4,

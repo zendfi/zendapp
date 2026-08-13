@@ -473,7 +473,7 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
                     child: Text(
                       '\$${amountUsdc.toStringAsFixed(2)}',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 32,
                         color: zt.bgPrimary,
@@ -528,7 +528,7 @@ class _RevealedVibe extends StatelessWidget {
           Text(
             '\$${amountUsdc.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontWeight: FontWeight.w700,
               fontSize: 22,
               color: zt.accent,

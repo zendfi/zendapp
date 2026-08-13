@@ -133,7 +133,7 @@ class _FallbackCircle extends StatelessWidget {
           ? Text(
               initials![0].toUpperCase(),
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: radius * 0.72,
                 fontWeight: FontWeight.w600,
                 color: _contrastColor(bgColor),

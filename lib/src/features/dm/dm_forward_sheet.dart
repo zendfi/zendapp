@@ -89,7 +89,7 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
                   Expanded(
                     child: Text(
                       'Forward to',
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 20, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 20, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                   ),
                   GestureDetector(
@@ -104,10 +104,10 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
                 onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Search chats',
-                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
+                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
                   prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
@@ -124,7 +124,7 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
                       ? Center(
                           child: Text(
                             _query.isEmpty ? 'No chats yet' : 'No chats matching "$_query"',
-                            style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                           ),
                         )
                       : ListView.builder(
@@ -139,7 +139,7 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
                               leading: ZendAvatar(radius: 20, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
                               title: Text(
                                 cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
                               ),
                               subtitle: Text(
                                 '@${cp.zendtag}',

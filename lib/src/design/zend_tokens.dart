@@ -150,7 +150,7 @@ class ZendTextStyles {
   /// Use anywhere digits need to stay a fixed width — OTP boxes, PIN dots,
   /// balances, phone number input. Replaces the old DMMono usage.
   static const TextStyle tabularNumeric = TextStyle(
-    fontFamily: 'Satoshi',
+    fontFamily: 'CircularStd',
     fontFeatures: [FontFeature.tabularFigures()],
   );
 }

@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const TextSpan(
                               text: 'hi ',
                               style: TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 color: ZendColors.textOnDeep,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
@@ -208,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             TextSpan(
                               text: '@${model.username}',
                               style: const TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 color: ZendColors.textOnDeep,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
@@ -344,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         key: const Key('zend-hero-balance-text'),
                                         model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
                                         style: TextStyle(
-                                          fontFamily: 'Satoshi',
+                                          fontFamily: 'CircularStd',
                                           color: ZendColors.textOnDeep,
                                           fontSize: balanceSize,
                                           height: 1.0,
@@ -387,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   key: const Key('zend-hero-balance-collapsed-text'),
                                   model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    fontFamily: 'Satoshi',
+                                    fontFamily: 'CircularStd',
                                     color: ZendColors.textOnDeep,
                                     fontSize: balanceSize,
                                     height: 1.0,
@@ -458,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Builder(builder: (context) {
                                   final zt = ZendTheme.of(context);
                                   return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                    Text('Recent', style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                                    Text('Recent', style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
                                     GestureDetector(
                                       onTap: widget.onViewAll,
                                       child: Text('view all', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent)),
@@ -563,16 +563,16 @@ class _TransactionRow extends StatelessWidget {
             Text(name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(height: 3),
             Text(note,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary)),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary)),
           ])),
           const SizedBox(width: 8),
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-            Text(amount, style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
+            Text(amount, style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
             const SizedBox(height: 4),
             Text(time, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
           ]),
@@ -622,7 +622,7 @@ class _SavingsCard extends StatelessWidget {
                 Text(
                   apyStr,
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontWeight: FontWeight.w700,
                     fontSize: 32,
                     height: 0.98,
@@ -744,7 +744,7 @@ class _PoolsCard extends StatelessWidget {
                     Text(
                       totalStr,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 32,
                         height: 0.98,

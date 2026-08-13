@@ -78,7 +78,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
           Text(
             'Personal note',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: zt.textSecondary,
@@ -94,14 +94,14 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             ],
             onChanged: (_) => setState(() {}),
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 14,
               color: zt.textPrimary,
             ),
             decoration: InputDecoration(
               hintText: 'Add a personal message...',
               hintStyle: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
@@ -136,7 +136,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
           Text(
             'Theme colour',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: zt.textSecondary,

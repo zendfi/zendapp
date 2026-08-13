@@ -301,7 +301,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                 _heading,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
@@ -312,7 +312,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                 _subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -342,7 +342,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

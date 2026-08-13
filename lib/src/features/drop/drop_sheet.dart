@@ -917,7 +917,7 @@ class _NoteField extends StatelessWidget {
             Text(
               hasNote ? preview! : 'Add note',
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -946,7 +946,7 @@ class _NoteField extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Add a note…',
                   hintStyle: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -959,7 +959,7 @@ class _NoteField extends StatelessWidget {
                   filled: false,
                 ),
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: zt.textPrimary,
                 ),

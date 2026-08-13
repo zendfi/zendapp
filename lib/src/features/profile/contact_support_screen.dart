@@ -41,7 +41,7 @@ class ContactSupportScreen extends StatelessWidget {
                           Text(
                             'We respond in under 2 hours',
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: zt.accentBright,
@@ -146,7 +146,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: zt.textPrimary,
@@ -155,7 +155,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),
@@ -216,7 +216,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -245,7 +245,7 @@ class _ProfileHeader extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,

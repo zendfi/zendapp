@@ -927,7 +927,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Original message not found', style: TextStyle(fontFamily: 'Satoshi')),
+              content: Text('Original message not found', style: TextStyle(fontFamily: 'CircularStd')),
               duration: Duration(seconds: 2),
             ),
           );
@@ -1024,7 +1024,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     child: Text(
                       _unseenWhileScrolledUp > 9 ? '9+' : '$_unseenWhileScrolledUp',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Satoshi', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                      style: const TextStyle(fontFamily: 'CircularStd', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
                     ),
                   ),
                 ),
@@ -1077,7 +1077,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'Satoshi')),
+        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'CircularStd')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -1108,7 +1108,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'Satoshi')),
+          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'CircularStd')),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -1116,7 +1116,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'Satoshi')),
+          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'CircularStd')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1138,19 +1138,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: zt.bgElevated,
-        title: const Text('Delete message?', style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700)),
+        title: const Text('Delete message?', style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700)),
         content: const Text(
           'This message will be deleted for everyone in this chat.',
-          style: TextStyle(fontFamily: 'Satoshi'),
+          style: TextStyle(fontFamily: 'CircularStd'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Satoshi')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'CircularStd')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Satoshi', color: ZendColors.destructive)),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'CircularStd', color: ZendColors.destructive)),
           ),
         ],
       ),
@@ -1170,7 +1170,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       setState(() => _messages[idx].isDeleted = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'Satoshi')),
+          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'CircularStd')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1302,7 +1302,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Request from', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                         ],
                       ),
                     ],
@@ -1319,7 +1319,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('\$', style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
+                            Text('\$', style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
                             const SizedBox(width: 4),
                             Flexible(
                               child: TextField(
@@ -1327,10 +1327,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 autofocus: true,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
+                                style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
                                 decoration: InputDecoration(
                                   hintText: '0',
-                                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
+                                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
                                   border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
                                 ),
                                 onChanged: (_) => setModalState(() => errorMsg = null),
@@ -1340,7 +1340,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         ),
                       ),
                       if (errorMsg != null)
-                        Text(errorMsg!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive)),
+                        Text(errorMsg!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
                     ],
                   ),
                 ),
@@ -1350,10 +1350,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: TextField(
                     controller: noteCtrl,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Add a note…',
-                      hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
+                      hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
                       filled: true, fillColor: zt.bgPrimary,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1393,7 +1393,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('Send request', style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700)),
+                      child: const Text('Send request', style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ),
@@ -1499,7 +1499,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -1527,11 +1527,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         });
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'Satoshi')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'CircularStd')), backgroundColor: zt.bgSecondary),
         );
       case _ChatMenuAction.block:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'Satoshi')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'CircularStd')), backgroundColor: zt.bgSecondary),
         );
     }
   }
@@ -1858,7 +1858,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               Flexible(
                                 child: Text(
                                   cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                  style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                                  style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1911,7 +1911,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
                     ),
                     const SizedBox(width: 8),
-                    Text('Reconnecting...', style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textSecondary)),
+                    Text('Reconnecting...', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
                   ],
                 ),
               ),
@@ -1929,7 +1929,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   child: Text(
                     'Could not connect. Tap to retry.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textPrimary),
                   ),
                 ),
               ),
@@ -2175,7 +2175,7 @@ class _SecuringChatStrip extends StatelessWidget {
           Text(
             'Securing chat…',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 12,
               color: zt.textSecondary,
               fontWeight: FontWeight.w500,
@@ -2210,7 +2210,7 @@ class _PresenceLabel extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            fontFamily: 'Satoshi',
+            fontFamily: 'CircularStd',
             fontSize: 11,
             color: color,
             fontWeight: FontWeight.w500,
@@ -2331,7 +2331,7 @@ class _ReplyStrip extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 13,
                               color: zt.textSecondary,
                               height: 1.2,
@@ -2557,7 +2557,7 @@ class _DateSeparator extends StatelessWidget {
           child: Text(
             _label(),
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),

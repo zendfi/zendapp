@@ -351,7 +351,7 @@ class _ActionMenu extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: color),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: color),
                   ),
                 ),
                 Icon(icon, size: 18, color: color),

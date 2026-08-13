@@ -9,7 +9,7 @@ import '../../design/zend_tokens.dart';
 const _kDropBackground = Color(0xFF080808);
 
 const _kAmountStyle = TextStyle(
-  fontFamily: 'Satoshi',
+  fontFamily: 'CircularStd',
   fontWeight: FontWeight.w700,
   fontSize: 88,
   color: Colors.white,

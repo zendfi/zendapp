@@ -312,7 +312,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               Text(
                 'Create a pool',
                 style: TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -327,7 +327,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   Text(
                     'Goal amount',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -337,7 +337,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     controller: _amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontWeight: FontWeight.w700,
                       fontSize: 36,
                       color: zt.textPrimary,
@@ -345,14 +345,14 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     decoration: InputDecoration(
                       prefixText: '\$',
                       prefixStyle: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 24,
                         color: zt.textSecondary,
                       ),
                       hintText: '0.00',
                       hintStyle: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontWeight: FontWeight.w700,
                         fontSize: 36,
                         color: zt.textSecondary.withValues(alpha: 0.4),
@@ -386,7 +386,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 }),
                 decoration: InputDecoration(
                   hintText: 'Pool name',
-                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -398,7 +398,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xxs),
               Align(
@@ -410,13 +410,13 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ),
               if (_nameError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_nameError!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive)),
+                Text(_nameError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
               Text(
                 'Add participants',
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
@@ -427,7 +427,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'No recent Zend users yet',
-                    style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
                   ),
                 )
               else
@@ -460,7 +460,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 onSubmitted: _addZendUser,
                 decoration: InputDecoration(
                   hintText: 'Add @username',
-                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                   prefixIcon: Icon(PhosphorIconsBold.userPlus, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
@@ -473,7 +473,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.md),
 
@@ -486,7 +486,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 onSubmitted: _addExternalContact,
                 decoration: InputDecoration(
                   hintText: 'Email or phone number',
-                  hintStyle: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
                   prefixIcon: Icon(PhosphorIconsBold.mailbox, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
@@ -499,7 +499,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
@@ -516,7 +516,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                         child: Text(
                           p.avatarLabel,
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: p.isExternal ? zt.textPrimary : ZendColors.textOnDeep,
@@ -525,7 +525,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                       ),
                       label: Text(
                         p.displayName,
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textPrimary),
                       ),
                       deleteIcon: Icon(PhosphorIconsBold.xCircle, size: 16, color: zt.textSecondary),
                       onDeleted: () => _removeParticipant(index),
@@ -546,7 +546,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ],
               if (_participantError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_participantError!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive)),
+                Text(_participantError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
@@ -559,7 +559,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ),
               if (_deadlineError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_deadlineError!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 12, color: ZendColors.destructive)),
+                Text(_deadlineError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
               ],
 
               const SizedBox(height: ZendSpacing.md),
@@ -582,7 +582,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                               Text(
                                 'Allow anyone to contribute via link',
                                 style: TextStyle(
-                                  fontFamily: 'Satoshi',
+                                  fontFamily: 'CircularStd',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: zt.textPrimary,
@@ -592,7 +592,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                               Text(
                                 'Share a link so anyone can chip in',
                                 style: TextStyle(
-                                  fontFamily: 'Satoshi',
+                                  fontFamily: 'CircularStd',
                                   fontSize: 12,
                                   color: zt.textSecondary,
                                 ),
@@ -615,7 +615,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               const Spacer(),
 
               if (_createError != null) ...[
-                Text(_createError!, style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: ZendColors.destructive)),
+                Text(_createError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: ZendColors.destructive)),
                 const SizedBox(height: ZendSpacing.xs),
               ],
 
@@ -648,7 +648,7 @@ class _TappableRow extends StatelessWidget {
         decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.sm)),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textPrimary))),
+            Expanded(child: Text(label, style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary))),
             trailing,
           ],
         ),
@@ -666,7 +666,7 @@ class _SectionLabel extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Text(
       label.toUpperCase(),
-      style: TextStyle(fontFamily: 'Satoshi', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
+      style: TextStyle(fontFamily: 'CircularStd', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
     );
   }
 }
@@ -696,11 +696,11 @@ class _SelectableContactTile extends StatelessWidget {
               backgroundColor: selected ? zt.accent : zt.bgSecondary,
               child: Text(
                 participant.avatarLabel,
-                style: TextStyle(fontFamily: 'Satoshi', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
+                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textPrimary))),
+            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary))),
             if (selected) Icon(PhosphorIconsBold.checkCircle, size: 20, color: zt.accentBright),
           ],
         ),

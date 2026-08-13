@@ -91,13 +91,13 @@ class _UsernameScreenState extends State<UsernameScreen> {
                     const SizedBox(height: 40),
                     Text(
                       _showingReservedBadge ? 'Your @, as you reserved it.' : 'Choose your @',
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     if (_showingReservedBadge) ...[
                       const SizedBox(height: 6),
                       Text(
                         "We held it for you. Keep it, or pick a different one.",
-                        style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, color: zt.textSecondary, height: 1.5),
+                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary, height: 1.5),
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -161,7 +161,7 @@ class _UsernameScreenState extends State<UsernameScreen> {
                     const SizedBox(height: 10),
                     Text(
                       "This is how people find you on Zend!",
-                      style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary, height: 1.4),
+                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary, height: 1.4),
                     ),
                     const SizedBox(height: 16),
                     _PreviewCard(username: username),
@@ -208,7 +208,7 @@ class _PreviewCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your Zend! tag', style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              Text('Your Zend! tag', style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textPrimary)),
               const SizedBox(height: 2),
               Text('zdfi.me/@', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
               Text(safeUsername, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),

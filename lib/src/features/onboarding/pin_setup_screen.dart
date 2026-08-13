@@ -200,7 +200,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
               Text(
                 'Set your transfer PIN',
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
@@ -213,7 +213,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                     : 'Re-enter your PIN to confirm',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -241,7 +241,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

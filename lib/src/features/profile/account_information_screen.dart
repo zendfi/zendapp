@@ -98,7 +98,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: zt.textPrimary,
@@ -136,7 +136,7 @@ class _ProfileHeader extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,
@@ -161,7 +161,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,

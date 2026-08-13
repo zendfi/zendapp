@@ -64,7 +64,7 @@ class PoolListDrawer extends StatelessWidget {
           Text(
             'Pools',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -93,7 +93,7 @@ class PoolListDrawer extends StatelessWidget {
                   Text(
                     'Create Pool',
                     style: TextStyle(
-                      fontFamily: 'Satoshi',
+                      fontFamily: 'CircularStd',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: zt.accentBright,
@@ -124,14 +124,14 @@ class PoolListDrawer extends StatelessWidget {
           children: [
             Text(
               'Failed to load pools',
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
             ),
             const SizedBox(height: ZendSpacing.sm),
             TextButton(
               onPressed: () => model.fetchPools(),
               child: Text(
                 'Retry',
-                style: TextStyle(fontFamily: 'Satoshi', fontWeight: FontWeight.w600, color: zt.accentBright),
+                style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: zt.accentBright),
               ),
             ),
           ],
@@ -148,7 +148,7 @@ class PoolListDrawer extends StatelessWidget {
       return Center(
         child: Text(
           'No pools yet',
-          style: TextStyle(fontFamily: 'Satoshi', fontSize: 15, color: zt.textSecondary),
+          style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
         ),
       );
     }
@@ -203,7 +203,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -239,7 +239,7 @@ class PoolStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,

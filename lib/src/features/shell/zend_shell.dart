@@ -769,7 +769,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                         Text(
                           '@${n.requesterZendtag} is requesting ${n.formattedAmount}',
                           style: const TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFFF0F0F0),
@@ -782,7 +782,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                           Text(
                             n.description!,
                             style: const TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 11,
                               color: Color(0x99F0F0F0),
                             ),
@@ -806,7 +806,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       child: const Text(
                         'Pay',
                         style: TextStyle(
-                          fontFamily: 'Satoshi',
+                          fontFamily: 'CircularStd',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: ZendColors.bgDeep,
@@ -895,7 +895,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   Expanded(
                     child: Text(
                       '@${n.reactorZendtag} reacted ${n.emoji} to your activity',
-                      style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                      style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -980,13 +980,13 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                       children: [
                         Text(
                           '@${n.authorZendtag} commented on your activity',
-                          style: const TextStyle(fontFamily: 'Satoshi', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                          style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           n.body,
-                          style: const TextStyle(fontFamily: 'Satoshi', fontSize: 11, color: Color(0x99F0F0F0)),
+                          style: const TextStyle(fontFamily: 'CircularStd', fontSize: 11, color: Color(0x99F0F0F0)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1081,7 +1081,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                           Text(
                             '@${widget.senderZendtag}',
                             style: const TextStyle(
-                                fontFamily: 'Satoshi',
+                                fontFamily: 'CircularStd',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFFF0F0F0)),
@@ -1090,7 +1090,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                             Text(
                               widget.preview,
                               style: const TextStyle(
-                                  fontFamily: 'Satoshi',
+                                  fontFamily: 'CircularStd',
                                   fontSize: 11,
                                   color: Color(0x99F0F0F0)),
                               maxLines: 1,

@@ -92,7 +92,7 @@ class _InitialsBadge extends StatelessWidget {
       child: Text(
         country.initials,
         style: TextStyle(
-          fontFamily: 'Satoshi',
+          fontFamily: 'CircularStd',
           fontSize: size * 0.27,
           fontWeight: FontWeight.w700,
           color: Colors.white,

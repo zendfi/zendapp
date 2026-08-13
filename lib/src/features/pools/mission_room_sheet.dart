@@ -52,7 +52,7 @@ class _MissionRoomSheet extends StatelessWidget {
                           child: Text(
                             pool.name,
                             style: TextStyle(
-                              fontFamily: 'Satoshi',
+                              fontFamily: 'CircularStd',
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: ZendTheme.of(context).textPrimary,

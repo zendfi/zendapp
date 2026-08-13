@@ -60,7 +60,7 @@ class PrimaryButton extends StatelessWidget {
             : Text(
                 label,
                 style: const TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -92,7 +92,7 @@ class OutlineActionButton extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 15,
               fontWeight: FontWeight.w600),
         ),
@@ -319,13 +319,13 @@ class ZendErrorState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Satoshi', fontSize: 13, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),

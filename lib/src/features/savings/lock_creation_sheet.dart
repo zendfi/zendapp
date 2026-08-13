@@ -285,7 +285,7 @@ class _AmountDateStage extends StatelessWidget {
           Text(
             'Lock savings',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -295,7 +295,7 @@ class _AmountDateStage extends StatelessWidget {
           Text(
             'Moving from Stash · Available: \$${freePocketBalance.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               color: zt.textSecondary,
             ),
@@ -306,7 +306,7 @@ class _AmountDateStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'Satoshi',
+                fontFamily: 'CircularStd',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -318,7 +318,7 @@ class _AmountDateStage extends StatelessWidget {
               child: Text(
                 amountError!,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -350,7 +350,7 @@ class _AmountDateStage extends StatelessWidget {
                           ? 'Unlock on ${_formatDate(unlockDate!)}'
                           : 'Pick unlock date',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 14,
                         color: unlockDate != null
                             ? zt.textPrimary
@@ -369,7 +369,7 @@ class _AmountDateStage extends StatelessWidget {
               child: Text(
                 dateError!,
                 style: const TextStyle(
-                  fontFamily: 'Satoshi',
+                  fontFamily: 'CircularStd',
                   fontSize: 12,
                   color: ZendColors.destructive,
                 ),
@@ -454,7 +454,7 @@ class _ConfirmStage extends StatelessWidget {
                     Text(
                       'Locking \$${amountUsd.toStringAsFixed(2)}',
                       style: TextStyle(
-                        fontFamily: 'Satoshi',
+                        fontFamily: 'CircularStd',
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -466,7 +466,7 @@ class _ConfirmStage extends StatelessWidget {
                 Text(
                   'Moving from Stash · Locked until ${_formatDate(unlockDate)}',
                   style: TextStyle(
-                    fontFamily: 'Satoshi',
+                    fontFamily: 'CircularStd',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -498,7 +498,7 @@ class _ConfirmStage extends StatelessWidget {
             errorMessage ?? pinError ?? 'Confirm with your PIN',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Satoshi',
+              fontFamily: 'CircularStd',
               fontSize: 13,
               color: (pinError != null || errorMessage != null)
                   ? ZendColors.destructive
@@ -546,7 +546,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'Satoshi',
+                            fontFamily: 'CircularStd',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,
