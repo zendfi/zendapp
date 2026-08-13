@@ -657,10 +657,10 @@ class _BalanceNavItem extends StatelessWidget {
                               // Slightly larger than the original 16px — the
                               // 26px icon glyphs on the other three tabs read
                               // heavier than plain 16px digits at the same
-                              // fontWeight, so bumping to 17px + tabular
+                              // fontWeight, so bumping to 18px + tabular
                               // figures keeps the balance text's optical
                               // weight in the same range as its siblings.
-                              fontSize: 17,
+                              fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: color,
                               height: 1.0,
