@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import 'wallet_service.dart';
 
 /// Result of validating a locally-stored session against the backend.
 ///
@@ -27,11 +28,14 @@ class AuthService {
   static const _walletAddressKey = 'zend_wallet_address';
   static const _avatarUrlKey = 'zend_avatar_url';
 
-  String? _otpSessionId;       // In-memory only
-  String? _verificationToken;  // In-memory only
+  String? _otpSessionId; // In-memory only
+  String? _verificationToken; // In-memory only
 
-  AuthService({required ApiClient apiClient, required FlutterSecureStorage secureStorage})
-      : _apiClient = apiClient, _secureStorage = secureStorage;
+  AuthService({
+    required ApiClient apiClient,
+    required FlutterSecureStorage secureStorage,
+  }) : _apiClient = apiClient,
+       _secureStorage = secureStorage;
 
   Future<String> requestOtp(String phoneNumber) async {
     final response = await _apiClient.requestOtp(phoneNumber);
@@ -46,22 +50,32 @@ class AuthService {
   }
 
   Future<OtpVerifyResponse> verifyOtp(String code) async {
-    if (_otpSessionId == null) throw StateError('No OTP session. Call requestOtp first.');
+    if (_otpSessionId == null) {
+      throw StateError('No OTP session. Call requestOtp first.');
+    }
     final response = await _apiClient.verifyOtp(_otpSessionId!, code);
     _verificationToken = response.verificationToken;
     return response;
   }
 
   Future<RegisterResponse> register(String displayName, String zendtag) async {
-    if (_verificationToken == null) throw StateError('No verification token. Call verifyOtp first.');
-    final response = await _apiClient.register(_verificationToken!, displayName, zendtag);
+    if (_verificationToken == null) {
+      throw StateError('No verification token. Call verifyOtp first.');
+    }
+    final response = await _apiClient.register(
+      _verificationToken!,
+      displayName,
+      zendtag,
+    );
     await _secureStorage.write(key: _tokenKey, value: response.sessionToken);
     _verificationToken = null;
     return response;
   }
 
   Future<AuthResponse> signIn() async {
-    if (_verificationToken == null) throw StateError('No verification token. Call verifyOtp first.');
+    if (_verificationToken == null) {
+      throw StateError('No verification token. Call verifyOtp first.');
+    }
     final response = await _apiClient.signIn(_verificationToken!);
     await _secureStorage.write(key: _tokenKey, value: response.sessionToken);
     _verificationToken = null;
@@ -121,9 +135,15 @@ class AuthService {
   Future<void> _saveUserIdentity(UserProfileResponse profile) async {
     await _secureStorage.write(key: _userIdKey, value: profile.userId);
     await _secureStorage.write(key: _zendtagKey, value: profile.zendtag);
-    await _secureStorage.write(key: _displayNameKey, value: profile.displayName);
+    await _secureStorage.write(
+      key: _displayNameKey,
+      value: profile.displayName,
+    );
     if (profile.walletAddress != null) {
-      await _secureStorage.write(key: _walletAddressKey, value: profile.walletAddress!);
+      await _secureStorage.write(
+        key: _walletAddressKey,
+        value: profile.walletAddress!,
+      );
     }
     // Persist avatar URL — write null as empty string, restore as null
     await _secureStorage.write(
@@ -167,10 +187,7 @@ class AuthService {
     await _secureStorage.delete(key: _displayNameKey);
     await _secureStorage.delete(key: _walletAddressKey);
     await _secureStorage.delete(key: _avatarUrlKey);
-    await _secureStorage.delete(key: 'zend_wallet_encrypted_private_key');
-    await _secureStorage.delete(key: 'zend_wallet_public_key');
-    await _secureStorage.delete(key: 'zend_pin_salt');
-    await _secureStorage.delete(key: 'zend_encryption_nonce');
+    await WalletService.clearLocalDataFromStorage(_secureStorage);
     _otpSessionId = null;
     _verificationToken = null;
   }

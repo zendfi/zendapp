@@ -19,6 +19,7 @@ import 'src/services/recent_contacts_store.dart';
 import 'src/services/sound_service.dart';
 import 'src/services/sse_service.dart';
 import 'src/services/wallet_service.dart';
+import 'src/services/payment_rails.dart';
 import 'src/services/zendtag_service.dart';
 import 'src/services/transfer_service.dart';
 import 'src/services/fx_service.dart';
@@ -80,25 +81,29 @@ void main() async {
 
   final zendtagService = ZendtagService(apiClient: apiClient);
 
+  final solanaRail = PaymentRailBinding(
+    identity: SolanaWalletIdentity(walletService: walletService),
+    signer: SolanaTransactionSigner(walletService: walletService),
+    client: CapabilityGatedSolanaRailClient(apiClient: apiClient),
+  );
+  final railRegistry = PaymentRailRegistry([solanaRail]);
+  final selectedRail = railRegistry.resolve(PaymentRail.solana);
+
   final transferService = TransferService(
-    apiClient: apiClient,
-    walletService: walletService,
+    railClient: selectedRail.client,
+    transactionSigner: selectedRail.signer,
   );
 
   final fxService = FxService(apiClient: apiClient);
 
-  final recentContactsStore = RecentContactsStore(
-    secureStorage: secureStorage,
-  );
+  final recentContactsStore = RecentContactsStore(secureStorage: secureStorage);
 
   final sseService = SseService(
     baseUrl: kApiBaseUrl,
     secureStorage: secureStorage,
   );
 
-  final pushNotificationService = PushNotificationService(
-    apiClient: apiClient,
-  );
+  final pushNotificationService = PushNotificationService(apiClient: apiClient);
 
   final appLockService = AppLockService();
 

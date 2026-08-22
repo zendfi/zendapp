@@ -21,9 +21,14 @@ import '../models/api_exceptions.dart';
 
 /// Parameters passed to the background isolate for Argon2id derivation.
 class _Argon2Params {
-  const _Argon2Params({required this.secret, required this.salt, this.tCostOverride});
+  const _Argon2Params({
+    required this.secret,
+    required this.salt,
+    this.tCostOverride,
+  });
   final String secret;
   final Uint8List salt;
+
   /// When set, overrides [WalletKdf.tCost] for this derivation.
   /// Used only for the v3→v4 migration to decrypt old t=3 backups.
   final int? tCostOverride;
@@ -48,30 +53,143 @@ Uint8List _argon2idIsolateEntry(_Argon2Params params) {
     argon2.deriveKey(secretBytes, 0, result, 0);
     return result;
   } finally {
-    for (var i = 0; i < secretBytes.length; i++) { secretBytes[i] = 0; }
+    for (var i = 0; i < secretBytes.length; i++) {
+      secretBytes[i] = 0;
+    }
+  }
+}
+
+class _RailScopedWalletStorage {
+  _RailScopedWalletStorage(this._storage);
+
+  final FlutterSecureStorage _storage;
+  Future<Map<String, String?>>? _snapshotFuture;
+
+  static const Map<String, String> _scopedKeys = {
+    'zend_wallet_encrypted_private_key':
+        'zend_wallet_solana_mainnet_encrypted_private_key',
+    'zend_wallet_raw_private_key': 'zend_wallet_solana_mainnet_raw_private_key',
+    'zend_wallet_public_key': 'zend_wallet_solana_mainnet_public_key',
+    'zend_pin_salt': 'zend_wallet_solana_mainnet_pin_salt',
+    'zend_encryption_nonce': 'zend_wallet_solana_mainnet_encryption_nonce',
+    'zend_kdf_version': 'zend_wallet_solana_mainnet_kdf_version',
+    'zend_pin_length': 'zend_wallet_solana_mainnet_pin_length',
+    'zend_pbkdf2_iterations': 'zend_wallet_solana_mainnet_pbkdf2_iterations',
+  };
+
+  Future<String?> read({required String key}) async {
+    if (!_scopedKeys.containsKey(key)) return _storage.read(key: key);
+    final snapshot = await (_snapshotFuture ??= _loadSnapshot());
+    return snapshot[key];
+  }
+
+  Future<void> write({required String key, required String? value}) async {
+    final scopedKey = _scopedKeys[key];
+    if (scopedKey == null) {
+      await _storage.write(key: key, value: value);
+      return;
+    }
+    await _storage.write(key: scopedKey, value: value);
+    await _storage.write(key: key, value: value);
+    _snapshotFuture = null;
+  }
+
+  Future<void> delete({required String key}) async {
+    final scopedKey = _scopedKeys[key];
+    if (scopedKey == null) {
+      await _storage.delete(key: key);
+      return;
+    }
+    await _storage.delete(key: scopedKey);
+    await _storage.delete(key: key);
+    _snapshotFuture = null;
+  }
+
+  Future<void> clear() async {
+    for (final entry in _scopedKeys.entries) {
+      await _storage.delete(key: entry.value);
+      await _storage.delete(key: entry.key);
+    }
+    _snapshotFuture = null;
+  }
+
+  Future<Map<String, String?>> _loadSnapshot() async {
+    final scoped = await _readNamespace(scoped: true);
+    if (_isCoherent(scoped)) return scoped;
+
+    final legacy = await _readNamespace(scoped: false);
+    if (_isCoherent(legacy)) {
+      // Copy the coherent snapshot exactly. Missing optional fields delete any
+      // interrupted scoped copy, while legacy values remain untouched.
+      for (final entry in _scopedKeys.entries) {
+        final value = legacy[entry.key];
+        if (value == null) {
+          await _storage.delete(key: entry.value);
+        } else {
+          await _storage.write(key: entry.value, value: value);
+        }
+      }
+      return Map<String, String?>.from(legacy);
+    }
+
+    // A partial namespace is never completed from the other namespace.
+    if (scoped.values.any((value) => value != null && value.isNotEmpty)) {
+      return scoped;
+    }
+    return legacy;
+  }
+
+  Future<Map<String, String?>> _readNamespace({required bool scoped}) async {
+    final values = <String, String?>{};
+    for (final entry in _scopedKeys.entries) {
+      values[entry.key] = await _storage.read(
+        key: scoped ? entry.value : entry.key,
+      );
+    }
+    return values;
+  }
+
+  bool _isCoherent(Map<String, String?> values) {
+    bool present(String key) => values[key]?.isNotEmpty ?? false;
+    final hasPublicKey = present('zend_wallet_public_key');
+    final hasRawKey = present('zend_wallet_raw_private_key');
+    final hasEncryptedKey = present('zend_wallet_encrypted_private_key');
+    final hasEncryptionMetadata =
+        present('zend_pin_salt') && present('zend_encryption_nonce');
+    return hasPublicKey &&
+        (hasRawKey || (hasEncryptedKey && hasEncryptionMetadata));
   }
 }
 
 class WalletService {
   final ApiClient _apiClient;
-  final FlutterSecureStorage _secureStorage;
+  final _RailScopedWalletStorage _secureStorage;
 
   static const _encryptedPrivateKeyKey = 'zend_wallet_encrypted_private_key';
-  static const _rawPrivateKeyKey = 'zend_wallet_raw_private_key'; // cleared after PIN setup
+  static const _rawPrivateKeyKey =
+      'zend_wallet_raw_private_key'; // cleared after PIN setup
   static const _publicKeyKey = 'zend_wallet_public_key';
   static const _pinSaltKey = 'zend_pin_salt';
   static const _encryptionNonceKey = 'zend_encryption_nonce';
   static const _kdfVersionKey = 'zend_kdf_version';
+  static const _pbkdf2IterationsKey = 'zend_pbkdf2_iterations';
 
-  static const _usdcMintAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  static const _usdcMintAddress =
+      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
   WalletService({
-        required ApiClient apiClient,
-        required FlutterSecureStorage secureStorage,
-      })  : _apiClient = apiClient,
-        _secureStorage = secureStorage;
+    required ApiClient apiClient,
+    required FlutterSecureStorage secureStorage,
+  }) : _apiClient = apiClient,
+       _secureStorage = _RailScopedWalletStorage(secureStorage);
 
-      ApiClient get apiClient => _apiClient;
+  ApiClient get apiClient => _apiClient;
+
+  static Future<void> clearLocalDataFromStorage(
+    FlutterSecureStorage secureStorage,
+  ) {
+    return _RailScopedWalletStorage(secureStorage).clear();
+  }
 
   Future<String> generateKeypair() async {
     final keypair = await Ed25519HDKeyPair.random();
@@ -93,7 +211,6 @@ class WalletService {
 
     return walletAddress;
   }
-
 
   Future<bool> hasLocalKeypair() async {
     final key = await _secureStorage.read(key: _encryptedPrivateKeyKey);
@@ -119,8 +236,9 @@ class WalletService {
   Future<void> setupPinAndBackup(String pin) async {
     // Read from the raw key slot. If not present, fall back to the encrypted
     // slot for devices that registered on an older build.
-    final rawKeyB64 = await _secureStorage.read(key: _rawPrivateKeyKey)
-        ?? await _secureStorage.read(key: _encryptedPrivateKeyKey);
+    final rawKeyB64 =
+        await _secureStorage.read(key: _rawPrivateKeyKey) ??
+        await _secureStorage.read(key: _encryptedPrivateKeyKey);
     if (rawKeyB64 == null) {
       throw StateError('No keypair found. Call generateKeypair first.');
     }
@@ -130,16 +248,16 @@ class WalletService {
 
     final rawKey = await _deriveKeyArgon2id(pin, salt);
     final secretKey = SecretKey(rawKey);
-    final (ciphertext, nonce) = await _encryptAesGcm(privateKeyBytes, secretKey);
+    final (ciphertext, nonce) = await _encryptAesGcm(
+      privateKeyBytes,
+      secretKey,
+    );
 
     await _secureStorage.write(
       key: _encryptedPrivateKeyKey,
       value: base64Encode(ciphertext),
     );
-    await _secureStorage.write(
-      key: _pinSaltKey,
-      value: base64Encode(salt),
-    );
+    await _secureStorage.write(key: _pinSaltKey, value: base64Encode(salt));
     await _secureStorage.write(
       key: _encryptionNonceKey,
       value: base64Encode(nonce),
@@ -213,7 +331,11 @@ class WalletService {
 
     Uint8List privateKeyBytes;
     try {
-      privateKeyBytes = await _decryptAesGcm(ciphertext, nonceBytes, SecretKey(derivedKey));
+      privateKeyBytes = await _decryptAesGcm(
+        ciphertext,
+        nonceBytes,
+        SecretKey(derivedKey),
+      );
     } catch (_) {
       throw PinDecryptionException();
     }
@@ -223,10 +345,7 @@ class WalletService {
       value: base64Encode(ciphertext),
     );
     await _secureStorage.write(key: _publicKeyKey, value: backup.publicKey);
-    await _secureStorage.write(
-      key: _pinSaltKey,
-      value: base64Encode(salt),
-    );
+    await _secureStorage.write(key: _pinSaltKey, value: base64Encode(salt));
     await _secureStorage.write(
       key: _encryptionNonceKey,
       value: base64Encode(nonceBytes),
@@ -247,12 +366,18 @@ class WalletService {
   /// Silently re-derives, re-encrypts, and re-uploads a unified 80-byte backup
   /// (salt32 + ciphertext48). Called after a successful legacy ciphertext-only
   /// restore. Best-effort — errors are ignored.
-  Future<void> _reuploadUnifiedBackup(String pin, Uint8List privateKeyBytes) async {
+  Future<void> _reuploadUnifiedBackup(
+    String pin,
+    Uint8List privateKeyBytes,
+  ) async {
     try {
       final newSalt = _generateRandomBytes(32);
       final rawKey = await _deriveKeyArgon2id(pin, newSalt);
       final secretKey = SecretKey(rawKey);
-      final (newCiphertext, newNonce) = await _encryptAesGcm(privateKeyBytes, secretKey);
+      final (newCiphertext, newNonce) = await _encryptAesGcm(
+        privateKeyBytes,
+        secretKey,
+      );
 
       // Persist the new encrypted data locally
       await _secureStorage.write(
@@ -272,7 +397,11 @@ class WalletService {
       final walletAddress = await _secureStorage.read(key: _publicKeyKey);
       if (walletAddress == null) return;
 
-      final backupPayload = _buildBackupPayload(newSalt, newNonce, newCiphertext);
+      final backupPayload = _buildBackupPayload(
+        newSalt,
+        newNonce,
+        newCiphertext,
+      );
       await _apiClient.storeBackup(
         base64Encode(backupPayload),
         base64Encode(newNonce),
@@ -289,16 +418,16 @@ class WalletService {
     final newSalt = _generateRandomBytes(32);
     final rawKey = await _deriveKeyArgon2id(newPin, newSalt);
     final secretKey = SecretKey(rawKey);
-    final (newCiphertext, newNonce) = await _encryptAesGcm(privateKeyBytes, secretKey);
+    final (newCiphertext, newNonce) = await _encryptAesGcm(
+      privateKeyBytes,
+      secretKey,
+    );
 
     await _secureStorage.write(
       key: _encryptedPrivateKeyKey,
       value: base64Encode(newCiphertext),
     );
-    await _secureStorage.write(
-      key: _pinSaltKey,
-      value: base64Encode(newSalt),
-    );
+    await _secureStorage.write(key: _pinSaltKey, value: base64Encode(newSalt));
     await _secureStorage.write(
       key: _encryptionNonceKey,
       value: base64Encode(newNonce),
@@ -306,8 +435,11 @@ class WalletService {
 
     final walletAddress = await _secureStorage.read(key: _publicKeyKey);
     if (walletAddress != null) {
-      final backupPayload =
-          _buildBackupPayload(newSalt, newNonce, newCiphertext);
+      final backupPayload = _buildBackupPayload(
+        newSalt,
+        newNonce,
+        newCiphertext,
+      );
       await _apiClient.storeBackup(
         base64Encode(backupPayload),
         base64Encode(newNonce),
@@ -361,8 +493,10 @@ class WalletService {
       'Exactly one of pin or keypairBytes must be provided',
     );
 
-    final resolvedKeypairBytes = keypairBytes ?? await _decryptLocalKeypair(pin!);
-    final ownsBytes = keypairBytes == null; // only zero what we decrypted ourselves
+    final resolvedKeypairBytes =
+        keypairBytes ?? await _decryptLocalKeypair(pin!);
+    final ownsBytes =
+        keypairBytes == null; // only zero what we decrypted ourselves
 
     try {
       final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
@@ -399,64 +533,80 @@ class WalletService {
   }) async {
     final keyCopy = Uint8List.fromList(senderKeypairBytes);
     try {
-    final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
-      privateKey: _extractSeed(keyCopy).toList(),
-    );
+      final keypair = await Ed25519HDKeyPair.fromPrivateKeyBytes(
+        privateKey: _extractSeed(keyCopy).toList(),
+      );
 
-    final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
-    final delegatePubkey = Ed25519HDPublicKey.fromBase58(delegatePubkeyB58);
-    final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
+      final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
+      final delegatePubkey = Ed25519HDPublicKey.fromBase58(delegatePubkeyB58);
+      final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
-    final senderAta = await findAssociatedTokenAddress(
-      owner: senderPubkey,
-      mint: usdcMint,
-    );
+      final senderAta = await findAssociatedTokenAddress(
+        owner: senderPubkey,
+        mint: usdcMint,
+      );
 
-    final amountTokens = (amountUsdc * 1_000_000).round();
-    final amountBytes = Uint8List(8);
-    var v = amountTokens;
-    for (var i = 0; i < 8; i++) { amountBytes[i] = v & 0xFF; v >>= 8; }
+      final amountTokens = (amountUsdc * 1_000_000).round();
+      final amountBytes = Uint8List(8);
+      var v = amountTokens;
+      for (var i = 0; i < 8; i++) {
+        amountBytes[i] = v & 0xFF;
+        v >>= 8;
+      }
 
-    // SPL Token Approve: accounts = [source (writable), delegate, owner (signer)]
-    final approveIx = Instruction(
-      programId: Ed25519HDPublicKey.fromBase58(
-          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-      accounts: [
-        AccountMeta(pubKey: senderAta, isWriteable: true, isSigner: false),
-        AccountMeta(pubKey: delegatePubkey, isWriteable: false, isSigner: false), // ← delegate (ek_pub)
-        AccountMeta(pubKey: senderPubkey, isWriteable: false, isSigner: true),
-      ],
-      data: ByteArray(Uint8List.fromList([4, 0, 0, 0, ...amountBytes])),
-    );
+      // SPL Token Approve: accounts = [source (writable), delegate, owner (signer)]
+      final approveIx = Instruction(
+        programId: Ed25519HDPublicKey.fromBase58(
+          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+        ),
+        accounts: [
+          AccountMeta(pubKey: senderAta, isWriteable: true, isSigner: false),
+          AccountMeta(
+            pubKey: delegatePubkey,
+            isWriteable: false,
+            isSigner: false,
+          ), // ← delegate (ek_pub)
+          AccountMeta(pubKey: senderPubkey, isWriteable: false, isSigner: true),
+        ],
+        data: ByteArray(Uint8List.fromList([4, 0, 0, 0, ...amountBytes])),
+      );
 
-    // Fetch blockhash and the actual gas fee payer from the backend.
-    // Note: fee_payer here is Zend's escrow wallet that pays SOL gas only —
-    // it is NOT the SPL delegate.
-    final prepData = await _apiClient.prepareApproveTransaction(
-      amountUsdc: amountUsdc,
-      feePayerPubkey: delegatePubkeyB58, // pass delegate for server-side ATA check
-    );
-    final blockhash = prepData['blockhash'] as String;
-    final feePayer = Ed25519HDPublicKey.fromBase58(prepData['fee_payer'] as String);
+      // Fetch blockhash and the actual gas fee payer from the backend.
+      // Note: fee_payer here is Zend's escrow wallet that pays SOL gas only —
+      // it is NOT the SPL delegate.
+      final prepData = await _apiClient.prepareApproveTransaction(
+        amountUsdc: amountUsdc,
+        feePayerPubkey:
+            delegatePubkeyB58, // pass delegate for server-side ATA check
+      );
+      final blockhash = prepData['blockhash'] as String;
+      final feePayer = Ed25519HDPublicKey.fromBase58(
+        prepData['fee_payer'] as String,
+      );
 
-    final message = Message(instructions: [approveIx]);
-    final compiled = message.compile(recentBlockhash: blockhash, feePayer: feePayer);
+      final message = Message(instructions: [approveIx]);
+      final compiled = message.compile(
+        recentBlockhash: blockhash,
+        feePayer: feePayer,
+      );
 
-    final sig = await keypair.sign(compiled.toByteArray());
+      final sig = await keypair.sign(compiled.toByteArray());
 
-    final signedTx = SignedTx(
-      compiledMessage: compiled,
-      signatures: [
-        Signature(List.filled(64, 0), publicKey: feePayer),
-        Signature(sig.bytes, publicKey: senderPubkey),
-      ],
-    );
+      final signedTx = SignedTx(
+        compiledMessage: compiled,
+        signatures: [
+          Signature(List.filled(64, 0), publicKey: feePayer),
+          Signature(sig.bytes, publicKey: senderPubkey),
+        ],
+      );
 
-    final txB64 = base64Encode(signedTx.toByteArray().toList());
-    final result = await _apiClient.submitApproveTransaction(txB64: txB64);
-    return result['transaction_signature'] as String;
+      final txB64 = base64Encode(signedTx.toByteArray().toList());
+      final result = await _apiClient.submitApproveTransaction(txB64: txB64);
+      return result['transaction_signature'] as String;
     } finally {
-      for (var i = 0; i < keyCopy.length; i++) { keyCopy[i] = 0; }
+      for (var i = 0; i < keyCopy.length; i++) {
+        keyCopy[i] = 0;
+      }
     }
   }
 
@@ -485,10 +635,16 @@ class WalletService {
       // produce a mismatch if the stored keypair address doesn't exactly match.
       final senderAta = senderAtaOverride != null
           ? Ed25519HDPublicKey.fromBase58(senderAtaOverride)
-          : await findAssociatedTokenAddress(owner: senderPubkey, mint: usdcMint);
+          : await findAssociatedTokenAddress(
+              owner: senderPubkey,
+              mint: usdcMint,
+            );
       final recipientAta = recipientAtaOverride != null
           ? Ed25519HDPublicKey.fromBase58(recipientAtaOverride)
-          : await findAssociatedTokenAddress(owner: recipientPubkey, mint: usdcMint);
+          : await findAssociatedTokenAddress(
+              owner: recipientPubkey,
+              mint: usdcMint,
+            );
 
       final amountTokens = (amountUsdc * 1000000).round();
 
@@ -501,9 +657,7 @@ class WalletService {
 
       final feePayer = Ed25519HDPublicKey.fromBase58(feePayerAddress);
 
-      final message = Message(
-        instructions: [transferInstruction],
-      );
+      final message = Message(instructions: [transferInstruction]);
 
       final compiledMessage = message.compile(
         recentBlockhash: blockhash,
@@ -546,8 +700,9 @@ class WalletService {
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
-      final destinationPubkey =
-          Ed25519HDPublicKey.fromBase58(destinationAddress);
+      final destinationPubkey = Ed25519HDPublicKey.fromBase58(
+        destinationAddress,
+      );
       final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
       final senderAta = await findAssociatedTokenAddress(
@@ -657,7 +812,10 @@ class WalletService {
   ///   - Values 0–127: 1 byte
   ///   - Values 128–16383: 2 bytes (low 7 bits in first byte with high bit set, next 7 bits in second byte)
   ///   - Values 16384–32767: 3 bytes
-  ({int value, int bytesConsumed}) _readCompactU16(Uint8List bytes, int offset) {
+  ({int value, int bytesConsumed}) _readCompactU16(
+    Uint8List bytes,
+    int offset,
+  ) {
     int value = 0;
     int bytesConsumed = 0;
     for (var i = 0; i < 3; i++) {
@@ -773,6 +931,7 @@ class WalletService {
     await _secureStorage.delete(key: _encryptionNonceKey);
     await _secureStorage.delete(key: _kdfVersionKey);
     await _secureStorage.delete(key: _pinLengthKey);
+    await _secureStorage.delete(key: _pbkdf2IterationsKey);
   }
 
   /// Normalises a keypair byte array to the 32-byte Ed25519 seed.
@@ -789,7 +948,9 @@ class WalletService {
   }
 
   Future<Uint8List> _decryptLocalKeypair(String pin) async {
-    final encryptedB64 = await _secureStorage.read(key: _encryptedPrivateKeyKey);
+    final encryptedB64 = await _secureStorage.read(
+      key: _encryptedPrivateKeyKey,
+    );
     final saltB64 = await _secureStorage.read(key: _pinSaltKey);
     final nonceB64 = await _secureStorage.read(key: _encryptionNonceKey);
     final kdfVersion = await _secureStorage.read(key: _kdfVersionKey);
@@ -811,7 +972,11 @@ class WalletService {
       // a v3 backup with the current params will fail. We must use the stored version
       // to select the right tCost.
       final tCost = kdfVersion == '3' ? 3 : WalletKdf.tCost;
-      final rawKey = await _deriveKeyArgon2idWithParams(pin, Uint8List.fromList(salt), tCost: tCost);
+      final rawKey = await _deriveKeyArgon2idWithParams(
+        pin,
+        Uint8List.fromList(salt),
+        tCost: tCost,
+      );
       final secretKey = SecretKey(rawKey);
       try {
         final plaintext = await _decryptAesGcm(
@@ -827,11 +992,18 @@ class WalletService {
       } catch (_) {
         throw PinDecryptionException();
       } finally {
-        for (var i = 0; i < rawKey.length; i++) { rawKey[i] = 0; }
+        for (var i = 0; i < rawKey.length; i++) {
+          rawKey[i] = 0;
+        }
       }
     } else {
       // Legacy PBKDF2 path — decrypt then transparently migrate to Argon2id
-      final plaintext = await _legacyDecryptPbkdf2(pin, salt, nonce, ciphertext);
+      final plaintext = await _legacyDecryptPbkdf2(
+        pin,
+        salt,
+        nonce,
+        ciphertext,
+      );
       // Background migration: re-encrypt with Argon2id
       unawaited(_migrateToArgon2id(plaintext, pin));
       return plaintext;
@@ -840,13 +1012,20 @@ class WalletService {
 
   /// Decrypts a legacy PBKDF2-encrypted keypair. Called only when kdfVersion != '3'.
   Future<Uint8List> _legacyDecryptPbkdf2(
-      String pin, List<int> salt, List<int> nonce, List<int> ciphertext) async {
-    final iterationsStr = await _secureStorage.read(key: 'zend_pbkdf2_iterations');
+    String pin,
+    List<int> salt,
+    List<int> nonce,
+    List<int> ciphertext,
+  ) async {
+    final iterationsStr = await _secureStorage.read(key: _pbkdf2IterationsKey);
     final storedIterations = int.tryParse(iterationsStr ?? '');
 
     if (storedIterations != null) {
       final derivedKey = await _deriveKeyFromPinWithIterations(
-          pin, Uint8List.fromList(salt), storedIterations);
+        pin,
+        Uint8List.fromList(salt),
+        storedIterations,
+      );
       try {
         final plaintext = await _decryptAesGcm(
           Uint8List.fromList(ciphertext),
@@ -862,7 +1041,10 @@ class WalletService {
     // No stored count — try both known PBKDF2 iteration counts
     for (final iterations in [100000, 10000]) {
       final derivedKey = await _deriveKeyFromPinWithIterations(
-          pin, Uint8List.fromList(salt), iterations);
+        pin,
+        Uint8List.fromList(salt),
+        iterations,
+      );
       try {
         return await _decryptAesGcm(
           Uint8List.fromList(ciphertext),
@@ -883,30 +1065,51 @@ class WalletService {
       final newSalt = _generateRandomBytes(32);
       final rawKey = await _deriveKeyArgon2id(pin, newSalt);
       final secretKey = SecretKey(rawKey);
-      final (newCiphertext, newNonce) = await _encryptAesGcm(privateKeyBytes, secretKey);
+      final (newCiphertext, newNonce) = await _encryptAesGcm(
+        privateKeyBytes,
+        secretKey,
+      );
 
       await _secureStorage.write(
-          key: _encryptedPrivateKeyKey, value: base64Encode(newCiphertext));
+        key: _encryptedPrivateKeyKey,
+        value: base64Encode(newCiphertext),
+      );
       await _secureStorage.write(
-          key: _pinSaltKey, value: base64Encode(newSalt));
+        key: _pinSaltKey,
+        value: base64Encode(newSalt),
+      );
       await _secureStorage.write(
-          key: _encryptionNonceKey, value: base64Encode(newNonce));
+        key: _encryptionNonceKey,
+        value: base64Encode(newNonce),
+      );
       await _secureStorage.write(key: _kdfVersionKey, value: '4');
 
       final walletAddress = await _secureStorage.read(key: _publicKeyKey);
       if (walletAddress == null) return;
 
-      final backupPayload = _buildBackupPayload(newSalt, newNonce, newCiphertext);
+      final backupPayload = _buildBackupPayload(
+        newSalt,
+        newNonce,
+        newCiphertext,
+      );
       await _apiClient.storeBackup(
-          base64Encode(backupPayload), base64Encode(newNonce), walletAddress);
-      for (var i = 0; i < rawKey.length; i++) { rawKey[i] = 0; }
+        base64Encode(backupPayload),
+        base64Encode(newNonce),
+        walletAddress,
+      );
+      for (var i = 0; i < rawKey.length; i++) {
+        rawKey[i] = 0;
+      }
     } catch (_) {
       // Best-effort — ignore
     }
   }
 
   Future<SecretKey> _deriveKeyFromPinWithIterations(
-      String pin, Uint8List salt, int iterations) async {
+    String pin,
+    Uint8List salt,
+    int iterations,
+  ) async {
     final pbkdf2 = Pbkdf2(
       macAlgorithm: Hmac.sha256(),
       iterations: iterations,
@@ -977,8 +1180,10 @@ class WalletService {
 
     try {
       final secretKey = SecretKey(rawKey);
-      final (newCiphertext, newNonce) =
-          await _encryptAesGcm(recoveredKeypair, secretKey);
+      final (newCiphertext, newNonce) = await _encryptAesGcm(
+        recoveredKeypair,
+        secretKey,
+      );
 
       // Build the 112-byte unified payload: salt(32) || ciphertext+tag(80)
       final backupPayload = _buildBackupPayload(salt, newNonce, newCiphertext);
@@ -997,10 +1202,7 @@ class WalletService {
         key: _encryptedPrivateKeyKey,
         value: base64Encode(newCiphertext),
       );
-      await _secureStorage.write(
-        key: _pinSaltKey,
-        value: base64Encode(salt),
-      );
+      await _secureStorage.write(key: _pinSaltKey, value: base64Encode(salt));
       await _secureStorage.write(
         key: _encryptionNonceKey,
         value: base64Encode(newNonce),
@@ -1011,7 +1213,9 @@ class WalletService {
       // Populate the session cache so subsequent sends work without re-unlock
       WalletSessionCache.instance.store(recoveredKeypair);
     } finally {
-      for (var i = 0; i < rawKey.length; i++) { rawKey[i] = 0; }
+      for (var i = 0; i < rawKey.length; i++) {
+        rawKey[i] = 0;
+      }
     }
   }
 
@@ -1039,8 +1243,7 @@ class WalletService {
   ) async {
     final algorithm = AesGcm.with256bits();
     const macLength = 16;
-    final encryptedData =
-        ciphertext.sublist(0, ciphertext.length - macLength);
+    final encryptedData = ciphertext.sublist(0, ciphertext.length - macLength);
     final mac = Mac(ciphertext.sublist(ciphertext.length - macLength));
     final secretBox = SecretBox(encryptedData, nonce: nonce, mac: mac);
     final plaintext = await algorithm.decrypt(secretBox, secretKey: key);
@@ -1103,10 +1306,16 @@ class WalletService {
       // Use server-provided ATAs when available — authoritative from the DB.
       final senderAta = senderAtaOverride != null
           ? Ed25519HDPublicKey.fromBase58(senderAtaOverride)
-          : await findAssociatedTokenAddress(owner: senderPubkey, mint: usdcMint);
+          : await findAssociatedTokenAddress(
+              owner: senderPubkey,
+              mint: usdcMint,
+            );
       final recipientAta = recipientAtaOverride != null
           ? Ed25519HDPublicKey.fromBase58(recipientAtaOverride)
-          : await findAssociatedTokenAddress(owner: recipientPubkey, mint: usdcMint);
+          : await findAssociatedTokenAddress(
+              owner: recipientPubkey,
+              mint: usdcMint,
+            );
 
       final amountTokens = (amountUsdc * 1000000).round();
       final transferInstruction = TokenInstruction.transfer(
@@ -1134,7 +1343,9 @@ class WalletService {
 
       return base64Encode(signedTx.toByteArray().toList());
     } finally {
-      for (var i = 0; i < keyCopy.length; i++) { keyCopy[i] = 0; }
+      for (var i = 0; i < keyCopy.length; i++) {
+        keyCopy[i] = 0;
+      }
     }
   }
 
@@ -1156,8 +1367,9 @@ class WalletService {
       );
 
       final senderPubkey = Ed25519HDPublicKey.fromBase58(keypair.address);
-      final destinationPubkey =
-          Ed25519HDPublicKey.fromBase58(destinationAddress);
+      final destinationPubkey = Ed25519HDPublicKey.fromBase58(
+        destinationAddress,
+      );
       final usdcMint = Ed25519HDPublicKey.fromBase58(_usdcMintAddress);
 
       final senderAta = await findAssociatedTokenAddress(
@@ -1195,7 +1407,9 @@ class WalletService {
 
       return base64Encode(signedTx.toByteArray().toList());
     } finally {
-      for (var i = 0; i < keyCopy.length; i++) { keyCopy[i] = 0; }
+      for (var i = 0; i < keyCopy.length; i++) {
+        keyCopy[i] = 0;
+      }
     }
   }
 
@@ -1229,7 +1443,9 @@ class WalletService {
 
       return base64Encode(result);
     } finally {
-      for (var i = 0; i < keyCopy.length; i++) { keyCopy[i] = 0; }
+      for (var i = 0; i < keyCopy.length; i++) {
+        keyCopy[i] = 0;
+      }
     }
   }
 }

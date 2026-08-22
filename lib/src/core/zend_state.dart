@@ -141,6 +141,7 @@ class StreakNotification {
 
   final String counterpartyZendtag;
   final int weeks;
+
   /// true = milestone reached, false = streak broken
   final bool isMilestone;
 }
@@ -160,9 +161,9 @@ class ZendAppModel extends ChangeNotifier {
     required this.pocketService,
     required this.localDb,
     EmailIntentService? emailIntentService,
-  })  : _emailIntentService = emailIntentService,
-        dmService = DmService(apiClient: walletService.apiClient),
-        e2eeService = E2eeService(apiClient: walletService.apiClient);
+  }) : _emailIntentService = emailIntentService,
+       dmService = DmService(apiClient: walletService.apiClient),
+       e2eeService = E2eeService(apiClient: walletService.apiClient);
 
   final AuthService authService;
   final WalletService walletService;
@@ -179,18 +180,20 @@ class ZendAppModel extends ChangeNotifier {
   /// Drop discoverability service — manages BLE beacon advertising as a receiver.
   late final DropDiscoverabilityService dropDiscoverabilityService =
       DropDiscoverabilityService(
-    apiClient: walletService.apiClient,
-    walletService: walletService,
-  );
+        apiClient: walletService.apiClient,
+        walletService: walletService,
+      );
 
   /// Contacts service — reads device contacts and resolves against Zend accounts.
-  late final ContactsService contactsService =
-      ContactsService(apiClient: walletService.apiClient);
+  late final ContactsService contactsService = ContactsService(
+    apiClient: walletService.apiClient,
+  );
 
   /// Activity Relationship Graph (Phase 2/3) data service — parallel to
   /// [transferService]/`fetchHistory()`, not a replacement for it.
-  late final ActivityDataService activityDataService =
-      ActivityDataService(apiClient: walletService.apiClient);
+  late final ActivityDataService activityDataService = ActivityDataService(
+    apiClient: walletService.apiClient,
+  );
 
   /// On-device SQLite database for pool message persistence.
   final AppDatabase localDb;
@@ -348,8 +351,10 @@ class ZendAppModel extends ChangeNotifier {
   // ── Drop confirmed stream ──
   /// Broadcasts Drop confirmation events to any listening UI (Drop sheet, home screen).
   /// Each event map contains: role, amount_usdc, counterparty_zendtag, note?, tx_hash.
-  final _dropConfirmedController = StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get dropConfirmedEvents => _dropConfirmedController.stream;
+  final _dropConfirmedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get dropConfirmedEvents =>
+      _dropConfirmedController.stream;
 
   // ── Fallback polling (used when SSE is unavailable) ──
   Timer? _pollingTimer;
@@ -409,10 +414,14 @@ class ZendAppModel extends ChangeNotifier {
         _patchTransferStatus(event.data);
         unawaited(fetchBalance());
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        if (_threadedActivityEverLoaded) {
+          unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        }
       case SseEventType.transferFailed:
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        if (_threadedActivityEverLoaded) {
+          unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        }
       case SseEventType.balanceUpdate:
         // Direct balance update from server — re-fetch for accuracy
         // (empty usdc_balance means "please re-fetch")
@@ -430,7 +439,9 @@ class ZendAppModel extends ChangeNotifier {
         // Server told us we missed events — do a full refresh
         unawaited(fetchBalance());
         unawaited(fetchHistory());
-        if (_threadedActivityEverLoaded) unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        if (_threadedActivityEverLoaded) {
+          unawaited(fetchThreadedActivity(mergeWithExisting: true));
+        }
       case SseEventType.poolContribution:
         // Update the cached pool's gathered amount
         final poolId = event.data['pool_id'] as String?;
@@ -513,7 +524,9 @@ class ZendAppModel extends ChangeNotifier {
         final dropRole = event.data['role'] as String?;
         final dropAmount = double.tryParse(dropAmountStr ?? '') ?? 0.0;
         final newBalanceStr = event.data['new_balance_usdc'] as String?;
-        final serverNewBalance = newBalanceStr != null ? double.tryParse(newBalanceStr) : null;
+        final serverNewBalance = newBalanceStr != null
+            ? double.tryParse(newBalanceStr)
+            : null;
 
         if (dropAmount > 0) {
           if (dropRole == 'sender' && serverNewBalance != null) {
@@ -523,7 +536,10 @@ class ZendAppModel extends ChangeNotifier {
           } else if (dropRole == 'receiver') {
             // Receiver: add incoming amount to cached balance immediately
             balance = (balance + dropAmount).clamp(0.0, double.maxFinite);
-            spendableBalance = (spendableBalance + dropAmount).clamp(0.0, double.maxFinite);
+            spendableBalance = (spendableBalance + dropAmount).clamp(
+              0.0,
+              double.maxFinite,
+            );
           }
           notifyListeners();
         }
@@ -675,6 +691,7 @@ class ZendAppModel extends ChangeNotifier {
   void handleDropConfirmedFromPush(Map<String, dynamic> data) {
     _onSseEvent(SseEvent(type: SseEventType.dropConfirmed, data: data));
   }
+
   /// Use this when coming back from a long background period where
   /// the SSE connection is known to be stale (e.g. > 5 minutes paused).
   void forceRestartRealTimeUpdates() {
@@ -722,7 +739,8 @@ class ZendAppModel extends ChangeNotifier {
 
   // ── Email intents ──
   List<EmailIntent> _pendingEmailIntents = [];
-  List<EmailIntent> get pendingEmailIntents => List.unmodifiable(_pendingEmailIntents);
+  List<EmailIntent> get pendingEmailIntents =>
+      List.unmodifiable(_pendingEmailIntents);
 
   // ── Transfer history ──
   List<ZendTransaction> recentTransactions = [];
@@ -833,7 +851,9 @@ class ZendAppModel extends ChangeNotifier {
       if (mergeWithExisting && threadedActivityEdges.isNotEmpty) {
         // Merge: keep existing edges not in the new first page, prepend new ones.
         final newIds = response.edges.map((e) => e.edgeId).toSet();
-        final kept = threadedActivityEdges.where((e) => !newIds.contains(e.edgeId)).toList();
+        final kept = threadedActivityEdges
+            .where((e) => !newIds.contains(e.edgeId))
+            .toList();
         threadedActivityEdges = [...response.edges, ...kept];
       } else {
         threadedActivityEdges = response.edges;
@@ -868,7 +888,9 @@ class ZendAppModel extends ChangeNotifier {
         );
         // Deduplicate — guard against concurrent fetches adding the same edges.
         final existingIds = threadedActivityEdges.map((e) => e.edgeId).toSet();
-        final deduped = response.edges.where((e) => !existingIds.contains(e.edgeId)).toList();
+        final deduped = response.edges
+            .where((e) => !existingIds.contains(e.edgeId))
+            .toList();
         if (deduped.isNotEmpty) {
           threadedActivityEdges = [...threadedActivityEdges, ...deduped];
         }
@@ -908,9 +930,11 @@ class ZendAppModel extends ChangeNotifier {
   String username = 'blessed';
   bool balanceHidden = false;
   bool isDarkMode = false;
+
   /// Whether this user's mutual connections are notified when they make
   /// an activity public. Default true — the social signal is intentional.
   bool notifyMutualsOnShare = true;
+
   /// True once the user has explicitly toggled dark/light mode.
   /// False = follow system theme.
   bool hasExplicitTheme = false;
@@ -1007,7 +1031,6 @@ class ZendAppModel extends ChangeNotifier {
       lastHistoryError = 'Failed to restore user identity: $e';
     }
   }
-
 
   void toggleBalanceHidden() {
     balanceHidden = !balanceHidden;
@@ -1114,7 +1137,7 @@ class ZendAppModel extends ChangeNotifier {
     lastBalanceError = null;
     if (firstLoad) notifyListeners();
     try {
-      final response = await walletService.apiClient.getBalance();
+      final response = await transferService.getBalance();
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
       lastBalanceError = null;
@@ -1173,7 +1196,9 @@ class ZendAppModel extends ChangeNotifier {
   /// No-op if [_emailIntentService] is not injected.
   Future<void> cancelEmailIntent(String id) async {
     await _emailIntentService?.cancelIntent(id);
-    _pendingEmailIntents = _pendingEmailIntents.where((i) => i.id != id).toList();
+    _pendingEmailIntents = _pendingEmailIntents
+        .where((i) => i.id != id)
+        .toList();
     notifyListeners();
   }
 
@@ -1186,9 +1211,13 @@ class ZendAppModel extends ChangeNotifier {
       // Fetch zend-to-zend transfers, bank sends, payins, and email intents in parallel
       final results = await Future.wait([
         transferService.getHistory(),
-        walletService.apiClient.getBankSendOrders().catchError((_) => <dynamic>[]),
+        walletService.apiClient.getBankSendOrders().catchError(
+          (_) => <dynamic>[],
+        ),
         walletService.apiClient.getPayinOrders().catchError((_) => <dynamic>[]),
-        walletService.apiClient.getCryptoDepositHistory().catchError((_) => <dynamic>[]),
+        walletService.apiClient.getCryptoDepositHistory().catchError(
+          (_) => <dynamic>[],
+        ),
       ]);
       // Fetch email intents in parallel but separately (returns void)
       unawaited(fetchEmailIntents());
@@ -1205,11 +1234,15 @@ class ZendAppModel extends ChangeNotifier {
       // Build rows from zend-to-zend transfers
       final transferRows = entries.map((entry) {
         final isSent = entry.senderZendtag == currentZendtag;
-        final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
+        final counterparty = isSent
+            ? entry.recipientZendtag
+            : entry.senderZendtag;
         final sign = isSent ? '-' : '+';
         final amt = entry.amountUsdc;
         // Avatar URL comes directly from the history entry (backend JOIN)
-        final avatarUrl = isSent ? entry.recipientAvatarUrl : entry.senderAvatarUrl;
+        final avatarUrl = isSent
+            ? entry.recipientAvatarUrl
+            : entry.senderAvatarUrl;
 
         // For email-intent claims on the sender side, prefer the masked email hint
         // (e.g. "te***@gmail.com") over the recipient's zendtag — it's more
@@ -1225,7 +1258,9 @@ class ZendAppModel extends ChangeNotifier {
               : (entry.note ?? ''),
           amount: '$sign\$$amt',
           time: _formatTimestamp(entry.createdAt),
-          avatarLabel: counterparty.isNotEmpty ? counterparty[0].toUpperCase() : '?',
+          avatarLabel: counterparty.isNotEmpty
+              ? counterparty[0].toUpperCase()
+              : '?',
           amountColor: isSent ? null : ZendColors.positive,
           entry: entry,
           avatarUrl: avatarUrl,
@@ -1249,15 +1284,22 @@ class ZendAppModel extends ChangeNotifier {
             : bankName;
 
         // Note: fiat amount + bank name + masked account
-        final fiatPart = fiatAmount != null && fiatAmount > 0 && fiatCurrency.isNotEmpty
+        final fiatPart =
+            fiatAmount != null && fiatAmount > 0 && fiatCurrency.isNotEmpty
             ? _formatFiatDisplay(fiatAmount, fiatCurrency)
             : null;
         final bankPart = bankName.isNotEmpty ? bankName : null;
         final accountPart = accountMasked != null && accountMasked.isNotEmpty
             ? accountMasked
             : null;
-        final noteParts = [fiatPart, bankPart, accountPart].whereType<String>().toList();
-        final note = noteParts.isNotEmpty ? noteParts.join(' · ') : '→ $bankName';
+        final noteParts = [
+          fiatPart,
+          bankPart,
+          accountPart,
+        ].whereType<String>().toList();
+        final note = noteParts.isNotEmpty
+            ? noteParts.join(' · ')
+            : '→ $bankName';
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
             ? '-\$${amountUsdc.toStringAsFixed(0)}'
@@ -1266,12 +1308,12 @@ class ZendAppModel extends ChangeNotifier {
         final timeStr = (status == 'pending_payment' || status == 'processing')
             ? 'Processing'
             : status == 'paid'
-                ? 'Sent'
-                : status == 'completed'
-                    ? 'Delivered'
-                    : status == 'failed'
-                        ? 'Failed'
-                        : _formatTimestamp(createdAt);
+            ? 'Sent'
+            : status == 'completed'
+            ? 'Delivered'
+            : status == 'failed'
+            ? 'Failed'
+            : _formatTimestamp(createdAt);
 
         return ZendTransaction(
           name: title,
@@ -1291,32 +1333,34 @@ class ZendAppModel extends ChangeNotifier {
       final payinRows = payinOrders
           .where((order) => (order['status'] as String? ?? '') == 'completed')
           .map((order) {
-        final amountUsdc = (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
-        final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
-        final createdAtStr = order['created_at'] as String? ?? '';
-        final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
+            final amountUsdc =
+                (order['amount_usdc'] as num?)?.toDouble() ?? 0.0;
+            final fiatAmount = (order['fiat_amount'] as num?)?.toDouble();
+            final createdAtStr = order['created_at'] as String? ?? '';
+            final createdAt = DateTime.tryParse(createdAtStr) ?? DateTime.now();
 
-        final fiatPart = fiatAmount != null && fiatAmount > 0
-            ? _formatFiatDisplay(fiatAmount, 'NGN')
-            : null;
-        final note = fiatPart != null ? '$fiatPart received' : 'NGN payin';
+            final fiatPart = fiatAmount != null && fiatAmount > 0
+                ? _formatFiatDisplay(fiatAmount, 'NGN')
+                : null;
+            final note = fiatPart != null ? '$fiatPart received' : 'NGN payin';
 
-        final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '+${amountUsdc.toStringAsFixed(0)}'
-            : '+${amountUsdc.toStringAsFixed(2)}';
+            final amtStr = amountUsdc == amountUsdc.roundToDouble()
+                ? '+${amountUsdc.toStringAsFixed(0)}'
+                : '+${amountUsdc.toStringAsFixed(2)}';
 
-        return ZendTransaction(
-          name: 'NGN Payin',
-          note: note,
-          amount: amtStr,
-          time: _formatTimestamp(createdAt),
-          avatarLabel: '₦',
-          amountColor: ZendColors.positive,
-          entry: null,
-          bankOrder: order,
-          createdAt: createdAt,
-        );
-      }).toList();
+            return ZendTransaction(
+              name: 'NGN Payin',
+              note: note,
+              amount: amtStr,
+              time: _formatTimestamp(createdAt),
+              avatarLabel: '₦',
+              amountColor: ZendColors.positive,
+              entry: null,
+              bankOrder: order,
+              createdAt: createdAt,
+            );
+          })
+          .toList();
 
       // Build rows from crypto deposit events (Dextopus bridge deposits)
       final cryptoDepositRows = cryptoDeposits.map((order) {
@@ -1325,7 +1369,8 @@ class ZendAppModel extends ChangeNotifier {
         final originBlockchain = order['origin_blockchain'] as String? ?? '';
         final completedAtStr = order['completed_at'] as String?;
         final createdAtStr = order['created_at'] as String? ?? '';
-        final createdAt = DateTime.tryParse(completedAtStr ?? createdAtStr) ?? DateTime.now();
+        final createdAt =
+            DateTime.tryParse(completedAtStr ?? createdAtStr) ?? DateTime.now();
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
             ? '+\$${amountUsdc.toStringAsFixed(0)}'
@@ -1349,8 +1394,12 @@ class ZendAppModel extends ChangeNotifier {
       }).toList();
 
       // Merge and sort newest first
-      final all = [...transferRows, ...bankRows, ...payinRows, ...cryptoDepositRows]
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final all = [
+        ...transferRows,
+        ...bankRows,
+        ...payinRows,
+        ...cryptoDepositRows,
+      ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       recentTransactions = all;
       recentContacts = contacts;
@@ -1377,10 +1426,13 @@ class ZendAppModel extends ChangeNotifier {
 
   String _toTitleCase(String s) {
     if (s.isEmpty) return s;
-    return s.split(' ').map((w) {
-      if (w.isEmpty) return w;
-      return w[0].toUpperCase() + w.substring(1).toLowerCase();
-    }).join(' ');
+    return s
+        .split(' ')
+        .map((w) {
+          if (w.isEmpty) return w;
+          return w[0].toUpperCase() + w.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 
   String _formatFiatDisplay(double value, String currency) {
@@ -1488,8 +1540,8 @@ class ZendAppModel extends ChangeNotifier {
     final contactAvatar = contactName.isNotEmpty
         ? contactName[0].toUpperCase()
         : recipientZendtag.isNotEmpty
-            ? recipientZendtag[0].toUpperCase()
-            : '?';
+        ? recipientZendtag[0].toUpperCase()
+        : '?';
 
     recentContacts = _mergeRecentContacts(
       RecentContact(
@@ -1714,7 +1766,7 @@ class ZendAppModel extends ChangeNotifier {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.day}';
   }
@@ -1727,8 +1779,12 @@ class ZendAppModel extends ChangeNotifier {
 
     for (final entry in entries) {
       final isSent = entry.senderZendtag == currentZendtag;
-      final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
-      final counterpartyAvatarUrl = isSent ? entry.recipientAvatarUrl : entry.senderAvatarUrl;
+      final counterparty = isSent
+          ? entry.recipientZendtag
+          : entry.senderZendtag;
+      final counterpartyAvatarUrl = isSent
+          ? entry.recipientAvatarUrl
+          : entry.senderAvatarUrl;
       // Display name comes directly from the history entry now
       final counterpartyDisplayName = isSent
           ? entry.recipientDisplayName
@@ -1743,15 +1799,21 @@ class ZendAppModel extends ChangeNotifier {
         (c) => c.tag == tag,
         orElse: () => RecentContact(name: '', tag: tag, avatarLabel: ''),
       );
-      final name = (counterpartyDisplayName != null && counterpartyDisplayName.trim().isNotEmpty)
+      final name =
+          (counterpartyDisplayName != null &&
+              counterpartyDisplayName.trim().isNotEmpty)
           ? counterpartyDisplayName.trim()
-          : (cached.name.isNotEmpty && cached.name != tag && cached.name != '@$tag')
-              ? cached.name
-              : '';
+          : (cached.name.isNotEmpty &&
+                cached.name != tag &&
+                cached.name != '@$tag')
+          ? cached.name
+          : '';
 
       final avatarLabel = name.isNotEmpty
           ? name[0].toUpperCase()
-          : tag.isNotEmpty ? tag[0].toUpperCase() : '?';
+          : tag.isNotEmpty
+          ? tag[0].toUpperCase()
+          : '?';
       // Prefer the freshest avatar URL: history entry > cached contact
       final avatarUrl = counterpartyAvatarUrl ?? cached.avatarUrl;
       contacts.add(
@@ -1813,7 +1875,8 @@ class ZendScope extends InheritedNotifier<ZendAppModel> {
   /// or reading a value before the first build. If the widget needs to
   /// rebuild on model changes, use [of] from `build()` instead.
   static ZendAppModel read(BuildContext context) {
-    final element = context.getElementForInheritedWidgetOfExactType<ZendScope>();
+    final element = context
+        .getElementForInheritedWidgetOfExactType<ZendScope>();
     assert(element != null, 'ZendScope not found in widget tree');
     return (element!.widget as ZendScope).notifier!;
   }

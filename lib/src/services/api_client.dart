@@ -13,6 +13,7 @@ import '../models/drop_models.dart';
 import '../models/email_intent.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
+import 'payment_rail_models.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -43,8 +44,8 @@ class ApiClient {
     required String baseUrl,
     required FlutterSecureStorage secureStorage,
     Dio? dio,
-  })  : _secureStorage = secureStorage,
-        _dio = dio ?? Dio() {
+  }) : _secureStorage = secureStorage,
+       _dio = dio ?? Dio() {
     _dio.options
       ..baseUrl = baseUrl
       ..connectTimeout = const Duration(seconds: 15)
@@ -71,7 +72,9 @@ class ApiClient {
           // Log the real underlying error for debugging — connectionError wraps
           // SocketException, HandshakeException, and other OS-level errors.
           final inner = error.error;
-          debugPrint('ApiClient connectionError — inner: ${inner.runtimeType}: $inner');
+          debugPrint(
+            'ApiClient connectionError — inner: ${inner.runtimeType}: $inner',
+          );
           debugPrint('ApiClient connectionError — message: ${error.message}');
 
           // Distinguish TLS/SSL failures (wrong cert, hostname mismatch) from
@@ -90,7 +93,8 @@ class ApiClient {
               error.message?.contains('Connection refused') == true) {
             userMessage = 'Server is unreachable. Please try again shortly.';
           } else {
-            userMessage = 'No internet connection. Check your network and try again.';
+            userMessage =
+                'No internet connection. Check your network and try again.';
           }
 
           handler.reject(
@@ -200,7 +204,8 @@ class ApiClient {
         ),
       );
       return PrepareTransferResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -295,7 +300,9 @@ class ApiClient {
 
   /// Resolves a batch of emails/phone numbers against Zend accounts.
   /// Returns only those that matched.
-  Future<List<Map<String, dynamic>>> batchResolveContacts(List<String> queries) async {
+  Future<List<Map<String, dynamic>>> batchResolveContacts(
+    List<String> queries,
+  ) async {
     if (queries.isEmpty) return [];
     try {
       final response = await _dio.post(
@@ -310,7 +317,10 @@ class ApiClient {
   }
 
   /// Searches for users by zendtag or display name prefix.
-  Future<List<Map<String, dynamic>>> searchUsers(String query, {int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> searchUsers(
+    String query, {
+    int limit = 20,
+  }) async {
     if (query.trim().isEmpty) return [];
     try {
       final response = await _dio.get(
@@ -397,14 +407,141 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/transfer/history',
-        queryParameters: <String, dynamic>{
-          'cursor': cursor,
-          'limit': limit,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'cursor': cursor, 'limit': limit}
+          ..removeWhere((_, v) => v == null),
       );
       return TransferHistoryResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<P2pCapabilities> getP2pCapabilities() async {
+    try {
+      final response = await _dio.get('/api/zend/v2/p2p/capabilities');
+      return P2pCapabilities.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<RailBalance> getP2pWalletBalance({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/v2/p2p/wallet/balance',
+        queryParameters: {'rail': rail.wireName, 'network': network.wireName},
+      );
+      return RailBalance.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<PreparedRailTransfer> prepareP2pTransfer({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+    required String recipientZendtag,
+    required double amountUsdc,
+    required PaymentAsset asset,
+    required String idempotencyKey,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v2/p2p/transfers/prepare',
+        data: {
+          'rail': rail.wireName,
+          'network': network.wireName,
+          'recipient_zendtag': recipientZendtag,
+          'amount_usdc': amountUsdc,
+          'asset': asset.wireName,
+        },
+        options: Options(
+          headers: {'Idempotency-Key': idempotencyKey},
+          receiveTimeout: const Duration(seconds: 60),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return PreparedRailTransfer.fromJson(
+        response.data as Map<String, dynamic>,
+        idempotencyKey: idempotencyKey,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<RailSubmission> submitP2pTransfer({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+    required String recipientZendtag,
+    required double amountUsdc,
+    required String? note,
+    required PaymentAsset asset,
+    required RailEnvelope envelope,
+    required String idempotencyKey,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v2/p2p/transfers/submit',
+        data: {
+          'rail': rail.wireName,
+          'network': network.wireName,
+          'recipient_zendtag': recipientZendtag,
+          'amount_usdc': amountUsdc,
+          'note': note,
+          'asset': asset.wireName,
+          'envelope': envelope.toJson(),
+        },
+        options: Options(
+          headers: {'Idempotency-Key': idempotencyKey},
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
+      );
+      return RailSubmission.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<RailHistory> getP2pTransferHistory({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+    String? cursor,
+    int? limit,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/v2/p2p/transfers/history',
+        queryParameters: <String, dynamic>{
+          'rail': rail.wireName,
+          'network': network.wireName,
+          'cursor': cursor,
+          'limit': limit,
+        }..removeWhere((_, value) => value == null),
+      );
+      return RailHistory.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<RailTransferStatus> getP2pTransferStatus({
+    required String transferId,
+    required PaymentRail rail,
+    required PaymentNetwork network,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/v2/p2p/transfers/$transferId/status',
+        queryParameters: {'rail': rail.wireName, 'network': network.wireName},
+      );
+      return RailTransferStatus.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -416,13 +553,11 @@ class ApiClient {
         '/api/zend/fx/preview',
         queryParameters: {'amount_usd': amountUsd},
       );
-      return FxPreviewResponse.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      return FxPreviewResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
-      }
     }
+  }
 
   Future<UserProfileResponse> getCurrentUser() async {
     try {
@@ -508,7 +643,9 @@ class ApiClient {
   ///
   /// Muting client-side only suppresses the in-app banner; this call is
   /// what stops the backend from sending the FCM push in the first place.
-  Future<void> updateNotificationPreferences(List<String> mutedCategories) async {
+  Future<void> updateNotificationPreferences(
+    List<String> mutedCategories,
+  ) async {
     try {
       await _dio.patch(
         '/api/zend/notifications/preferences',
@@ -547,9 +684,8 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/payment-requests',
-        queryParameters: <String, dynamic>{
-          'status': status,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'status': status}
+          ..removeWhere((_, v) => v == null),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -557,13 +693,14 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> getReceivedPaymentRequests({String? status}) async {
+  Future<Map<String, dynamic>> getReceivedPaymentRequests({
+    String? status,
+  }) async {
     try {
       final response = await _dio.get(
         '/api/zend/payment-requests/received',
-        queryParameters: <String, dynamic>{
-          'status': status,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'status': status}
+          ..removeWhere((_, v) => v == null),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -644,10 +781,7 @@ class ApiClient {
     try {
       final response = await _dio.post(
         '/api/zend/bank-send/ngn/confirm',
-        data: {
-          'order_id': orderId,
-          'partially_signed_tx': partiallySignedTx,
-        },
+        data: {'order_id': orderId, 'partially_signed_tx': partiallySignedTx},
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return response.data as Map<String, dynamic>;
@@ -658,8 +792,9 @@ class ApiClient {
 
   Future<List<dynamic>> getIntlSavedAccounts() async {
     try {
-      final response =
-          await _dio.get('/api/zend/bank-send/intl/saved-accounts');
+      final response = await _dio.get(
+        '/api/zend/bank-send/intl/saved-accounts',
+      );
       final data = response.data as Map<String, dynamic>;
       return data['accounts'] as List<dynamic>;
     } on DioException catch (e) {
@@ -668,7 +803,8 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> addIntlBankAccount(
-      Map<String, dynamic> data) async {
+    Map<String, dynamic> data,
+  ) async {
     try {
       final response = await _dio.post(
         '/api/zend/bank-send/intl/add-account',
@@ -688,10 +824,7 @@ class ApiClient {
     try {
       final response = await _dio.post(
         '/api/zend/bank-send/intl/prepare',
-        data: {
-          'amount_usdc': amountUsdc,
-          'saved_account_id': savedAccountId,
-        },
+        data: {'amount_usdc': amountUsdc, 'saved_account_id': savedAccountId},
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -706,10 +839,7 @@ class ApiClient {
     try {
       final response = await _dio.post(
         '/api/zend/bank-send/intl/confirm',
-        data: {
-          'order_id': orderId,
-          'partially_signed_tx': partiallySignedTx,
-        },
+        data: {'order_id': orderId, 'partially_signed_tx': partiallySignedTx},
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return response.data as Map<String, dynamic>;
@@ -757,10 +887,8 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/activity/edges',
-        queryParameters: <String, dynamic>{
-          'cursor': cursor,
-          'limit': limit,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'cursor': cursor, 'limit': limit}
+          ..removeWhere((_, v) => v == null),
       );
       return ActivityEdgesResponse.fromJson(
         response.data as Map<String, dynamic>,
@@ -772,8 +900,9 @@ class ApiClient {
 
   Future<PoolContributorsResponse> getPoolContributors(String poolId) async {
     try {
-      final response =
-          await _dio.get('/api/zend/activity/pools/$poolId/contributors');
+      final response = await _dio.get(
+        '/api/zend/activity/pools/$poolId/contributors',
+      );
       return PoolContributorsResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
@@ -794,10 +923,8 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/activity/users/$userId/edges',
-        queryParameters: <String, dynamic>{
-          'cursor': cursor,
-          'limit': limit,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'cursor': cursor, 'limit': limit}
+          ..removeWhere((_, v) => v == null),
       );
       return ActivityEdgesResponse.fromJson(
         response.data as Map<String, dynamic>,
@@ -807,9 +934,14 @@ class ApiClient {
     }
   }
 
-  Future<List<EdgeReactionCount>> getEdgeReactions(String edgeKind, String edgeId) async {
+  Future<List<EdgeReactionCount>> getEdgeReactions(
+    String edgeKind,
+    String edgeId,
+  ) async {
     try {
-      final response = await _dio.get('/api/zend/activity/edges/$edgeKind/$edgeId/reactions');
+      final response = await _dio.get(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/reactions',
+      );
       final data = response.data as Map<String, dynamic>;
       return (data['reactions'] as List<dynamic>? ?? [])
           .map((r) => EdgeReactionCount.fromJson(r as Map<String, dynamic>))
@@ -819,7 +951,11 @@ class ApiClient {
     }
   }
 
-  Future<void> addEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+  Future<void> addEdgeReaction(
+    String edgeKind,
+    String edgeId,
+    String emoji,
+  ) async {
     try {
       await _dio.post(
         '/api/zend/activity/edges/$edgeKind/$edgeId/reactions',
@@ -830,7 +966,11 @@ class ApiClient {
     }
   }
 
-  Future<void> removeEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+  Future<void> removeEdgeReaction(
+    String edgeKind,
+    String edgeId,
+    String emoji,
+  ) async {
     try {
       await _dio.delete(
         '/api/zend/activity/edges/$edgeKind/$edgeId/reactions',
@@ -841,7 +981,11 @@ class ApiClient {
     }
   }
 
-  Future<void> makeEdgePublic(String edgeKind, String edgeId, {String preset = 'share_activity_full'}) async {
+  Future<void> makeEdgePublic(
+    String edgeKind,
+    String edgeId, {
+    String preset = 'share_activity_full',
+  }) async {
     try {
       await _dio.post(
         '/api/zend/activity/edges/$edgeKind/$edgeId/make-public',
@@ -882,10 +1026,7 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/dm/$roomId/messages',
-        queryParameters: {
-          if (cursor != null) 'cursor': cursor, // ignore: use_null_aware_elements
-          'limit': limit,
-        },
+        queryParameters: {'cursor': ?cursor, 'limit': limit},
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -931,7 +1072,8 @@ class ApiClient {
     required String roomId,
     required String stickerId,
     required double amountUsdc,
-  }) async {    try {
+  }) async {
+    try {
       final response = await _dio.post(
         '/api/zend/dm/$roomId/vibes/prepare',
         data: {'sticker_id': stickerId, 'amount_usdc': amountUsdc},
@@ -1019,7 +1161,10 @@ class ApiClient {
           'partially_signed_tx': partiallySignedTx,
           'client_id': clientId,
         },
-        options: Options(receiveTimeout: const Duration(seconds: 90), sendTimeout: const Duration(seconds: 30)),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 30),
+        ),
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -1054,9 +1199,14 @@ class ApiClient {
 
   /// Read access follows the edge's normal authorization (direct
   /// participant or Shared_Network_Viewer).
-  Future<List<EdgeComment>> getEdgeComments(String edgeKind, String edgeId) async {
+  Future<List<EdgeComment>> getEdgeComments(
+    String edgeKind,
+    String edgeId,
+  ) async {
     try {
-      final response = await _dio.get('/api/zend/activity/edges/$edgeKind/$edgeId/comments');
+      final response = await _dio.get(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/comments',
+      );
       final data = response.data as Map<String, dynamic>;
       return (data['comments'] as List<dynamic>? ?? [])
           .map((c) => EdgeComment.fromJson(c as Map<String, dynamic>))
@@ -1068,18 +1218,31 @@ class ApiClient {
 
   /// Write access is direct-participant-only (sender/recipient) — never
   /// extended to Shared_Network_Viewers.
-  Future<void> addEdgeComment(String edgeKind, String edgeId, String body) async {
+  Future<void> addEdgeComment(
+    String edgeKind,
+    String edgeId,
+    String body,
+  ) async {
     try {
-      await _dio.post('/api/zend/activity/edges/$edgeKind/$edgeId/comments', data: {'body': body});
+      await _dio.post(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/comments',
+        data: {'body': body},
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
   }
 
   /// Delete-your-own only — no editing, no moderator override in v1.
-  Future<void> deleteEdgeComment(String edgeKind, String edgeId, String commentId) async {
+  Future<void> deleteEdgeComment(
+    String edgeKind,
+    String edgeId,
+    String commentId,
+  ) async {
     try {
-      await _dio.delete('/api/zend/activity/edges/$edgeKind/$edgeId/comments/$commentId');
+      await _dio.delete(
+        '/api/zend/activity/edges/$edgeKind/$edgeId/comments/$commentId',
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1103,7 +1266,8 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> getMyPageCustomisation() async {    try {
+  Future<Map<String, dynamic>> getMyPageCustomisation() async {
+    try {
       final response = await _dio.get('/api/zend/page/customisation');
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -1112,7 +1276,8 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> updateMyPageCustomisation(
-      Map<String, dynamic> data) async {
+    Map<String, dynamic> data,
+  ) async {
     try {
       final response = await _dio.put(
         '/api/zend/page/customisation',
@@ -1154,10 +1319,8 @@ class ApiClient {
     try {
       final response = await _dio.get(
         '/api/zend/pools',
-        queryParameters: <String, dynamic>{
-          'cursor': cursor,
-          'limit': limit,
-        }..removeWhere((_, v) => v == null),
+        queryParameters: <String, dynamic>{'cursor': cursor, 'limit': limit}
+          ..removeWhere((_, v) => v == null),
       );
       final data = response.data as Map<String, dynamic>;
       final pools = (data['pools'] as List<dynamic>? ?? [])
@@ -1181,7 +1344,9 @@ class ApiClient {
   /// Looks up a pool by its share short code (zdfi.me/pool/{code}).
   Future<Pool> getPoolByShortCode(String shortCode) async {
     try {
-      final response = await _dio.get('/api/zend/pools/by-short-code/$shortCode');
+      final response = await _dio.get(
+        '/api/zend/pools/by-short-code/$shortCode',
+      );
       return Pool.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
@@ -1211,7 +1376,8 @@ class ApiClient {
         ),
       );
       return PrepareTransferResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1345,8 +1511,8 @@ class ApiClient {
   }
 
   Future<SavingsPrepareResponse> prepareSavingsDeposit(
-      double amountUsdc, {
-      String? pocketId,
+    double amountUsdc, {
+    String? pocketId,
   }) async {
     try {
       final data = <String, dynamic>{'amount_usdc': amountUsdc};
@@ -1360,16 +1526,17 @@ class ApiClient {
         ),
       );
       return SavingsPrepareResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
   }
 
   Future<SavingsSubmitResult> submitSavingsDeposit(
-      String partiallySignedTxB64, {
-      String? pocketId,
-      double? amountUsdc,
+    String partiallySignedTxB64, {
+    String? pocketId,
+    double? amountUsdc,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -1386,7 +1553,8 @@ class ApiClient {
         ),
       );
       return SavingsSubmitResult.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1402,14 +1570,16 @@ class ApiClient {
         ),
       );
       return SavingsPrepareResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
   }
 
   Future<SavingsSubmitResult> submitSavingsWithdraw(
-      String partiallySignedTxB64) async {
+    String partiallySignedTxB64,
+  ) async {
     try {
       final response = await _dio.post(
         '/api/zend/savings/withdraw/submit',
@@ -1420,7 +1590,8 @@ class ApiClient {
         ),
       );
       return SavingsSubmitResult.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1500,7 +1671,8 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return SavingsPrepareResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1514,7 +1686,8 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return SavingsSubmitResult.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1527,14 +1700,17 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return SavingsPrepareResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
   }
 
   Future<SavingsSubmitResult> submitGoalWithdraw(
-      String pocketId, String signedTx) async {
+    String pocketId,
+    String signedTx,
+  ) async {
     try {
       final response = await _dio.post(
         '/api/zend/savings/pockets/goals/$pocketId/withdraw/submit',
@@ -1542,7 +1718,8 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return SavingsSubmitResult.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1555,7 +1732,8 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return SavingsPrepareResponse.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1569,7 +1747,8 @@ class ApiClient {
         options: Options(receiveTimeout: const Duration(seconds: 90)),
       );
       return SavingsSubmitResult.fromJson(
-          response.data as Map<String, dynamic>);
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1608,9 +1787,10 @@ class ApiClient {
 
   Future<void> setOnboardingChains(List<int> chainIds) async {
     try {
-      await _dio.post('/api/zend/crypto/onboarding-chains', data: {
-        'chain_ids': chainIds,
-      });
+      await _dio.post(
+        '/api/zend/crypto/onboarding-chains',
+        data: {'chain_ids': chainIds},
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -1622,11 +1802,14 @@ class ApiClient {
     required double amountUsdc,
   }) async {
     try {
-      final resp = await _dio.post('/api/zend/crypto/send/quote', data: {
-        'chain_id': chainId,
-        'destination_address': destinationAddress,
-        'amount_usdc': amountUsdc,
-      });
+      final resp = await _dio.post(
+        '/api/zend/crypto/send/quote',
+        data: {
+          'chain_id': chainId,
+          'destination_address': destinationAddress,
+          'amount_usdc': amountUsdc,
+        },
+      );
       return CryptoSendQuote.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
@@ -1638,10 +1821,10 @@ class ApiClient {
     required String partiallySignedTx,
   }) async {
     try {
-      final resp = await _dio.post('/api/zend/crypto/send/execute', data: {
-        'quote_id': quoteId,
-        'partially_signed_tx': partiallySignedTx,
-      });
+      final resp = await _dio.post(
+        '/api/zend/crypto/send/execute',
+        data: {'quote_id': quoteId, 'partially_signed_tx': partiallySignedTx},
+      );
       return CryptoSendResult.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;
@@ -1778,7 +1961,9 @@ class ApiClient {
   /// uses for the subsequent approve/deny call
   /// (`cli_pairing::get_session_status` accepts either an id or a code in
   /// the same path segment).
-  Future<CliPairingSessionStatus> getCliPairingSessionByCode(String code) async {
+  Future<CliPairingSessionStatus> getCliPairingSessionByCode(
+    String code,
+  ) async {
     try {
       final response = await _dio.get('/api/v1/dev/cli-auth/sessions/$code');
       return CliPairingSessionStatus.fromJson(
@@ -1791,7 +1976,10 @@ class ApiClient {
 
   /// Approves a CLI pairing session, submitting the signature produced by
   /// [WalletService.signArbitraryMessage] over the pairing code.
-  Future<void> approveCliPairingSession(String sessionId, String signatureB64) async {
+  Future<void> approveCliPairingSession(
+    String sessionId,
+    String signatureB64,
+  ) async {
     try {
       await _dio.post(
         '/api/v1/dev/cli-auth/sessions/$sessionId/approve',
@@ -1834,10 +2022,7 @@ class ApiClient {
     try {
       final resp = await _dio.post(
         '/api/zend/email-intents/prepare-approve',
-        data: {
-          'amount_usdc': amountUsdc,
-          'fee_payer': feePayerPubkey,
-        },
+        data: {'amount_usdc': amountUsdc, 'fee_payer': feePayerPubkey},
       );
       return resp.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -1933,10 +2118,7 @@ class ApiClient {
     try {
       final resp = await _dio.post(
         '/api/zend/claim/$intentId',
-        data: {
-          'ek_priv': ekPriv,
-          'wallet_address': walletAddress,
-        },
+        data: {'ek_priv': ekPriv, 'wallet_address': walletAddress},
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return resp.data as Map<String, dynamic>;
@@ -2001,7 +2183,9 @@ class ApiClient {
   Future<BeaconGenerateResponse> generateBeacon() async {
     try {
       final response = await _dio.post('/api/zend/drop/beacon/generate');
-      return BeaconGenerateResponse.fromJson(response.data as Map<String, dynamic>);
+      return BeaconGenerateResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -2013,7 +2197,9 @@ class ApiClient {
         '/api/zend/drop/beacon/preview',
         queryParameters: {'nonce': nonce},
       );
-      return BeaconPreviewResponse.fromJson(response.data as Map<String, dynamic>);
+      return BeaconPreviewResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
@@ -2049,7 +2235,9 @@ class ApiClient {
           sendTimeout: const Duration(seconds: 30),
         ),
       );
-      return DropExecuteResponse.fromJson(response.data as Map<String, dynamic>);
+      return DropExecuteResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw e.error ?? e;
     }
