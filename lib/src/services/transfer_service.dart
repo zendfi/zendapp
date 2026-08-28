@@ -50,6 +50,16 @@ class TransferService {
     }
   }
 
+  /// Declares whether this account can use a rail that signs with a local key.
+  ///
+  /// False for a zkLogin account, which has no Solana wallet. Set after sign-in
+  /// and on session restore, once the account type is known. A setter rather than
+  /// a constructor argument because the account type is not known at composition
+  /// time — the app has to read it from storage first.
+  set accountUsesLocalKeyRail(bool value) {
+    _railRouter?.allowLocalKeyRailFallback = value;
+  }
+
   /// Resolves the rail for [operations], falling back to the fixed pair when no
   /// router was supplied.
   Future<({RailClient client, TransactionSigner signer})> _bindingFor(

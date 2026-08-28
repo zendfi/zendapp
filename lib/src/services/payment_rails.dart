@@ -763,10 +763,20 @@ class RailRouter {
     }
   }
 
+  /// Whether falling back to a rail that signs with a local key is meaningful.
+  ///
+  /// Set false for a zkLogin account. Such an account has no Solana wallet, so
+  /// falling back to Solana does not degrade gracefully — it fails with
+  /// `WALLET_NOT_REGISTERED`, telling the user to "store a wallet backup", which
+  /// is a concept their account does not have and names the wrong cause. With
+  /// this false the router reports why its own rail is unavailable instead.
+  bool allowLocalKeyRailFallback = true;
+
   /// Resolves the binding to use for [operations].
   ///
-  /// Falls back to [fallback] when capabilities cannot be read, so a network
-  /// blip degrades to the previous behaviour rather than blocking a transfer.
+  /// Falls back to [fallback] when capabilities cannot be read, so a network blip
+  /// degrades to the previous behaviour rather than blocking a transfer — but only
+  /// when that fallback is usable by this account.
   Future<PaymentRailBinding> resolve({
     required Set<PaymentOperation> operations,
     PaymentRail fallback = PaymentRail.solana,
@@ -786,6 +796,14 @@ class RailRouter {
         }
       }
     }
+
+    if (!allowLocalKeyRailFallback) {
+      // Report the reason the account's own rail is unavailable rather than
+      // failing later on a rail it can never use.
+      throw RailUnavailableException(
+        capabilities?.unavailableReasonFor(PaymentRail.sui),
+      );
+    }
     return _registry.resolve(fallback);
   }
 
@@ -795,4 +813,34 @@ class RailRouter {
     _cached = null;
     _cachedAt = null;
   }
+}
+
+/// Thrown when no rail this account can actually use is currently available.
+///
+/// Carries the backend's reason code so the message names the real cause. The
+/// alternative — letting the request proceed on a rail the account has no wallet
+/// for — surfaces as `WALLET_NOT_REGISTERED` and tells the user to store a wallet
+/// backup, which is both wrong and unactionable for a Google sign-in.
+class RailUnavailableException implements Exception {
+  const RailUnavailableException(this.reasonCode);
+
+  /// `SUI_COHORT_REQUIRED`, `RAIL_NOT_SUPPORTED`, or null when capabilities could
+  /// not be read at all.
+  final String? reasonCode;
+
+  /// User-facing copy. Deliberately avoids naming a blockchain: which chain moves
+  /// the money is not something the user chose or needs to know.
+  String get userMessage => switch (reasonCode) {
+    'SUI_COHORT_REQUIRED' =>
+      'Your account isn’t switched on for transfers yet. '
+          'Hang tight — we’re rolling this out gradually.',
+    'RAIL_NOT_SUPPORTED' =>
+      'Transfers are temporarily unavailable. Please try again later.',
+    _ =>
+      'We couldn’t reach the transfer service. '
+          'Check your connection and try again.',
+  };
+
+  @override
+  String toString() => 'RailUnavailableException($reasonCode)';
 }

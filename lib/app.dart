@@ -631,6 +631,7 @@ class _SplashWithSessionRestoreState
     final isZkLogin = await widget.model.authService.isZkLoginAccount();
     if (!mounted) return;
     widget.model.isZkLoginAccount = isZkLogin;
+    widget.model.transferService.accountUsesLocalKeyRail = !isZkLogin;
     if (isZkLogin) {
       // The PIN-based inactivity lock must stay disarmed: AppLockOverlay unlocks
       // by decrypting a local Solana key, which this account does not have.

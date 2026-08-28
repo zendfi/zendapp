@@ -24,6 +24,7 @@ import '../services/notification_preferences_service.dart';
 import '../services/signing_policy_service.dart';
 import '../services/sound_service.dart';
 import '../services/sse_service.dart';
+import '../services/payment_rails.dart' show RailUnavailableException;
 import '../services/transfer_service.dart';
 import '../services/pocket_service.dart';
 import '../services/sui_zklogin_service.dart';
@@ -1177,6 +1178,10 @@ class ZendAppModel extends ChangeNotifier {
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
       lastBalanceError = null;
+    } on RailUnavailableException catch (e) {
+      // Names the real cause (for example: not yet in the rollout) instead of the
+      // wallet-backup error a fallback to Solana would have produced.
+      lastBalanceError = e.userMessage;
     } catch (e) {
       lastBalanceError = e.toString();
     } finally {

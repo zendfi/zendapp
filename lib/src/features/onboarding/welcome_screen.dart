@@ -64,6 +64,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       // satisfied. App lock is opt-in from profile settings instead.
       model.appLockService.pinIsAvailable = false;
       model.isZkLoginAccount = true;
+      // This account has no Solana wallet, so a fallback to Solana would fail with
+      // an error about storing a wallet backup — wrong cause, and nothing the user
+      // can act on.
+      model.transferService.accountUsesLocalKeyRail = false;
 
       await navigator.pushAndRemoveUntil(
         zendRoute<void>(page: const ZendShell()),

@@ -310,18 +310,26 @@ class RailCapability {
   final Set<PaymentAsset> assets;
   final Set<PaymentOperation> operations;
 
+  /// Why this rail is unavailable, when it is. The backend distinguishes
+  /// `RAIL_NOT_SUPPORTED` (absent from this build) from `SUI_COHORT_REQUIRED`
+  /// (present, but this account is not in the rollout) so a client can explain
+  /// the actual cause instead of guessing.
+  final String? errorCode;
+
   const RailCapability({
     required this.rail,
     required this.enabled,
     required this.networks,
     required this.assets,
     required this.operations,
+    this.errorCode,
   });
 
   factory RailCapability.fromJson(Map<String, dynamic> json) {
     return RailCapability(
       rail: _parseRail(json['rail'] as String),
       enabled: json['enabled'] as bool? ?? false,
+      errorCode: json['error'] as String?,
       networks: (json['networks'] as List<dynamic>? ?? const [])
           .map((value) => _parseNetwork(value as String))
           .toSet(),
@@ -369,6 +377,16 @@ class P2pCapabilities {
           )
           .toList(growable: false),
     );
+  }
+
+  /// The reason [rail] is unavailable, or null if it is available or unknown.
+  String? unavailableReasonFor(PaymentRail rail) {
+    for (final capability in rails) {
+      if (capability.rail == rail) {
+        return capability.enabled ? null : capability.errorCode;
+      }
+    }
+    return null;
   }
 
   bool supports({

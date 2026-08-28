@@ -10,6 +10,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/email_intent.dart';
 import '../../models/recent_contact.dart';
+import '../../services/payment_rails.dart' show RailUnavailableException;
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
@@ -341,6 +342,15 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
       rethrow;
+    } on RailUnavailableException catch (e) {
+      // No rail this account can actually use is available — for example the
+      // account is not in the rollout yet. Naming that beats the wallet-backup
+      // error a fallback to Solana would have produced.
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = SendStage.error;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
