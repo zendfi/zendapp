@@ -14,6 +14,7 @@ import '../models/email_intent.dart';
 import '../models/pocket_models.dart';
 import '../models/savings_models.dart';
 import 'payment_rail_models.dart';
+import 'sui_zklogin_models.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -413,6 +414,221 @@ class ApiClient {
       return TransferHistoryResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Sui zkLogin public sign-in (unauthenticated) ──────────────────────────
+
+  /// Registers a pending session *before* any account exists.
+  ///
+  /// Unauthenticated by necessity: this is the first call of the login itself, so
+  /// requiring a session would be circular. The nonce it returns commits only to
+  /// the supplied ephemeral key and the epoch window the backend chose.
+  Future<SuiZkLoginSessionInit> createPublicSuiZkLoginSession({
+    required String extendedEphemeralPublicKey,
+    required String jwtRandomness,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/public/sessions',
+        data: {
+          'ephemeral_public_key': extendedEphemeralPublicKey,
+          'jwt_randomness': jwtRandomness,
+        },
+        // No Authorization header: a stale token from a previous account must not
+        // influence which account this sign-in resolves to.
+        options: Options(headers: {'Authorization': null}),
+      );
+      return SuiZkLoginSessionInit.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Exchanges a nonce-bearing Google ID token for a Zend session.
+  ///
+  /// Creates the account if this Google identity is new. The timeout is generous
+  /// because this call also provisions the salt and derives the zkLogin address
+  /// through the proving provider.
+  Future<SuiZkLoginPublicSignIn> publicSuiZkLoginSignIn({
+    required String sessionId,
+    required String idToken,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/public/signin',
+        data: {'session_id': sessionId, 'id_token': idToken},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60),
+          headers: {'Authorization': null},
+        ),
+      );
+      return SuiZkLoginPublicSignIn.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Converts a placeholder handle (the user's email) into a chosen zendtag.
+  ///
+  /// Authenticated, and one-way: the backend refuses it once a real handle is set.
+  Future<String> claimZendtag(String zendtag) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/zendtag/claim',
+        data: {'zendtag': zendtag},
+      );
+      return (response.data as Map<String, dynamic>)['zendtag'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Registers a fresh Google re-authentication so a high-value transfer can go
+  /// through. The grant is short-lived and consumed by a single transfer.
+  Future<void> suiZkLoginStepUp({
+    required String sessionId,
+    required String idToken,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/zend/v1/sui/zklogin/step-up',
+        data: {'session_id': sessionId, 'id_token': idToken},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Records that the user never wants to be asked to choose a zendtag again.
+  ///
+  /// Server-side so the decision survives a reinstall and applies on every
+  /// device. Their email placeholder stays their handle indefinitely.
+  Future<void> suppressZendtagPrompt() async {
+    try {
+      await _dio.post('/api/zend/zendtag/skip-prompt');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // ── Sui zkLogin identity ──────────────────────────────────────────────────
+
+  /// Registers a pending session. The backend derives the nonce and maxEpoch.
+  Future<SuiZkLoginSessionInit> createSuiZkLoginSession({
+    required String extendedEphemeralPublicKey,
+    required String jwtRandomness,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/sessions',
+        data: {
+          'ephemeral_public_key': extendedEphemeralPublicKey,
+          'jwt_randomness': jwtRandomness,
+        },
+      );
+      return SuiZkLoginSessionInit.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Exchanges a nonce-bearing ID token for a linked Sui identity.
+  Future<SuiZkLoginIdentity> redeemSuiZkLoginSession({
+    required String sessionId,
+    required String idToken,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/identity/redeem',
+        data: {'session_id': sessionId, 'id_token': idToken},
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      final body = response.data as Map<String, dynamic>;
+      return SuiZkLoginIdentity(
+        linked: true,
+        identityId: body['identity_id'] as String?,
+        network: body['network'] as String?,
+        suiAddress: body['sui_address'] as String?,
+        addressSource: body['address_source'] as String?,
+        saltBackedUp: body['salt_backed_up'] as bool? ?? false,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<SuiZkLoginIdentity> getSuiZkLoginIdentity() async {
+    try {
+      final response = await _dio.get('/api/zend/v1/sui/zklogin/identity');
+      return SuiZkLoginIdentity.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Requests a proof. Proof generation is compute-heavy, so the timeout is
+  /// generous and the result is cached for the whole session by the caller.
+  Future<SuiZkLoginProof> requestSuiZkLoginProof({
+    required String sessionId,
+    required String idToken,
+    required String extendedEphemeralPublicKey,
+    required String jwtRandomness,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/proofs',
+        data: {
+          'session_id': sessionId,
+          'id_token': idToken,
+          'extended_ephemeral_public_key': extendedEphemeralPublicKey,
+          'jwt_randomness': jwtRandomness,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 90)),
+      );
+      return SuiZkLoginProof.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Wraps an ephemeral signature plus the cached proof into a zkLogin
+  /// signature. The backend owns the BCS authenticator layout.
+  Future<String> assembleSuiZkLoginSignature({
+    required String sessionId,
+    required String idToken,
+    required Map<String, dynamic> proof,
+    required String ephemeralSignature,
+    required String extendedEphemeralPublicKey,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/signatures',
+        data: {
+          'session_id': sessionId,
+          'id_token': idToken,
+          'proof': proof,
+          'ephemeral_signature': ephemeralSignature,
+          'ephemeral_public_key': extendedEphemeralPublicKey,
+        },
+      );
+      return (response.data as Map<String, dynamic>)['signature'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> revokeAllSuiZkLoginSessions() async {
+    try {
+      await _dio.post('/api/zend/v1/sui/zklogin/sessions/revoke-all');
     } on DioException catch (e) {
       throw e.error ?? e;
     }

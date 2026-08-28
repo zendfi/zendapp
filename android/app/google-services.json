@@ -12,7 +12,12 @@
           "package_name": "com.zendfi.zendapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "896122105196-b2n7pk8f6brvngro80np66f99bh7vi8u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAJJMq-gI9VVWUDBjyW5-FAmMUULGnAtng"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "896122105196-b2n7pk8f6brvngro80np66f99bh7vi8u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

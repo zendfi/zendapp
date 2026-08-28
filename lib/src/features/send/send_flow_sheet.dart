@@ -169,7 +169,23 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   Future<void> _proceedFromRecipient() async {
     final policy = SigningPolicyService();
     final cache = WalletSessionCache.instance;
+
+    // A zkLogin account has no local keypair and no PIN: signing authority is an
+    // in-memory ephemeral key plus a zero-knowledge proof. The PIN stage would be
+    // unsatisfiable for it, so it is skipped entirely rather than prompting for a
+    // secret that does not exist. Step-up for large amounts is handled by
+    // re-authenticating with Google, not by a local PIN.
+    final model = ZendScope.of(context);
+    final signsWithoutLocalSecret = await model.authService.isZkLoginAccount();
+    if (!mounted) return;
+    if (signsWithoutLocalSecret) {
+      _goTo(SendStage.processing);
+      await _executeTransfer(pin: null, keypairBytes: null);
+      return;
+    }
+
     final needsPin = await policy.requiresPinForAmount(widget.amount);
+    if (!mounted) return;
 
     if (!needsPin && cache.hasKeypair) {
       // Session signing — skip PIN, go straight to processing
@@ -274,15 +290,34 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     try {
       final model = ZendScope.of(context);
 
-      await model.transferService.sendTransfer(
-        recipientZendtag: _recipientZendtag!,
-        amountUsdc: widget.amount,
-        pin: pin,
-        keypairBytes: keypairBytes,
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
+      final note = _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim();
+
+      try {
+        await model.transferService.sendTransfer(
+          recipientZendtag: _recipientZendtag!,
+          amountUsdc: widget.amount,
+          pin: pin,
+          keypairBytes: keypairBytes,
+          note: note,
+        );
+      } on ApiException catch (e) {
+        // The backend refuses large transfers from a PIN-less account until
+        // Google has re-verified the person. Satisfy that and retry exactly once.
+        // Safe to retry: the check runs before anything is broadcast, so nothing
+        // was submitted, and a retry takes a fresh idempotency key.
+        if (e.errorCode != 'STEP_UP_REQUIRED') rethrow;
+        await model.zkLoginService.satisfyStepUp();
+        if (!mounted) return;
+        await model.transferService.sendTransfer(
+          recipientZendtag: _recipientZendtag!,
+          amountUsdc: widget.amount,
+          pin: pin,
+          keypairBytes: keypairBytes,
+          note: note,
+        );
+      }
 
       if (!mounted) return;
 

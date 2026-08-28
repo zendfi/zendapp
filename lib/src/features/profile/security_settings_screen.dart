@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
@@ -38,6 +39,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   bool _biometricSupported = false;
   bool _biometricEnabled = false;
+
+  /// zkLogin accounts hold no local key and no PIN, so every PIN-based control on
+  /// this screen is meaningless for them and is hidden. They get an app lock that
+  /// is a presence check instead.
+  bool _isZkLoginAccount = false;
+  bool _appLockEnabled = false;
   bool _pinPerPaymentEnabled = false;
   // Both threshold fields now default to the "PIN above a threshold" ON
   // state that SigningPolicyService applies for anyone who hasn't
@@ -62,9 +69,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
+    // Captured before the first await so no BuildContext is used across an async
+    // gap.
+    final authService = ZendScope.read(context).authService;
+
     final biometricSupported = await _biometric.isAvailable();
     final biometricEnabled =
         biometricSupported ? await _biometric.isEnabled() : false;
+    final isZkLogin = await authService.isZkLoginAccount();
+    final appLockEnabled = await _biometric.isAppLockEnabled();
     final snapshot = await _policy.snapshot();
     // Check if recovery backup exists (best-effort — don't crash settings if Drive unavailable)
     bool hasRecovery = false;
@@ -76,6 +89,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     setState(() {
       _biometricSupported = biometricSupported;
       _biometricEnabled = biometricEnabled;
+      _isZkLoginAccount = isZkLogin;
+      _appLockEnabled = appLockEnabled;
       _pinPerPaymentEnabled = snapshot.pinPerPaymentEnabled;
       _pinThresholdEnabled = snapshot.pinThresholdEnabled;
       _pinThresholdAmount = snapshot.pinThresholdAmount;
@@ -83,6 +98,37 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       _thresholdController.text = snapshot.pinThresholdAmount.toStringAsFixed(0);
       _loading = false;
     });
+  }
+
+  /// Turns the PIN-less app lock on or off.
+  ///
+  /// Enabling verifies the OS prompt actually works *before* persisting, so the
+  /// setting can never be switched on in a state that would leave the user unable
+  /// to get back into their own account on next launch.
+  Future<void> _toggleAppLock(bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (value) {
+      final ok = await _biometric.authenticateOnly(
+        reason: 'Confirm to turn on app lock',
+      );
+      if (!mounted) return;
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('App lock not enabled — could not confirm it’s you.'),
+          ),
+        );
+        return;
+      }
+    }
+    await _biometric.setAppLockEnabled(value);
+    if (!mounted) return;
+    setState(() => _appLockEnabled = value);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(value ? 'App lock enabled.' : 'App lock disabled.'),
+      ),
+    );
   }
 
   Future<void> _toggleBiometric(bool value) async {
@@ -243,22 +289,50 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── PIN section ──────────────────────────────────
-                      _SectionLabel('PIN', zt),
-                      const SizedBox(height: 8),
-                      _SettingsGroup(zt: zt, tiles: [
-                        _Tile(
-                          icon: PhosphorIconsBold.lockSimple,
-                          label: 'Change PIN',
-                          zt: zt,
-                          onTap: () =>
-                              pushZendSlide(context, const ChangePinScreen()),
-                        ),
-                      ]),
-                      const SizedBox(height: 20),
+                      // ── App lock (accounts with no PIN) ──────────────
+                      // Shown only for zkLogin accounts, and only where the
+                      // device can actually satisfy it. Copy states plainly what
+                      // it protects: this is privacy from someone holding your
+                      // unlocked phone, not protection of the funds themselves —
+                      // that comes from re-authenticating with Google on large
+                      // transfers.
+                      if (_isZkLoginAccount) ...[
+                        if (_biometricSupported) ...[
+                          _SectionLabel('App lock', zt),
+                          const SizedBox(height: 8),
+                          _SettingsGroup(zt: zt, tiles: [
+                            _ToggleTile(
+                              icon: PhosphorIconsBold.fingerprint,
+                              label: 'Require unlock to open Zend!',
+                              subtitle:
+                                  'Hides your balance and activity behind Face ID, '
+                                  'fingerprint, or your device passcode',
+                              value: _appLockEnabled,
+                              zt: zt,
+                              onChanged: _toggleAppLock,
+                            ),
+                          ]),
+                          const SizedBox(height: 20),
+                        ],
+                      ] else ...[
+                        // ── PIN section ────────────────────────────────
+                        _SectionLabel('PIN', zt),
+                        const SizedBox(height: 8),
+                        _SettingsGroup(zt: zt, tiles: [
+                          _Tile(
+                            icon: PhosphorIconsBold.lockSimple,
+                            label: 'Change PIN',
+                            zt: zt,
+                            onTap: () =>
+                                pushZendSlide(context, const ChangePinScreen()),
+                          ),
+                        ]),
+                        const SizedBox(height: 20),
+                      ],
 
                       // ── Biometric section ────────────────────────────
-                      if (_biometricSupported) ...[
+                      // PIN-backed, so irrelevant to a zkLogin account.
+                      if (_biometricSupported && !_isZkLoginAccount) ...[
                         _SectionLabel('Biometrics', zt),
                         const SizedBox(height: 8),
                         _SettingsGroup(zt: zt, tiles: [
@@ -283,6 +357,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       ],
 
                       // ── Payments section ─────────────────────────────
+                      // Every control here authorizes a payment with the PIN, so
+                      // it is hidden for accounts that have none. Step-up for
+                      // large sends on those accounts is a Google
+                      // re-authentication, enforced server-side.
+                      if (!_isZkLoginAccount) ...[
                       _SectionLabel('Payments', zt),
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
@@ -375,6 +454,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      ],
 
                       // ── Backup section ────────────────────────────────
                       _SectionLabel('Backup', zt),

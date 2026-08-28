@@ -11,6 +11,7 @@ import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../../services/pending_notification_service.dart';
 import '../activity/activity_screen.dart';
+import '../onboarding/zendtag_prompt_sheet.dart';
 import '../receive/receive_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
@@ -144,17 +145,29 @@ class _ZendShellState extends State<ZendShell> {
     return showSendFlowSheet(context, amount: amount);
   }
 
-  void _openReceiveScreen(BuildContext context) {
+  Future<void> _openReceiveScreen(BuildContext context) async {
     final model = ZendScope.of(context);
-    Navigator.of(context).push<bool>(
+
+    // The receive screen publishes a `zdfi.me/@handle` link as a QR, a share
+    // sheet, and an NFC tag. While the handle is still an email placeholder that
+    // link resolves to nothing — placeholders are excluded from public
+    // resolution — and sharing it would hand out the user's email address. So the
+    // handle is claimed first; the user can still decline, they just don't get a
+    // broken link.
+    if (model.zendtagIsPlaceholder) {
+      await showZendtagPromptSheet(context);
+      if (!mounted || model.zendtagIsPlaceholder) return;
+    }
+    if (!context.mounted) return;
+
+    final openSend = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => ReceiveScreen(username: model.username),
       ),
-    ).then((openSend) {
-      if (openSend == true && mounted) {
-        _setTab(1);
-      }
-    });
+    );
+    if (openSend == true && mounted) {
+      _setTab(1);
+    }
   }
 
   @override

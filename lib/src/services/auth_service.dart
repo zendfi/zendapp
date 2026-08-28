@@ -2,6 +2,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import 'sui_zklogin_models.dart';
+import 'sui_zklogin_service.dart';
 import 'wallet_service.dart';
 
 /// Result of validating a locally-stored session against the backend.
@@ -27,6 +29,16 @@ class AuthService {
   static const _displayNameKey = 'zend_display_name';
   static const _walletAddressKey = 'zend_wallet_address';
   static const _avatarUrlKey = 'zend_avatar_url';
+
+  /// How this device's account authenticates. Currently only [authMethodZkLogin]
+  /// is ever written; a null value means the legacy OTP + local-keypair account
+  /// shape, which is what every pre-zkLogin install has on disk.
+  ///
+  /// Startup routing depends on this: a zkLogin account has no Solana keypair and
+  /// no PIN, so the keypair-based checks in `app.dart` would otherwise send it to
+  /// a PIN restore screen that can never succeed.
+  static const _authMethodKey = 'zend_auth_method';
+  static const authMethodZkLogin = 'zklogin';
 
   String? _otpSessionId; // In-memory only
   String? _verificationToken; // In-memory only
@@ -80,6 +92,45 @@ class AuthService {
     await _secureStorage.write(key: _tokenKey, value: response.sessionToken);
     _verificationToken = null;
     return response;
+  }
+
+  /// Signs in with Google via zkLogin, creating the account if it is new.
+  ///
+  /// Replaces the whole `requestOtp` → `verifyOtp` → `register`/`signIn` sequence
+  /// with a single call. There is no verification token to carry between steps
+  /// because the Google ID token is itself the proof of identity.
+  ///
+  /// [zkLoginService] is injected rather than held as a field so this service
+  /// keeps no dependency on the Sui stack when zkLogin is not in use, which keeps
+  /// the OTP path above completely unaffected.
+  Future<SuiZkLoginPublicSignIn> signInWithGoogle(
+    SuiZkLoginService zkLoginService,
+  ) async {
+    final result = await zkLoginService.signInPublic();
+    await _secureStorage.write(key: _tokenKey, value: result.sessionToken);
+    await _secureStorage.write(key: _userIdKey, value: result.userId);
+    await _secureStorage.write(key: _zendtagKey, value: result.zendtag);
+    await _secureStorage.write(key: _displayNameKey, value: result.displayName);
+    // Written last, and only after the session is durably stored: startup routing
+    // keys off this, so a marker without a token would strand the next launch.
+    await _secureStorage.write(
+      key: _authMethodKey,
+      value: authMethodZkLogin,
+    );
+    // A zkLogin-native account has no Solana wallet, so nothing is written to
+    // _walletAddressKey here. Callers must treat a null wallet address as normal
+    // rather than as a broken account.
+    _verificationToken = null;
+    return result;
+  }
+
+  /// True when this device's account signs in with Google via zkLogin.
+  ///
+  /// Such an account has no local Solana keypair and no PIN by design, so callers
+  /// must not treat either absence as a broken or half-finished install.
+  Future<bool> isZkLoginAccount() async {
+    final method = await _secureStorage.read(key: _authMethodKey);
+    return method == authMethodZkLogin;
   }
 
   /// Public wrapper to persist user identity to secure storage.
@@ -187,6 +238,7 @@ class AuthService {
     await _secureStorage.delete(key: _displayNameKey);
     await _secureStorage.delete(key: _walletAddressKey);
     await _secureStorage.delete(key: _avatarUrlKey);
+    await _secureStorage.delete(key: _authMethodKey);
     await WalletService.clearLocalDataFromStorage(_secureStorage);
     _otpSessionId = null;
     _verificationToken = null;

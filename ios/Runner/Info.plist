@@ -82,5 +82,27 @@
 		<string>Zend uses Bluetooth to broadcast your identity to nearby Zend users so they can send you money via Drop.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Custom URL scheme registration. Previously absent entirely, which means
+		     the zendapp:// links the Android manifest has always declared could not
+		     open the app on iOS at all. Declared here so both the zkLogin OAuth
+		     callback fallback (zendapp://auth-callback) and the existing payment
+		     deep link (zendapp://pay) resolve.
+
+		     The primary zkLogin callback is the https Universal Link
+		     zdfi.me/auth/callback, which is covered by the existing
+		     applinks:zdfi.me entry in Runner.entitlements and needs no scheme here. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.zendfi.app.zendapp</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>zendapp</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

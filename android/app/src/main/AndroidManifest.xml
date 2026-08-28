@@ -97,6 +97,33 @@
                 <data android:scheme="zendapp" android:host="pay" />
             </intent-filter>
         </activity>
+
+        <!-- zkLogin OAuth callback (flutter_web_auth_2).
+             Two filters on purpose:
+               1. https App Link — Google only permits https redirect URIs for a
+                  Web OAuth client, and the Web client is what keeps the zkLogin
+                  address identical across app and web (`aud` feeds the address).
+               2. zendapp://auth-callback — a fallback for when App Link
+                  verification has not propagated, so a failed domain
+                  verification degrades to a chooser instead of a dead sign-in.
+             taskAffinity is cleared per flutter_web_auth_2 5.x guidance. -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter android:label="flutter_web_auth_2" android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="zdfi.me" android:path="/auth/callback" />
+            </intent-filter>
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="zendapp" android:host="auth-callback" />
+            </intent-filter>
+        </activity>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

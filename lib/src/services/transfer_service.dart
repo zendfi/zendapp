@@ -18,6 +18,11 @@ class TransferService {
   final RailClient _railClient;
   final TransactionSigner _transactionSigner;
 
+  /// When present, the rail is resolved per operation from the backend's
+  /// capabilities instead of being fixed at construction. Absent in tests and in
+  /// legacy composition, which keeps the original single-rail behaviour intact.
+  final RailRouter? _railRouter;
+
   String? _nextCursor;
 
   /// [apiClient] and [walletService] remain accepted for source compatibility.
@@ -27,7 +32,9 @@ class TransferService {
     WalletService? walletService,
     RailClient? railClient,
     TransactionSigner? transactionSigner,
-  }) : _railClient =
+    RailRouter? railRouter,
+  }) : _railRouter = railRouter,
+       _railClient =
            railClient ??
            LegacySolanaRailClient(
              apiClient: _requireDependency(apiClient, 'apiClient'),
@@ -43,6 +50,22 @@ class TransferService {
     }
   }
 
+  /// Resolves the rail for [operations], falling back to the fixed pair when no
+  /// router was supplied.
+  Future<({RailClient client, TransactionSigner signer})> _bindingFor(
+    Set<PaymentOperation> operations,
+  ) async {
+    final router = _railRouter;
+    if (router == null) {
+      return (client: _railClient, signer: _transactionSigner);
+    }
+    final binding = await router.resolve(
+      operations: operations,
+      fallback: _railClient.rail,
+    );
+    return (client: binding.client, signer: binding.signer);
+  }
+
   /// Sends a USDC transfer to [recipientZendtag]. The return type remains the
   /// legacy UI DTO while all rail-facing data stays neutral and opaque.
   Future<TransferResponse> sendTransfer({
@@ -52,31 +75,50 @@ class TransferService {
     Uint8List? keypairBytes,
     String? note,
   }) async {
-    if ((pin == null) == (keypairBytes == null)) {
+    // Resolved before validating authorization, because whether a local secret is
+    // even required depends on the rail: a zkLogin account signs with an
+    // in-memory ephemeral key and has no PIN or stored keypair to supply.
+    final binding = await _bindingFor({
+      PaymentOperation.prepare,
+      PaymentOperation.submit,
+    });
+    final needsLocalSecret = binding.signer.rail == PaymentRail.solana;
+
+    if (needsLocalSecret && (pin == null) == (keypairBytes == null)) {
+      // Reached either by a genuine caller mistake, or by an account with no
+      // local key being routed to a rail that requires one — which happens when
+      // a zkLogin account's own rail is unavailable. Both are unrecoverable here,
+      // so name the real condition rather than only the missing argument.
       throw ArgumentError(
-        'Exactly one of pin or keypairBytes must be provided',
+        'This transfer resolved to the ${binding.signer.rail.name} rail, which '
+        'signs with a local key. Exactly one of pin or keypairBytes is required.',
       );
     }
 
     // One key identifies this logical send and is reused for prepare, submit,
     // and any adapter-level retries of either request.
     final idempotencyKey = const Uuid().v4();
-    final prepared = await _railClient.prepareTransfer(
+    final prepared = await binding.client.prepareTransfer(
       recipientZendtag: recipientZendtag,
       amountUsdc: amountUsdc,
       idempotencyKey: idempotencyKey,
     );
 
-    final authorization = keypairBytes != null
-        ? SigningAuthorization.withCachedKeypair(keypairBytes)
-        : SigningAuthorization.withPin(pin!);
-    final signedTransfer = await _transactionSigner.signPreparedTransfer(
+    final SigningAuthorization authorization;
+    if (!needsLocalSecret) {
+      authorization = const SigningAuthorization.none();
+    } else if (keypairBytes != null) {
+      authorization = SigningAuthorization.withCachedKeypair(keypairBytes);
+    } else {
+      authorization = SigningAuthorization.withPin(pin!);
+    }
+    final signedTransfer = await binding.signer.signPreparedTransfer(
       prepared: prepared,
       amountUsdc: amountUsdc,
       authorization: authorization,
     );
 
-    final submission = await _railClient.submitTransfer(
+    final submission = await binding.client.submitTransfer(
       recipientZendtag: recipientZendtag,
       amountUsdc: amountUsdc,
       signedTransfer: signedTransfer,
@@ -93,7 +135,8 @@ class TransferService {
   /// Preserves the legacy balance DTO expected by app state and screens while
   /// routing the request through the selected rail façade.
   Future<BalanceResponse> getBalance() async {
-    final balance = await _railClient.getBalance();
+    final binding = await _bindingFor({PaymentOperation.balance});
+    final balance = await binding.client.getBalance();
     final usdc = balance.amountFor(PaymentAsset.usdc);
     return BalanceResponse(
       walletAddress: balance.walletAddress,
@@ -105,7 +148,8 @@ class TransferService {
 
   Future<List<TransferHistoryEntry>> getHistory() async {
     _nextCursor = null;
-    final response = await _railClient.getTransferHistory();
+    final binding = await _bindingFor({PaymentOperation.history});
+    final response = await binding.client.getTransferHistory();
     _nextCursor = response.nextCursor;
     return response.transfers
         .map(_toLegacyHistoryEntry)
@@ -113,7 +157,10 @@ class TransferService {
   }
 
   Future<List<TransferHistoryEntry>> getNextPage() async {
-    final response = await _railClient.getTransferHistory(cursor: _nextCursor);
+    final binding = await _bindingFor({PaymentOperation.history});
+    final response = await binding.client.getTransferHistory(
+      cursor: _nextCursor,
+    );
     _nextCursor = response.nextCursor;
     return response.transfers
         .map(_toLegacyHistoryEntry)

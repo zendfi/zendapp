@@ -16,7 +16,10 @@ import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
 import 'src/features/onboarding/pin_setup_screen.dart';
 import 'src/features/onboarding/pin_migration_screen.dart';
+import 'src/features/lock/biometric_lock_screen.dart';
 import 'src/features/pools/pool_detail_screen.dart';
+import 'src/features/shell/zend_shell.dart';
+import 'src/services/biometric_service.dart';
 import 'src/features/profile/user_profile_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/navigation/notification_navigator.dart';
@@ -135,6 +138,30 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         }
       }
     });
+  }
+
+  /// Re-locks a PIN-less account behind the biometric gate after a long absence.
+  ///
+  /// Pushed as a full-screen route rather than handled by [AppLockService],
+  /// because that service's lock state drives [AppLockOverlay], which unlocks by
+  /// decrypting a local Solana key that a zkLogin account does not have.
+  Future<void> _maybeShowBiometricGate(ZendAppModel model) async {
+    if (!model.isAuthenticated) return;
+    if (!await model.authService.isZkLoginAccount()) return;
+    if (!await BiometricService().isAppLockEnabled()) return;
+    if (!mounted) return;
+
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    await navigator.push(
+      zendRoute<void>(
+        page: BiometricLockScreen(
+          // Already authenticated behind this gate, so unlocking just dismisses
+          // it and returns the user exactly where they were.
+          onUnlocked: () => navigator.pop(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -405,6 +432,13 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           model.appLockService.lock();
         }
 
+        // Same rule for accounts with no PIN, which the line above cannot cover
+        // because it is gated on pinIsAvailable. These re-lock through the
+        // biometric gate instead of the PIN overlay.
+        if (bgDuration.inSeconds >= 120 && !model.appLockService.pinIsAvailable) {
+          unawaited(_maybeShowBiometricGate(model));
+        }
+
         if (bgDuration.inMinutes >= 2) {
           model.forceRestartRealTimeUpdates();
         } else {
@@ -587,6 +621,41 @@ class _SplashWithSessionRestoreState
 
     await widget.model.restoreUserIdentity();
     if (!mounted) return;
+
+    // zkLogin accounts are resolved before the keypair checks below, because
+    // those checks assume every account owns a local Solana key protected by a
+    // PIN. A zkLogin account owns neither: its signing key is ephemeral and lives
+    // only in memory, and there is no local secret for a PIN to protect. Falling
+    // through would land it on PinRestoreScreen, which would try to fetch a
+    // server key backup that never existed.
+    final isZkLogin = await widget.model.authService.isZkLoginAccount();
+    if (!mounted) return;
+    widget.model.isZkLoginAccount = isZkLogin;
+    if (isZkLogin) {
+      // The PIN-based inactivity lock must stay disarmed: AppLockOverlay unlocks
+      // by decrypting a local Solana key, which this account does not have.
+      widget.model.appLockService.pinIsAvailable = false;
+
+      // Opt-in biometric gate, off unless the user turned it on in settings.
+      final lockEnabled = await BiometricService().isAppLockEnabled();
+      if (!mounted) return;
+      if (lockEnabled) {
+        _finishSplashAndNavigate(
+          BiometricLockScreen(
+            onUnlocked: () {
+              final navigator = _navigatorKey.currentState;
+              navigator?.pushAndRemoveUntil(
+                zendRoute<void>(page: const ZendShell()),
+                (route) => false,
+              );
+            },
+          ),
+        );
+        return;
+      }
+      _finishSplashAndNavigate(const ZendShell());
+      return;
+    }
 
     final hasLocalKeypair = await widget.model.walletService.hasLocalKeypair();
     final hasPinSetup = await widget.model.walletService.hasPinSetup();

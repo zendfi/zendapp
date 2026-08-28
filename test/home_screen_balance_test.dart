@@ -27,6 +27,8 @@ import 'package:zendapp/src/services/sse_service.dart';
 import 'package:zendapp/src/services/transfer_service.dart';
 import 'package:zendapp/src/services/wallet_service.dart';
 import 'package:zendapp/src/services/zendtag_service.dart';
+import 'package:zendapp/src/services/sui_oauth_provider.dart';
+import 'package:zendapp/src/services/sui_zklogin_service.dart';
 
 ZendAppModel _buildModel() {
   const secureStorage = FlutterSecureStorage();
@@ -47,6 +49,19 @@ ZendAppModel _buildModel() {
   final appLockService = AppLockService();
   final savingsService = SavingsService(apiClient: apiClient);
   final pocketService = PocketService(apiClient: apiClient);
+  // Constructed so ZendAppModel can be built; no test here signs in, and the
+  // redirect host is unreachable, so the OAuth round-trip is never attempted.
+  final zkLoginService = SuiZkLoginService(
+    apiClient: apiClient,
+    oauthProvider: GoogleZkLoginOAuthProvider(
+      clientId: 'test.apps.googleusercontent.com',
+      redirectUri: 'https://test.invalid/auth/callback',
+      callbackUrlScheme: 'https',
+      httpsHost: 'test.invalid',
+      httpsPath: '/auth/callback',
+      flow: SuiOAuthFlow.implicitIdToken,
+    ),
+  );
 
   return ZendAppModel(
     authService: authService,
@@ -61,6 +76,7 @@ ZendAppModel _buildModel() {
     savingsService: savingsService,
     pocketService: pocketService,
     localDb: AppDatabase.instance,
+    zkLoginService: zkLoginService,
   );
 }
 

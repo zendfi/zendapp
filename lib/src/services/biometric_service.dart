@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Manages biometric unlock for the Zend! wallet.
 ///
@@ -76,5 +77,53 @@ class BiometricService {
     const storage = FlutterSecureStorage(iOptions: _iOptions);
     final value = await storage.read(key: _pinKey);
     return value != null && value.isNotEmpty;
+  }
+
+  // ── App lock for accounts with no PIN ────────────────────────────────────
+  //
+  // A zkLogin account has no local private key and therefore no PIN, so the
+  // methods above have nothing to store or retrieve. Its app lock is a pure
+  // presence check instead: the OS confirms the person holding the device.
+  //
+  // Worth being clear about what this does and does not protect. It keeps a
+  // passer-by out of balances, activity and chats. It is not custody protection:
+  // anyone who can reach the device's Google session could sign in again from
+  // scratch. Protection for large transfers comes from re-authenticating with
+  // Google server-side, not from this toggle.
+
+  static const _appLockKey = 'zend_app_lock_biometric';
+
+  /// Whether the user has switched on biometric app lock.
+  Future<bool> isAppLockEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_appLockKey) ?? false;
+  }
+
+  Future<void> setAppLockEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_appLockKey, enabled);
+  }
+
+  /// Presents the platform prompt and reports only whether it succeeded.
+  ///
+  /// Unlike [authenticateAndGetPin] this retrieves nothing, because there is no
+  /// PIN to retrieve. `biometricOnly` is deliberately false so the OS offers the
+  /// device passcode as a fallback — otherwise a failed fingerprint sensor or a
+  /// re-enrolled face would lock the user out of their own account with no way
+  /// back in, and the account holds money.
+  Future<bool> authenticateOnly({
+    String reason = 'Unlock Zend!',
+  }) async {
+    try {
+      return await _auth.authenticate(
+        localizedReason: reason,
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
   }
 }

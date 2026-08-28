@@ -190,11 +190,15 @@ class ProfileScreen extends StatelessWidget {
                         label: 'Security settings',
                         onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
                       ),
-                      _Tile(
-                        icon: PhosphorIconsBold.lockSimple,
-                        label: 'Change PIN',
-                        onTap: () => pushZendSlide(context, const ChangePinScreen()),
-                      ),
+                      // Hidden for zkLogin accounts: they have no PIN, so this
+                      // would open a flow with nothing to change.
+                      if (!model.isZkLoginAccount)
+                        _Tile(
+                          icon: PhosphorIconsBold.lockSimple,
+                          label: 'Change PIN',
+                          onTap: () =>
+                              pushZendSlide(context, const ChangePinScreen()),
+                        ),
                       _Tile(
                         icon: PhosphorIconsBold.identificationBadge,
                         label: 'Identity verification',

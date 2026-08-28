@@ -26,6 +26,7 @@ import '../services/sound_service.dart';
 import '../services/sse_service.dart';
 import '../services/transfer_service.dart';
 import '../services/pocket_service.dart';
+import '../services/sui_zklogin_service.dart';
 import '../services/savings_service.dart';
 import '../services/wallet_service.dart';
 import '../services/wallet_session_cache.dart';
@@ -160,6 +161,7 @@ class ZendAppModel extends ChangeNotifier {
     required this.savingsService,
     required this.pocketService,
     required this.localDb,
+    required this.zkLoginService,
     EmailIntentService? emailIntentService,
   }) : _emailIntentService = emailIntentService,
        dmService = DmService(apiClient: walletService.apiClient),
@@ -176,6 +178,12 @@ class ZendAppModel extends ChangeNotifier {
   final AppLockService appLockService;
   final SavingsService savingsService;
   final PocketService pocketService;
+
+  /// Sui zkLogin sign-in and transaction signing.
+  ///
+  /// Holds the ephemeral signing session in memory only, so it is also what
+  /// determines whether a Sui send can proceed without another Google round-trip.
+  final SuiZkLoginService zkLoginService;
 
   /// Drop discoverability service — manages BLE beacon advertising as a receiver.
   late final DropDiscoverabilityService dropDiscoverabilityService =
@@ -724,6 +732,23 @@ class ZendAppModel extends ChangeNotifier {
   bool isAuthenticated = false;
   String? currentUserId;
   String? currentZendtag;
+
+  /// True when [currentZendtag] is the user's email standing in for a handle they
+  /// have not chosen.
+  ///
+  /// Such a handle is deliberately excluded from public resolution, search, the
+  /// sitemap, and public payment pages, so any UI that builds a shareable
+  /// `zdfi.me/@…` link from it would produce a URL that 404s *and* would embed the
+  /// user's email address in whatever they shared. Surfaces that publish a handle
+  /// must check this first.
+  bool zendtagIsPlaceholder = false;
+
+  /// True when this account signs in with Google via zkLogin.
+  ///
+  /// An in-session mirror of the durable marker in secure storage, so widgets
+  /// that cannot await (stateless screens, build methods) can still avoid
+  /// offering PIN-based actions to an account that has no PIN.
+  bool isZkLoginAccount = false;
   String? currentDisplayName;
   String? currentAvatarUrl;
 
@@ -1062,6 +1087,17 @@ class ZendAppModel extends ChangeNotifier {
     walletService.apiClient
         .updateVisibilitySettings(notifyMutualsOnShare: notifyMutualsOnShare)
         .ignore();
+  }
+
+  /// Records a handle the user has just claimed, replacing their email placeholder.
+  ///
+  /// Clears [zendtagIsPlaceholder] so the receive and share surfaces become
+  /// available in the same beat, without waiting for a profile refetch.
+  void applyClaimedZendtag(String zendtag) {
+    currentZendtag = zendtag;
+    username = zendtag;
+    zendtagIsPlaceholder = false;
+    notifyListeners();
   }
 
   void setUsername(String value) {
@@ -1461,6 +1497,7 @@ class ZendAppModel extends ChangeNotifier {
     required String displayName,
     String? walletAddr,
     String? avatarUrl,
+    bool? zendtagIsPlaceholder,
   }) {
     // If a different user is authenticating (account switch), zero out all
     // stale per-user state so the previous user's balance/history/social
@@ -1476,6 +1513,9 @@ class ZendAppModel extends ChangeNotifier {
     currentDisplayName = displayName;
     if (walletAddr != null) walletAddress = walletAddr;
     if (avatarUrl != null) currentAvatarUrl = avatarUrl;
+    if (zendtagIsPlaceholder != null) {
+      this.zendtagIsPlaceholder = zendtagIsPlaceholder;
+    }
     username = zendtag;
     // Onboarding done — drop any waitlist hold-over so it can't leak
     // into a future session if this device is later signed out and
@@ -1656,6 +1696,8 @@ class ZendAppModel extends ChangeNotifier {
     currentZendtag = null;
     currentDisplayName = null;
     currentAvatarUrl = null;
+    zendtagIsPlaceholder = false;
+    isZkLoginAccount = false;
     username = 'blessed';
     balanceHidden = false;
     isDarkMode = false;

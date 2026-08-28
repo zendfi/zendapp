@@ -1,6 +1,9 @@
 enum PaymentRail { solana, sui }
 
-enum PaymentNetwork { mainnet }
+/// Note that `_parseNetwork` below throws on an unrecognised value rather than
+/// guessing, so every network the backend can report must be listed here. Sui
+/// currently runs on testnet, which is why it is not mainnet-only.
+enum PaymentNetwork { mainnet, testnet }
 
 enum PaymentAsset { usdc, native }
 

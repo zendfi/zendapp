@@ -20,6 +20,8 @@ import 'src/services/sound_service.dart';
 import 'src/services/sse_service.dart';
 import 'src/services/wallet_service.dart';
 import 'src/services/payment_rails.dart';
+import 'src/services/sui_oauth_provider.dart';
+import 'src/services/sui_zklogin_service.dart';
 import 'src/services/zendtag_service.dart';
 import 'src/services/transfer_service.dart';
 import 'src/services/fx_service.dart';
@@ -28,6 +30,34 @@ import 'src/services/pocket_service.dart';
 import 'src/services/email_intent_service.dart';
 
 const kApiBaseUrl = 'https://api-v2.zendfi.tech';
+
+/// Google OAuth client used for zkLogin sign-in.
+///
+/// **This must be the Web client id, and it must be the same value on every
+/// platform.** A zkLogin Sui address is derived from `iss`, `aud`, `sub`, and the
+/// user salt, and `aud` is this client id. Two client ids therefore produce two
+/// different Sui addresses for the same Google account, and funds sent to one are
+/// not spendable from the other.
+///
+/// The Android client id cannot be used here: Google documents the browser-based
+/// OAuth flow for iOS and Desktop client types only, and directs Android to the
+/// native Credential Manager SDK — which cannot set the OIDC `nonce` that zkLogin
+/// requires. A Web client id is also the only kind a browser can use, so it is
+/// the only value that lets zendapp and zendonline share one address.
+///
+/// `SUI_ZKLOGIN_GOOGLE_CLIENT_IDS` on the backend must contain this exact value,
+/// or ID token verification fails on the `aud` claim.
+const kZkLoginGoogleClientId =
+    '896122105196-b2n7pk8f6brvngro80np66f99bh7vi8u.apps.googleusercontent.com';
+
+/// Redirect target for the zkLogin OAuth round-trip.
+///
+/// Must be registered verbatim as an Authorized redirect URI on the Web client.
+/// Google only accepts https redirects for a Web client, so this is an App Link
+/// (Android) / Universal Link (iOS) rather than a custom scheme.
+const kZkLoginRedirectUri = 'https://zdfi.me/auth/callback';
+const kZkLoginRedirectHost = 'zdfi.me';
+const kZkLoginRedirectPath = '/auth/callback';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -81,17 +111,57 @@ void main() async {
 
   final zendtagService = ZendtagService(apiClient: apiClient);
 
+  // zkLogin sign-in. The Web client id and https redirect are required together:
+  // Google permits only https redirects for a Web client, and the Web client is
+  // the only kind a browser can use — which is what keeps one Google account
+  // mapped to one Sui address across app and web, since `aud` feeds the address.
+  final zkLoginService = SuiZkLoginService(
+    apiClient: apiClient,
+    oauthProvider: GoogleZkLoginOAuthProvider(
+      clientId: kZkLoginGoogleClientId,
+      redirectUri: kZkLoginRedirectUri,
+      // 'https' selects App Link / Universal Link capture; host and path are
+      // mandatory on Android in flutter_web_auth_2 5.x when the scheme is https.
+      callbackUrlScheme: 'https',
+      httpsHost: kZkLoginRedirectHost,
+      httpsPath: kZkLoginRedirectPath,
+      // Implicit, because zkLogin needs only an ID token. A code exchange would
+      // require the Web client's secret, which must never ship in an app.
+      flow: SuiOAuthFlow.implicitIdToken,
+    ),
+  );
+
   final solanaRail = PaymentRailBinding(
     identity: SolanaWalletIdentity(walletService: walletService),
     signer: SolanaTransactionSigner(walletService: walletService),
     client: CapabilityGatedSolanaRailClient(apiClient: apiClient),
   );
-  final railRegistry = PaymentRailRegistry([solanaRail]);
+  // Sui runs on testnet for the pilot. All three components must agree on the
+  // network or PaymentRailBinding rejects the mix.
+  const suiNetwork = PaymentNetwork.testnet;
+  final suiRail = PaymentRailBinding(
+    identity: SuiWalletIdentity(apiClient: apiClient, network: suiNetwork),
+    signer: SuiTransactionSigner(
+      zkLoginService: zkLoginService,
+      network: suiNetwork,
+    ),
+    client: SuiV2RailClient(apiClient: apiClient, network: suiNetwork),
+  );
+
+  // Both rails are registered; which one a transfer actually uses is decided at
+  // runtime from /capabilities, never hardcoded here. The registry stays
+  // fail-closed, so an unavailable rail raises rather than silently crossing
+  // chains.
+  final railRegistry = PaymentRailRegistry([solanaRail, suiRail]);
   final selectedRail = railRegistry.resolve(PaymentRail.solana);
 
+  final railRouter = RailRouter(apiClient: apiClient, registry: railRegistry);
+
   final transferService = TransferService(
+    // Fixed pair is the fallback used only when capabilities cannot be read.
     railClient: selectedRail.client,
     transactionSigner: selectedRail.signer,
+    railRouter: railRouter,
   );
 
   final fxService = FxService(apiClient: apiClient);
@@ -133,6 +203,7 @@ void main() async {
     pocketService: pocketService,
     emailIntentService: emailIntentService,
     localDb: localDb,
+    zkLoginService: zkLoginService,
   );
 
   // Wire every confirmed 401 (from any API call, on any screen) to a

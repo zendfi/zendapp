@@ -64,8 +64,18 @@ dependencies:
   # pins the version and enables the Argon2BytesGenerator / Argon2Parameters API.
   pointycastle: ^3.9.1
 
-  # Google Sign-In for Drive API access (Android recovery backup)
+  # Google Sign-In for Drive API access (Android recovery backup).
+  # NOT usable for zkLogin: the plugin cannot set an OIDC `nonce`, and zkLogin
+  # requires the nonce to be embedded in the ID token. See flutter#85439. The
+  # zkLogin flow uses flutter_web_auth_2 below instead.
   google_sign_in: ^6.2.1
+
+  # Browser-based OpenID Connect round-trip for zkLogin sign-in. Uses Custom Tabs
+  # on Android and ASWebAuthenticationSession on iOS, which is what Google
+  # supports (embedded webviews are refused). Chosen over flutter_appauth because
+  # zkLogin needs only an ID token — no access or refresh tokens — so the token
+  # endpoint and client secret are avoidable entirely for the implicit flow.
+  flutter_web_auth_2: ^5.1.0
 
   # Google APIs — Drive v3 scope for recovery packet storage
   googleapis: ^13.0.0
