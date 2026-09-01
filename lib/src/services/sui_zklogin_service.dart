@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
 import 'sui_oauth_provider.dart' show SuiOAuthPrompt;
+import 'sui_salt_custody_service.dart';
+import 'sui_salt_shares.dart';
 import 'sui_signing_service.dart';
 import 'sui_zklogin_models.dart';
 
@@ -98,13 +100,19 @@ class SuiZkLoginService {
     required ApiClient apiClient,
     required SuiOAuthProvider oauthProvider,
     SuiSigningService signingService = const SuiSigningService(),
+    SuiSaltCustodyService? saltCustody,
   }) : _api = apiClient,
        _oauth = oauthProvider,
-       _signing = signingService;
+       _signing = signingService,
+       _custody = saltCustody;
 
   final ApiClient _api;
   final SuiOAuthProvider _oauth;
   final SuiSigningService _signing;
+
+  /// Sharded salt custody. Optional so this service still works on the
+  /// whole-salt strategies, where the backend supplies the salt itself.
+  final SuiSaltCustodyService? _custody;
 
   _ActiveSession? _session;
 
@@ -219,11 +227,16 @@ class SuiZkLoginService {
 
     final session = _requireSession();
 
+    // Under sharded custody the backend cannot rebuild the salt, so it is
+    // reconstructed here and supplied with the proof request. Only needed when a
+    // proof is actually being fetched — proofs are cached for the whole session,
+    // so this is at most one reconstruction per sign-in rather than per transfer.
     final proof = session.proof ??= (await _api.requestSuiZkLoginProof(
       sessionId: session.sessionId,
       idToken: session.idToken,
       extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
       jwtRandomness: session.jwtRandomness,
+      salt: await _reconstructSaltIfSharded(session),
     )).payload;
 
     final signature = await _signing.signPreparedTransfer(
@@ -238,6 +251,85 @@ class SuiZkLoginService {
       ephemeralSignature: signature.signatureBase64,
       extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
     );
+  }
+
+  /// Reconstructs the salt for a proof request, or null when custody is not
+  /// sharded.
+  ///
+  /// Failures are surfaced rather than swallowed: a proof built without the right
+  /// salt would commit to an address the user does not control, so failing the
+  /// transfer is strictly better than producing one.
+  Future<String?> _reconstructSaltIfSharded(_ActiveSession session) async {
+    final custody = _custody;
+    if (custody == null) return null;
+
+    final salt = await custody.reconstructSalt(
+      sessionId: session.sessionId,
+      idToken: session.idToken,
+      accessToken: session.accessToken,
+    );
+    try {
+      return saltToDecimalString(salt);
+    } finally {
+      for (var i = 0; i < salt.length; i++) {
+        salt[i] = 0;
+      }
+    }
+  }
+
+  /// Moves this account onto 2-of-3 sharded salt custody.
+  ///
+  /// Reads the whole salt once, splits it, and distributes the shares. Splitting
+  /// the *existing* salt rather than generating a new one is what preserves the
+  /// user's address — the address derives from the salt, so a fresh one would
+  /// strand any funds already held.
+  ///
+  /// Requires an active session whose OAuth grant included Drive access.
+  Future<void> provisionSaltShares() async {
+    final custody = _custody;
+    if (custody == null) {
+      throw StateError('Salt custody is not configured');
+    }
+    final session = _requireSession();
+    final accessToken = session.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      throw const SuiSaltRecoveryException(
+        'Google Drive access is required to set up wallet recovery',
+      );
+    }
+
+    final decimal = await _api.exportSuiZkLoginSalt(
+      sessionId: session.sessionId,
+      idToken: session.idToken,
+    );
+    final salt = _saltFromDecimalString(decimal);
+    try {
+      await custody.provisionShares(
+        salt: salt,
+        sessionId: session.sessionId,
+        idToken: session.idToken,
+        accessToken: accessToken,
+      );
+    } finally {
+      for (var i = 0; i < salt.length; i++) {
+        salt[i] = 0;
+      }
+    }
+  }
+
+  /// Parses the decimal salt the backend exports into its 16 big-endian bytes.
+  Uint8List _saltFromDecimalString(String decimal) {
+    final value = BigInt.parse(decimal.trim());
+    if (value.isNegative || value.bitLength > kSaltBytes * 8) {
+      throw const SuiSaltRecoveryException('Exported salt is out of range');
+    }
+    final bytes = Uint8List(kSaltBytes);
+    var remaining = value;
+    for (var i = kSaltBytes - 1; i >= 0; i--) {
+      bytes[i] = (remaining & BigInt.from(0xff)).toInt();
+      remaining = remaining >> 8;
+    }
+    return bytes;
   }
 
   /// Re-establishes a signing session without involving the user.

@@ -264,3 +264,20 @@ class SaltShareThresholdException implements Exception {
   @override
   String toString() => 'SaltShareThresholdException: $message';
 }
+
+/// Renders a 16-byte salt as the decimal integer the prover and address
+/// derivation expect.
+///
+/// Must match the backend's `UserSalt::to_decimal_string` byte for byte: the salt
+/// is interpreted as a big-endian integer below 2^128. A mismatch here produces a
+/// valid-looking proof against an address nobody controls.
+String saltToDecimalString(Uint8List salt) {
+  if (salt.length != kSaltBytes) {
+    throw ArgumentError('Salt must be exactly $kSaltBytes bytes');
+  }
+  var value = BigInt.zero;
+  for (final byte in salt) {
+    value = (value << 8) | BigInt.from(byte);
+  }
+  return value.toString();
+}

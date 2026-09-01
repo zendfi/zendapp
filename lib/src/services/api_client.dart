@@ -490,6 +490,26 @@ class ApiClient {
     }
   }
 
+  /// Reads the whole salt once, so it can be split into shares.
+  ///
+  /// Only used during migration onto sharded custody, and gated server-side behind
+  /// `SUI_ZKLOGIN_SALT_EXPORT_ENABLED`. After provisioning, the backend holds only
+  /// one share and this can no longer return anything.
+  Future<String> exportSuiZkLoginSalt({
+    required String sessionId,
+    required String idToken,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/salt/export',
+        data: {'session_id': sessionId, 'id_token': idToken},
+      );
+      return (response.data as Map<String, dynamic>)['salt'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Hands share C of the sharded salt to the backend and moves the identity onto
   /// sharded custody.
   ///
@@ -629,6 +649,10 @@ class ApiClient {
     required String idToken,
     required String extendedEphemeralPublicKey,
     required String jwtRandomness,
+    /// Reconstructed salt as a decimal string. Required for sharded custody,
+    /// where the backend holds one share and cannot rebuild it; ignored for the
+    /// other strategies, where the stored value stays authoritative.
+    String? salt,
   }) async {
     try {
       final response = await _dio.post(
@@ -637,6 +661,10 @@ class ApiClient {
           'session_id': sessionId,
           'id_token': idToken,
           'extended_ephemeral_public_key': extendedEphemeralPublicKey,
+          // Null-aware element: the entry is omitted entirely when there is no
+          // salt, which is what the backend expects for the non-sharded
+          // strategies. An explicit null would be a different thing.
+          'salt': ?salt,
           'jwt_randomness': jwtRandomness,
         },
         options: Options(receiveTimeout: const Duration(seconds: 90)),
