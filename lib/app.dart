@@ -619,19 +619,24 @@ class _SplashWithSessionRestoreState
       return;
     }
 
-    await widget.model.restoreUserIdentity();
-    if (!mounted) return;
-
-    // zkLogin accounts are resolved before the keypair checks below, because
-    // those checks assume every account owns a local Solana key protected by a
-    // PIN. A zkLogin account owns neither: its signing key is ephemeral and lives
-    // only in memory, and there is no local secret for a PIN to protect. Falling
-    // through would land it on PinRestoreScreen, which would try to fetch a
-    // server key backup that never existed.
+    // Resolved before restoreUserIdentity(), which calls setAuthenticated() and so
+    // immediately starts polling and fetching balances. Reading the account type
+    // afterwards would let that first balance fetch fall back to a rail this
+    // account has no wallet for.
     final isZkLogin = await widget.model.authService.isZkLoginAccount();
     if (!mounted) return;
     widget.model.isZkLoginAccount = isZkLogin;
     widget.model.transferService.accountUsesLocalKeyRail = !isZkLogin;
+
+    await widget.model.restoreUserIdentity();
+    if (!mounted) return;
+
+    // zkLogin accounts are routed before the keypair checks below, because those
+    // checks assume every account owns a local Solana key protected by a PIN. A
+    // zkLogin account owns neither: its signing key is ephemeral and lives only in
+    // memory, and there is no local secret for a PIN to protect. Falling through
+    // would land it on PinRestoreScreen, which would try to fetch a server key
+    // backup that never existed.
     if (isZkLogin) {
       // The PIN-based inactivity lock must stay disarmed: AppLockOverlay unlocks
       // by decrypting a local Solana key, which this account does not have.

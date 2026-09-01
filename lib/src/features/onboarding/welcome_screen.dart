@@ -52,22 +52,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ? result.displayName
           : result.zendtag;
 
+      // Set BEFORE setAuthenticated, which is not passive: it calls startPolling()
+      // and kicks off unawaited balance/history/pool fetches synchronously. Setting
+      // these afterwards let the first balance fetch race ahead of them, fall back
+      // to Solana, and fail with WALLET_NOT_REGISTERED.
+      //
+      // A zkLogin account has no local keypair and no PIN, so the inactivity lock
+      // must stay disarmed — arming it would present a lock screen that cannot be
+      // satisfied. App lock is opt-in from profile settings instead.
+      model.appLockService.pinIsAvailable = false;
+      model.isZkLoginAccount = true;
+      // No Solana wallet exists for this account, so falling back to Solana would
+      // fail with an error about storing a wallet backup — wrong cause, and nothing
+      // the user can act on.
+      model.transferService.accountUsesLocalKeyRail = false;
+
       model.setAuthenticated(
         userId: result.userId,
         zendtag: result.zendtag,
         displayName: displayName,
         zendtagIsPlaceholder: result.zendtagIsPlaceholder,
       );
-
-      // A zkLogin account has no local keypair and no PIN, so the inactivity lock
-      // must stay disarmed — arming it would present a lock screen that cannot be
-      // satisfied. App lock is opt-in from profile settings instead.
-      model.appLockService.pinIsAvailable = false;
-      model.isZkLoginAccount = true;
-      // This account has no Solana wallet, so a fallback to Solana would fail with
-      // an error about storing a wallet backup — wrong cause, and nothing the user
-      // can act on.
-      model.transferService.accountUsesLocalKeyRail = false;
 
       await navigator.pushAndRemoveUntil(
         zendRoute<void>(page: const ZendShell()),
