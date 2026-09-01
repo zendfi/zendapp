@@ -29,7 +29,7 @@ import 'src/services/savings_service.dart';
 import 'src/services/pocket_service.dart';
 import 'src/services/email_intent_service.dart';
 
-const kApiBaseUrl = 'https://api-v2.zendfi.tech';
+const kApiBaseUrl = 'https://api.usezend.app';
 
 /// Google OAuth client used for zkLogin sign-in.
 ///
