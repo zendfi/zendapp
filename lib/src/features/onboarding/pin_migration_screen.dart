@@ -285,7 +285,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(PhosphorIconsBold.shieldCheck, color: ZendColors.accentPop, size: 14),
+                      const Icon(PhosphorIconsRegular.shieldCheck, color: ZendColors.accentPop, size: 14),
                       const SizedBox(width: 6),
                       Text(
                         'Security upgrade',
@@ -301,7 +301,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                 _heading,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
@@ -312,7 +312,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                 _subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -342,7 +342,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

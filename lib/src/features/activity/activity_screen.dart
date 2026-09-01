@@ -26,7 +26,13 @@ import 'threaded_activity_screen.dart';
 /// persisted under the same `activity_view_mode` key and is what "first
 /// load" resolves to on every subsequent app session for that User.
 class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+  const ActivityScreen({super.key, this.onOpenWallet});
+
+  /// Invoked when the user taps the balance in the header — the Feed's one
+  /// gateway into the Wallet (ZEND BETA spec §7: "The balance on the feed
+  /// is a gateway... Tap → Wallet"). Only wired up on the default
+  /// [ThreadedActivityScreen] path; the Legacy/Graph views are unaffected.
+  final VoidCallback? onOpenWallet;
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -89,6 +95,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         return ThreadedActivityScreen(
           onToggleView: () => _setMode(_modeLegacy),
           onOpenGraphView: () => _setMode(_modeGraph),
+          onOpenWallet: widget.onOpenWallet,
         );
     }
   }

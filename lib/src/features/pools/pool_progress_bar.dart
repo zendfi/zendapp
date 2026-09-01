@@ -132,7 +132,7 @@ class _CircleBar extends StatelessWidget {
                 Text(
                   '$pct%',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: size * 0.21,
                     fontWeight: FontWeight.w700,
                     color: zt.textPrimary,

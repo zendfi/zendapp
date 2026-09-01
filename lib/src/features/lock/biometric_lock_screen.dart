@@ -88,7 +88,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Icon(
-                    PhosphorIconsBold.lockKey,
+                    PhosphorIconsRegular.lockKey,
                     size: 44,
                     color: zt.textPrimary,
                   ),
@@ -97,7 +97,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     'Zend! is locked',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,

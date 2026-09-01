@@ -230,11 +230,11 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Amount — large, gold, CircularStd Bold
+                          // Amount — large, gold, Geist Bold
                           Text(
                             _amountStr,
                             style: const TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontWeight: FontWeight.w700,
                               fontSize: 28,
                               color: Color(0xFFFFD166),
@@ -245,7 +245,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                           Text(
                             'from @${widget.senderZendtag}',
                             style: const TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 13,
                               color: Color(0xCCF0F0F0),
                             ),
@@ -264,7 +264,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                     ),
                     // Subtle chevron — signals tappability
                     const Icon(
-                      PhosphorIconsBold.caretRight,
+                      PhosphorIconsRegular.caretRight,
                       color: Color(0x66F0F0F0),
                       size: 18,
                     ),

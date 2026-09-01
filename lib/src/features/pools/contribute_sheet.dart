@@ -430,7 +430,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             pool.name,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -459,7 +459,7 @@ class _AmountStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -472,7 +472,7 @@ class _AmountStage extends StatelessWidget {
               amountError ??
                   'Balance: \$${userBalance.toStringAsFixed(2)}',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: amountError != null
                     ? ZendColors.destructive
@@ -523,7 +523,7 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -531,7 +531,7 @@ class _PinStage extends StatelessWidget {
             'Contribute \$${amount.toStringAsFixed(2)} to ${pool.name}',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -558,7 +558,7 @@ class _PinStage extends StatelessWidget {
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
@@ -590,7 +590,7 @@ class _ProcessingStage extends StatelessWidget {
             'Contributing \$${amount.toStringAsFixed(2)} to ${pool.name}...',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -627,13 +627,13 @@ class _SuccessStage extends StatelessWidget {
                 color: ZendColors.positive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
               'Contributed! 🔥',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
@@ -644,7 +644,7 @@ class _SuccessStage extends StatelessWidget {
               '\$${amount.toStringAsFixed(2)} added to ${pool.name}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -687,14 +687,14 @@ class _ErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textPrimary,
               ),
@@ -714,7 +714,7 @@ class _ErrorStage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'CircularStd')),
+                        style: TextStyle(fontFamily: 'Geist')),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),
@@ -760,7 +760,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

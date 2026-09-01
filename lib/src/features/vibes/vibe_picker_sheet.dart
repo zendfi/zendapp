@@ -182,7 +182,7 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
                   if (_step != _VibeStep.amount)
                     GestureDetector(
                       onTap: () => _goToStep(_VibeStep.values[_step.index - 1]),
-                      child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20),
+                      child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20),
                     ),
                   if (_step != _VibeStep.amount) const SizedBox(width: 8),
                   Expanded(
@@ -193,7 +193,7 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
                         _VibeStep.preview => 'Ready to send',
                       },
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -305,7 +305,7 @@ class _AmountStep extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(PhosphorIconsBold.minusCircle, size: 22, color: zt.textSecondary),
+                  child: Icon(PhosphorIconsRegular.minusCircle, size: 22, color: zt.textSecondary),
                 ),
               ),
               const SizedBox(width: 24),
@@ -313,7 +313,7 @@ class _AmountStep extends StatelessWidget {
               Text(
                 '\$${amount.toStringAsFixed(amount == amount.roundToDouble() ? 0 : 2)}',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 52,
                   color: zt.textPrimary,
@@ -331,7 +331,7 @@ class _AmountStep extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(PhosphorIconsBold.plusCircle, size: 22, color: zt.accent),
+                  child: Icon(PhosphorIconsRegular.plusCircle, size: 22, color: zt.accent),
                 ),
               ),
             ],
@@ -376,7 +376,7 @@ class _AmountStep extends StatelessWidget {
           if (amountError != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(amountError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 11, color: ZendColors.destructive)),
+              child: Text(amountError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: ZendColors.destructive)),
             ),
           const SizedBox(height: 4),
         ],
@@ -387,7 +387,7 @@ class _AmountStep extends StatelessWidget {
           child: Text(
             customMode ? 'Use stepper instead' : 'Custom amount',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: zt.accent,
               fontWeight: FontWeight.w600,
@@ -408,7 +408,7 @@ class _AmountStep extends StatelessWidget {
           ),
           child: Text(
             'Choose a sticker',
-            style: const TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -478,7 +478,7 @@ class _StickerStep extends StatelessWidget {
                     Text(
                       sticker.label,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 9,
                         color: isSelected ? zt.accent : zt.textSecondary,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
@@ -502,7 +502,7 @@ class _StickerStep extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: const Text('Preview', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700)),
+          child: const Text('Preview', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
         ),
       ],
     );
@@ -552,7 +552,7 @@ class _PreviewStep extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Amount revealed when recipient taps',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
               ),
             ],
           ),
@@ -571,7 +571,7 @@ class _PreviewStep extends StatelessWidget {
             children: [
               Text(sticker?.emoji ?? '✨', style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Text('Send Vibe', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700)),
+              const Text('Send Vibe', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
             ],
           ),
         ),

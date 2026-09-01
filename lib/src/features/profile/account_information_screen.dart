@@ -98,7 +98,7 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: zt.textPrimary,
@@ -130,13 +130,13 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,
@@ -161,7 +161,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,

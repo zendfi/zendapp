@@ -281,7 +281,7 @@ class _MissionRoomState extends State<MissionRoom> {
           // rather than assuming they're fully caught up because nothing
           // told them otherwise.
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Couldn't sync the latest messages — will retry automatically", style: TextStyle(fontFamily: 'CircularStd'))),
+            const SnackBar(content: Text("Couldn't sync the latest messages — will retry automatically", style: TextStyle(fontFamily: 'Geist'))),
           );
         }
       }
@@ -539,7 +539,7 @@ class _MissionRoomState extends State<MissionRoom> {
       if (mounted) {
         setState(() => _loadingOlder = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load earlier messages', style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text('Could not load earlier messages', style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -891,7 +891,7 @@ class _MissionRoomState extends State<MissionRoom> {
         _updateReaction(message.id, emoji, model.currentZendtag,
             increment: existing.reactedByMe);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -1080,7 +1080,7 @@ class _MissionRoomState extends State<MissionRoom> {
                 children: [
                   ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
                   const SizedBox(width: 8),
-                  Text('Reconnecting...', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
+                  Text('Reconnecting...', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
                 ],
               ),
             );
@@ -1099,7 +1099,7 @@ class _MissionRoomState extends State<MissionRoom> {
                 child: Text(
                   'Could not connect. Tap to retry.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textPrimary),
+                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textPrimary),
                 ),
               ),
             );
@@ -1116,7 +1116,7 @@ class _MissionRoomState extends State<MissionRoom> {
               child: Text(
                 'This pool has closed — messages are read-only',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
               ),
             );
           }),
@@ -1129,7 +1129,7 @@ class _MissionRoomState extends State<MissionRoom> {
                   ? Center(
                       child: Text(
                         'No messages yet. Say something! 👋',
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: ZendTheme.of(context).textSecondary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: ZendTheme.of(context).textSecondary),
                       ),
                     )
                   : Stack(
@@ -1331,7 +1331,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 6),
           Text(
             _label,
-            style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+            style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
           ),
         ],
       ),
@@ -1375,7 +1375,7 @@ class _DateSeparator extends StatelessWidget {
           child: Text(
             _label(),
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),
@@ -1448,7 +1448,7 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
             shape: BoxShape.circle,
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
           ),
-          child: const Icon(PhosphorIconsBold.caretDown, color: Colors.white, size: 22),
+          child: const Icon(PhosphorIconsRegular.caretDown, color: Colors.white, size: 22),
         ),
       ),
     );
@@ -1551,14 +1551,14 @@ class _InputBarState extends State<_InputBar> {
       child: widget.isRecording
           ? Row(
               children: [
-                const Icon(PhosphorIconsBold.record, color: ZendColors.destructive, size: 14),
+                const Icon(PhosphorIconsRegular.record, color: ZendColors.destructive, size: 14),
                 const SizedBox(width: ZendSpacing.xs),
                 Text('Recording ${widget.recordingSeconds}s / 30s',
                     style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => unawaited(widget.onMicStop()),
-                  child: const Text('Stop', style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
+                  child: const Text('Stop', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
                 ),
               ],
             )
@@ -1584,7 +1584,7 @@ class _InputBarState extends State<_InputBar> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                        child: Icon(PhosphorIconsBold.gift, size: 18, color: zt.textSecondary),
+                        child: Icon(PhosphorIconsRegular.gift, size: 18, color: zt.textSecondary),
                       ),
                     ),
                   ),
@@ -1600,7 +1600,7 @@ class _InputBarState extends State<_InputBar> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                      child: Icon(PhosphorIconsBold.microphone, size: 18, color: zt.textSecondary),
+                      child: Icon(PhosphorIconsRegular.microphone, size: 18, color: zt.textSecondary),
                     ),
                   ),
                 ),
@@ -1626,14 +1626,14 @@ class _InputBarState extends State<_InputBar> {
                       minLines: 1,
                       maxLength: 280,
                       textInputAction: TextInputAction.newline,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                       buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
                         if (!isFocused || !overLimit) return null;
                         return Text('$remaining', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive));
                       },
                       decoration: InputDecoration(
                         hintText: 'Message the group...',
-                        hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                         border: InputBorder.none,
                         counterText: '',
                         isDense: true,
@@ -1662,7 +1662,7 @@ class _InputBarState extends State<_InputBar> {
                               child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                             )
                           : Icon(
-                              PhosphorIconsBold.paperPlaneTilt,
+                              PhosphorIconsRegular.paperPlaneTilt,
                               size: 17,
                               color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
                             ),

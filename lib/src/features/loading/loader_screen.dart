@@ -32,7 +32,7 @@ class LoaderScreen extends StatelessWidget {
                   message,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: ZendColors.textOnDeep,
                     letterSpacing: 0.3,

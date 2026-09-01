@@ -327,7 +327,7 @@ class _DmInputBarState extends State<DmInputBar>
                         duration: const Duration(milliseconds: 180),
                         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
                         child: Icon(
-                          _panelOpen ? PhosphorIconsBold.xCircle : PhosphorIconsBold.plusSquare,
+                          _panelOpen ? PhosphorIconsRegular.xCircle : PhosphorIconsRegular.plusSquare,
                           key: ValueKey(_panelOpen),
                           size: 22,
                           color: _panelOpen ? zt.accent : zt.textSecondary,
@@ -375,7 +375,7 @@ class _DmInputBarState extends State<DmInputBar>
                                   maxLines: 5,
                                   minLines: 1,
                                   style: TextStyle(
-                                    fontFamily: 'CircularStd',
+                                    fontFamily: 'Geist',
                                     fontSize: 15,
                                     color: zt.textPrimary,
                                     height: 1.35,
@@ -383,7 +383,7 @@ class _DmInputBarState extends State<DmInputBar>
                                   decoration: InputDecoration(
                                     hintText: 'Message',
                                     hintStyle: TextStyle(
-                                      fontFamily: 'CircularStd',
+                                      fontFamily: 'Geist',
                                       fontSize: 15,
                                       color: zt.textSecondary.withValues(alpha: 0.55),
                                     ),
@@ -411,7 +411,7 @@ class _DmInputBarState extends State<DmInputBar>
                                         width: 32, height: 32,
                                         margin: const EdgeInsets.only(right: 6, bottom: 6),
                                         decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
-                                        child: const Icon(PhosphorIconsBold.paperPlaneTilt, size: 16, color: Colors.white),
+                                        child: const Icon(PhosphorIconsRegular.paperPlaneTilt, size: 16, color: Colors.white),
                                       ),
                                     )
                                   : GestureDetector(
@@ -420,7 +420,7 @@ class _DmInputBarState extends State<DmInputBar>
                                       child: Padding(
                                         padding: const EdgeInsets.only(right: 10, bottom: 11),
                                         child: Icon(
-                                          PhosphorIconsBold.microphone,
+                                          PhosphorIconsRegular.microphone,
                                           size: 20,
                                           color: zt.textSecondary.withValues(alpha: 0.6),
                                         ),
@@ -493,21 +493,21 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               _MonoActionTile(
-                icon: PhosphorIconsBold.arrowSquareDown,
+                icon: PhosphorIconsRegular.arrowSquareDown,
                 label: 'Request',
                 zt: zt,
                 onTap: () { _closePanel(); widget.onRequestPayment?.call(); },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
-                icon: PhosphorIconsBold.currencyDollar,
+                icon: PhosphorIconsRegular.currencyDollar,
                 label: 'Pay',
                 zt: zt,
                 onTap: () { _closePanel(); widget.onPayRecipient?.call(); },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
-                icon: PhosphorIconsBold.gift,
+                icon: PhosphorIconsRegular.gift,
                 label: 'Vibe',
                 zt: zt,
                 onTap: _enterVibeFlow,
@@ -538,11 +538,11 @@ class _DmInputBarState extends State<DmInputBar>
             children: [
               GestureDetector(
                 onTap: () => _setMode(_PanelMode.actions),
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20),
               ),
               const SizedBox(width: 8),
               Expanded(child: Text('Set amount',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
               Text('\$0.01 – \$5',
                 style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
             ],
@@ -575,12 +575,12 @@ class _DmInputBarState extends State<DmInputBar>
                     child: Column(
                       children: [
                         // Up chevron
-                        Icon(PhosphorIconsBold.caretUp, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(PhosphorIconsRegular.caretUp, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
                         const SizedBox(height: 4),
                         Text(
                           displayAmount,
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontWeight: FontWeight.w700,
                             fontSize: 52,
                             color: isOverLimit ? ZendColors.destructive : zt.textPrimary,
@@ -589,7 +589,7 @@ class _DmInputBarState extends State<DmInputBar>
                         ),
                         const SizedBox(height: 4),
                         // Down chevron
-                        Icon(PhosphorIconsBold.caretDown, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(PhosphorIconsRegular.caretDown, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
                       ],
                     ),
                   ),
@@ -630,7 +630,7 @@ class _DmInputBarState extends State<DmInputBar>
                     onTap: () => setState(() { _vibeCustomMode = true; _vibeCustomInput = ''; }),
                     child: Text('Custom',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary, fontWeight: FontWeight.w500)),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary, fontWeight: FontWeight.w500)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -642,7 +642,7 @@ class _DmInputBarState extends State<DmInputBar>
             Text(
               _vibeCustomInput.isEmpty ? '\$—' : '\$$_vibeCustomInput',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 44,
                 color: isOverLimit ? ZendColors.destructive : zt.textPrimary,
@@ -650,7 +650,7 @@ class _DmInputBarState extends State<DmInputBar>
               ),
             ),
             if (isOverLimit)
-              Text('Max \$5.00', style: const TextStyle(fontFamily: 'CircularStd', fontSize: 11, color: ZendColors.destructive)),
+              Text('Max \$5.00', style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: ZendColors.destructive)),
             const SizedBox(height: 8),
             _keypad(zt),
             const SizedBox(height: 8),
@@ -659,7 +659,7 @@ class _DmInputBarState extends State<DmInputBar>
                 child: GestureDetector(
                   onTap: () => setState(() { _vibeCustomMode = false; _vibeCustomInput = ''; }),
                   child: Text('← Dial', textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary)),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -681,9 +681,9 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeAmount),
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
-              Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
+              Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
               Text('\$${_vibeAmount.toStringAsFixed(2)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
             ],
           ),
@@ -731,9 +731,9 @@ class _DmInputBarState extends State<DmInputBar>
           Row(
             children: [
               GestureDetector(onTap: () => _setMode(_PanelMode.vibeSticker),
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textSecondary, size: 20)),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20)),
               const SizedBox(width: 8),
-              Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
+              Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
             ],
           ),
           const Spacer(),
@@ -750,7 +750,7 @@ class _DmInputBarState extends State<DmInputBar>
               style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0xFFFF6B9D), fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 4),
-          Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
+          Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
           const Spacer(),
           SizedBox(
             width: double.infinity,
@@ -766,7 +766,7 @@ class _DmInputBarState extends State<DmInputBar>
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(_selectedSticker?.emoji ?? '✨', style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 8),
-                const Text('Send Vibe', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700)),
+                const Text('Send Vibe', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
               ]),
             ),
           ),
@@ -793,7 +793,7 @@ class _DmInputBarState extends State<DmInputBar>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
-      child: Text(label, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w700)),
+      child: Text(label, style: const TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w700)),
     ),
   );
 
@@ -853,7 +853,7 @@ class _MonoActionTile extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: zt.textPrimary,

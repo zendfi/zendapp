@@ -87,7 +87,7 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+          icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -95,7 +95,7 @@ class _Header extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 26,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,

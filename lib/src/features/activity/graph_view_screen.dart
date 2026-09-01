@@ -132,7 +132,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                     child: Text(
                       'Your Mutuals',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -141,7 +141,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                   ),
                   IconButton(
                     onPressed: widget.onToggleView,
-                    icon: Icon(PhosphorIconsBold.listBullets, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsRegular.listBullets, color: zt.textSecondary),
                     tooltip: 'Switch to threaded view',
                   ),
                 ],
@@ -154,7 +154,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                       ? Center(
                           child: Text(
                             'No relationships to visualize yet',
-                            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                           ),
                         )
                       : LayoutBuilder(
@@ -416,7 +416,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.accent.withValues(alpha: 0.18),
-            child: Icon(PhosphorIconsBold.usersThree, color: zt.accent, size: radius * 0.9),
+            child: Icon(PhosphorIconsRegular.usersThree, color: zt.accent, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.others:
@@ -426,7 +426,7 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.border,
-            child: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary, size: radius * 0.9),
+            child: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary, size: radius * 0.9),
           ),
         );
       case GraphNodeKind.user:
@@ -464,7 +464,7 @@ class _LabeledNode extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'CircularStd', fontSize: 10, color: zt.textSecondary),
+            style: TextStyle(fontFamily: 'Geist', fontSize: 10, color: zt.textSecondary),
           ),
         ),
       ],
@@ -518,7 +518,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
             Text(
               '${widget.nodes.length} more relationships',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: zt.textSecondary,
@@ -539,7 +539,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                       photoUrl: node.avatarUrl,
                       initials: node.initialLetter,
                     ),
-                    title: Text(node.label, style: TextStyle(fontFamily: 'CircularStd', color: zt.textPrimary)),
+                    title: Text(node.label, style: TextStyle(fontFamily: 'Geist', color: zt.textPrimary)),
                   );
                 },
               ),
@@ -550,7 +550,7 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                 onPressed: () => setState(() => _visibleCount += _pageSize),
                 child: Text(
                   'Load more',
-                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: zt.accent),
+                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.accent),
                 ),
               ),
             ],

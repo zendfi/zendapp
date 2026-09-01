@@ -15,14 +15,39 @@ import 'sui_zklogin_models.dart';
 /// nonce. An implementation must run an OpenID Connect flow with
 /// `response_type=id_token`, `scope=openid`, and the supplied nonce.
 abstract interface class SuiOAuthProvider {
-  /// Returns a raw ID token whose `nonce` claim equals [nonce].
+  /// Returns a raw ID token whose `nonce` claim equals [nonce], plus the access
+  /// token from the same grant when one was issued.
+  ///
+  /// Both come from a single round trip on purpose. Share B of the sharded salt
+  /// lives in the user's Google Drive `appdata` folder, which needs an access
+  /// token — obtaining it separately (for example through `google_sign_in`) would
+  /// allow the Drive account and the zkLogin account to diverge, writing the share
+  /// into the wrong person's Drive. One grant makes that mismatch impossible
+  /// rather than something to validate against.
   ///
   /// [prompt] controls how much user interaction is requested; see
   /// `SuiOAuthPrompt`. Implementations that cannot vary it may ignore it.
-  Future<String> signInForIdToken({
+  Future<SuiOAuthTokens> signInForIdToken({
     required String nonce,
     SuiOAuthPrompt prompt,
   });
+}
+
+/// Credentials from one OAuth grant.
+class SuiOAuthTokens {
+  const SuiOAuthTokens({required this.idToken, this.accessToken});
+
+  /// Nonce-bound OpenID Connect ID token. Proves identity to the backend.
+  final String idToken;
+
+  /// Google API access token, present only when the flow requested a scope that
+  /// needs one. Short-lived and never refreshed: it is used immediately for Drive
+  /// during sign-in, provisioning, or recovery, then dropped.
+  final String? accessToken;
+
+  /// Never log this: both fields are live credentials.
+  @override
+  String toString() => 'SuiOAuthTokens(<redacted>)';
 }
 
 /// In-memory session state. Deliberately not persisted: the ephemeral private
@@ -36,12 +61,19 @@ class _ActiveSession {
     required this.idToken,
     required this.maxEpoch,
     required this.expiresAt,
+    this.accessToken,
   });
 
   final String sessionId;
   final SuiEphemeralKeyPair keyPair;
   final String jwtRandomness;
   final String idToken;
+
+  /// Google API access token from the same grant as [idToken], used to reach the
+  /// Drive `appdata` folder holding share B. Short-lived and never refreshed, so
+  /// it is only good for the window right after sign-in — which is exactly when
+  /// provisioning and recovery happen.
+  final String? accessToken;
   final int maxEpoch;
   final DateTime expiresAt;
 
@@ -96,11 +128,11 @@ class SuiZkLoginService {
         jwtRandomness: randomness,
       );
 
-      final idToken = await _oauth.signInForIdToken(nonce: init.nonce);
+      final tokens = await _oauth.signInForIdToken(nonce: init.nonce);
 
       final identity = await _api.redeemSuiZkLoginSession(
         sessionId: init.sessionId,
-        idToken: idToken,
+        idToken: tokens.idToken,
       );
 
       _replaceSession(
@@ -108,7 +140,8 @@ class SuiZkLoginService {
           sessionId: init.sessionId,
           keyPair: keyPair,
           jwtRandomness: randomness,
-          idToken: idToken,
+          idToken: tokens.idToken,
+          accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
         ),
@@ -141,11 +174,11 @@ class SuiZkLoginService {
         jwtRandomness: randomness,
       );
 
-      final idToken = await _oauth.signInForIdToken(nonce: init.nonce);
+      final tokens = await _oauth.signInForIdToken(nonce: init.nonce);
 
       final result = await _api.publicSuiZkLoginSignIn(
         sessionId: init.sessionId,
-        idToken: idToken,
+        idToken: tokens.idToken,
       );
 
       // Retain the signing session so the first transfer after sign-in does not
@@ -155,7 +188,8 @@ class SuiZkLoginService {
           sessionId: init.sessionId,
           keyPair: keyPair,
           jwtRandomness: randomness,
-          idToken: idToken,
+          idToken: tokens.idToken,
+          accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
         ),
@@ -225,14 +259,14 @@ class SuiZkLoginService {
         jwtRandomness: randomness,
       );
 
-      final idToken = await _oauth.signInForIdToken(
+      final tokens = await _oauth.signInForIdToken(
         nonce: init.nonce,
         prompt: SuiOAuthPrompt.none,
       );
 
       await _api.redeemSuiZkLoginSession(
         sessionId: init.sessionId,
-        idToken: idToken,
+        idToken: tokens.idToken,
       );
 
       _replaceSession(
@@ -240,7 +274,8 @@ class SuiZkLoginService {
           sessionId: init.sessionId,
           keyPair: keyPair,
           jwtRandomness: randomness,
-          idToken: idToken,
+          idToken: tokens.idToken,
+          accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
         ),
@@ -271,13 +306,13 @@ class SuiZkLoginService {
         extendedEphemeralPublicKey: keyPair.extendedPublicKeyBase64,
         jwtRandomness: _generateRandomness(),
       );
-      final idToken = await _oauth.signInForIdToken(
+      final tokens = await _oauth.signInForIdToken(
         nonce: init.nonce,
         prompt: SuiOAuthPrompt.reauthenticate,
       );
       await _api.suiZkLoginStepUp(
         sessionId: init.sessionId,
-        idToken: idToken,
+        idToken: tokens.idToken,
       );
     } finally {
       // This key never signs anything, so it is discarded immediately.
@@ -346,7 +381,7 @@ class ManualIdTokenOAuthProvider implements SuiOAuthProvider {
   final String _idToken;
 
   @override
-  Future<String> signInForIdToken({
+  Future<SuiOAuthTokens> signInForIdToken({
     required String nonce,
     SuiOAuthPrompt prompt = SuiOAuthPrompt.selectAccount,
   }) async {
@@ -360,7 +395,9 @@ class ManualIdTokenOAuthProvider implements SuiOAuthProvider {
         'Re-run the OAuth flow with nonce=$nonce',
       );
     }
-    return _idToken;
+    // No access token: a pasted ID token carries no Drive grant, so share B is
+    // unreachable on this path. Acceptable, since this provider is debug-only.
+    return SuiOAuthTokens(idToken: _idToken);
   }
 
   Map<String, dynamic> _decodeClaims(String jwt) {

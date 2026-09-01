@@ -927,7 +927,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Original message not found', style: TextStyle(fontFamily: 'CircularStd')),
+              content: Text('Original message not found', style: TextStyle(fontFamily: 'Geist')),
               duration: Duration(seconds: 2),
             ),
           );
@@ -1004,7 +1004,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   border: Border.all(color: zt.border),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
                 ),
-                child: Icon(PhosphorIconsBold.caretDown, size: 18, color: zt.textSecondary),
+                child: Icon(PhosphorIconsRegular.caretDown, size: 18, color: zt.textSecondary),
               ),
               // "N new" badge — only shown once we know something actually
               // arrived below, not just because the user happens to be
@@ -1024,7 +1024,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     child: Text(
                       _unseenWhileScrolledUp > 9 ? '9+' : '$_unseenWhileScrolledUp',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'CircularStd', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                      style: const TextStyle(fontFamily: 'Geist', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
                     ),
                   ),
                 ),
@@ -1077,7 +1077,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'CircularStd')),
+        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'Geist')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -1108,7 +1108,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'CircularStd')),
+          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'Geist')),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -1116,7 +1116,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'CircularStd')),
+          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'Geist')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1138,19 +1138,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: zt.bgElevated,
-        title: const Text('Delete message?', style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700)),
+        title: const Text('Delete message?', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
         content: const Text(
           'This message will be deleted for everyone in this chat.',
-          style: TextStyle(fontFamily: 'CircularStd'),
+          style: TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'CircularStd')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'CircularStd', color: ZendColors.destructive)),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Geist', color: ZendColors.destructive)),
           ),
         ],
       ),
@@ -1170,7 +1170,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       setState(() => _messages[idx].isDeleted = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'CircularStd')),
+          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'Geist')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1302,7 +1302,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Request from', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                         ],
                       ),
                     ],
@@ -1319,7 +1319,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('\$', style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
+                            Text('\$', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
                             const SizedBox(width: 4),
                             Flexible(
                               child: TextField(
@@ -1327,10 +1327,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 autofocus: true,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
+                                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
                                 decoration: InputDecoration(
                                   hintText: '0',
-                                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
+                                  hintStyle: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
                                   border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
                                 ),
                                 onChanged: (_) => setModalState(() => errorMsg = null),
@@ -1340,7 +1340,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         ),
                       ),
                       if (errorMsg != null)
-                        Text(errorMsg!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
+                        Text(errorMsg!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
                     ],
                   ),
                 ),
@@ -1350,10 +1350,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: TextField(
                     controller: noteCtrl,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Add a note…',
-                      hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
+                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
                       filled: true, fillColor: zt.bgPrimary,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1393,7 +1393,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('Send request', style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700)),
+                      child: const Text('Send request', style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ),
@@ -1499,7 +1499,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -1527,11 +1527,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         });
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'CircularStd')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'Geist')), backgroundColor: zt.bgSecondary),
         );
       case _ChatMenuAction.block:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'CircularStd')), backgroundColor: zt.bgSecondary),
+          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'Geist')), backgroundColor: zt.bgSecondary),
         );
     }
   }
@@ -1834,7 +1834,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 children: [
                   IconButton(
                     onPressed: _handleBackPressed,
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 26),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 26),
                   ),
                   GestureDetector(
                     onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
@@ -1858,13 +1858,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               Flexible(
                                 child: Text(
                                   cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                  style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                                  style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (_e2eeReady) ...[
                                 const SizedBox(width: 5),
-                                Icon(PhosphorIconsBold.lockSimple, size: 13, color: ZendColors.positive),
+                                Icon(PhosphorIconsRegular.lockSimple, size: 13, color: ZendColors.positive),
                               ],
                             ],
                           ),
@@ -1876,7 +1876,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   ),
                   // ── Overflow menu ─────────────────────────────────────
                   PopupMenuButton<_ChatMenuAction>(
-                    icon: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary, size: 24),
+                    icon: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary, size: 24),
                     color: zt.bgSecondary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xl)),
                     elevation: 1,
@@ -1884,12 +1884,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     popUpAnimationStyle: AnimationStyle.noAnimation,
                     onSelected: (action) => _handleMenuAction(context, zt, cp, action),
                     itemBuilder: (ctx) => [
-                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, PhosphorIconsBold.user, 'View contact'),
-                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, PhosphorIconsBold.magnifyingGlass, 'Search in chat', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, PhosphorIconsBold.clock, 'Disappearing messages', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, PhosphorIconsBold.trash, 'Clear chat'),
+                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, PhosphorIconsRegular.user, 'View contact'),
+                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, PhosphorIconsRegular.magnifyingGlass, 'Search in chat', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, PhosphorIconsRegular.clock, 'Disappearing messages', disabled: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, PhosphorIconsRegular.trash, 'Clear chat'),
                       const PopupMenuDivider(),
-                      _popupItem(ctx, zt, _ChatMenuAction.block, PhosphorIconsBold.prohibit, 'Block @${cp.zendtag}', isDestructive: true),
+                      _popupItem(ctx, zt, _ChatMenuAction.block, PhosphorIconsRegular.prohibit, 'Block @${cp.zendtag}', isDestructive: true),
                     ],
                   ),
                 ],
@@ -1911,7 +1911,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
                     ),
                     const SizedBox(width: 8),
-                    Text('Reconnecting...', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
+                    Text('Reconnecting...', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
                   ],
                 ),
               ),
@@ -1929,7 +1929,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   child: Text(
                     'Could not connect. Tap to retry.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textPrimary),
                   ),
                 ),
               ),
@@ -2175,7 +2175,7 @@ class _SecuringChatStrip extends StatelessWidget {
           Text(
             'Securing chat…',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 12,
               color: zt.textSecondary,
               fontWeight: FontWeight.w500,
@@ -2210,7 +2210,7 @@ class _PresenceLabel extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 11,
             color: color,
             fontWeight: FontWeight.w500,
@@ -2261,18 +2261,18 @@ class _ReplyStrip extends StatelessWidget {
     // show the actual amount rather than a bare generic label.
     final (IconData typeIcon, String preview) = switch (message.type) {
       DmMessageType.payment => (
-          PhosphorIconsBold.arrowsLeftRight,
+          PhosphorIconsRegular.arrowsLeftRight,
           '💸 \$${(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
         ),
       DmMessageType.vibe => (
-          PhosphorIconsBold.star,
+          PhosphorIconsRegular.star,
           '${message.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
         ),
       DmMessageType.paymentRequest => (
-          PhosphorIconsBold.receipt,
+          PhosphorIconsRegular.receipt,
           '💬 Payment request · \$${(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
         ),
-      _ => (PhosphorIconsBold.chatCircle, message.displayContent ?? ''),
+      _ => (PhosphorIconsRegular.chatCircle, message.displayContent ?? ''),
     };
     final previewShort = preview.length > 60
         ? '${preview.substring(0, 60)}…'
@@ -2309,7 +2309,7 @@ class _ReplyStrip extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(PhosphorIconsBold.arrowBendUpLeft, size: 11, color: zt.accent),
+                        Icon(PhosphorIconsRegular.arrowBendUpLeft, size: 11, color: zt.accent),
                         const SizedBox(width: 4),
                         Text(
                           isMe
@@ -2331,7 +2331,7 @@ class _ReplyStrip extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 13,
                               color: zt.textSecondary,
                               height: 1.2,
@@ -2351,7 +2351,7 @@ class _ReplyStrip extends StatelessWidget {
               // Cancel button
               IconButton(
                 onPressed: onCancel,
-                icon: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
+                icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
@@ -2557,7 +2557,7 @@ class _DateSeparator extends StatelessWidget {
           child: Text(
             _label(),
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),

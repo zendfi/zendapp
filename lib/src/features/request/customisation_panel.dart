@@ -78,7 +78,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
           Text(
             'Personal note',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: zt.textSecondary,
@@ -94,14 +94,14 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             ],
             onChanged: (_) => setState(() {}),
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textPrimary,
             ),
             decoration: InputDecoration(
               hintText: 'Add a personal message...',
               hintStyle: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
@@ -136,7 +136,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
           Text(
             'Theme colour',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: zt.textSecondary,
@@ -164,7 +164,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
                           : null,
                     ),
                     child: isSelected
-                        ? const Icon(PhosphorIconsBold.checkCircle, size: 16, color: Colors.white)
+                        ? const Icon(PhosphorIconsRegular.checkCircle, size: 16, color: Colors.white)
                         : null,
                   ),
                 ),

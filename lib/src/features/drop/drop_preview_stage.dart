@@ -63,7 +63,7 @@ class _DropPreviewStageState extends State<DropPreviewStage>
         Text(
           _amountFormatted,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontWeight: FontWeight.w700,
             fontSize: 44,
             color: zt.textPrimary,
@@ -98,7 +98,7 @@ class _DropPreviewStageState extends State<DropPreviewStage>
         Text(
           '@${widget.receiver.preview?.zendtag ?? '?'}',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: zt.textPrimary,

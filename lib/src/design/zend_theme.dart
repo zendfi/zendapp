@@ -5,12 +5,12 @@ ThemeData buildZendTheme() {
   final base = ThemeData.light(useMaterial3: true);
   final textTheme = base.textTheme
       .apply(
-        fontFamily: 'CircularStd',
+        fontFamily: 'Geist',
         bodyColor: ZendColors.textPrimary,
         displayColor: ZendColors.textPrimary,
       )
       .copyWith(
-        // CircularStd renders slightly looser than DM Sans/Instrument Serif at
+        // Geist renders slightly looser than DM Sans/Instrument Serif at
         // the same sizes — a small negative letterSpacing tightens tracking
         // without looking cramped, at DISPLAY/HEADLINE/TITLE sizes (18px+)
         // only. bodyLarge/bodyMedium/labelLarge below deliberately stay at
@@ -22,7 +22,7 @@ ThemeData buildZendTheme() {
         // jagged/cramped at 9-11px, since there's less room between glyphs
         // for anti-aliasing to smooth their edges.
         displayLarge: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
@@ -30,7 +30,7 @@ ThemeData buildZendTheme() {
           color: ZendColors.textPrimary,
         ),
         displayMedium: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
@@ -38,7 +38,7 @@ ThemeData buildZendTheme() {
           color: ZendColors.textPrimary,
         ),
         headlineMedium: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
@@ -46,7 +46,7 @@ ThemeData buildZendTheme() {
           color: ZendColors.textPrimary,
         ),
         headlineSmall: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
@@ -89,7 +89,7 @@ ThemeData buildZendTheme() {
 
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'CircularStd',
+    fontFamily: 'Geist',
     colorScheme: const ColorScheme.light(
       primary: ZendColors.accent,
       secondary: ZendColors.accentBright,
@@ -132,13 +132,13 @@ ThemeData buildZendDarkTheme() {
 
   final textTheme = base.textTheme
       .apply(
-        fontFamily: 'CircularStd',
+        fontFamily: 'Geist',
         bodyColor: darkTextPrimary,
         displayColor: darkTextPrimary,
       )
       .copyWith(
         displayLarge: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 56,
           height: 1.04,
           fontWeight: FontWeight.w700,
@@ -146,7 +146,7 @@ ThemeData buildZendDarkTheme() {
           color: darkTextPrimary,
         ),
         displayMedium: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 32,
           height: 1.08,
           fontWeight: FontWeight.w700,
@@ -154,7 +154,7 @@ ThemeData buildZendDarkTheme() {
           color: darkTextPrimary,
         ),
         headlineMedium: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 28,
           height: 1.08,
           fontWeight: FontWeight.w700,
@@ -162,7 +162,7 @@ ThemeData buildZendDarkTheme() {
           color: darkTextPrimary,
         ),
         headlineSmall: const TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 24,
           height: 1.1,
           fontWeight: FontWeight.w700,
@@ -205,7 +205,7 @@ ThemeData buildZendDarkTheme() {
 
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'CircularStd',
+    fontFamily: 'Geist',
     colorScheme: const ColorScheme.dark(
       primary: Color(0xFF52B788), 
       secondary: Color(0xFF95D5B2),

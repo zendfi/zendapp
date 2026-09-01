@@ -219,7 +219,7 @@ class _SendScreenState extends State<SendScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconPill(icon: PhosphorIconsBold.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
+                          _IconPill(icon: PhosphorIconsRegular.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
                           // Profile — balance is now surfaced in the navbar
                           // (see ZendBottomBar's _BalanceNavItem), so it no
                           // longer needs its own pill here.
@@ -286,7 +286,7 @@ class _SendScreenState extends State<SendScreen>
                                         key: const ValueKey('ngn-amount'),
                                         text: _primaryDisplay,
                                         style: TextStyle(
-                                          fontFamily: 'CircularStd',
+                                          fontFamily: 'Geist',
                                           fontWeight: FontWeight.w700,
                                           color: ZendColors.textOnDeep,
                                           fontSize: compact ? 72 : 84,
@@ -323,7 +323,7 @@ class _SendScreenState extends State<SendScreen>
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
-                                            PhosphorIconsBold.arrowsDownUp,
+                                            PhosphorIconsRegular.arrowsDownUp,
                                             color: Color(0x66F0F0F0),
                                             size: 14,
                                           ),
@@ -344,7 +344,7 @@ class _SendScreenState extends State<SendScreen>
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
-                                        PhosphorIconsBold.arrowsDownUp,
+                                        PhosphorIconsRegular.arrowsDownUp,
                                         color: Color(0x44F0F0F0),
                                         size: 12,
                                       ),
@@ -553,7 +553,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            PhosphorIconsBold.lightning,
+                            PhosphorIconsRegular.lightning,
                             size: 14,
                             color: fill > 0
                                 ? ZendColors.accentBright
@@ -565,7 +565,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                                 ? 'Hold… ${(3 - fill * 3).ceil()}s'
                                 : 'Drop',
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 14,
                               color: fill > 0
                                   ? ZendColors.accentBright
@@ -606,7 +606,7 @@ class _GlassPill extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'CircularStd', color: ZendColors.textOnDeep, fontSize: 14),
+              fontFamily: 'Geist', color: ZendColors.textOnDeep, fontSize: 14),
         ),
       ),
     );
@@ -632,7 +632,7 @@ class _PayButton extends StatelessWidget {
         child: Text(
           'Pay',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             color: zt.isDark ? ZendColors.bgDeep : ZendColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -766,7 +766,7 @@ class _KeypadKeyState extends State<_KeypadKey> {
                   : Text(
                       widget.label,
                       style: const TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 24,
                         color: ZendColors.textOnDeep,
                         fontWeight: FontWeight.w300,
@@ -800,7 +800,7 @@ class _UsdAmountDisplay extends StatelessWidget {
     final decSize = compact ? 28.0 : 32.0;
 
     final wholeStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: ZendColors.textOnDeep,
       fontSize: wholeSize,
@@ -808,7 +808,7 @@ class _UsdAmountDisplay extends StatelessWidget {
     );
 
     final decStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: const Color(0xCCF0F0F0),
       fontSize: decSize,
@@ -816,7 +816,7 @@ class _UsdAmountDisplay extends StatelessWidget {
     );
 
     final currencyStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: const Color(0x80F0F0F0),
       fontSize: wholeSize * 0.5,
@@ -854,7 +854,7 @@ class _UsdAmountDisplay extends StatelessWidget {
                   Text(
                     '.',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontWeight: FontWeight.w700,
                       color: const Color(0xCCF0F0F0),
                       fontSize: decSize,

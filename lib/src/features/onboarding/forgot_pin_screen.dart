@@ -41,7 +41,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(PhosphorIconsBold.caretLeft,
+                  icon: const Icon(PhosphorIconsRegular.caretLeft,
                       color: ZendColors.textOnDeep),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
@@ -174,7 +174,7 @@ class _RequestView extends StatelessWidget {
         const Text(
           'Forgot your PIN?',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontWeight: FontWeight.w700,
             fontSize: 28,
             color: ZendColors.textOnDeep,
@@ -184,7 +184,7 @@ class _RequestView extends StatelessWidget {
         const Text(
           "We'll send a verification code to your email, then you can recover your wallet using your government ID number.",
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 15,
             height: 1.5,
             color: Color(0x99E8F4EC), // textOnDeepSecondary
@@ -199,13 +199,13 @@ class _RequestView extends StatelessWidget {
           ),
           child: const Row(
             children: [
-              Icon(PhosphorIconsBold.mailbox, color: ZendColors.accentPop, size: 20),
+              Icon(PhosphorIconsRegular.mailbox, color: ZendColors.accentPop, size: 20),
               SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Code will be sent to your registered email',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: Color(0x99E8F4EC),
                   ),
@@ -219,7 +219,7 @@ class _RequestView extends StatelessWidget {
           Text(
             error!,
             style: const TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: ZendColors.destructive,
             ),
@@ -264,7 +264,7 @@ class _OtpView extends StatelessWidget {
         const Text(
           'Check your inbox',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontWeight: FontWeight.w700,
             fontSize: 28,
             color: ZendColors.textOnDeep,
@@ -274,7 +274,7 @@ class _OtpView extends StatelessWidget {
         const Text(
           'Enter the 6-digit code we sent to your email.',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 15,
             color: Color(0x99E8F4EC),
           ),
@@ -313,7 +313,7 @@ class _OtpView extends StatelessWidget {
             error!,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: ZendColors.destructive,
             ),

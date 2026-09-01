@@ -183,19 +183,19 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(PhosphorIconsBold.fingerprint, size: 22, color: zt.accent),
+                    child: Icon(PhosphorIconsRegular.fingerprint, size: 22, color: zt.accent),
                   ),
                   const SizedBox(width: 14),
                   Text(
                     'Enable biometric unlock',
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               Text(
                 'Biometrics are linked to your PIN on this device. To enable them:',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary, height: 1.4),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.4),
               ),
               const SizedBox(height: 20),
               _BiometricStep(number: 1, text: 'Lock the app by pressing the home button or letting the screen time out.', zt: zt),
@@ -263,12 +263,12 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                   Text(
                     'Security',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontWeight: FontWeight.w700,
                       fontSize: 24,
                       color: zt.textPrimary,
@@ -302,7 +302,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                           const SizedBox(height: 8),
                           _SettingsGroup(zt: zt, tiles: [
                             _ToggleTile(
-                              icon: PhosphorIconsBold.fingerprint,
+                              icon: PhosphorIconsRegular.fingerprint,
                               label: 'Require unlock to open Zend!',
                               subtitle:
                                   'Hides your balance and activity behind Face ID, '
@@ -320,7 +320,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         const SizedBox(height: 8),
                         _SettingsGroup(zt: zt, tiles: [
                           _Tile(
-                            icon: PhosphorIconsBold.lockSimple,
+                            icon: PhosphorIconsRegular.lockSimple,
                             label: 'Change PIN',
                             zt: zt,
                             onTap: () =>
@@ -338,7 +338,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         _SettingsGroup(zt: zt, tiles: [
                           if (_biometricEnabled)
                             _ToggleTile(
-                              icon: PhosphorIconsBold.fingerprint,
+                              icon: PhosphorIconsRegular.fingerprint,
                               label: 'Biometric unlock',
                               subtitle: 'Tap to disable biometric unlock',
                               value: true,
@@ -347,7 +347,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                             )
                           else
                             _Tile(
-                              icon: PhosphorIconsBold.fingerprint,
+                              icon: PhosphorIconsRegular.fingerprint,
                               label: 'Biometric unlock',
                               zt: zt,
                               onTap: () => _showBiometricSetupGuide(context),
@@ -366,7 +366,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _ToggleTile(
-                          icon: PhosphorIconsBold.lockKey,
+                          icon: PhosphorIconsRegular.lockKey,
                           label: 'Require PIN on every payment',
                           subtitle:
                               'Re-enter PIN before every send, regardless of amount',
@@ -375,7 +375,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                           onChanged: _togglePinPerPayment,
                         ),
                         _ToggleTile(
-                          icon: PhosphorIconsBold.receiptX,
+                          icon: PhosphorIconsRegular.receiptX,
                           label: 'Require PIN for larger sends',
                           subtitle: _pinThresholdEnabled
                               ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
@@ -406,7 +406,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                                   ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
                                   : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -420,8 +420,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
                           icon: _hasRecoveryBackup
-                              ? PhosphorIconsBold.sealCheck
-                              : PhosphorIconsBold.shield,
+                              ? PhosphorIconsRegular.sealCheck
+                              : PhosphorIconsRegular.shield,
                           label: _hasRecoveryBackup
                               ? 'Update ID verification'
                               : 'Set up PIN recovery',
@@ -447,7 +447,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               ? "PIN recovery is set up. If you forget your PIN, you can verify your ID to get back in."
                               : "Set this up once so you're never locked out if you forget your PIN.",
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -461,14 +461,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsGroup(zt: zt, tiles: [
                         _Tile(
-                          icon: PhosphorIconsBold.download,
+                          icon: PhosphorIconsRegular.download,
                           label: 'Back up my account',
                           zt: zt,
                           onTap: () => pushZendSlide(
                               context, const ExportBackupScreen()),
                         ),
                         _Tile(
-                          icon: PhosphorIconsBold.key,
+                          icon: PhosphorIconsRegular.key,
                           label: 'View secret recovery phrase',
                           zt: zt,
                           onTap: () => pushZendSlide(
@@ -481,7 +481,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         child: Text(
                           "Save a backup before switching phones so you don't lose access to your money.",
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 12,
                             color: zt.textSecondary,
                           ),
@@ -524,7 +524,7 @@ class _BiometricStep extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary, height: 1.4),
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary, height: 1.4),
           ),
         ),
       ],
@@ -558,7 +558,7 @@ class _AmountInput extends StatelessWidget {
           Text(
             'Require PIN above',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -597,7 +597,7 @@ class _AmountInput extends StatelessWidget {
             child: Text(
               'Save',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: zt.accentBright,
@@ -624,7 +624,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -686,14 +686,14 @@ class _Tile extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
                   ),
                 ),
               ),
-              Icon(PhosphorIconsBold.caretRight, size: 16, color: zt.textSecondary),
+              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
             ],
           ),
         ),
@@ -733,7 +733,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
@@ -742,7 +742,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),

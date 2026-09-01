@@ -298,7 +298,7 @@ class _NameEmojiStage extends StatelessWidget {
           Text(
             'Name your goal',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -313,7 +313,7 @@ class _NameEmojiStage extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'e.g. New car, Holiday fund…',
               hintStyle: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 color: zt.textSecondary,
               ),
               errorText: nameError,
@@ -324,13 +324,13 @@ class _NameEmojiStage extends StatelessWidget {
                 borderSide: BorderSide.none,
               ),
               counterStyle: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 11,
                 color: zt.textSecondary,
               ),
             ),
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 16,
               color: zt.textPrimary,
             ),
@@ -341,7 +341,7 @@ class _NameEmojiStage extends StatelessWidget {
           Text(
             'Pick an emoji',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: zt.textSecondary,
@@ -440,14 +440,14 @@ class _TargetDeadlineStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'Set your target',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -459,7 +459,7 @@ class _TargetDeadlineStage extends StatelessWidget {
             child: Text(
               _displayAmount,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 48,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -471,7 +471,7 @@ class _TargetDeadlineStage extends StatelessWidget {
               child: Text(
                 targetError!,
                 style: const TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: ZendColors.destructive,
                 ),
@@ -491,7 +491,7 @@ class _TargetDeadlineStage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsBold.calendar,
+                  Icon(PhosphorIconsRegular.calendar,
                       size: 16, color: zt.textSecondary),
                   const SizedBox(width: ZendSpacing.xs),
                   Expanded(
@@ -500,7 +500,7 @@ class _TargetDeadlineStage extends StatelessWidget {
                           ? _formatDate(deadline!)
                           : 'Set a deadline (optional)',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 14,
                         color: deadline != null
                             ? zt.textPrimary
@@ -511,7 +511,7 @@ class _TargetDeadlineStage extends StatelessWidget {
                   if (deadline != null)
                     GestureDetector(
                       onTap: onClearDeadline,
-                      child: Icon(PhosphorIconsBold.xCircle, size: 16, color: zt.textSecondary),
+                      child: Icon(PhosphorIconsRegular.xCircle, size: 16, color: zt.textSecondary),
                     ),
                 ],
               ),
@@ -559,14 +559,14 @@ class _ModeStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'Choose a saving style',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -577,7 +577,7 @@ class _ModeStage extends StatelessWidget {
           _ModeOption(
             title: 'Flexible',
             description: 'Withdraw anytime, even before you hit your goal.',
-            icon: PhosphorIconsBold.handCoins,
+            icon: PhosphorIconsRegular.handCoins,
             isSelected: selectedMode == 'flexible',
             onTap: () => onModeSelected('flexible'),
             zt: zt,
@@ -586,7 +586,7 @@ class _ModeStage extends StatelessWidget {
           _ModeOption(
             title: 'Strict',
             description: 'Locked until you reach your target. Keeps you on track.',
-            icon: PhosphorIconsBold.lockKey,
+            icon: PhosphorIconsRegular.lockKey,
             isSelected: selectedMode == 'strict',
             onTap: () => onModeSelected('strict'),
             zt: zt,
@@ -660,7 +660,7 @@ class _ModeOption extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -670,7 +670,7 @@ class _ModeOption extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 13,
                       color: zt.textSecondary,
                     ),
@@ -679,7 +679,7 @@ class _ModeOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(PhosphorIconsBold.checkCircle, color: ZendColors.accentBright, size: 20),
+              const Icon(PhosphorIconsRegular.checkCircle, color: ZendColors.accentBright, size: 20),
           ],
         ),
       ),
@@ -734,7 +734,7 @@ class _ConfirmStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
@@ -753,7 +753,7 @@ class _ConfirmStage extends StatelessWidget {
                 Text(
                   '$emoji $name',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -768,7 +768,7 @@ class _ConfirmStage extends StatelessWidget {
                   Text(
                     'Deadline: ${_formatDate(deadline!)}',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 13,
                       color: zt.textSecondary,
                     ),
@@ -776,7 +776,7 @@ class _ConfirmStage extends StatelessWidget {
                 Text(
                   'Mode: ${mode == 'strict' ? 'Strict' : 'Flexible'}',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -808,7 +808,7 @@ class _ConfirmStage extends StatelessWidget {
             errorMessage ?? pinError ?? 'Confirm with your PIN',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: (pinError != null || errorMessage != null)
                   ? ZendColors.destructive
@@ -856,7 +856,7 @@ class _NumericKeypad extends StatelessWidget {
                       : Text(
                           key,
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 22,
                             fontWeight: FontWeight.w500,
                             color: zt.textPrimary,

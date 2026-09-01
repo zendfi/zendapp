@@ -35,13 +35,13 @@ class ContactSupportScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(PhosphorIconsBold.lightning,
+                          Icon(PhosphorIconsRegular.lightning,
                               size: 16, color: zt.accentBright),
                           const SizedBox(width: 8),
                           Text(
                             'We respond in under 2 hours',
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: zt.accentBright,
@@ -57,7 +57,7 @@ class ContactSupportScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ContactTile(
-                        icon: PhosphorIconsBold.mailbox,
+                        icon: PhosphorIconsRegular.mailbox,
                         label: 'Email support',
                         subtitle: 'support@zendfi.com',
                         onTap: () async {
@@ -78,13 +78,13 @@ class ContactSupportScreen extends StatelessWidget {
                         },
                       ),
                       _ContactTile(
-                        icon: PhosphorIconsBold.chatDots,
+                        icon: PhosphorIconsRegular.chatDots,
                         label: 'Live chat',
                         subtitle: 'Start a conversation',
                         onTap: () {},
                       ),
                       _ContactTile(
-                        icon: PhosphorIconsBold.clipboard,
+                        icon: PhosphorIconsRegular.clipboard,
                         label: 'Help centre',
                         subtitle: 'Browse guides and FAQs',
                         onTap: () async {
@@ -146,7 +146,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: zt.textPrimary,
@@ -155,7 +155,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),
@@ -163,7 +163,7 @@ class _ContactTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(PhosphorIconsBold.caretRight,
+              Icon(PhosphorIconsRegular.caretRight,
                   size: 16, color: zt.textSecondary),
             ],
           ),
@@ -216,7 +216,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -239,13 +239,13 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,

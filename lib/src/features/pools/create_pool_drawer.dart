@@ -312,7 +312,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               Text(
                 'Create a pool',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -327,7 +327,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   Text(
                     'Goal amount',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -337,7 +337,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     controller: _amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontWeight: FontWeight.w700,
                       fontSize: 36,
                       color: zt.textPrimary,
@@ -345,14 +345,14 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     decoration: InputDecoration(
                       prefixText: '\$',
                       prefixStyle: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 24,
                         color: zt.textSecondary,
                       ),
                       hintText: '0.00',
                       hintStyle: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 36,
                         color: zt.textSecondary.withValues(alpha: 0.4),
@@ -386,7 +386,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 }),
                 decoration: InputDecoration(
                   hintText: 'Pool name',
-                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -398,7 +398,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xxs),
               Align(
@@ -410,13 +410,13 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ),
               if (_nameError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_nameError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
+                Text(_nameError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
               Text(
                 'Add participants',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
@@ -427,7 +427,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'No recent Zend users yet',
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
                   ),
                 )
               else
@@ -460,8 +460,8 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 onSubmitted: _addZendUser,
                 decoration: InputDecoration(
                   hintText: 'Add @username',
-                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(PhosphorIconsBold.userPlus, size: 18, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                  prefixIcon: Icon(PhosphorIconsRegular.userPlus, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -473,7 +473,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.md),
 
@@ -486,8 +486,8 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 onSubmitted: _addExternalContact,
                 decoration: InputDecoration(
                   hintText: 'Email or phone number',
-                  hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(PhosphorIconsBold.mailbox, size: 18, color: zt.textSecondary),
+                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                  prefixIcon: Icon(PhosphorIconsRegular.mailbox, size: 18, color: zt.textSecondary),
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
@@ -499,7 +499,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                     vertical: ZendSpacing.sm,
                   ),
                 ),
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
               ),
               const SizedBox(height: ZendSpacing.xs),
 
@@ -516,7 +516,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                         child: Text(
                           p.avatarLabel,
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: p.isExternal ? zt.textPrimary : ZendColors.textOnDeep,
@@ -525,9 +525,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                       ),
                       label: Text(
                         p.displayName,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary),
                       ),
-                      deleteIcon: Icon(PhosphorIconsBold.xCircle, size: 16, color: zt.textSecondary),
+                      deleteIcon: Icon(PhosphorIconsRegular.xCircle, size: 16, color: zt.textSecondary),
                       onDeleted: () => _removeParticipant(index),
                       backgroundColor: p.isExternal
                           ? zt.bgSecondary
@@ -546,7 +546,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               ],
               if (_participantError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_participantError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
+                Text(_participantError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
               ],
               const SizedBox(height: ZendSpacing.md),
 
@@ -554,12 +554,12 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                 label: _deadline != null
                     ? 'Deadline: ${_formatDate(_deadline!)}'
                     : 'Set deadline',
-                trailing: Icon(PhosphorIconsBold.caretRight, size: 18, color: zt.textSecondary),
+                trailing: Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
                 onTap: _pickDeadline,
               ),
               if (_deadlineError != null) ...[
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_deadlineError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive)),
+                Text(_deadlineError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
               ],
 
               const SizedBox(height: ZendSpacing.md),
@@ -582,7 +582,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                               Text(
                                 'Allow anyone to contribute via link',
                                 style: TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: zt.textPrimary,
@@ -592,7 +592,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                               Text(
                                 'Share a link so anyone can chip in',
                                 style: TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 12,
                                   color: zt.textSecondary,
                                 ),
@@ -615,7 +615,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
               const Spacer(),
 
               if (_createError != null) ...[
-                Text(_createError!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: ZendColors.destructive)),
+                Text(_createError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive)),
                 const SizedBox(height: ZendSpacing.xs),
               ],
 
@@ -648,7 +648,7 @@ class _TappableRow extends StatelessWidget {
         decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.sm)),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary))),
+            Expanded(child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary))),
             trailing,
           ],
         ),
@@ -666,7 +666,7 @@ class _SectionLabel extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Text(
       label.toUpperCase(),
-      style: TextStyle(fontFamily: 'CircularStd', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
+      style: TextStyle(fontFamily: 'Geist', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
     );
   }
 }
@@ -696,12 +696,12 @@ class _SelectableContactTile extends StatelessWidget {
               backgroundColor: selected ? zt.accent : zt.bgSecondary,
               child: Text(
                 participant.avatarLabel,
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary))),
-            if (selected) Icon(PhosphorIconsBold.checkCircle, size: 20, color: zt.accentBright),
+            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary))),
+            if (selected) Icon(PhosphorIconsRegular.checkCircle, size: 20, color: zt.accentBright),
           ],
         ),
       ),

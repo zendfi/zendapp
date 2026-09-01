@@ -43,7 +43,7 @@ class RecoverySetupScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     icon: Icon(
-                      isFirstTime ? PhosphorIconsBold.xCircle : PhosphorIconsBold.caretLeft,
+                      isFirstTime ? PhosphorIconsRegular.xCircle : PhosphorIconsRegular.caretLeft,
                       color: zt.textPrimary,
                     ),
                     onPressed: () => _skip(context),
@@ -62,7 +62,7 @@ class RecoverySetupScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    PhosphorIconsBold.shield,
+                    PhosphorIconsRegular.shield,
                     size: 36,
                     color: zt.accent,
                   ),
@@ -74,7 +74,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 'Set up wallet recovery',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -85,7 +85,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 'If you ever forget your PIN, you can recover your wallet using your government ID number — completely without involving Zend.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 15,
                   height: 1.5,
                   color: zt.textSecondary,
@@ -95,19 +95,19 @@ class RecoverySetupScreen extends StatelessWidget {
 
               // Benefits list
               _BulletItem(
-                icon: PhosphorIconsBold.cloudSun,
+                icon: PhosphorIconsRegular.cloudSun,
                 text: 'Your recovery file is saved to your Google Drive or iCloud — Zend never sees it.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: PhosphorIconsBold.fingerprint,
+                icon: PhosphorIconsRegular.fingerprint,
                 text: 'Your government ID number is the only key — we can\'t decrypt it for you.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
-                icon: PhosphorIconsBold.lockKey,
+                icon: PhosphorIconsRegular.lockKey,
                 text: 'Even if your phone is lost, your money stays recoverable.',
                 zt: zt,
               ),
@@ -122,7 +122,7 @@ class RecoverySetupScreen extends StatelessWidget {
                     'If you skip this, a forgotten PIN means you permanently lose access to your wallet.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       color: zt.textSecondary,
                       height: 1.45,
@@ -140,7 +140,7 @@ class RecoverySetupScreen extends StatelessWidget {
                 child: Text(
                   isFirstTime ? 'Set it up later' : 'Cancel',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -191,7 +191,7 @@ class _BulletItem extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               height: 1.45,
               color: zt.textPrimary,

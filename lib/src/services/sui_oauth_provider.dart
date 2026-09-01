@@ -6,7 +6,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 import 'package:pointycastle/digests/sha256.dart';
 
-import 'sui_zklogin_service.dart' show SuiOAuthProvider;
+import 'sui_zklogin_service.dart' show SuiOAuthProvider, SuiOAuthTokens;
 
 /// Which OAuth response type to use.
 ///
@@ -80,7 +80,7 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     required this.flow,
     this.httpsHost,
     this.httpsPath,
-    this.implicitResponseType = 'id_token',
+    this.implicitResponseType = 'id_token token',
     http.Client? httpClient,
     Random? random,
   }) : _http = httpClient ?? http.Client(),
@@ -97,6 +97,11 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
   static const _authorizationEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
   static const _tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
+  /// Hidden per-app Drive folder. Non-sensitive per Google's Drive scope
+  /// classification, and the only Drive access this app ever requests.
+  static const _driveAppdataScope =
+      'https://www.googleapis.com/auth/drive.appdata';
+
   /// The OAuth client id. Also the `aud` claim, so it participates in address
   /// derivation — see the class-level warning before changing it.
   final String clientId;
@@ -108,18 +113,22 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
 
   /// Response type for [SuiOAuthFlow.implicitIdToken].
   ///
-  /// Google's discovery document lists bare `id_token` under
-  /// `response_types_supported`, but its written guide only spells out the
-  /// `id_token token` pairing. Configurable so a rejection can be worked around
-  /// without a code change; `id_token token` additionally returns an access token
-  /// we neither want nor use.
+  /// `id_token token` rather than bare `id_token`: the access token is required to
+  /// reach Drive `appdata`, where share B of the sharded salt lives. Google's
+  /// written guide documents this exact pairing for the implicit flow, and taking
+  /// both from one grant is what guarantees the Drive account and the zkLogin
+  /// account are the same person.
+  ///
+  /// Still configurable so a provider-side rejection can be worked around without
+  /// a code change, but dropping back to bare `id_token` disables Drive access and
+  /// therefore share B.
   final String implicitResponseType;
 
   final http.Client _http;
   final Random _random;
 
   @override
-  Future<String> signInForIdToken({
+  Future<SuiOAuthTokens> signInForIdToken({
     required String nonce,
     SuiOAuthPrompt prompt = SuiOAuthPrompt.selectAccount,
   }) async {
@@ -135,7 +144,17 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
       'redirect_uri': redirectUri,
       // `openid` yields the ID token; email and profile populate the placeholder
       // handle and display name the backend assigns on first sign-in.
-      'scope': 'openid email profile',
+      //
+      // `drive.appdata` grants access to a hidden per-app folder in the user's
+      // Drive and nothing else — it cannot see their other files. Google
+      // classifies it as non-sensitive, so it needs no OAuth verification or app
+      // store listing. It is where share B of the sharded salt lives, which is
+      // what lets a user recover their wallet on a new device without us.
+      //
+      // Note it is not a *basic* identity scope, so requesting it forfeits the
+      // exemption that lets any user sign in while the consent screen is in
+      // Testing. The consent screen must be In Production.
+      'scope': 'openid email profile $_driveAppdataScope',
       'nonce': nonce,
       'state': state,
       ...prompt.parameters,
@@ -180,21 +199,25 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
       );
     }
 
-    final idToken = switch (flow) {
-      SuiOAuthFlow.implicitIdToken => returned['id_token'],
+    final SuiOAuthTokens tokens = switch (flow) {
+      // Implicit returns both tokens directly in the fragment.
+      SuiOAuthFlow.implicitIdToken => SuiOAuthTokens(
+        idToken: returned['id_token'] ?? '',
+        accessToken: returned['access_token'],
+      ),
       SuiOAuthFlow.authorizationCodePkce => await _exchangeCode(
         code: returned['code'],
         verifier: verifier!,
       ),
     };
-    if (idToken == null || idToken.isEmpty) {
+    if (tokens.idToken.isEmpty) {
       throw const SuiOAuthException('Google returned no ID token');
     }
 
     // The backend re-checks this in constant time and is authoritative; this is
     // only a fast, clearer failure for a stale or replayed redirect.
-    _assertNonceMatches(idToken: idToken, expected: nonce);
-    return idToken;
+    _assertNonceMatches(idToken: tokens.idToken, expected: nonce);
+    return tokens;
   }
 
   /// Exchanges an authorization code for an ID token.
@@ -203,7 +226,7 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
   /// app) client, where PKCE replaces the secret. Uses a plain HTTP client on
   /// purpose so the app's Dio interceptor cannot attach the Zend bearer token to
   /// a third-party request.
-  Future<String?> _exchangeCode({
+  Future<SuiOAuthTokens> _exchangeCode({
     required String? code,
     required String verifier,
   }) async {
@@ -227,7 +250,10 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
       );
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return decoded['id_token'] as String?;
+    return SuiOAuthTokens(
+      idToken: decoded['id_token'] as String? ?? '',
+      accessToken: decoded['access_token'] as String?,
+    );
   }
 
   /// Reads parameters from either the query string or the fragment.

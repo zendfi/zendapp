@@ -912,12 +912,12 @@ class _NoteField extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsBold.notePencil, size: 16, color: zt.textSecondary),
+            Icon(PhosphorIconsRegular.notePencil, size: 16, color: zt.textSecondary),
             const SizedBox(width: 4),
             Text(
               hasNote ? preview! : 'Add note',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -946,7 +946,7 @@ class _NoteField extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Add a note…',
                   hintStyle: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: zt.textSecondary,
                   ),
@@ -959,7 +959,7 @@ class _NoteField extends StatelessWidget {
                   filled: false,
                 ),
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: zt.textPrimary,
                 ),
@@ -983,7 +983,7 @@ class _NoteField extends StatelessWidget {
               onTap: onToggle,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(PhosphorIconsBold.caretUp,
+                child: Icon(PhosphorIconsRegular.caretUp,
                     size: 18, color: zt.textSecondary),
               ),
             ),

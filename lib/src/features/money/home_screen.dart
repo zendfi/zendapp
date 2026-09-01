@@ -25,11 +25,18 @@ class HomeScreen extends StatefulWidget {
     required this.onOpenReceive,
     required this.onOpenWithdraw,
     required this.onViewAll,
+    this.showBackButton = false,
   });
 
   final VoidCallback onOpenReceive;
   final VoidCallback onOpenWithdraw;
   final VoidCallback onViewAll;
+
+  /// Renders a back arrow before the "hi @username" greeting. Off by
+  /// default (this screen's original role was a bare shell tab, with no
+  /// route to pop). [WalletScreen] — the pushed screen this now lives
+  /// inside of, per the ZEND BETA nav restructure — sets this `true`.
+  final bool showBackButton;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -193,29 +200,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            const TextSpan(
-                              text: 'hi ',
-                              style: TextStyle(
-                                fontFamily: 'CircularStd',
-                                color: ZendColors.textOnDeep,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            TextSpan(
-                              text: '@${model.username}',
-                              style: const TextStyle(
-                                fontFamily: 'CircularStd',
-                                color: ZendColors.textOnDeep,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
+                      Row(
+                        children: [
+                          if (widget.showBackButton) ...[
+                            GestureDetector(
+                              onTap: () => Navigator.of(context).pop(),
+                              child: const Padding(
+                                padding: EdgeInsets.only(right: 10),
+                                child: Icon(
+                                  PhosphorIconsRegular.caretLeft,
+                                  size: 22,
+                                  color: ZendColors.textOnDeep,
+                                ),
                               ),
                             ),
                           ],
-                        ),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: 'hi ',
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    color: ZendColors.textOnDeep,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '@${model.username}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Geist',
+                                    color: ZendColors.textOnDeep,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       Row(children: [
                         // Drop discoverable indicator — subtle dot + tap to go to settings
@@ -273,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              PhosphorIconsBold.magnifyingGlass,
+                              PhosphorIconsRegular.magnifyingGlass,
                               size: 18,
                               color: ZendColors.textOnDeep,
                             ),
@@ -344,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         key: const Key('zend-hero-balance-text'),
                                         model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
                                         style: TextStyle(
-                                          fontFamily: 'CircularStd',
+                                          fontFamily: 'Geist',
                                           color: ZendColors.textOnDeep,
                                           fontSize: balanceSize,
                                           height: 1.0,
@@ -357,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   GestureDetector(
                                     onTap: model.toggleBalanceHidden,
                                     child: Icon(
-                                      model.balanceHidden ? PhosphorIconsBold.eyeClosed : PhosphorIconsBold.eye,
+                                      model.balanceHidden ? PhosphorIconsRegular.eyeClosed : PhosphorIconsRegular.eye,
                                       color: const Color(0x80F0F0F0),
                                       size: 20,
                                     ),
@@ -387,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   key: const Key('zend-hero-balance-collapsed-text'),
                                   model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    fontFamily: 'CircularStd',
+                                    fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,
                                     fontSize: balanceSize,
                                     height: 1.0,
@@ -398,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 GestureDetector(
                                   onTap: model.toggleBalanceHidden,
                                   child: Icon(
-                                    model.balanceHidden ? PhosphorIconsBold.eyeClosed : PhosphorIconsBold.eye,
+                                    model.balanceHidden ? PhosphorIconsRegular.eyeClosed : PhosphorIconsRegular.eye,
                                     color: const Color(0x80F0F0F0),
                                     size: 18,
                                   ),
@@ -458,7 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Builder(builder: (context) {
                                   final zt = ZendTheme.of(context);
                                   return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                    Text('Recent', style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                                    Text('Recent', style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
                                     GestureDetector(
                                       onTap: widget.onViewAll,
                                       child: Text('view all', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent)),
@@ -563,16 +587,16 @@ class _TransactionRow extends StatelessWidget {
             Text(name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
             const SizedBox(height: 3),
             Text(note,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary)),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
           ])),
           const SizedBox(width: 8),
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-            Text(amount, style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
+            Text(amount, style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
             const SizedBox(height: 4),
             Text(time, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
           ]),
@@ -616,13 +640,13 @@ class _SavingsCard extends StatelessWidget {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-                  Icon(PhosphorIconsBold.wallet, size: 16, color: zt.textSecondary),
+                  Icon(PhosphorIconsRegular.wallet, size: 16, color: zt.textSecondary),
                 ]),
                 const SizedBox(height: 3),
                 Text(
                   apyStr,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontWeight: FontWeight.w700,
                     fontSize: 32,
                     height: 0.98,
@@ -691,7 +715,7 @@ class _PoolsCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Pools', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-                        Icon(PhosphorIconsBold.usersFour, size: 16, color: zt.textSecondary),
+                        Icon(PhosphorIconsRegular.usersFour, size: 16, color: zt.textSecondary),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -744,7 +768,7 @@ class _PoolsCard extends StatelessWidget {
                     Text(
                       totalStr,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 32,
                         height: 0.98,

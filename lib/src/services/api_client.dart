@@ -490,6 +490,53 @@ class ApiClient {
     }
   }
 
+  /// Hands share C of the sharded salt to the backend and moves the identity onto
+  /// sharded custody.
+  ///
+  /// Call only after share B is confirmed durable in Drive: this is the call that
+  /// flips the strategy, and doing it earlier would leave the account with two
+  /// shares on the same device.
+  Future<void> provisionSuiSaltShares({
+    required String sessionId,
+    required String idToken,
+    required String shareC,
+    bool rotating = false,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/zend/v1/sui/zklogin/salt/shares/provision',
+        data: {
+          'session_id': sessionId,
+          'id_token': idToken,
+          'share_c': shareC,
+          'rotating': rotating,
+        },
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Retrieves share C so a new device can reconstruct the salt.
+  ///
+  /// The backend requires a freshly verified ID token — not the long-lived session
+  /// — and rate-limits these, because this is the one call that hands out
+  /// cryptographic material.
+  Future<String> releaseSuiSaltShare({
+    required String sessionId,
+    required String idToken,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v1/sui/zklogin/salt/shares/release',
+        data: {'session_id': sessionId, 'id_token': idToken},
+      );
+      return (response.data as Map<String, dynamic>)['share_c'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Registers a fresh Google re-authentication so a high-value transfer can go
   /// through. The grant is short-lived and consumed by a single transfer.
   Future<void> suiZkLoginStepUp({

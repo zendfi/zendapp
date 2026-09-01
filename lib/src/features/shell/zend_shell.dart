@@ -10,17 +10,19 @@ import '../../navigation/zend_shell_controller.dart';
 import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../../services/pending_notification_service.dart';
-import '../activity/activity_screen.dart';
 import '../onboarding/zendtag_prompt_sheet.dart';
 import '../receive/receive_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
-import '../send/send_screen.dart';
 import '../send/withdraw_sheet.dart';
-import '../money/home_screen.dart';
+import '../profile/profile_screen.dart';
 import '../dm/dm_list_screen.dart';
 import '../dm/dm_thread_screen.dart';
 import '../../navigation/zend_routes.dart';
+import 'feed_screen.dart';
+import 'people_screen.dart';
+import 'wallet_screen.dart';
+import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ZendShell extends StatefulWidget {
@@ -31,8 +33,11 @@ class ZendShell extends StatefulWidget {
 }
 
 class _ZendShellState extends State<ZendShell> {
-  // Start on the Send tab (index 1) — the primary action in Zend.
-  int _tabIndex = 1;
+  // Tab order: 0=Feed, 1=People, 2=Chats, 3=You (ZEND BETA spec §2).
+  // Feed is the primary landing screen — "what's happening between me and
+  // my people?" (spec §5) — replacing the old default of the Send tab,
+  // which no longer exists as a tab at all (Zend is now a floating action).
+  int _tabIndex = 0;
   late final PageController _pageController;
   Timer? _bannerTimer;
   // Tracks the last notification ID so re-arrival of a new request
@@ -102,14 +107,16 @@ class _ZendShellState extends State<ZendShell> {
     // Jump instantly — no slide animation for tab-bar taps.
     // Slide animation only fires when the user physically swipes the PageView.
     _pageController.jumpToPage(index);
-    // Clear activity badge when user actively switches to the Activity tab.
-    if (index == 2) {
+    // Clear the activity badge when the user actively switches to Feed —
+    // Feed is where activity/reaction/comment updates live now, taking
+    // over the old Activity tab's role (index 2 previously).
+    if (index == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ZendScope.of(context).markActivityRead();
       });
     }
-    // Clear DM badge when switching to Messages tab
-    if (index == 3) {
+    // Clear DM badge when switching to the Chats tab (index 2 now, was 3).
+    if (index == 2) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
       });
@@ -141,8 +148,16 @@ class _ZendShellState extends State<ZendShell> {
     );
   }
 
-  Future<void> _openRecipientSheet(BuildContext context, double amount) {
-    return showSendFlowSheet(context, amount: amount);
+  Future<void> _openWallet(BuildContext context) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => WalletScreen(
+          onOpenReceive: () => _openReceiveScreen(context),
+          onOpenWithdraw: () => showWithdrawSheet(context),
+          onViewAll: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _openReceiveScreen(BuildContext context) async {
@@ -165,8 +180,11 @@ class _ZendShellState extends State<ZendShell> {
         builder: (_) => ReceiveScreen(username: model.username),
       ),
     );
-    if (openSend == true && mounted) {
-      _setTab(1);
+    // Send is no longer a tab to jump to — it's the floating Zend action.
+    // "Open send" from ReceiveScreen now opens that same identity-first
+    // entry sheet instead of switching tabs.
+    if (openSend == true && context.mounted) {
+      showZendEntrySheet(context);
     }
   }
 
@@ -181,20 +199,22 @@ class _ZendShellState extends State<ZendShell> {
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
     final pendingComment = model.pendingActivityComment;
-    // Suppress the reaction/comment banners while the Activity tab is
-    // already active — mirrors the DM banner's own `_tabIndex != 3` check.
+    // Suppress the reaction/comment banners while Feed (which now owns
+    // activity content, replacing the old Activity tab at index 2) is
+    // already active — mirrors the DM banner's own `_tabIndex != 2` check
+    // below (Chats is index 2 now, was 3).
     // Computed once here (rather than inline at each Positioned site) so
     // the top-offset math for the banner stack and the visibility checks
     // can't drift out of sync with each other.
-    final showReactionBanner = pendingReaction != null && _tabIndex != 2;
-    final showCommentBanner = pendingComment != null && _tabIndex != 2;
+    final showReactionBanner = pendingReaction != null && _tabIndex != 0;
+    final showCommentBanner = pendingComment != null && _tabIndex != 0;
 
     // DM banner logic — show when dmUnreadTotal increases and we're not on DM tab
     // The SSE data is carried via model.lastDmBannerData
     if (model.lastDmBannerData != null) {
       final data = model.lastDmBannerData!;
       final key = data['room_id'] as String? ?? '';
-      if (key != _lastDmBannerKey && _tabIndex != 3) {
+      if (key != _lastDmBannerKey && _tabIndex != 2) {
         _lastDmBannerKey = key;
         _pendingDmBanner = data;
         model.clearLastDmBannerData();
@@ -247,17 +267,15 @@ class _ZendShellState extends State<ZendShell> {
       _lastCommentBannerKey = null;
     }
 
+    // Tab order: 0=Feed, 1=People, 2=Chats, 3=You (ZEND BETA spec §2).
+    // Send is not a tab — it's the floating Zend action (§4), shown
+    // contextually below. Wallet is not a tab either — reached only by
+    // tapping the balance inside Feed (§7).
     final pages = <Widget>[
-      HomeScreen(
-        onOpenReceive: () => _openReceiveScreen(context),
-        onOpenWithdraw: () => showWithdrawSheet(context),
-        onViewAll: () => _setTab(2),
-      ),
-      SendScreen(
-        onOpenRecipients: (amount) => _openRecipientSheet(context, amount),
-      ),
-      const ActivityScreen(),
+      FeedScreen(onOpenWallet: () => _openWallet(context)),
+      const PeopleScreen(),
       const DmListScreen(),
+      const ProfileScreen(showBackButton: false),
     ];
 
     // Wrap each page in AutomaticKeepAlive so the PageView keeps all tabs
@@ -280,12 +298,12 @@ class _ZendShellState extends State<ZendShell> {
             onPageChanged: (i) {
               if (i != _tabIndex) {
                 setState(() => _tabIndex = i);
-                if (i == 2) {
+                if (i == 0) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) ZendScope.of(context).markActivityRead();
                   });
                 }
-                if (i == 3) {
+                if (i == 2) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
                   });
@@ -340,8 +358,8 @@ class _ZendShellState extends State<ZendShell> {
                 onDismiss: () => _dismissCommentBanner(model),
               ),
             ),
-          // DM banner — shown when a new message arrives and the DM tab isn't active
-          if (_pendingDmBanner != null && _tabIndex != 3)
+          // DM banner — shown when a new message arrives and the Chats tab isn't active
+          if (_pendingDmBanner != null && _tabIndex != 2)
             Positioned(
               top: (pending != null ? 78 : 0) +
                   (showReactionBanner ? 78 : 0) +
@@ -356,7 +374,7 @@ class _ZendShellState extends State<ZendShell> {
                   final roomId = _pendingDmBanner!['room_id'] as String? ?? '';
                   _dmBannerTimer?.cancel();
                   setState(() => _pendingDmBanner = null);
-                  _setTab(3);
+                  _setTab(2);
                   Future.delayed(const Duration(milliseconds: 300), () {
                     if (!mounted) return;
                     final thread = model.dmService.cachedThreads
@@ -379,64 +397,93 @@ class _ZendShellState extends State<ZendShell> {
         ],
         ),  // close RepaintBoundary
       ),
+      // Zend — the primary action (spec §4) — floats over Feed and People
+      // only. Not present on Chats (Zend is reachable contextually from
+      // inside a conversation instead — spec §27) or You (not an action
+      // screen — spec §29's "this is me, manage me").
+      floatingActionButton: (_tabIndex == 0 || _tabIndex == 1)
+          ? _ZendFab(onTap: () => showZendEntrySheet(context))
+          : null,
       bottomNavigationBar: ZendBottomBar(
         currentIndex: _tabIndex,
         onChanged: _setTab,
-        activityBadgeCount: model.activityUnreadCount,
-        dmBadgeCount: model.dmUnreadTotal,
-        balance: model.spendableBalance,
-        balanceHidden: model.balanceHidden,
+        feedBadgeCount: model.activityUnreadCount,
+        chatsBadgeCount: model.dmUnreadTotal,
       ),
     );
   }
 }
 
+/// The floating "Zend" action — the app's one verb (spec §4). A round
+/// button using the same Z mark as the old Send tab's icon, so the brand
+/// gesture carries over even though Send is no longer a destination of
+/// its own.
+class _ZendFab extends StatelessWidget {
+  const _ZendFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: const BoxDecoration(
+          color: ZendColors.bgDeep,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: Center(
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.mode(ZendColors.accentPop, BlendMode.srcIn),
+            child: Image.asset(
+              'assets/icons/zend-icon-navbar.png',
+              width: 26,
+              height: 26,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tab bar for Feed / People / Chats / You (spec §2). Every tab now follows
+/// the app's own light/dark theme uniformly — the old Send tab's permanent
+/// dark-brand-surface styling is gone, since no tab is "the Send tab"
+/// anymore (Zend moved to a floating action, see [_ZendFab]).
 class ZendBottomBar extends StatelessWidget {
   const ZendBottomBar({
     super.key,
     required this.currentIndex,
     required this.onChanged,
-    this.activityBadgeCount = 0,
-    this.dmBadgeCount = 0,
-    this.balance = 0.0,
-    this.balanceHidden = false,
+    this.feedBadgeCount = 0,
+    this.chatsBadgeCount = 0,
   });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
-  final int activityBadgeCount;
-  final int dmBadgeCount;
-  /// Spendable balance shown in place of a wallet icon on the Home tab —
-  /// mirrors the Cash App pattern of surfacing the live balance right in
-  /// the tab bar instead of a static icon.
-  final double balance;
-  final bool balanceHidden;
+  final int feedBadgeCount;
+  final int chatsBadgeCount;
 
   @override
   Widget build(BuildContext context) {
-    final onSendTab = currentIndex == 1;
     final zt = ZendTheme.of(context);
-
-    // The Send tab always stays on the deep-green brand surface regardless
-    // of light/dark theme. Every other tab now follows the app's theme —
-    // light mode gets the same off-white background as the rest of the UI
-    // instead of being hardcoded to near-black.
-    final barColor = onSendTab ? ZendColors.bgDeep : zt.bgPrimary;
-    final borderColor = onSendTab ? Colors.transparent : zt.border;
-    final activeColor = onSendTab ? ZendColors.accentPop : zt.accent;
-    final inactiveColor = onSendTab
-        ? const Color(0x66F0F0F0)
-        : zt.textSecondary.withValues(alpha: 0.7);
-    final badgeBorderColor = barColor;
+    final activeColor = zt.accent;
+    final inactiveColor = zt.textSecondary.withValues(alpha: 0.7);
+    final badgeBorderColor = zt.bgPrimary;
 
     return ColoredBox(
-      // Solid fill — no backdrop blur. Fully opaque so tab content never
-      // shows through underneath.
-      color: barColor,
+      color: zt.bgPrimary,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(height: 1, color: borderColor),
+          Container(height: 1, color: zt.border),
           SafeArea(
             top: false,
             child: Padding(
@@ -444,16 +491,21 @@ class ZendBottomBar extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _BalanceNavItem(
-                    balance: balance,
-                    hidden: balanceHidden,
+                  _BottomNavIcon(
+                    icon: PhosphorIconsRegular.houseLine,
+                    activeIcon: PhosphorIconsFill.houseLine,
+                    label: 'Feed',
                     active: currentIndex == 0,
                     onTap: () => onChanged(0),
                     activeColor: activeColor,
                     inactiveColor: inactiveColor,
+                    badgeBorderColor: badgeBorderColor,
+                    badgeCount: feedBadgeCount,
                   ),
                   _BottomNavIcon(
-                    imageAsset: 'assets/icons/zend-icon-navbar.png',
+                    icon: PhosphorIconsRegular.usersThree,
+                    activeIcon: PhosphorIconsFill.usersThree,
+                    label: 'People',
                     active: currentIndex == 1,
                     onTap: () => onChanged(1),
                     activeColor: activeColor,
@@ -461,22 +513,25 @@ class ZendBottomBar extends StatelessWidget {
                     badgeBorderColor: badgeBorderColor,
                   ),
                   _BottomNavIcon(
-                    icon: PhosphorIconsBold.arrowsLeftRight,
+                    icon: PhosphorIconsRegular.chatCircleText,
+                    activeIcon: PhosphorIconsFill.chatCircleText,
+                    label: 'Chats',
                     active: currentIndex == 2,
                     onTap: () => onChanged(2),
                     activeColor: activeColor,
                     inactiveColor: inactiveColor,
                     badgeBorderColor: badgeBorderColor,
-                    badgeCount: activityBadgeCount,
+                    badgeCount: chatsBadgeCount,
                   ),
                   _BottomNavIcon(
-                    icon: PhosphorIconsBold.chatCircleText,
+                    icon: PhosphorIconsRegular.userCircle,
+                    activeIcon: PhosphorIconsFill.userCircle,
+                    label: 'You',
                     active: currentIndex == 3,
                     onTap: () => onChanged(3),
                     activeColor: activeColor,
                     inactiveColor: inactiveColor,
                     badgeBorderColor: badgeBorderColor,
-                    badgeCount: dmBadgeCount,
                   ),
                 ],
               ),
@@ -488,49 +543,26 @@ class ZendBottomBar extends StatelessWidget {
   }
 }
 
-/// Formats a balance the way we want it to read in the tab bar — whole
-/// dollars with no decimals ("$10"), 2dp for small amounts like $0.16 so
-/// they stay legible instead of getting truncated to "$0", and a compact
-/// "k"/"M" suffix above $1,000 so the chip's width — and thus its "icon"
-/// footprint in the row — stays roughly constant regardless of balance size
-/// instead of growing indefinitely or getting squashed by FittedBox.
-String _formatNavBalance(double balance) {
-  final abs = balance.abs();
-  if (abs >= 1000000) {
-    return '\$${(balance / 1000000).toStringAsFixed(1)}M';
-  }
-  if (abs >= 1000) {
-    // Drop the decimal at 100k+ so it doesn't get cramped: "$124k" not "$124.3k".
-    if (abs >= 100000) {
-      return '\$${(balance / 1000).round()}k';
-    }
-    return '\$${(balance / 1000).toStringAsFixed(1)}k';
-  }
-  if (balance == balance.roundToDouble()) {
-    return '\$${balance.toStringAsFixed(0)}';
-  }
-  return '\$${balance.toStringAsFixed(2)}';
-}
-
 class _BottomNavIcon extends StatelessWidget {
   const _BottomNavIcon({
-    this.icon,
-    this.imageAsset,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
     required this.active,
     required this.onTap,
     required this.activeColor,
     required this.inactiveColor,
     required this.badgeBorderColor,
     this.badgeCount = 0,
-  }) : assert(icon != null || imageAsset != null, 'Provide either icon or imageAsset');
+  });
 
-  /// Font-icon glyph (Solar Icons) — used for most tabs.
-  final IconData? icon;
-  /// Path to a flat PNG glyph (e.g. the Zend "Z" mark) used instead of
-  /// [icon]. Tinted via ColorFiltered/BlendMode.srcIn so it recolors
-  /// between active/inactive + light/dark exactly like a font icon would,
-  /// rather than showing its own baked-in white/green artwork.
-  final String? imageAsset;
+  /// Regular-weight glyph shown when this tab isn't active.
+  final IconData icon;
+  /// Fill-weight glyph shown when this tab is active — gives active/inactive
+  /// its own visual language on top of the color change (quiet outline vs
+  /// solid, matching the "simple, quiet, rounded" icon brief).
+  final IconData activeIcon;
+  final String label;
   final bool active;
   final VoidCallback onTap;
   final Color activeColor;
@@ -551,7 +583,6 @@ class _BottomNavIcon extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icon with optional badge overlay
             SizedBox(
               width: 34,
               height: 34,
@@ -559,17 +590,7 @@ class _BottomNavIcon extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Center(
-                    child: imageAsset != null
-                        ? ColorFiltered(
-                            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                            child: Image.asset(
-                              imageAsset!,
-                              width: 22,
-                              height: 22,
-                              fit: BoxFit.contain,
-                            ),
-                          )
-                        : Icon(icon, color: color, size: 26),
+                    child: Icon(active ? activeIcon : icon, color: color, size: 24),
                   ),
                   if (badgeCount > 0 && !active)
                     Positioned(
@@ -593,104 +614,14 @@ class _BottomNavIcon extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 3),
-            AnimatedOpacity(
-              opacity: active ? 1 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(color: activeColor, shape: BoxShape.circle),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Home-tab item — shows the user's current spendable balance as text
-/// (e.g. "$10", "$0.16") instead of a static wallet icon, Cash App-style.
-/// No pill/chip background — sits bare like the icon glyphs beside it. It
-/// swaps to an eye-closed glyph — rather than bare "••••" text — when the
-/// user has hidden their balance, so the hidden state still reads as an
-/// icon rather than a masked label.
-class _BalanceNavItem extends StatelessWidget {
-  const _BalanceNavItem({
-    required this.balance,
-    required this.hidden,
-    required this.active,
-    required this.onTap,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
-
-  final double balance;
-  final bool hidden;
-  final bool active;
-  final VoidCallback onTap;
-  final Color activeColor;
-  final Color inactiveColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active ? activeColor : inactiveColor;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Same 34px box as the icon glyphs on the other three nav
-            // items, so the row stays visually aligned — but no
-            // background/border here, matching their bare-glyph look.
-            SizedBox(
-              height: 34,
-              width: 64,
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: hidden
-                        ? Icon(
-                            PhosphorIconsBold.eyeClosed,
-                            key: const ValueKey('hidden-icon'),
-                            size: 26,
-                            color: color,
-                          )
-                        : Text(
-                            _formatNavBalance(balance),
-                            key: ValueKey(balance.toStringAsFixed(2)),
-                            style: ZendTextStyles.tabularNumeric.copyWith(
-                              // Slightly larger than the original 16px — the
-                              // 26px icon glyphs on the other three tabs read
-                              // heavier than plain 16px digits at the same
-                              // fontWeight, so bumping to 18px + tabular
-                              // figures keeps the balance text's optical
-                              // weight in the same range as its siblings.
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                              height: 1.0,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 3),
-            AnimatedOpacity(
-              opacity: active ? 1 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(color: activeColor, shape: BoxShape.circle),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: color,
               ),
             ),
           ],
@@ -767,7 +698,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      PhosphorIconsBold.currencyDollar,
+                      PhosphorIconsRegular.currencyDollar,
                       size: 20,
                       color: ZendColors.accentPop,
                     ),
@@ -782,7 +713,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                         Text(
                           '@${n.requesterZendtag} is requesting ${n.formattedAmount}',
                           style: const TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFFF0F0F0),
@@ -795,7 +726,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                           Text(
                             n.description!,
                             style: const TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 11,
                               color: Color(0x99F0F0F0),
                             ),
@@ -819,7 +750,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       child: const Text(
                         'Pay',
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: ZendColors.bgDeep,
@@ -832,7 +763,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                   GestureDetector(
                     onTap: widget.onDismiss,
                     child: const Icon(
-                      PhosphorIconsBold.xCircle,
+                      PhosphorIconsRegular.xCircle,
                       size: 16,
                       color: Color(0x66F0F0F0),
                     ),
@@ -908,7 +839,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   Expanded(
                     child: Text(
                       '@${n.reactorZendtag} reacted ${n.emoji} to your activity',
-                      style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                      style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -916,7 +847,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),
@@ -983,7 +914,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                     height: 36,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                    child: const Icon(PhosphorIconsBold.chatDots, size: 16, color: ZendColors.accentPop),
+                    child: const Icon(PhosphorIconsRegular.chatDots, size: 16, color: ZendColors.accentPop),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -993,13 +924,13 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                       children: [
                         Text(
                           '@${n.authorZendtag} commented on your activity',
-                          style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                          style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           n.body,
-                          style: const TextStyle(fontFamily: 'CircularStd', fontSize: 11, color: Color(0x99F0F0F0)),
+                          style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: Color(0x99F0F0F0)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1009,7 +940,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x66F0F0F0)),
                   ),
                 ],
               ),
@@ -1082,7 +1013,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                       width: 36, height: 36,
                       decoration: const BoxDecoration(
                         color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                      child: const Icon(PhosphorIconsBold.chatDots,
+                      child: const Icon(PhosphorIconsRegular.chatDots,
                           size: 18, color: ZendColors.accentPop),
                     ),
                     const SizedBox(width: 10),
@@ -1094,7 +1025,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                           Text(
                             '@${widget.senderZendtag}',
                             style: const TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFFF0F0F0)),
@@ -1103,7 +1034,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                             Text(
                               widget.preview,
                               style: const TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 11,
                                   color: Color(0x99F0F0F0)),
                               maxLines: 1,
@@ -1115,7 +1046,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: widget.onDismiss,
-                      child: const Icon(PhosphorIconsBold.xCircle,
+                      child: const Icon(PhosphorIconsRegular.xCircle,
                           size: 16, color: Color(0x66F0F0F0)),
                     ),
                   ],

@@ -126,14 +126,14 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const Spacer(),
                   // Share link — only when pool has a short code
                   if (_pool.shortCode != null)
                     IconButton(
-                      icon: Icon(PhosphorIconsBold.share, color: zt.textSecondary),
+                      icon: Icon(PhosphorIconsRegular.share, color: zt.textSecondary),
                       tooltip: 'Share pool link',
                       onPressed: () {
                         Share.share(
@@ -155,7 +155,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   Text(
                     _pool.name,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -177,7 +177,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                       child: Text(
                         _pool.status.name,
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _statusColor(_pool.status, zt),
@@ -208,7 +208,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   Text(
                     '${_pool.formattedGathered} of ${_pool.formattedTarget}',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       color: zt.textPrimary,
                     ),
@@ -223,7 +223,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   Text(
                     'PARTICIPANTS',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1,
@@ -267,11 +267,11 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                             subject: _pool.name,
                           );
                         },
-                        icon: const Icon(PhosphorIconsBold.link, size: 16),
+                        icon: const Icon(PhosphorIconsRegular.link, size: 16),
                         label: const Text(
                           'Share contribution link',
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -305,7 +305,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                             child: const Text(
                               'Contribute',
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -333,7 +333,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                             child: const Text(
                               'Manage',
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -348,11 +348,11 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () =>
                               showMissionRoomSheet(context, pool: _pool),
-                          icon: const Icon(PhosphorIconsBold.chatDots, size: 16),
+                          icon: const Icon(PhosphorIconsRegular.chatDots, size: 16),
                           label: const Text(
                             'Message',
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -401,7 +401,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                 Text(
                   p.displayName,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     color: zt.textPrimary,
                   ),
@@ -410,7 +410,7 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                   Text(
                     'external',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 11,
                       color: zt.textSecondary,
                     ),
@@ -450,7 +450,7 @@ class _StatusBanner extends StatelessWidget {
       child: Text(
         message,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: color,
@@ -475,7 +475,7 @@ class _TimelineRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 13,
             color: zt.textSecondary,
           ),
@@ -484,7 +484,7 @@ class _TimelineRow extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 13,
             color: zt.textPrimary,
           ),

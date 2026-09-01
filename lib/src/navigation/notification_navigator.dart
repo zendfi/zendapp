@@ -36,8 +36,10 @@ class NotificationNavigator {
   ) async {
     switch (dest) {
       // ── Activity: show the threaded feed, optionally open a specific edge ──
+      // Activity content now lives on the Feed tab (index 0) — there's no
+      // dedicated Activity tab anymore.
       case NotifActivityFeed(:final focusSenderZendtag, :final focusTransferId):
-        ZendShellController.instance?.switchToTab(2);
+        ZendShellController.instance?.switchToTab(0);
         if (focusTransferId == null && focusSenderZendtag == null) return;
         await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!context.mounted) return;
@@ -52,7 +54,7 @@ class NotificationNavigator {
 
       // ── Activity: open a specific edge's comment sheet ──────────────────────
       case NotifActivityEdge(:final edgeId):
-        ZendShellController.instance?.switchToTab(2);
+        ZendShellController.instance?.switchToTab(0);
         // Trigger a fetch so the edge is available if it's not yet loaded.
         unawaited(model.fetchThreadedActivity());
         await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -66,7 +68,7 @@ class NotificationNavigator {
 
       // ── Public feed ──────────────────────────────────────────────────────────
       case NotifPublicFeed():
-        ZendShellController.instance?.switchToTab(2);
+        ZendShellController.instance?.switchToTab(0);
         await Future<void>.delayed(const Duration(milliseconds: 350));
         if (!context.mounted) return;
         pushZendSlide(context, const PublicFeedScreen(), rootNavigator: true);
@@ -76,6 +78,9 @@ class NotificationNavigator {
         final pool = model.pools.firstWhereOrNull((p) => p.id == poolId);
         if (pool == null) {
           unawaited(model.fetchPools());
+          // No tab owns Pools directly under the new IA (pools live inside
+          // Chats as group conversations) — Feed is the safest general
+          // landing spot when the specific pool can't be found yet.
           ZendShellController.instance?.switchToTab(0);
           return;
         }
@@ -90,6 +95,10 @@ class NotificationNavigator {
           ZendShellController.instance?.switchToTab(0);
           return;
         }
+        // Note: once Pools are surfaced as Chats-tab group conversations
+        // (spec §31-34), this fallback and the pool-chat hand-off below
+        // should route through Chats(2) instead of a direct push — tracked
+        // as follow-up screen work, not part of this nav restructure.
         if (!context.mounted) return;
         pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
         await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -109,7 +118,7 @@ class NotificationNavigator {
 
       // ── DM thread ────────────────────────────────────────────────────────────
       case NotifDmThread(:final roomId):
-        ZendShellController.instance?.switchToTab(3);
+        ZendShellController.instance?.switchToTab(2);
         await Future<void>.delayed(const Duration(milliseconds: 350));
         if (!context.mounted) return;
         // Try to find the counterparty from the loaded thread list

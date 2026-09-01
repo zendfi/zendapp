@@ -39,7 +39,7 @@ class StreakIndicator extends StatelessWidget {
             Text(
               '$streakWeeks',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 36,
                 color: zt.textPrimary,
@@ -48,7 +48,7 @@ class StreakIndicator extends StatelessWidget {
             Text(
               'week streak 🔥',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),

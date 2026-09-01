@@ -19,6 +19,16 @@ import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+/// Formats a balance for the restrained header gateway — plain dollars,
+/// 2dp only when needed, no thousands separator logic beyond what's already
+/// legible at this size (this is a glance-value, not a statement).
+String _formatBalance(double balance) {
+  if (balance == balance.roundToDouble()) {
+    return '\$${balance.toStringAsFixed(0)}';
+  }
+  return '\$${balance.toStringAsFixed(2)}';
+}
+
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.
 /// Structurally parallel to `legacy_activity_list_view.dart`'s
@@ -40,6 +50,7 @@ class ThreadedActivityScreen extends StatefulWidget {
     super.key,
     required this.onToggleView,
     this.onOpenGraphView,
+    this.onOpenWallet,
   });
 
   /// Invoked when the user taps the view-toggle control to switch to the
@@ -51,6 +62,12 @@ class ThreadedActivityScreen extends StatefulWidget {
   /// Optional so this widget remains usable standalone without requiring a
   /// router that supports the Graph_View mode.
   final VoidCallback? onOpenGraphView;
+
+  /// Invoked when the user taps the header balance — the Feed's gateway
+  /// into the Wallet. Null when this screen is used somewhere that has no
+  /// Wallet destination to open (kept optional for the same standalone-reuse
+  /// reason as [onOpenGraphView]).
+  final VoidCallback? onOpenWallet;
 
   @override
   State<ThreadedActivityScreen> createState() => _ThreadedActivityScreenState();
@@ -128,7 +145,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   ),
                 ),
                 _OverflowItem(
-                  icon: PhosphorIconsBold.globe,
+                  icon: PhosphorIconsRegular.globe,
                   label: 'Public feed',
                   subtitle: 'Activities your mutuals have shared',
                   onTap: () {
@@ -139,7 +156,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 if (widget.onOpenGraphView != null) ...[
                   Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                   _OverflowItem(
-                    icon: PhosphorIconsBold.usersFour,
+                    icon: PhosphorIconsRegular.usersFour,
                     label: 'Your mutuals',
                     subtitle: 'Your activity relationship graph',
                     onTap: () {
@@ -150,7 +167,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 ],
                 Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                 _OverflowItem(
-                  icon: PhosphorIconsBold.magnifyingGlass,
+                  icon: PhosphorIconsRegular.magnifyingGlass,
                   label: 'Search all',
                   subtitle: 'Transactions, requests, pools, users',
                   onTap: () {
@@ -160,7 +177,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 ),
                 Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                 _OverflowItem(
-                  icon: _notificationsMuted ? PhosphorIconsBold.bellSlash : PhosphorIconsBold.bell,
+                  icon: _notificationsMuted ? PhosphorIconsRegular.bellSlash : PhosphorIconsRegular.bell,
                   label: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
                   subtitle: _notificationsMuted ? 'Activity alerts are off' : 'Activity alerts are on',
                   onTap: () {
@@ -320,18 +337,37 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     child: Text(
                       'Activity',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
                       ),
                     ),
                   ),
+                  // ── Balance → Wallet gateway ── restrained: a plain
+                  // formatted amount, no label, no card chrome (spec §5/§7).
+                  if (widget.onOpenWallet != null)
+                    GestureDetector(
+                      onTap: widget.onOpenWallet,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: Text(
+                          model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
                   // ── Search / Filter ──
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? PhosphorIconsBold.magnifyingGlassMinus : PhosphorIconsBold.magnifyingGlass,
+                      _filterActive ? PhosphorIconsRegular.magnifyingGlassMinus : PhosphorIconsRegular.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
@@ -339,7 +375,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   // ── Overflow menu (niche actions) ──
                   IconButton(
                     onPressed: () => _showOverflowMenu(context),
-                    icon: Icon(PhosphorIconsBold.dotsThreeVertical, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary),
                     tooltip: 'More',
                   ),
                 ],
@@ -356,15 +392,15 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Filter by person or note…',
-                          hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,
@@ -398,7 +434,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                                         ? 'No matches for "$_filterQuery"'
                                         : 'No activity yet',
                                     style: TextStyle(
-                                      fontFamily: 'CircularStd',
+                                      fontFamily: 'Geist',
                                       fontSize: 14,
                                       color: zt.textSecondary,
                                     ),
@@ -442,7 +478,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   'Could not load latest activity',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),
@@ -540,7 +576,7 @@ class _RequestsThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: ZendColors.destructive.withValues(alpha: 0.12),
-                child: Icon(PhosphorIconsBold.receipt, color: ZendColors.destructive, size: 20),
+                child: Icon(PhosphorIconsRegular.receipt, color: ZendColors.destructive, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -549,14 +585,14 @@ class _RequestsThreadTile extends StatelessWidget {
                   children: [
                     Text(
                       'Requests',
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       'Money asks between you and others',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -572,7 +608,7 @@ class _RequestsThreadTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(PhosphorIconsBold.caretRight, color: zt.textSecondary),
+              Icon(PhosphorIconsRegular.caretRight, color: zt.textSecondary),
             ],
           ),
         ),
@@ -646,7 +682,7 @@ class _RequestsThreadSheet extends StatelessWidget {
             ),
             Text(
               'Requests',
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
@@ -746,7 +782,7 @@ class _PendingRowTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -756,7 +792,7 @@ class _PendingRowTile extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
                     ),
                   ],
                 ),
@@ -764,7 +800,7 @@ class _PendingRowTile extends StatelessWidget {
               Text(
                 amount,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: zt.textPrimary,
@@ -831,12 +867,12 @@ class _UserThreadTile extends StatelessWidget {
                     color: zt.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(PhosphorIconsBold.chatCircleText, size: 18, color: zt.accent),
+                  child: Icon(PhosphorIconsRegular.chatCircleText, size: 18, color: zt.accent),
                 ),
                 title: Text(
                   'Message @${counterparty.displayLabel}',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -845,7 +881,7 @@ class _UserThreadTile extends StatelessWidget {
                 subtitle: Text(
                   'Open DM thread',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: zt.textSecondary,
                   ),
@@ -862,12 +898,12 @@ class _UserThreadTile extends StatelessWidget {
                     color: zt.bgPrimary,
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(PhosphorIconsBold.arrowsLeftRight, size: 18, color: zt.textSecondary),
+                  child: Icon(PhosphorIconsRegular.arrowsLeftRight, size: 18, color: zt.textSecondary),
                 ),
                 title: Text(
                   'View activity',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: zt.textPrimary,
@@ -918,7 +954,7 @@ class _UserThreadTile extends StatelessWidget {
       // failed instead of routing them somewhere unexplained.
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -972,7 +1008,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (isOutgoing) const TextSpan(text: 'You sent a Vibe ✨ to '),
                             if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
@@ -985,7 +1021,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (isOutgoing) const TextSpan(text: 'You chipped into '),
                             if (!isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -999,7 +1035,7 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
                           children: [
                             if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
                             TextSpan(
@@ -1018,7 +1054,7 @@ class _UserThreadTile extends StatelessWidget {
                         mostRecent.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
                     ],
                     const SizedBox(height: 6),
@@ -1115,7 +1151,7 @@ class _PoolThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: zt.accent.withValues(alpha: 0.15),
-                child: Icon(PhosphorIconsBold.usersThree, color: zt.accent, size: 20),
+                child: Icon(PhosphorIconsRegular.usersThree, color: zt.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1126,7 +1162,7 @@ class _PoolThreadTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14.5, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
                         children: [
                           const TextSpan(text: 'You contributed to '),
                           TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -1285,7 +1321,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
           Text(
             '\$${gathered.toStringAsFixed(2)} of \$${target.toStringAsFixed(2)}',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontWeight: FontWeight.w700,
               fontSize: 28,
               color: zt.textPrimary,
@@ -1305,7 +1341,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
           Text(
             'Contributors',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
@@ -1327,7 +1363,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                         PoolContributorExternalAnonymized(aggregateCount: final count) =>
                           '$count external contributor${count == 1 ? '' : 's'}',
                       },
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1389,11 +1425,11 @@ class _OverflowItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
                   ),
                 ],
               ),

@@ -351,7 +351,7 @@ class _ActionMenu extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: color),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: color),
                   ),
                 ),
                 Icon(icon, size: 18, color: color),
@@ -362,11 +362,11 @@ class _ActionMenu extends StatelessWidget {
       );
     }
 
-    addItem('Reply', PhosphorIconsBold.arrowBendUpLeft, actions.onReply);
-    addItem('Forward', PhosphorIconsBold.arrowBendUpRight, actions.onForward);
-    addItem('Copy', PhosphorIconsBold.copy, actions.onCopy);
-    addItem('Info', PhosphorIconsBold.info, actions.onInfo);
-    addItem('Delete', PhosphorIconsBold.trash, actions.onDelete, destructive: true);
+    addItem('Reply', PhosphorIconsRegular.arrowBendUpLeft, actions.onReply);
+    addItem('Forward', PhosphorIconsRegular.arrowBendUpRight, actions.onForward);
+    addItem('Copy', PhosphorIconsRegular.copy, actions.onCopy);
+    addItem('Info', PhosphorIconsRegular.info, actions.onInfo);
+    addItem('Delete', PhosphorIconsRegular.trash, actions.onDelete, destructive: true);
 
     return Material(
       color: Colors.transparent,

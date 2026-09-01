@@ -909,7 +909,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                   Text(
                     'Pay ${widget.amountFormatted}',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -958,14 +958,14 @@ class _RecipientStageState extends State<_RecipientStage> {
                             ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
                             : _resolvedDisplayName != null
                                 ? Icon(
-                                    PhosphorIconsBold.checkCircle,
+                                    PhosphorIconsRegular.checkCircle,
                                     size: 16,
                                     color: zt.accentBright,
                                   )
                                 : null,
                       ),
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 15,
                         color: zt.textPrimary,
                       ),
@@ -1026,7 +1026,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                         filled: false,
                       ),
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 15,
                         color: zt.textPrimary,
                       ),
@@ -1052,7 +1052,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                     Text(
                       'PREVIOUS',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.1,
@@ -1188,7 +1188,7 @@ class _ContactTile extends StatelessWidget {
                     Text(
                       contact.name,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: zt.textPrimary,
@@ -1263,12 +1263,12 @@ class _EmailIntentStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 12),
           // ── Recipient label ─────────────────────────────────────────
-          Icon(PhosphorIconsBold.mailbox, color: zt.accent, size: 28),
+          Icon(PhosphorIconsRegular.mailbox, color: zt.accent, size: 28),
           const SizedBox(height: 8),
           Text(
             maskedEmail,
@@ -1278,7 +1278,7 @@ class _EmailIntentStage extends StatelessWidget {
           Text(
             amountFormatted,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -1312,7 +1312,7 @@ class _EmailIntentStage extends StatelessWidget {
             Text(
               pinError ?? 'Enter your PIN to confirm',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: pinError != null
                     ? ZendColors.destructive
@@ -1418,14 +1418,14 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'Sent!',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 36,
                 color: zt.textPrimary,
@@ -1436,7 +1436,7 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
               '${widget.amountFormatted} to $maskedEmail',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -1526,7 +1526,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 Text(
                   'CONTACTS',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.1,
@@ -1545,7 +1545,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 child: Text(
                   'Finding your contacts on Zend…',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -1566,7 +1566,7 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                           ? 'Show fewer'
                           : 'Show ${contacts.length - 3} more',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 13,
                         color: zt.accent,
                       ),

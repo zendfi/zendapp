@@ -101,7 +101,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                   Expanded(
                     child: Column(
@@ -110,7 +110,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       children: [
                         Text(
                           'Public',
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                         ),
                         Text(
                           "Activity your mutuals have shared",
@@ -122,7 +122,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? PhosphorIconsBold.magnifyingGlassMinus : PhosphorIconsBold.magnifyingGlass,
+                      _filterActive ? PhosphorIconsRegular.magnifyingGlassMinus : PhosphorIconsRegular.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter feed',
@@ -141,15 +141,15 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Filter by @handle or note…',
-                          hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 18, color: zt.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
                                 )
                               : null,
                           filled: true,
@@ -182,7 +182,7 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                               ? 'No public activity matching "$_filterQuery"'
                               : "Nothing public yet. When one of your mutuals shares an activity with their network, it shows up here.",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                         ),
                       ),
                     )
@@ -290,7 +290,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
         // convention as the existing comment-post failure toast.
         setState(() => _reactions = preOptimistic);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -437,7 +437,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   if (isVibe)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           const TextSpan(text: ' sent a Vibe ✨ to '),
@@ -448,7 +448,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   else if (isPoolContrib)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           const TextSpan(text: ' contributed to a pool'),
@@ -463,7 +463,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   else
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                         children: [
                           TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
                           TextSpan(text: ' $verb '),
@@ -488,7 +488,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                       edge.note!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
                     ),
                   ],
                   // ── Reaction pills ──
@@ -559,7 +559,7 @@ class _SuggestionsStrip extends StatelessWidget {
           child: Text(
             'People you might know',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,

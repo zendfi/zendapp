@@ -106,7 +106,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft,
+                    icon: Icon(PhosphorIconsRegular.caretLeft,
                         color: zt.textPrimary),
                   ),
                 ],
@@ -173,9 +173,9 @@ class _ProfileContent extends StatelessWidget {
         ),
       );
     }).catchError((_) {
-      // Fallback: switch to Messages tab — user can find/start the thread there
+      // Fallback: switch to Chats tab — user can find/start the thread there
       if (context.mounted) {
-        ZendShellController.instance?.switchToTab(3);
+        ZendShellController.instance?.switchToTab(2);
       }
     });
   }
@@ -203,7 +203,7 @@ class _ProfileContent extends StatelessWidget {
               Text(
                 profile.displayName,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 26,
                   color: zt.textPrimary,
@@ -220,7 +220,7 @@ class _ProfileContent extends StatelessWidget {
                 Text(
                   profile.bio!,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: zt.textSecondary,
                     height: 1.4,
@@ -250,7 +250,7 @@ class _ProfileContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _ActionButton(
-                        icon: PhosphorIconsBold.currencyDollar,
+                        icon: PhosphorIconsRegular.currencyDollar,
                         label: 'Send',
                         onTap: () {
                           Navigator.of(context).pop();
@@ -264,7 +264,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ActionButton(
-                        icon: PhosphorIconsBold.arrowSquareUp,
+                        icon: PhosphorIconsRegular.arrowSquareUp,
                         label: 'Request',
                         onTap: () {
                           Navigator.of(context).pop();
@@ -278,7 +278,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ActionButton(
-                        icon: PhosphorIconsBold.chatDots,
+                        icon: PhosphorIconsRegular.chatDots,
                         label: 'Message',
                         onTap: () => _openDm(context, profile),
                       ),
@@ -315,7 +315,7 @@ class _ProfileContent extends StatelessWidget {
               child: Text(
                 '${profile.publicActivityCount} shared activities',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,
@@ -331,7 +331,7 @@ class _ProfileContent extends StatelessWidget {
               child: Text(
                 'Tap Activity to see shared posts',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: zt.textSecondary,
                 ),
@@ -374,7 +374,7 @@ class _ActionButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -402,14 +402,14 @@ class _MutualContextCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(PhosphorIconsBold.arrowsLeftRight,
+          Icon(PhosphorIconsRegular.arrowsLeftRight,
               size: 16, color: zt.accentBright),
           const SizedBox(width: 10),
           Text(
             "You've sent each other ${context.transactionCount} time${context.transactionCount == 1 ? '' : 's'}"
             " · \$${context.totalUsdc} total",
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: zt.accentBright,
             ),
@@ -445,7 +445,7 @@ class _StreakCard extends StatelessWidget {
                 Text(
                   '$streakWeeks week streak',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: zt.textPrimary,
@@ -478,13 +478,13 @@ class _ErrorState extends StatelessWidget {
         children: [
           Text(message,
               style: TextStyle(
-                  fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+                  fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 12),
           TextButton(
             onPressed: onRetry,
             child: Text('Retry',
                 style: TextStyle(
-                    fontFamily: 'CircularStd', fontSize: 14, color: zt.accent)),
+                    fontFamily: 'Geist', fontSize: 14, color: zt.accent)),
           ),
         ],
       ),

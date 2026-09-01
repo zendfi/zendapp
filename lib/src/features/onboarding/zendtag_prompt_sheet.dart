@@ -193,7 +193,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
               Text(
                 'Want a zendtag?',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -251,7 +251,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                 Text(
                   _error ?? formatError!,
                   style: const TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 13,
                     color: ZendColors.destructive,
                   ),
@@ -261,7 +261,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                 const Text(
                   'That handle is taken',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 13,
                     color: ZendColors.destructive,
                   ),

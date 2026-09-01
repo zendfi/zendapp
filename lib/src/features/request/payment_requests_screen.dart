@@ -100,14 +100,14 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   // Back button sits left, same weight as activity icons
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Payment requests',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -116,7 +116,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    icon: Icon(PhosphorIconsBold.arrowsClockwise, color: zt.textSecondary),
+                    icon: Icon(PhosphorIconsRegular.arrowsClockwise, color: zt.textSecondary),
                   ),
                 ],
               ),
@@ -153,7 +153,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                       child: Text(
                         _filterLabel(filter),
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           color: active
                               ? ZendColors.textOnDeep
                               : zt.textSecondary,
@@ -179,7 +179,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                               Text(
                                 _error!,
                                 style: TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 14,
                                   color: zt.textSecondary,
                                 ),
@@ -208,7 +208,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                                               ? 'No payment requests yet'
                                               : 'No ${_filterLabel(_activeFilter).toLowerCase()} requests',
                                           style: TextStyle(
-                                            fontFamily: 'CircularStd',
+                                            fontFamily: 'Geist',
                                             fontSize: 14,
                                             color: zt.textSecondary,
                                           ),
@@ -312,7 +312,7 @@ class _RequestTile extends StatelessWidget {
                 child: Text(
                   amountStr,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: zt.textPrimary,
@@ -329,7 +329,7 @@ class _RequestTile extends StatelessWidget {
                 child: Text(
                   statusLabel,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: statusColor,
@@ -345,7 +345,7 @@ class _RequestTile extends StatelessWidget {
             Text(
               description,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -369,7 +369,7 @@ class _RequestTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(PhosphorIconsBold.copy, size: 14, color: zt.accent),
+                Icon(PhosphorIconsRegular.copy, size: 14, color: zt.accent),
               ],
             ),
           ),
@@ -389,7 +389,7 @@ class _RequestTile extends StatelessWidget {
               child: Text(
                 'Cancel request',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: ZendColors.destructive,
                   fontWeight: FontWeight.w500,

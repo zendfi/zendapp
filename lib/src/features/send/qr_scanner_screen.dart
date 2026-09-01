@@ -136,7 +136,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(fontFamily: 'CircularStd', fontSize: 14),
+          style: const TextStyle(fontFamily: 'Geist', fontSize: 14),
         ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
@@ -192,7 +192,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     children: [
                       // Back button
                       IconButton(
-                        icon: const Icon(PhosphorIconsBold.caretLeft, color: Colors.white),
+                        icon: const Icon(PhosphorIconsRegular.caretLeft, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                         tooltip: 'Back',
                       ),
@@ -201,7 +201,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                       const Text(
                         'Scan QR code',
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -339,7 +339,7 @@ class _PermissionDeniedOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              PhosphorIconsBold.camera,
+              PhosphorIconsRegular.camera,
               color: Colors.white54,
               size: 64,
             ),
@@ -348,7 +348,7 @@ class _PermissionDeniedOverlay extends StatelessWidget {
               'Camera access required',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -360,7 +360,7 @@ class _PermissionDeniedOverlay extends StatelessWidget {
               'Please enable camera access in your device settings.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 color: Colors.white70,
                 height: 1.5,
@@ -382,7 +382,7 @@ class _PermissionDeniedOverlay extends StatelessWidget {
                 child: const Text(
                   'Enable Camera in Settings',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -413,7 +413,7 @@ class _CameraErrorOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              PhosphorIconsBold.videoCamera,
+              PhosphorIconsRegular.videoCamera,
               color: Colors.white54,
               size: 64,
             ),
@@ -422,7 +422,7 @@ class _CameraErrorOverlay extends StatelessWidget {
               'Camera unavailable',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -433,7 +433,7 @@ class _CameraErrorOverlay extends StatelessWidget {
               error.errorCode.message,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 color: Colors.white70,
                 height: 1.5,
@@ -475,7 +475,7 @@ class _TorchButton extends StatelessWidget {
           ),
         ),
         child: Icon(
-          PhosphorIconsBold.flashlight,
+          PhosphorIconsRegular.flashlight,
           color: Colors.white,
           size: 24,
         ),

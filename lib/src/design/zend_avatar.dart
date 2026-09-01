@@ -133,7 +133,7 @@ class _FallbackCircle extends StatelessWidget {
           ? Text(
               initials![0].toUpperCase(),
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: radius * 0.72,
                 fontWeight: FontWeight.w600,
                 color: _contrastColor(bgColor),
@@ -141,7 +141,7 @@ class _FallbackCircle extends StatelessWidget {
               ),
             )
           : Icon(
-              PhosphorIconsBold.userCircle,
+              PhosphorIconsRegular.userCircle,
               size: radius * 1.1,
               color: zt.textSecondary,
             ),

@@ -119,7 +119,7 @@ class _RequestConfirmationContentState
             CircleAvatar(
               radius: 48,
               backgroundColor: ZendColors.positive.withValues(alpha: 0.12),
-              child: const Icon(PhosphorIconsBold.checkCircle,
+              child: const Icon(PhosphorIconsRegular.checkCircle,
                   size: 48, color: ZendColors.positive),
             ),
             const SizedBox(height: 32),
@@ -132,7 +132,7 @@ class _RequestConfirmationContentState
                       : 'Link created!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 36,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -145,7 +145,7 @@ class _RequestConfirmationContentState
                 "They'll get a notification to pay you.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -155,7 +155,7 @@ class _RequestConfirmationContentState
                 "Sent to ${widget.paymentRequest.recipientEmail}",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -173,7 +173,7 @@ class _RequestConfirmationContentState
               formatRequestAmount(widget.paymentRequest.amount),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -243,7 +243,7 @@ class _RequestConfirmationContentState
                 child: const Text(
                   'Share',
                   style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600),
                 ),
@@ -258,7 +258,7 @@ class _RequestConfirmationContentState
               child: Text(
                 'Done',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: zt.textSecondary,

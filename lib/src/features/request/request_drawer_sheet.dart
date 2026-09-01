@@ -17,6 +17,7 @@ Future<void> showRequestDrawer(
   BuildContext context, {
   double? initialAmount,
   bool amountReadOnly = false,
+  String? prefilledRecipient,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -28,6 +29,7 @@ Future<void> showRequestDrawer(
       child: RequestDrawerSheet(
         initialAmount: initialAmount,
         amountReadOnly: amountReadOnly,
+        prefilledRecipient: prefilledRecipient,
       ),
     ),
   );
@@ -44,10 +46,17 @@ class RequestDrawerSheet extends StatefulWidget {
     super.key,
     this.initialAmount,
     this.amountReadOnly = false,
+    this.prefilledRecipient,
   });
 
   final double? initialAmount;
   final bool amountReadOnly;
+
+  /// A zendtag already established by an identity-first entry point (the
+  /// new Zend entry flow — pick identity, then Send/Request). When set, the
+  /// "who" field starts populated and resolved instead of empty — mirrors
+  /// [SendFlowSheet.prefilledRecipient].
+  final String? prefilledRecipient;
 
   @override
   State<RequestDrawerSheet> createState() => _RequestDrawerSheetState();
@@ -83,6 +92,15 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     _amount = widget.initialAmount ?? 0;
     if (_amount > 0) _amountController.text = _amount.toStringAsFixed(2);
     _toController.addListener(() {});
+    if (widget.prefilledRecipient != null) {
+      _toController.text = widget.prefilledRecipient!;
+      // Deferred to a post-frame callback (not called synchronously here)
+      // since resolving needs ZendScope.of(context), which is illegal in
+      // initState — see ZendScope's own doc comment on .of() vs .read().
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onToChanged(widget.prefilledRecipient!);
+      });
+    }
   }
 
   @override
@@ -355,7 +373,7 @@ class _FormStage extends StatelessWidget {
                   Text(
                     'Request $amountFormatted',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -372,7 +390,7 @@ class _FormStage extends StatelessWidget {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         textInputAction: TextInputAction.next,
                         onChanged: onAmountChanged,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
                         decoration: InputDecoration(
                           hintText: '0.00',
                           hintStyle: TextStyle(color: zt.textSecondary),
@@ -397,7 +415,7 @@ class _FormStage extends StatelessWidget {
                       controller: toController,
                       onChanged: onToChanged,
                       textInputAction: TextInputAction.next,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: '@username or email',
                         hintStyle: TextStyle(color: zt.textSecondary),
@@ -411,7 +429,7 @@ class _FormStage extends StatelessWidget {
                         suffixIcon: resolving
                             ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
                             : (resolvedZendtag != null || recipientEmail != null)
-                                ? Icon(PhosphorIconsBold.checkCircle, size: 16, color: zt.accentBright)
+                                ? Icon(PhosphorIconsRegular.checkCircle, size: 16, color: zt.accentBright)
                                 : null,
                       ),
                     ),
@@ -448,7 +466,7 @@ class _FormStage extends StatelessWidget {
                       controller: noteController,
                       maxLength: noteMaxLength,
                       textInputAction: TextInputAction.done,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'optional',
                         hintStyle: TextStyle(color: zt.textSecondary),
@@ -500,7 +518,7 @@ class _LoadingStage extends StatelessWidget {
         children: [
           ZendLoader(size: 32, color: zt.accent),
           const SizedBox(height: 20),
-          Text('Creating request…', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary)),
+          Text('Creating request…', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
         ],
       ),
     );
@@ -564,15 +582,15 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
             child: Container(
               width: 64, height: 64,
               decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-              child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
             ),
           ),
           const SizedBox(height: 20),
-          Text(_headline(), style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
+          Text(_headline(), style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
           const SizedBox(height: 6),
           Text(amountStr, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textSecondary)),
           const SizedBox(height: 4),
-          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 32),
           SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr)),
           const SizedBox(height: 12),

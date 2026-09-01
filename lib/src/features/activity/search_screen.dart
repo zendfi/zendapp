@@ -144,21 +144,21 @@ class _SearchScreenState extends State<SearchScreen> {
                         focusNode: _focusNode,
                         onChanged: _onQueryChanged,
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 15,
                           color: zt.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search transactions, pools, users…',
                           hintStyle: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 14,
                             color: zt.textSecondary,
                           ),
-                          prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, color: zt.textSecondary, size: 20),
+                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, color: zt.textSecondary, size: 20),
                           suffixIcon: _query.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(PhosphorIconsBold.xCircle, size: 18, color: zt.textSecondary),
+                                  icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
                                   onPressed: () {
                                     _ctrl.clear();
                                     _onQueryChanged('');
@@ -177,7 +177,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 14,
                         color: zt.textSecondary,
                       ),
@@ -289,7 +289,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                         color: zt.accentBright.withValues(alpha: 0.12),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: Icon(PhosphorIconsBold.usersThree, size: 18, color: zt.accentBright),
+                                      child: Icon(PhosphorIconsRegular.usersThree, size: 18, color: zt.accentBright),
                                     ),
                                     title: pool.name,
                                     subtitle: '\$${pool.gathered.toStringAsFixed(2)} of \$${pool.targetAmount.toStringAsFixed(2)}',
@@ -317,12 +317,12 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(PhosphorIconsBold.magnifyingGlass, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
+          Icon(PhosphorIconsRegular.magnifyingGlass, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text(
             'Search transactions, users, pools',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -337,7 +337,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Text(
         'No results for "$_query"',
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 14,
           color: zt.textSecondary,
         ),
@@ -398,7 +398,7 @@ class _SearchTile extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -410,7 +410,7 @@ class _SearchTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 12,
                         color: zt.textSecondary,
                       ),
@@ -456,7 +456,7 @@ class _UserTile extends StatelessWidget {
       ),
       title: name,
       subtitle: '@$zendtag',
-      trailing: Icon(PhosphorIconsBold.caretRight, size: 12, color: zt.textSecondary),
+      trailing: Icon(PhosphorIconsRegular.caretRight, size: 12, color: zt.textSecondary),
       onTap: onTap,
     );
   }

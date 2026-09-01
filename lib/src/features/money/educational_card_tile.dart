@@ -29,13 +29,13 @@ class EducationalCardTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(PhosphorIconsBold.lightbulb, size: 20, color: zt.accent),
+            Icon(PhosphorIconsRegular.lightbulb, size: 20, color: zt.accent),
             Text(
               card.topicTitle ?? '',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,

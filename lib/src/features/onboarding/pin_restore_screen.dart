@@ -176,7 +176,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
             children: [
               SizedBox(height: compact ? 40 : 64),
               const Icon(
-                PhosphorIconsBold.lockKeyOpen,
+                PhosphorIconsRegular.lockKeyOpen,
                 color: ZendColors.accentPop,
                 size: 36,
               ),
@@ -184,7 +184,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
               const Text(
                 'Enter your PIN',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
@@ -195,7 +195,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                 'Enter your transfer PIN to restore your wallet',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: Color(0x99E8F4EC),
                 ),
@@ -226,7 +226,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

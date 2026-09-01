@@ -22,7 +22,20 @@ import '../request/payment_requests_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.showBackButton = true});
+
+  /// Whether to render the back-arrow + "Profile" header.
+  ///
+  /// Defaults to `true` for the existing pushed-screen usage
+  /// (`pushZendSlide(context, const ProfileScreen())`), where a Navigator
+  /// route sits underneath and popping is the correct behaviour.
+  ///
+  /// Pass `false` when this screen is the "You" tab root inside [ZendShell]:
+  /// as a bare PageView child it has no route of its own to pop, so the
+  /// back arrow would either no-op or (worse) pop the whole shell off the
+  /// app's root stack. Tab roots elsewhere (`ActivityScreen`, `DmListScreen`)
+  /// follow the same no-back-button convention for the same reason.
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
@@ -41,18 +54,19 @@ class ProfileScreen extends StatelessWidget {
           children: [
             // ── Header ────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+              padding: EdgeInsets.fromLTRB(showBackButton ? 8 : 20, 8, 20, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
-                  ),
+                  if (showBackButton)
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    ),
                   Expanded(
                     child: Text(
-                      'Profile',
+                      showBackButton ? 'Profile' : 'You',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 24,
                         color: zt.textPrimary,
@@ -90,7 +104,7 @@ class ProfileScreen extends StatelessWidget {
                                     Text(
                                       displayName,
                                       style: TextStyle(
-                                        fontFamily: 'CircularStd',
+                                        fontFamily: 'Geist',
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                         color: zt.textPrimary,
@@ -106,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Icon(PhosphorIconsBold.caretRight,
+                              Icon(PhosphorIconsRegular.caretRight,
                                   size: 18, color: zt.textSecondary),
                             ],
                           ),
@@ -121,17 +135,17 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: PhosphorIconsBold.bank,
+                        icon: PhosphorIconsRegular.bank,
                         label: 'Connected banks',
                         onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
                       ),
                       _Tile(
-                        icon: PhosphorIconsBold.link,
+                        icon: PhosphorIconsRegular.link,
                         label: 'Connected apps',
                         onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
                       ),
                       _Tile(
-                        icon: PhosphorIconsBold.receipt,
+                        icon: PhosphorIconsRegular.receipt,
                         label: 'Payment requests',
                         onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
                       ),
@@ -158,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ToggleTile(
-                        icon: PhosphorIconsBold.moon,
+                        icon: PhosphorIconsRegular.moon,
                         label: 'Dark mode',
                         value: model.isDarkMode,
                         onChanged: (_) => model.toggleDarkMode(),
@@ -172,7 +186,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _ToggleTile(
-                        icon: PhosphorIconsBold.bell,
+                        icon: PhosphorIconsRegular.bell,
                         label: 'Notify network when I share',
                         value: model.notifyMutualsOnShare,
                         onChanged: (_) => unawaited(model.toggleNotifyMutualsOnShare()),
@@ -186,7 +200,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: PhosphorIconsBold.shieldCheck,
+                        icon: PhosphorIconsRegular.shieldCheck,
                         label: 'Security settings',
                         onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
                       ),
@@ -194,13 +208,13 @@ class ProfileScreen extends StatelessWidget {
                       // would open a flow with nothing to change.
                       if (!model.isZkLoginAccount)
                         _Tile(
-                          icon: PhosphorIconsBold.lockSimple,
+                          icon: PhosphorIconsRegular.lockSimple,
                           label: 'Change PIN',
                           onTap: () =>
                               pushZendSlide(context, const ChangePinScreen()),
                         ),
                       _Tile(
-                        icon: PhosphorIconsBold.identificationBadge,
+                        icon: PhosphorIconsRegular.identificationBadge,
                         label: 'Identity verification',
                         onTap: () => pushZendSlide(context, const BridgeKycScreen()),
                       ),
@@ -213,7 +227,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(tiles: [
                       _Tile(
-                        icon: PhosphorIconsBold.headset,
+                        icon: PhosphorIconsRegular.headset,
                         label: 'Contact support',
                         onTap: () => pushZendSlide(context, const ContactSupportScreen()),
                       ),
@@ -233,13 +247,13 @@ class ProfileScreen extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(PhosphorIconsBold.signOut,
+                              Icon(PhosphorIconsRegular.signOut,
                                   size: 18, color: ZendColors.destructive),
                               const SizedBox(width: 8),
                               const Text(
                                 'Log out',
                                 style: TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: ZendColors.destructive,
@@ -317,12 +331,12 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsBold.eyeClosed, size: 20, color: zt.textSecondary),
+                  Icon(PhosphorIconsRegular.eyeClosed, size: 20, color: zt.textSecondary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Online status & last seen',
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
                     ),
                   ),
                   if (_saving) ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
@@ -346,13 +360,13 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(option.$2, style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                            Text(option.$3, style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
+                            Text(option.$2, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+                            Text(option.$3, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
                           ],
                         ),
                       ),
                       if (_visibility == option.$1)
-                        Icon(PhosphorIconsBold.checkCircle, size: 18, color: zt.accent),
+                        Icon(PhosphorIconsRegular.checkCircle, size: 18, color: zt.accent),
                     ],
                   ),
                 ),
@@ -380,7 +394,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -452,14 +466,14 @@ class _Tile extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: zt.textPrimary,
                   ),
                 ),
               ),
-              Icon(PhosphorIconsBold.caretRight, size: 16, color: zt.textSecondary),
+              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
             ],
           ),
         ),
@@ -496,7 +510,7 @@ class _ToggleTile extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: zt.textPrimary,
@@ -565,7 +579,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               Text(
                 'Profile photo',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: zt.textPrimary,
@@ -573,18 +587,18 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               ),
               const SizedBox(height: 12),
               _PickerRow(
-                icon: PhosphorIconsBold.camera,
+                icon: PhosphorIconsRegular.camera,
                 label: 'Take photo',
                 onTap: () => Navigator.pop(ctx, 'camera'),
               ),
               _PickerRow(
-                icon: PhosphorIconsBold.imageSquare,
+                icon: PhosphorIconsRegular.imageSquare,
                 label: 'Choose from library',
                 onTap: () => Navigator.pop(ctx, 'gallery'),
               ),
               if (hasPhoto)
                 _PickerRow(
-                  icon: PhosphorIconsBold.trash,
+                  icon: PhosphorIconsRegular.trash,
                   label: 'Remove photo',
                   onTap: () => Navigator.pop(ctx, 'remove'),
                   destructive: true,
@@ -679,7 +693,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                   color: ZendColors.accentBright,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsBold.pencilSimple, size: 9, color: Colors.white),
+                child: const Icon(PhosphorIconsRegular.pencilSimple, size: 9, color: Colors.white),
               ),
             ),
         ],
@@ -721,7 +735,7 @@ class _PickerRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: color,
@@ -771,7 +785,7 @@ Future<void> _confirmLogout(BuildContext context) async {
             Text(
               'Log out?',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
                 color: zt.textPrimary,
@@ -781,7 +795,7 @@ Future<void> _confirmLogout(BuildContext context) async {
             Text(
               "You'll need to sign in again to access your account.",
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 color: zt.textSecondary,
                 height: 1.4,
@@ -799,7 +813,7 @@ Future<void> _confirmLogout(BuildContext context) async {
               style: TextButton.styleFrom(foregroundColor: zt.textSecondary),
               child: const Text(
                 'Cancel',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15),
               ),
             ),
             const SizedBox(height: 4),
@@ -872,7 +886,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Icon(
-                        PhosphorIconsBold.bluetoothConnected,
+                        PhosphorIconsRegular.bluetoothConnected,
                         size: 20,
                         color: isOn ? zt.accentBright : zt.textSecondary,
                       ),
@@ -881,7 +895,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         child: Text(
                           'Be Discoverable',
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: zt.textPrimary,
@@ -909,7 +923,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                           ? 'Broadcasting a secure Bluetooth signal. Nearby Zend users can send you money via Drop automatically.'
                           : 'Let nearby Zend users send you money via Drop — no sharing your zendtag needed.',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 12,
                         color: zt.textSecondary,
                         height: 1.4,
@@ -924,7 +938,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 17),
                       child: Row(
                         children: [
-                          Icon(PhosphorIconsBold.record,
+                          Icon(PhosphorIconsRegular.record,
                               size: 10, color: zt.accentBright),
                           const SizedBox(width: 4),
                           Text(
@@ -951,14 +965,14 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(PhosphorIconsBold.warningCircle,
+                            Icon(PhosphorIconsRegular.warningCircle,
                                 size: 14, color: ZendColors.destructive),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 service.lastError!,
                                 style: const TextStyle(
-                                  fontFamily: 'CircularStd',
+                                  fontFamily: 'Geist',
                                   fontSize: 11,
                                   color: ZendColors.destructive,
                                   height: 1.4,

@@ -91,14 +91,14 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   const CircleAvatar(
                     radius: 34,
                     backgroundColor: Color(0x33E8F4EC),
-                    child: Icon(PhosphorIconsBold.userCircle, color: ZendColors.textOnDeep),
+                    child: Icon(PhosphorIconsRegular.userCircle, color: ZendColors.textOnDeep),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     "You're in, @${widget.username}",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 28,
                       height: 1.08,
                       color: ZendColors.textOnDeep,

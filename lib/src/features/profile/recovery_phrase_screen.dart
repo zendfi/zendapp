@@ -96,7 +96,7 @@ class _RecoveryPhraseScreenState extends State<RecoveryPhraseScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+          icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           onPressed: () {
             // Zero words before popping
             setState(() => _words = List.filled(_words.length, ''));
@@ -104,7 +104,7 @@ class _RecoveryPhraseScreenState extends State<RecoveryPhraseScreen> {
           },
         ),
         title: Text('Recovery phrase',
-          style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
       ),
       body: SafeArea(
         child: switch (_stage) {
@@ -138,17 +138,17 @@ class _PinStage extends StatelessWidget {
       child: Column(children: [
         SizedBox(height: compact ? 24 : 40),
         Text('Confirm your PIN', textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
         const SizedBox(height: 8),
         Text('Enter your PIN to view your recovery phrase.', textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
         SizedBox(height: compact ? 32 : 48),
         _PinDots(filledCount: digits.length, zt: zt),
         const SizedBox(height: 16),
         SizedBox(height: 20,
           child: errorMessage != null
               ? Text(errorMessage!, textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: ZendColors.destructive))
+                  style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive))
               : loading
                   ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                   : null),
@@ -184,15 +184,15 @@ class _ConfirmStage extends StatelessWidget {
             border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.18)),
           ),
           child: Column(children: [
-            const Icon(PhosphorIconsBold.key, color: ZendColors.destructive, size: 36),
+            const Icon(PhosphorIconsRegular.key, color: ZendColors.destructive, size: 36),
             const SizedBox(height: 12),
             Text('Never share this phrase.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
+              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
             const SizedBox(height: 8),
             Text('Zend! staff will never ask for it. Anyone with this phrase controls your wallet.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
           ]),
         ),
         const SizedBox(height: 24),
@@ -209,7 +209,7 @@ class _ConfirmStage extends StatelessWidget {
               ),
               Expanded(child: Text(
                 'I understand this phrase gives full access to my wallet',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
               )),
             ]),
           ),
@@ -226,7 +226,7 @@ class _ConfirmStage extends StatelessWidget {
             child: loading
                 ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
                 : const Text('Show recovery phrase',
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600)),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(height: 24),
@@ -254,11 +254,11 @@ class _DisplayStage extends StatelessWidget {
             border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.2)),
           ),
           child: Row(children: [
-            const Icon(PhosphorIconsBold.warningCircle, color: ZendColors.destructive, size: 18),
+            const Icon(PhosphorIconsRegular.warningCircle, color: ZendColors.destructive, size: 18),
             const SizedBox(width: 8),
             Expanded(child: Text(
               'Never share this phrase. Zend! staff will never ask for it.',
-              style: const TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: ZendColors.destructive),
+              style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive),
             )),
           ]),
         ),
@@ -287,7 +287,7 @@ class _DisplayStage extends StatelessWidget {
                 style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary)),
               const SizedBox(width: 4),
               Expanded(child: Text(words[i],
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 13,
+                style: TextStyle(fontFamily: 'Geist', fontSize: 13,
                     fontWeight: FontWeight.w600, color: zt.textPrimary),
                 overflow: TextOverflow.ellipsis)),
             ]),
@@ -296,7 +296,7 @@ class _DisplayStage extends StatelessWidget {
         const SizedBox(height: 24),
         Text('Keep this phrase offline and never share it with anyone.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary)),
+          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
         const SizedBox(height: 16),
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -304,7 +304,7 @@ class _DisplayStage extends StatelessWidget {
             minimumSize: const Size.fromHeight(48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
           ),
-          child: const Text('Done', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15)),
+          child: const Text('Done', style: TextStyle(fontFamily: 'Geist', fontSize: 15)),
         ),
         const SizedBox(height: 24),
       ]),

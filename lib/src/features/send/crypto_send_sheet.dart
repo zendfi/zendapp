@@ -418,7 +418,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Send $_amountFormatted to',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -431,7 +431,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Search chains...',
-                prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass,
+                prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass,
                     size: 20, color: zt.textSecondary),
                 filled: true,
                 fillColor: zt.bgSecondary,
@@ -457,7 +457,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                       ? 'No chains found'
                       : 'No chains available',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 13,
                     color: zt.textSecondary,
                   ),
@@ -505,7 +505,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                 child: Text(
                                   avatarLabel,
                                   style: TextStyle(
-                                    fontFamily: 'CircularStd',
+                                    fontFamily: 'Geist',
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: zt.textPrimary,
@@ -521,7 +521,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                     Text(
                                       displayName,
                                       style: TextStyle(
-                                        fontFamily: 'CircularStd',
+                                        fontFamily: 'Geist',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: zt.textPrimary,
@@ -535,7 +535,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                 ),
                               ),
                               if (isSelected)
-                                Icon(PhosphorIconsBold.checkCircle,
+                                Icon(PhosphorIconsRegular.checkCircle,
                                     size: 18, color: zt.accent),
                             ],
                           ),
@@ -578,7 +578,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 child: const Text(
                   'Get quote',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -613,7 +613,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _quote = null;
                   _stage = CryptoSendStage.chainAndAddress;
                 }),
-                child: Icon(PhosphorIconsBold.caretLeft,
+                child: Icon(PhosphorIconsRegular.caretLeft,
                     color: zt.textPrimary, size: 22),
               ),
             ),
@@ -621,7 +621,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Sending $_amountFormattedExact',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
@@ -631,7 +631,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               '→ ~${quote.estimatedReceiveAmount} $symbol on ${quote.destinationChainDisplay}',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
@@ -641,7 +641,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               Text(
                 'Bridge fee: ~\$${quote.estimatedFeeUsdc.toStringAsFixed(4)}',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 12,
                   color: zt.textSecondary,
                 ),
@@ -685,7 +685,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _pinError = null;
                   _stage = CryptoSendStage.quote;
                 }),
-                child: Icon(PhosphorIconsBold.caretLeft,
+                child: Icon(PhosphorIconsRegular.caretLeft,
                     color: zt.textPrimary, size: 22),
               ),
             ),
@@ -693,7 +693,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               '$_amountFormattedExact to $chainName',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -703,7 +703,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               _truncateAddress(address),
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -724,7 +724,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               _pinError ?? 'Enter your PIN',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: _pinError != null
                     ? ZendColors.destructive
@@ -757,7 +757,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             Text(
               'Processing...',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: ZendTheme.of(context).textSecondary,
               ),
@@ -800,13 +800,13 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   color: ZendColors.destructive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 20),
               Text(
                 'Oops',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 32,
                   color: zt.textPrimary,
@@ -817,7 +817,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 _errorMessage ?? 'Something went wrong.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 15,
                   color: zt.textSecondary,
                 ),
@@ -914,14 +914,14 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
                   shape: BoxShape.circle,
                 ),
                 child:
-                    const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+                    const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'Sent!',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: zt.textPrimary,
@@ -931,7 +931,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
             Text(
               '${widget.amountFormattedExact} → ${widget.destinationChainDisplay}',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -1074,7 +1074,7 @@ class _CryptoPinKeypadKeyState extends State<_CryptoPinKeypadKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,

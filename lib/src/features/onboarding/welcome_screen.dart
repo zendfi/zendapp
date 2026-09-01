@@ -124,7 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     Text(
                       'Send money,\nanywhere.',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 56,
                         height: 1.08,
                         fontWeight: FontWeight.w700,
@@ -152,7 +152,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         _error!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

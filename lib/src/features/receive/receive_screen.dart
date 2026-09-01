@@ -35,13 +35,13 @@ class ReceiveScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(
                     'Receive',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       color: zt.textPrimary,
@@ -91,7 +91,7 @@ class ReceiveScreen extends StatelessWidget {
                         child: Text(
                           'Customise your page',
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             color: zt.accent,
                             fontSize: 15,
                           ),

@@ -112,7 +112,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -135,7 +135,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     child: Text(
                       _pocket.goalName ?? 'Goal',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -216,7 +216,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: Row(
                         children: [
                           const Icon(
-                            PhosphorIconsBold.lockKey,
+                            PhosphorIconsRegular.lockKey,
                             size: 16,
                             color: ZendColors.accentBright,
                           ),
@@ -225,7 +225,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             child: Text(
                               'Withdrawals are locked until you reach your target.',
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 13,
                                 color: zt.textSecondary,
                               ),
@@ -261,7 +261,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: const Text(
                         'Withdraw',
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -299,7 +299,7 @@ class _StatRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 14,
             color: zt.textSecondary,
           ),

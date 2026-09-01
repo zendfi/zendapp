@@ -409,7 +409,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
               opacity: (_swipeDx / 36.0).clamp(0.0, 1.0),
               child: Center(
                 child: Icon(
-                  PhosphorIconsBold.arrowBendUpLeft,
+                  PhosphorIconsRegular.arrowBendUpLeft,
                   size: 18,
                   color: _replyTriggered
                       ? ZendTheme.of(context).accent
@@ -544,7 +544,7 @@ class _TextBubble extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              PhosphorIconsBold.arrowBendUpRight,
+                              PhosphorIconsRegular.arrowBendUpRight,
                               size: 11,
                               color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
                             ),
@@ -552,7 +552,7 @@ class _TextBubble extends StatelessWidget {
                             Text(
                               'Forwarded',
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 11.5,
                                 color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
                               ),
@@ -565,7 +565,7 @@ class _TextBubble extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            PhosphorIconsBold.prohibitInset,
+                            PhosphorIconsRegular.prohibitInset,
                             size: 13,
                             color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
                           ),
@@ -573,7 +573,7 @@ class _TextBubble extends StatelessWidget {
                           Text(
                             'This message was deleted',
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 14,
                               color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
                             ),
@@ -595,7 +595,7 @@ class _TextBubble extends StatelessWidget {
                             TextSpan(
                               text: message.displayContent!,
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontSize: 15.5,
                                 color: isMe ? Colors.white : zt.textPrimary,
                                 height: 1.35,
@@ -669,7 +669,7 @@ class _MessageMeta extends StatelessWidget {
       children: [
         if (showNotEncrypted) ...[
           Icon(
-            PhosphorIconsBold.lockKeyOpen,
+            PhosphorIconsRegular.lockKeyOpen,
             size: 10,
             color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
           ),
@@ -720,7 +720,7 @@ class _ReplyHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            PhosphorIconsBold.arrowBendUpLeft,
+            PhosphorIconsRegular.arrowBendUpLeft,
             size: 12,
             color: zt.textSecondary,
           ),
@@ -731,7 +731,7 @@ class _ReplyHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: zt.textSecondary,
@@ -785,7 +785,7 @@ class _QuotePill extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textSecondary,
               decoration: TextDecoration.none,
@@ -807,21 +807,21 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case DmLocalStatus.sending:
-        return Icon(PhosphorIconsBold.clock, size: 11, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(PhosphorIconsRegular.clock, size: 11, color: Colors.white.withValues(alpha: 0.6));
       case DmLocalStatus.delivered:
         // Single check — sent/delivered but not yet read. WhatsApp/iMessage
         // both use a single tick for this state, reserving the double tick
         // for "read".
-        return Icon(PhosphorIconsBold.check, size: 12, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(PhosphorIconsRegular.check, size: 12, color: Colors.white.withValues(alpha: 0.6));
       case DmLocalStatus.read:
         // Double tick, tinted — the read-receipt state. Uses the app's
         // accentPop colour (not WhatsApp's blue) so it still reads as
         // "seen" while staying on-brand.
-        return const Icon(PhosphorIconsBold.checks, size: 13, color: ZendColors.accentPop);
+        return const Icon(PhosphorIconsRegular.checks, size: 13, color: ZendColors.accentPop);
       case DmLocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,
-          child: const Icon(PhosphorIconsBold.xCircle, size: 11, color: ZendColors.destructive),
+          child: const Icon(PhosphorIconsRegular.xCircle, size: 11, color: ZendColors.destructive),
         );
     }
   }
@@ -895,7 +895,7 @@ class DmPaymentBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isMe ? PhosphorIconsBold.arrowSquareUp : PhosphorIconsBold.arrowSquareDown,
+                          isMe ? PhosphorIconsRegular.arrowSquareUp : PhosphorIconsRegular.arrowSquareDown,
                           size: 11, color: iconColor,
                         ),
                         const SizedBox(width: 3),
@@ -908,13 +908,13 @@ class DmPaymentBubble extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       amountFormatted,
-                      style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
+                      style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
                     ),
                     if (note != null && note.isNotEmpty && note != 'vibe') ...[
                       const SizedBox(height: 3),
                       Text(
                         note,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -994,19 +994,19 @@ class DmPaymentRequestBubble extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isMe ? PhosphorIconsBold.receiptX : PhosphorIconsBold.receipt, size: 11, color: accentColor),
+                      Icon(isMe ? PhosphorIconsRegular.receiptX : PhosphorIconsRegular.receipt, size: 11, color: accentColor),
                       const SizedBox(width: 3),
                       Text(isMe ? 'you requested' : 'payment request',
                           style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4)),
                     ]),
                     const SizedBox(height: 2),
                     Text(amountFormatted,
-                        style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
+                        style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
                         rd.note!,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1022,18 +1022,18 @@ class DmPaymentRequestBubble extends StatelessWidget {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w700)),
+                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w700)),
                         ),
                       )
                     else if (isMe && isPending)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(PhosphorIconsBold.clock, size: 11, color: labelColor),
+                        Icon(PhosphorIconsRegular.clock, size: 11, color: labelColor),
                         const SizedBox(width: 4),
                         Text('Waiting…', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
                       ])
                     else if (!isPending)
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(PhosphorIconsBold.checkCircle, size: 13, color: ZendColors.positive),
+                        Icon(PhosphorIconsRegular.checkCircle, size: 13, color: ZendColors.positive),
                         const SizedBox(width: 4),
                         Text('Paid', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
                       ]),

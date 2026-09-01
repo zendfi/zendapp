@@ -125,11 +125,11 @@ class _DeliveryStatus extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.6)
         : ZendTheme.of(context).textSecondary.withValues(alpha: 0.5);
     return switch (status) {
-      LocalStatus.sending  => Icon(PhosphorIconsBold.clock,  size: 11, color: color),
-      LocalStatus.delivered => Icon(PhosphorIconsBold.checkCircle,  size: 11, color: color),
+      LocalStatus.sending  => Icon(PhosphorIconsRegular.clock,  size: 11, color: color),
+      LocalStatus.delivered => Icon(PhosphorIconsRegular.checkCircle,  size: 11, color: color),
       LocalStatus.failed   => GestureDetector(
         onTap: onRetry,
-        child: const Icon(PhosphorIconsBold.warningCircle, size: 11, color: ZendColors.destructive),
+        child: const Icon(PhosphorIconsRegular.warningCircle, size: 11, color: ZendColors.destructive),
       ),
     };
   }
@@ -328,7 +328,7 @@ class _TextMessageRow extends StatelessWidget {
                           TextSpan(
                             text: message.content ?? '',
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 15.5,
                               color: textColor,
                               height: 1.35,
@@ -483,7 +483,7 @@ class _ContributionEventRow extends StatelessWidget {
                   TextSpan(
                     text: message.content ?? '',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: zt.accent,
@@ -580,7 +580,7 @@ class _VoiceNoteRow extends StatelessWidget {
           GestureDetector(
             onTap: onPlayTap,
             child: Icon(
-              isPlaying ? PhosphorIconsBold.pauseCircle : PhosphorIconsBold.playCircle,
+              isPlaying ? PhosphorIconsRegular.pauseCircle : PhosphorIconsRegular.playCircle,
               size: 26,
               color: isMe ? Colors.white : zt.accent,
             ),

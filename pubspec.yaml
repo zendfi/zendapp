@@ -231,25 +231,25 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   fonts:
-    # CircularStd is the single sans family: Book/Medium for body & UI,
-    # Bold/Black for display & headline styles. No italics by design —
-    # Circular Std has no Light cut, so the Book asset is registered
-    # twice (300 and 400) to give FontWeight.w300 requests a deterministic,
-    # non-synthesized match instead of falling back to Skia's nearest-weight
-    # matching.
-    - family: CircularStd
+    # Geist is the single sans family across the whole app (Vercel, SIL Open
+    # Font License — free to bundle, no license fee, unlike the CircularStd
+    # cut this replaces). Five static weights registered to match the
+    # w300–w700 range used across zend_theme.dart and the wider app; w900
+    # requests fall back to the nearest lighter registered weight (700)
+    # since Geist's heaviest cuts (Black/UltraBlack) are intentionally not
+    # bundled — the redesign's brand voice avoids 900-weight emphasis.
+    - family: Geist
       fonts:
-        - asset: assets/fonts/circular/CircularStd-Book.otf
+        - asset: assets/fonts/geist/Geist-Light.ttf
           weight: 300
-        - asset: assets/fonts/circular/CircularStd-Book.otf
+        - asset: assets/fonts/geist/Geist-Regular.ttf
           weight: 400
-        - asset: assets/fonts/circular/CircularStd-Medium.otf
+        - asset: assets/fonts/geist/Geist-Medium.ttf
           weight: 500
-        - asset: assets/fonts/circular/CircularStd-Bold.otf
+        - asset: assets/fonts/geist/Geist-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/geist/Geist-Bold.ttf
           weight: 700
-        - asset: assets/fonts/circular/CircularStd-Black.otf
-          weight: 900
-  # DMMono block removed
 
 flutter_launcher_icons:
   android: true

@@ -133,7 +133,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             'Drop $_amountFormatted',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontWeight: FontWeight.w700,
               fontSize: 32,
               color: zt.textPrimary,
@@ -144,7 +144,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             'to @$_zendtag',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -185,13 +185,13 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (widget.requiresBiometric) ...[
-                          const Icon(PhosphorIconsBold.fingerprint, color: Colors.white, size: 18),
+                          const Icon(PhosphorIconsRegular.fingerprint, color: Colors.white, size: 18),
                           const SizedBox(width: 6),
                         ],
                         Text(
                           widget.requiresBiometric ? 'Confirm with Biometric' : 'Confirm Drop',
                           style: const TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -210,7 +210,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
                 'Cancel',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),

@@ -204,7 +204,7 @@ class _VibePinSheetState extends State<_VibePinSheet>
             Text(
               'Confirm $_amountFormatted Vibe',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: zt.textPrimary,
@@ -225,7 +225,7 @@ class _VibePinSheetState extends State<_VibePinSheet>
             Text(
               _pinError ?? 'Enter your PIN',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: _pinError != null
                     ? ZendColors.destructive

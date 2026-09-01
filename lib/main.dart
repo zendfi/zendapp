@@ -136,9 +136,11 @@ void main() async {
     signer: SolanaTransactionSigner(walletService: walletService),
     client: CapabilityGatedSolanaRailClient(apiClient: apiClient),
   );
-  // Sui runs on testnet for the pilot. All three components must agree on the
-  // network or PaymentRailBinding rejects the mix.
-  const suiNetwork = PaymentNetwork.testnet;
+  // All three components must agree on the network or PaymentRailBinding rejects
+  // the mix. This must also match the backend's SUI_NETWORK: the rail policy
+  // compares the requested network against the cohort's, so a mismatch is denied
+  // rather than silently routed.
+  const suiNetwork = PaymentNetwork.mainnet;
   final suiRail = PaymentRailBinding(
     identity: SuiWalletIdentity(apiClient: apiClient, network: suiNetwork),
     signer: SuiTransactionSigner(

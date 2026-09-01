@@ -147,7 +147,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                         border: Border.all(color: zt.accentBright, width: 1.5),
                       ),
                       child: Icon(
-                        PhosphorIconsBold.checkCircle,
+                        PhosphorIconsRegular.checkCircle,
                         color: zt.accentBright,
                         size: 28,
                       ),
@@ -194,7 +194,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                   t < 0.98 ? formatted : _amountStr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontWeight: FontWeight.w700,
                     fontSize: 36,
                     // Transitions from primary → accentBright as it settles
@@ -210,7 +210,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
               'dropped to @$_zendtag',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -239,7 +239,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                 child: const Text(
                   'Done',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,

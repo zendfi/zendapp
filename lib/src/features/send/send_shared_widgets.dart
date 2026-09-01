@@ -43,14 +43,14 @@ class SendPinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '$amountFormatted to @$recipientZendtag',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: zt.textPrimary,
@@ -63,7 +63,7 @@ class SendPinStage extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary,
               ),
@@ -85,7 +85,7 @@ class SendPinStage extends StatelessWidget {
           Text(
             pinError ?? 'Enter your PIN',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 13,
               color: pinError != null ? ZendColors.destructive : zt.textSecondary,
             ),
@@ -222,7 +222,7 @@ class _SendPinKeypadKeyState extends State<SendPinKeypadKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,
@@ -258,7 +258,7 @@ class SendProcessingStage extends StatelessWidget {
           Text(
             'Sending $amountFormatted to @$recipientZendtag...',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: zt.textSecondary,
             ),
@@ -329,14 +329,14 @@ class _SendSuccessStageState extends State<SendSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'Zent It!',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: zt.textPrimary,
@@ -346,7 +346,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             Text(
               '${widget.amountFormattedExact} to @${widget.recipientZendtag}',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
@@ -395,13 +395,13 @@ class SendErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
               'Oops',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 32,
                 color: zt.textPrimary,
@@ -412,7 +412,7 @@ class SendErrorStage extends StatelessWidget {
               errorMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),

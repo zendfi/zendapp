@@ -184,7 +184,7 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
                     : 'Confirm your PIN',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 26,
                   color: ZendColors.textOnDeep,
@@ -197,7 +197,7 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
                     : 'Enter the same PIN again to confirm.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: textOnDeepSecondary,
                 ),
@@ -222,7 +222,7 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
                         _error!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: ZendColors.destructive,
                         ),

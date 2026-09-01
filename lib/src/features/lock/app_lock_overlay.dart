@@ -257,7 +257,7 @@ class _LockScreenState extends State<_LockScreen>
                 SizedBox(height: compact ? 40 : 64),
                 // Lock icon
                 const Icon(
-                  PhosphorIconsBold.lockKey,
+                  PhosphorIconsRegular.lockKey,
                   color: ZendColors.accentPop,
                   size: 36,
                 ),
@@ -265,7 +265,7 @@ class _LockScreenState extends State<_LockScreen>
                 const Text(
                   'App locked',
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontWeight: FontWeight.w700,
                     fontSize: 28,
                     color: ZendColors.textOnDeep,
@@ -276,7 +276,7 @@ class _LockScreenState extends State<_LockScreen>
                   'Enter your PIN to continue',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     color: Color(0x99E8F4EC),
                   ),
@@ -304,7 +304,7 @@ class _LockScreenState extends State<_LockScreen>
                           _errorMessage!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 13,
                             color: ZendColors.destructive,
                           ),
@@ -325,11 +325,11 @@ class _LockScreenState extends State<_LockScreen>
                 if (_biometricAvailable && _biometricFailures < _maxBiometricFailures && !_loading && !_isLockedOut) ...[
                   TextButton.icon(
                     onPressed: _tryBiometricUnlock,
-                    icon: const Icon(PhosphorIconsBold.fingerprint, size: 20),
+                    icon: const Icon(PhosphorIconsRegular.fingerprint, size: 20),
                     label: const Text('Use biometrics'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0x99E8F4EC),
-                      textStyle: const TextStyle(fontFamily: 'CircularStd', fontSize: 13),
+                      textStyle: const TextStyle(fontFamily: 'Geist', fontSize: 13),
                     ),
                   ),
                 ],

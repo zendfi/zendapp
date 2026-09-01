@@ -70,7 +70,7 @@ class _RailSelectStage extends StatelessWidget {
           Text(
             'Send $_amountStr to',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 26,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -80,7 +80,7 @@ class _RailSelectStage extends StatelessWidget {
           Text(
             'Choose your destination',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -125,7 +125,7 @@ class _RailTile extends StatelessWidget {
                   Text(
                     info.title,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -135,7 +135,7 @@ class _RailTile extends StatelessWidget {
                   Text(
                     info.subtitle,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -143,7 +143,7 @@ class _RailTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(PhosphorIconsBold.caretRight, size: 18, color: zt.textSecondary),
+            Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),
@@ -204,7 +204,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -214,7 +214,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                     Text(
                       'Nigerian bank',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
@@ -246,7 +246,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                     child: Text(
                       widget.selectedBank?['name'] as String? ?? 'Select bank',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 15,
                         color: widget.selectedBank != null
                             ? zt.textPrimary
@@ -254,7 +254,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                       ),
                     ),
                   ),
-                  Icon(PhosphorIconsBold.caretDown, color: zt.textSecondary),
+                  Icon(PhosphorIconsRegular.caretDown, color: zt.textSecondary),
                 ],
               ),
             ),
@@ -282,7 +282,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
             Text(
               widget.errorMessage!,
               style: const TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: ZendColors.destructive,
               ),
@@ -303,7 +303,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
             child: const Text(
               'Verify account',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -361,13 +361,13 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
                 'Select bank',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -382,7 +382,7 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               hintText: 'Search banks...',
-              prefixIcon: Icon(PhosphorIconsBold.magnifyingGlass, size: 20, color: zt.textSecondary),
+              prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 20, color: zt.textSecondary),
               filled: true,
               fillColor: zt.bgSecondary,
               border: OutlineInputBorder(
@@ -399,7 +399,7 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                     child: Text(
                       'No banks found',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontSize: 14,
                         color: zt.textSecondary,
                       ),
@@ -418,12 +418,12 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                         title: Text(
                           name,
                           style: TextStyle(
-                            fontFamily: 'CircularStd',
+                            fontFamily: 'Geist',
                             fontSize: 15,
                             color: zt.textPrimary,
                           ),
                         ),
-                        trailing: Icon(PhosphorIconsBold.caretRight,
+                        trailing: Icon(PhosphorIconsRegular.caretRight,
                             size: 18, color: zt.textSecondary),
                         onTap: () => widget.onSelect(bank),
                       );
@@ -464,13 +464,13 @@ class _IntlAccountStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
                 '${rail.currency} bank',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -485,13 +485,13 @@ class _IntlAccountStage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(PhosphorIconsBold.bank,
+                    Icon(PhosphorIconsRegular.bank,
                         size: 48, color: zt.textSecondary),
                     const SizedBox(height: 16),
                     Text(
                       'No saved accounts yet',
                       style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 15,
                           color: zt.textSecondary),
                     ),
@@ -499,7 +499,7 @@ class _IntlAccountStage extends StatelessWidget {
                     Text(
                       'Add a bank account to get started',
                       style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: zt.textSecondary),
                     ),
@@ -549,13 +549,13 @@ class _IntlAccountStage extends StatelessWidget {
                         color: zt.bgSecondary,
                         borderRadius: BorderRadius.circular(ZendRadii.md),
                       ),
-                      child: Icon(PhosphorIconsBold.bank,
+                      child: Icon(PhosphorIconsRegular.bank,
                           size: 20, color: zt.textSecondary),
                     ),
                     title: Text(
                       displayTitle,
                       style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary),
@@ -563,11 +563,11 @@ class _IntlAccountStage extends StatelessWidget {
                     subtitle: Text(
                       displaySubtitle,
                       style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 12,
                           color: zt.textSecondary),
                     ),
-                    trailing: Icon(PhosphorIconsBold.caretRight, color: zt.textSecondary),
+                    trailing: Icon(PhosphorIconsRegular.caretRight, color: zt.textSecondary),
                     onTap: () => onSelect(acct),
                   );
                 },
@@ -602,7 +602,7 @@ class _ResolvingStage extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: ZendTheme.of(context).textSecondary,
             ),
@@ -658,13 +658,13 @@ class _ConfirmationStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
                 'Confirm transfer',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -680,7 +680,7 @@ class _ConfirmationStage extends StatelessWidget {
                   Text(
                     '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)}',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontWeight: FontWeight.w700,
                       fontSize: 48,
                       color: zt.textPrimary,
@@ -695,7 +695,7 @@ class _ConfirmationStage extends StatelessWidget {
                   Text(
                     amountStr,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontWeight: FontWeight.w700,
                       fontSize: 48,
                       color: zt.textPrimary,
@@ -769,10 +769,10 @@ class _DetailRow extends StatelessWidget {
       children: [
         Text(label,
             style: TextStyle(
-                fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+                fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
         Text(value,
             style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: highlight ? zt.accent : zt.textPrimary)),
@@ -825,14 +825,14 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Confirm with PIN',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontWeight: FontWeight.w700,
               fontSize: 22,
               color: zt.textPrimary,
@@ -842,7 +842,7 @@ class _PinStage extends StatelessWidget {
           Text(
             'Sending $_amountStr to ${rail.currency} bank',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: zt.textSecondary,
             ),
@@ -864,7 +864,7 @@ class _PinStage extends StatelessWidget {
                     pinError!,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 13,
                       color: ZendColors.destructive,
                     ),
@@ -999,7 +999,7 @@ class _LightPinKeyState extends State<_LightPinKey> {
                 : Text(
                     widget.label,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 24,
                       color: zt.textPrimary,
                       fontWeight: FontWeight.w300,
@@ -1028,7 +1028,7 @@ class _ProcessingStage extends StatelessWidget {
           Text(
             'Sending to your bank...',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: ZendTheme.of(context).textSecondary,
             ),
@@ -1119,14 +1119,14 @@ class _SuccessStageState extends State<_SuccessStage>
                 height: 64,
                 decoration: const BoxDecoration(
                     color: ZendColors.positive, shape: BoxShape.circle),
-                child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'On its way!',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 40,
                 color: zt.textPrimary,
@@ -1137,14 +1137,14 @@ class _SuccessStageState extends State<_SuccessStage>
               _subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
+                  fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
             ),
             const SizedBox(height: 6),
             Text(
               _eta,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: zt.textSecondary.withValues(alpha: 0.7),
               ),
@@ -1187,13 +1187,13 @@ class _ErrorStage extends StatelessWidget {
               height: 64,
               decoration: const BoxDecoration(
                   color: ZendColors.destructive, shape: BoxShape.circle),
-              child: const Icon(PhosphorIconsBold.xCircle, color: Colors.white, size: 36),
+              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
               'Oops',
               style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 32,
                   color: zt.textPrimary),
@@ -1203,7 +1203,7 @@ class _ErrorStage extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
+                  fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -1347,13 +1347,13 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
                 'Add ${widget.rail.currency} account',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: zt.textPrimary,
@@ -1437,7 +1437,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                     Text(
                       _errorMessage!,
                       style: const TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: ZendColors.destructive),
                     ),
@@ -1464,7 +1464,7 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
               child: const Text(
                 'Save account',
                 style: TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -1503,7 +1503,7 @@ class _FormField extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: zt.textSecondary),

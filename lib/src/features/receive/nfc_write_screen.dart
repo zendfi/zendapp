@@ -135,13 +135,13 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(PhosphorIconsBold.caretLeft, color: ZendColors.textOnDeep),
+          icon: const Icon(PhosphorIconsRegular.caretLeft, color: ZendColors.textOnDeep),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           'Write NFC tag',
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: ZendColors.textOnDeep,
@@ -196,7 +196,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
                 ),
               ),
               child: const Icon(
-                PhosphorIconsBold.bluetooth,
+                PhosphorIconsRegular.bluetooth,
                 size: 56,
                 color: ZendColors.accentPop,
               ),
@@ -223,7 +223,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               color: ZendColors.positive,
             ),
             child: const Icon(
-              PhosphorIconsBold.checkCircle,
+              PhosphorIconsRegular.checkCircle,
               size: 52,
               color: Colors.white,
             ),
@@ -241,7 +241,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               border: Border.all(color: ZendColors.destructive, width: 2),
             ),
             child: const Icon(
-              PhosphorIconsBold.warningCircle,
+              PhosphorIconsRegular.warningCircle,
               size: 52,
               color: ZendColors.destructive,
             ),
@@ -251,7 +251,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       case _WriteState.unavailable:
         return const Center(
           child: Icon(
-            PhosphorIconsBold.bluetooth,
+            PhosphorIconsRegular.bluetooth,
             size: 80,
             color: Color(0x44E8F4EC),
           ),
@@ -273,7 +273,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       text,
       textAlign: TextAlign.center,
       style: const TextStyle(
-        fontFamily: 'CircularStd',
+        fontFamily: 'Geist',
         fontWeight: FontWeight.w700,
         fontSize: 28,
         color: ZendColors.textOnDeep,
@@ -303,7 +303,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       text,
       textAlign: TextAlign.center,
       style: const TextStyle(
-        fontFamily: 'CircularStd',
+        fontFamily: 'Geist',
         fontSize: 15,
         color: Color(0x99E8F4EC),
         height: 1.5,
@@ -382,7 +382,7 @@ class _ActionButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'CircularStd',
+            fontFamily: 'Geist',
             fontSize: 15,
             fontWeight: FontWeight.w600,
             color: primary

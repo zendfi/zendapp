@@ -58,7 +58,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'CircularStd'))),
+        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
       );
       return;
     }
@@ -120,7 +120,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                   ZendAvatar(
                     radius: 18,
@@ -131,7 +131,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                   Expanded(
                     child: Text(
                       widget.label,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                   ),
                 ],
@@ -153,7 +153,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                           ? Center(
                               child: Text(
                                 'No shared activity to show',
-                                style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                               ),
                             )
                           : ListView.separated(
@@ -208,7 +208,7 @@ class _PersonActivityRow extends StatelessWidget {
                       headline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                     ),
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
@@ -216,7 +216,7 @@ class _PersonActivityRow extends StatelessWidget {
                         edge.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
                       ),
                     ],
                   ],

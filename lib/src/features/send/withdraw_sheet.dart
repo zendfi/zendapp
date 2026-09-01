@@ -191,7 +191,7 @@ class _AmountStage extends StatelessWidget {
           Text(
             'Withdraw',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -288,14 +288,14 @@ class _DestinationStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'Withdraw $amountFormatted to',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -305,7 +305,7 @@ class _DestinationStage extends StatelessWidget {
 
           // ── Bank option ─────────────────────────────────────────────
           _DestinationTile(
-            icon: PhosphorIconsBold.bank,
+            icon: PhosphorIconsRegular.bank,
             title: 'Bank account',
             subtitle: 'Nigeria, UK, USA, Europe',
             onTap: () {
@@ -317,7 +317,7 @@ class _DestinationStage extends StatelessWidget {
 
           // ── Blockchain option ───────────────────────────────────────
           _DestinationTile(
-            icon: PhosphorIconsBold.currencyDollar,
+            icon: PhosphorIconsRegular.currencyDollar,
             title: 'Crypto wallet',
             subtitle: 'Any chain — Tron, Ethereum, BNB...',
             onTap: () {
@@ -376,7 +376,7 @@ class _DestinationTile extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
@@ -386,7 +386,7 @@ class _DestinationTile extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       color: zt.textSecondary,
                     ),
@@ -394,7 +394,7 @@ class _DestinationTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(PhosphorIconsBold.caretRight, size: 18, color: zt.textSecondary),
+            Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
           ],
         ),
       ),
@@ -424,7 +424,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     final decSize = compact ? 26.0 : 30.0;
 
     final wholeStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: zt.textPrimary,
       fontSize: wholeSize,
@@ -432,7 +432,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     );
 
     final currencyStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: zt.textSecondary,
       fontSize: wholeSize * 0.5,
@@ -440,7 +440,7 @@ class _WithdrawAmountDisplay extends StatelessWidget {
     );
 
     final decStyle = TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontWeight: FontWeight.w700,
       color: zt.textSecondary,
       fontSize: decSize,
@@ -526,7 +526,7 @@ class _WithdrawKeypad extends StatelessWidget {
                               : Text(
                                   keys[row * 3 + col],
                                   style: TextStyle(
-                                    fontFamily: 'CircularStd',
+                                    fontFamily: 'Geist',
                                     fontSize: 22,
                                     color: zt.textPrimary,
                                     fontWeight: FontWeight.w300,

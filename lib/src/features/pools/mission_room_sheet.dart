@@ -52,7 +52,7 @@ class _MissionRoomSheet extends StatelessWidget {
                           child: Text(
                             pool.name,
                             style: TextStyle(
-                              fontFamily: 'CircularStd',
+                              fontFamily: 'Geist',
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: ZendTheme.of(context).textPrimary,
@@ -62,7 +62,7 @@ class _MissionRoomSheet extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(PhosphorIconsBold.xCircle, color: ZendTheme.of(context).textSecondary, size: 20),
+                          icon: Icon(PhosphorIconsRegular.xCircle, color: ZendTheme.of(context).textSecondary, size: 20),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],

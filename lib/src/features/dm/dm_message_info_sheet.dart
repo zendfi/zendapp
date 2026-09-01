@@ -100,12 +100,12 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                 Expanded(
                   child: Text(
                     'Message info',
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
-                  child: Icon(PhosphorIconsBold.xCircle, color: zt.textSecondary, size: 22),
+                  child: Icon(PhosphorIconsRegular.xCircle, color: zt.textSecondary, size: 22),
                 ),
               ],
             ),
@@ -132,7 +132,7 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
                           "Couldn't load message info",
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
                         ),
                       )
                     : Column(
@@ -143,12 +143,12 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Text(
                                 'Read receipts are only available for messages you sent.',
-                                style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary),
+                                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
                               ),
                             ),
                           if (isMe && _info?.readAt != null)
                             _InfoRow(
-                              icon: PhosphorIconsBold.checks,
+                              icon: PhosphorIconsRegular.checks,
                               iconColor: ZendColors.accentPop,
                               label: 'Read',
                               time: _formatFull(_info!.readAt!),
@@ -156,14 +156,14 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                             ),
                           if (isMe)
                             _InfoRow(
-                              icon: PhosphorIconsBold.check,
+                              icon: PhosphorIconsRegular.check,
                               iconColor: zt.textSecondary,
                               label: 'Delivered',
                               time: _formatFull(_info?.sentAt ?? widget.message.createdAt),
                               zt: zt,
                             ),
                           _InfoRow(
-                            icon: PhosphorIconsBold.paperPlaneTilt,
+                            icon: PhosphorIconsRegular.paperPlaneTilt,
                             iconColor: zt.textSecondary,
                             label: 'Sent',
                             time: _formatFull(_info?.sentAt ?? widget.message.createdAt),
@@ -204,7 +204,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
             ),
           ),
           Text(

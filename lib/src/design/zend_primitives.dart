@@ -60,7 +60,7 @@ class PrimaryButton extends StatelessWidget {
             : Text(
                 label,
                 style: const TextStyle(
-                    fontFamily: 'CircularStd',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -92,7 +92,7 @@ class OutlineActionButton extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 15,
               fontWeight: FontWeight.w600),
         ),
@@ -314,18 +314,18 @@ class ZendErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsBold.warning, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
+            Icon(PhosphorIconsRegular.warning, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
             const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
@@ -353,7 +353,7 @@ class ZendBackspaceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(
-      PhosphorIconsBold.backspace,
+      PhosphorIconsRegular.backspace,
       color: color,
       size: size,
     );

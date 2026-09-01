@@ -113,13 +113,13 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                   Expanded(
                     child: Text(
                       'Customise page',
                       style: TextStyle(
-                        fontFamily: 'CircularStd',
+                        fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 24,
                         color: zt.textPrimary,
@@ -132,7 +132,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                       child: Text(
                         _successMessage!,
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: zt.positive,
                           fontWeight: FontWeight.w600,
@@ -147,7 +147,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                           : Text(
                               'Save',
                               style: TextStyle(
-                                fontFamily: 'CircularStd',
+                                fontFamily: 'Geist',
                                 fontWeight: FontWeight.w600,
                                 color: zt.accent,
                               ),
@@ -227,9 +227,9 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                             Expanded(child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Show recent activity', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
+                                Text('Show recent activity', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
                                 const SizedBox(height: 2),
-                                Text('Display recent payment count on your page', style: TextStyle(fontFamily: 'CircularStd', fontSize: 12, color: zt.textSecondary)),
+                                Text('Display recent payment count on your page', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
                               ],
                             )),
                             Switch.adaptive(
@@ -243,7 +243,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
 
                         if (_error != null) ...[
                           const SizedBox(height: 16),
-                          Text(_error!, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: ZendColors.destructive)),
+                          Text(_error!, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive)),
                         ],
 
                         const SizedBox(height: 24),
@@ -277,10 +277,10 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
           padding: const EdgeInsets.all(20),
           child: switch (_linkStyle) {
             'minimal' => Row(children: [
-                CircleAvatar(radius: 20, backgroundColor: themeColor, child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 18))),
+                CircleAvatar(radius: 20, backgroundColor: themeColor, child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18))),
                 const SizedBox(width: 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(displayName, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(displayName, style: const TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
                   Text('@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
                 ]),
               ]),
@@ -288,19 +288,19 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [themeColor, _hexToColor(_accentColor)], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(ZendRadii.xl)),
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
-                  CircleAvatar(radius: 28, backgroundColor: Colors.white.withValues(alpha: 0.3), child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 24))),
+                  CircleAvatar(radius: 28, backgroundColor: Colors.white.withValues(alpha: 0.3), child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 24))),
                   const SizedBox(height: 8),
-                  Text(displayName, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(displayName, style: const TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                   Text('zdfi.me/@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Colors.white70)),
-                  if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: Colors.white70))],
+                  if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: Colors.white70))],
                 ]),
               ),
             _ => Column(children: [
-                CircleAvatar(radius: 28, backgroundColor: themeColor, child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 24))),
+                CircleAvatar(radius: 28, backgroundColor: themeColor, child: Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Z', style: const TextStyle(color: Colors.white, fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 24))),
                 const SizedBox(height: 8),
-                Text(displayName, style: const TextStyle(fontFamily: 'CircularStd', fontSize: 20, fontWeight: FontWeight.w700)),
+                Text(displayName, style: const TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w700)),
                 Text('zdfi.me/@$zendtag', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-                if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: zt.textSecondary))],
+                if (bio.isNotEmpty) ...[const SizedBox(height: 6), Text(bio, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary))],
               ]),
           },
         ),
@@ -316,7 +316,7 @@ Widget _sectionLabel(String label, ZendTheme zt) => Padding(
   child: Text(
     label,
     style: TextStyle(
-      fontFamily: 'CircularStd',
+      fontFamily: 'Geist',
       fontSize: 13,
       fontWeight: FontWeight.w600,
       color: zt.textSecondary,
@@ -372,7 +372,7 @@ class _ColorPicker extends StatelessWidget {
               border: Border.all(color: isSelected ? zt.textPrimary : Colors.transparent, width: 2.5),
               boxShadow: isSelected ? [BoxShadow(color: _hex(color).withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1)] : null,
             ),
-            child: isSelected ? Icon(PhosphorIconsBold.checkCircle, size: 16, color: _hex(color).computeLuminance() > 0.4 ? Colors.black : Colors.white) : null,
+            child: isSelected ? Icon(PhosphorIconsRegular.checkCircle, size: 16, color: _hex(color).computeLuminance() > 0.4 ? Colors.black : Colors.white) : null,
           ),
         );
       }).toList(),
@@ -407,9 +407,9 @@ class _StyleSelector extends StatelessWidget {
                 border: Border.all(color: isSelected ? themeColor : zt.border, width: 1.5),
               ),
               child: Column(children: [
-                Text(label, style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? themeColor : zt.textPrimary)),
+                Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? themeColor : zt.textPrimary)),
                 const SizedBox(height: 2),
-                Text(desc, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'CircularStd', fontSize: 10, color: zt.textSecondary)),
+                Text(desc, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 10, color: zt.textSecondary)),
               ]),
             ),
           ),

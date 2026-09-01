@@ -134,7 +134,7 @@ class ZendQrCardState extends State<ZendQrCard> {
           children: [
             Expanded(
               child: _CardButton(
-                icon: PhosphorIconsBold.share,
+                icon: PhosphorIconsRegular.share,
                 label: 'Share card',
                 loading: _saving,
                 onTap: shareCard,
@@ -143,7 +143,7 @@ class ZendQrCardState extends State<ZendQrCard> {
             const SizedBox(width: 10),
             Expanded(
               child: _CardButton(
-                icon: PhosphorIconsBold.download,
+                icon: PhosphorIconsRegular.download,
                 label: _saving ? 'Saving…' : 'Download card',
                 loading: _saving,
                 onTap: downloadCard,
@@ -249,7 +249,7 @@ class _CardFace extends StatelessWidget {
             Text(
               '@$username',
               style: const TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 26,
                 color: _textOnDeep,
@@ -264,7 +264,7 @@ class _CardFace extends StatelessWidget {
             const Text(
               'Scan to pay instantly',
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: _textMuted,
                 letterSpacing: 0.3,
@@ -318,7 +318,7 @@ class _CardButton extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: Color(0xCCE8F4EC),
               ),

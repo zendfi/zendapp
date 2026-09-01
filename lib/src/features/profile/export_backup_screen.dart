@@ -92,11 +92,11 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+          icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text('Export backup',
-          style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
       ),
       body: SafeArea(
         child: switch (_stage) {
@@ -134,10 +134,10 @@ class _PinStage extends StatelessWidget {
         children: [
           SizedBox(height: compact ? 24 : 40),
           Text('Confirm your PIN', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
+            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
           const SizedBox(height: 8),
           Text('Enter your PIN to generate the backup file.', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
           SizedBox(height: compact ? 32 : 48),
           _PinDots(filledCount: digits.length, zt: zt),
           const SizedBox(height: 16),
@@ -145,7 +145,7 @@ class _PinStage extends StatelessWidget {
             height: 20,
             child: errorMessage != null
                 ? Text(errorMessage!, textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'CircularStd', fontSize: 13, color: ZendColors.destructive))
+                    style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive))
                 : loading
                     ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
                     : null,
@@ -186,16 +186,16 @@ class _WarningStage extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Icon(PhosphorIconsBold.warningCircle, color: ZendColors.destructive, size: 40),
+                const Icon(PhosphorIconsRegular.warningCircle, color: ZendColors.destructive, size: 40),
                 const SizedBox(height: 12),
                 Text('Store this file safely.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
+                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
                 const SizedBox(height: 8),
                 Text(
                   'Anyone with this file and your PIN can access your wallet.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                  style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                 ),
               ],
             ),
@@ -211,13 +211,13 @@ class _WarningStage extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
               ),
               child: const Text('I understand — export backup',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(fontFamily: 'CircularStd', color: zt.textSecondary)),
+            child: Text('Cancel', style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary)),
           ),
           const SizedBox(height: 24),
         ],
@@ -241,14 +241,14 @@ class _DoneStage extends StatelessWidget {
           Container(
             width: 64, height: 64,
             decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-            child: const Icon(PhosphorIconsBold.checkCircle, color: Colors.white, size: 36),
+            child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
           ),
           const SizedBox(height: 20),
           Text('Backup exported',
-            style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary)),
+            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary)),
           const SizedBox(height: 8),
           Text('Store it somewhere safe.',
-            style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary)),
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -259,7 +259,7 @@ class _DoneStage extends StatelessWidget {
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
               ),
-              child: const Text('Done', style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text('Done', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
         ],

@@ -31,7 +31,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          PhosphorIconsBold.bank,
+                          PhosphorIconsRegular.bank,
                           size: 30,
                           color: zt.textSecondary,
                         ),
@@ -40,7 +40,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                       Text(
                         'No banks connected',
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: zt.textPrimary,
@@ -51,7 +51,7 @@ class ConnectedBanksScreen extends StatelessWidget {
                         'Bank accounts you use for withdrawals will appear here automatically.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontFamily: 'CircularStd',
+                          fontFamily: 'Geist',
                           fontSize: 13,
                           color: zt.textSecondary,
                           height: 1.4,
@@ -82,13 +82,13 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(PhosphorIconsBold.caretLeft, color: zt.textPrimary),
+            icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           ),
           Expanded(
             child: Text(
               title,
               style: TextStyle(
-                fontFamily: 'CircularStd',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 fontSize: 24,
                 color: zt.textPrimary,

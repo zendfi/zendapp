@@ -93,7 +93,7 @@ class DebitCardTeaser extends StatelessWidget {
               onTap: onDismiss,
               child: const Padding(
                 padding: EdgeInsets.all(4),
-                child: Icon(PhosphorIconsBold.xCircle, size: 16, color: Color(0x99F0F0F0)),
+                child: Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x99F0F0F0)),
               ),
             ),
           ),

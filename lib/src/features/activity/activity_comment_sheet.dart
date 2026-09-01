@@ -161,7 +161,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
         // revert has no network dependency, so it can't fail the same way.
         setState(() => _reactions = preOptimistic);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -196,7 +196,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
               ),
               Text(
                 'React to this',
-                style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -233,7 +233,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not post comment — try again', style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text('Could not post comment — try again', style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     } finally {
@@ -253,7 +253,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
         // comment above for why this replaced re-calling _load() to revert.
         setState(() => _comments = preOptimistic);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't delete comment — try again", style: TextStyle(fontFamily: 'CircularStd'))),
+          const SnackBar(content: Text("Couldn't delete comment — try again", style: TextStyle(fontFamily: 'Geist'))),
         );
       }
     }
@@ -299,13 +299,13 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 Expanded(
                   child: Text(
                     'Activity',
-                    style: TextStyle(fontFamily: 'CircularStd', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
                 TextButton.icon(
                   onPressed: widget.onViewReceipt,
-                  icon: Icon(PhosphorIconsBold.receipt, size: 16, color: zt.accent),
-                  label: Text('Receipt', style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
+                  icon: Icon(PhosphorIconsRegular.receipt, size: 16, color: zt.accent),
+                  label: Text('Receipt', style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
                 ),
               ],
             ),
@@ -327,14 +327,14 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       // Headline is the primary text — larger, more prominent
                       Text(
                         widget.headline,
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary, height: 1.3),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary, height: 1.3),
                       ),
                       const SizedBox(height: 6),
                       // Note (payment memo) rendered as post body copy
                       if (edge.note?.isNotEmpty == true) ...[
                         Text(
                           edge.note!,
-                          style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, height: 1.45, color: zt.textPrimary.withValues(alpha: 0.88)),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 15, height: 1.45, color: zt.textPrimary.withValues(alpha: 0.88)),
                         ),
                         const SizedBox(height: 10),
                       ],
@@ -403,7 +403,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(PhosphorIconsBold.smiley, size: 16, color: zt.textSecondary),
+                              child: Icon(PhosphorIconsRegular.smiley, size: 16, color: zt.textSecondary),
                             ),
                           ),
                         ],
@@ -432,7 +432,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                           child: Text(
                             'No comments yet — be the first to say something.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontFamily: 'CircularStd', fontSize: 13.5, color: zt.textSecondary),
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, color: zt.textSecondary),
                           ),
                         ),
                       )
@@ -494,10 +494,10 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       maxLines: 4,
                       minLines: 1,
                       textInputAction: TextInputAction.newline,
-                      style: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Add a comment…',
-                        hintStyle: TextStyle(fontFamily: 'CircularStd', fontSize: 14, color: zt.textSecondary),
+                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                         border: InputBorder.none,
                         counterText: '',
                         isDense: true,
@@ -525,7 +525,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                               padding: const EdgeInsets.all(8),
                               child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
                             )
-                          : const Icon(PhosphorIconsBold.paperPlaneTilt, size: 17, color: Colors.white),
+                          : const Icon(PhosphorIconsRegular.paperPlaneTilt, size: 17, color: Colors.white),
                     ),
                   ),
                 ),
@@ -592,13 +592,13 @@ class _CommentRow extends StatelessWidget {
                 Row(
                   children: [
                     Text('@${comment.authorZendtag}',
-                        style: TextStyle(fontFamily: 'CircularStd', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w700, color: zt.textPrimary)),
                     const SizedBox(width: 6),
                     Text(relativeTime, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8))),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(comment.body, style: TextStyle(fontFamily: 'CircularStd', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9))),
+                Text(comment.body, style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.9))),
               ],
             ),
           ),

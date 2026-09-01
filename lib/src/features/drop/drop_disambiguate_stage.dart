@@ -108,7 +108,7 @@ class _DropDisambiguateStageState extends State<DropDisambiguateStage> {
               Text(
                 'Drop $_amountFormatted to…',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
                   color: zt.textPrimary,
@@ -118,7 +118,7 @@ class _DropDisambiguateStageState extends State<DropDisambiguateStage> {
               Text(
                 '${candidates.length} nearby Zend users detected. Tap the right one.',
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: zt.textSecondary,
                 ),
@@ -157,7 +157,7 @@ class _DropDisambiguateStageState extends State<DropDisambiguateStage> {
                 'Cancel',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'CircularStd',
+                  fontFamily: 'Geist',
                   fontSize: 14,
                   color: zt.textSecondary,
                 ),
@@ -236,7 +236,7 @@ class _CandidateTile extends StatelessWidget {
                   Text(
                     _displayName,
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,

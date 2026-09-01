@@ -64,7 +64,7 @@ class PoolListDrawer extends StatelessWidget {
           Text(
             'Pools',
             style: TextStyle(
-              fontFamily: 'CircularStd',
+              fontFamily: 'Geist',
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: zt.textPrimary,
@@ -88,12 +88,12 @@ class PoolListDrawer extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(PhosphorIconsBold.plusCircle, size: 18, color: zt.accentBright),
+                  Icon(PhosphorIconsRegular.plusCircle, size: 18, color: zt.accentBright),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Create Pool',
                     style: TextStyle(
-                      fontFamily: 'CircularStd',
+                      fontFamily: 'Geist',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: zt.accentBright,
@@ -124,14 +124,14 @@ class PoolListDrawer extends StatelessWidget {
           children: [
             Text(
               'Failed to load pools',
-              style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
             ),
             const SizedBox(height: ZendSpacing.sm),
             TextButton(
               onPressed: () => model.fetchPools(),
               child: Text(
                 'Retry',
-                style: TextStyle(fontFamily: 'CircularStd', fontWeight: FontWeight.w600, color: zt.accentBright),
+                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.accentBright),
               ),
             ),
           ],
@@ -148,7 +148,7 @@ class PoolListDrawer extends StatelessWidget {
       return Center(
         child: Text(
           'No pools yet',
-          style: TextStyle(fontFamily: 'CircularStd', fontSize: 15, color: zt.textSecondary),
+          style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
         ),
       );
     }
@@ -203,7 +203,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: zt.textSecondary,
@@ -239,7 +239,7 @@ class PoolStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'CircularStd',
+          fontFamily: 'Geist',
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: color,

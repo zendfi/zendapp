@@ -25,6 +25,7 @@ class ZendShellController {
 
   void Function(int)? _switchTab;
 
-  /// Switch to the given tab index (0 = Home, 1 = Send, 2 = Activity).
+  /// Switch to the given tab index (0 = Feed, 1 = People, 2 = Chats, 3 = You).
+  /// See ZendShell's own tab-order comment for the source of truth.
   void switchToTab(int index) => _switchTab?.call(index);
 }
