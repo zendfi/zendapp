@@ -27,6 +27,7 @@ Future<void> showActivityCommentSheet(
   String? avatarUrl,
   required String avatarInitial,
   required VoidCallback onViewReceipt,
+  VoidCallback? onOpenChat,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -40,6 +41,7 @@ Future<void> showActivityCommentSheet(
       avatarUrl: avatarUrl,
       avatarInitial: avatarInitial,
       onViewReceipt: onViewReceipt,
+      onOpenChat: onOpenChat,
     ),
   );
 }
@@ -51,6 +53,7 @@ class _ActivityCommentSheet extends StatefulWidget {
     required this.avatarUrl,
     required this.avatarInitial,
     required this.onViewReceipt,
+    this.onOpenChat,
   });
 
   final ActivityEdge edge;
@@ -58,6 +61,13 @@ class _ActivityCommentSheet extends StatefulWidget {
   final String? avatarUrl;
   final String avatarInitial;
   final VoidCallback onViewReceipt;
+
+  /// Opens the chat with this Activity's counterparty — the header chat
+  /// icon locked by ZEND BETA spec §21 ("Chat is accessed through an icon
+  /// in the header. It opens the recipient's chat."). Null when there's no
+  /// single counterparty to chat with (an external/public-to-Mutual edge
+  /// between two other people) — the icon hides itself in that case.
+  final VoidCallback? onOpenChat;
 
   @override
   State<_ActivityCommentSheet> createState() => _ActivityCommentSheetState();
@@ -292,6 +302,10 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           const SizedBox(height: 8),
 
           // ── Header ──
+          // Spec §21's locked decision: no contextual Zend button here
+          // (the Activity already represents a cash event) — only a chat
+          // icon, and only when there's a single counterparty to open a
+          // chat with.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 12, 8),
             child: Row(
@@ -302,6 +316,12 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                     style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
                   ),
                 ),
+                if (widget.onOpenChat != null)
+                  IconButton(
+                    onPressed: widget.onOpenChat,
+                    icon: Icon(PhosphorIconsRegular.chatCircleText, size: 20, color: zt.textSecondary),
+                    tooltip: 'Chat',
+                  ),
                 TextButton.icon(
                   onPressed: widget.onViewReceipt,
                   icon: Icon(PhosphorIconsRegular.receipt, size: 16, color: zt.accent),
@@ -453,6 +473,22 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           ),
 
           // ── Composer ──
+          // Spec §22: only the edge's two direct participants may comment;
+          // Shared_Network_Viewers may react but not comment. The server
+          // already enforces this on POST — hiding the composer here means
+          // a Mutual viewer never sees an input box that would silently
+          // fail, and instead sees a plain explanatory line matching the
+          // spec's "important social boundary" framing.
+          if (!edge.isDirectParticipant)
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + bottomInset),
+              child: Text(
+                'Only the people in this Activity can comment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Geist', fontSize: 12.5, color: zt.textSecondary),
+              ),
+            )
+          else
           // Elevated card-style bar: user avatar | field | send button.
           // A top border + slight elevation separates it from the comment list
           // without an ugly flat band. Keyboard-aware via viewInsets.

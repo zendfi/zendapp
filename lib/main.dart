@@ -21,6 +21,7 @@ import 'src/services/sse_service.dart';
 import 'src/services/wallet_service.dart';
 import 'src/services/payment_rails.dart';
 import 'src/services/sui_oauth_provider.dart';
+import 'src/services/sui_salt_custody_service.dart';
 import 'src/services/sui_zklogin_service.dart';
 import 'src/services/zendtag_service.dart';
 import 'src/services/transfer_service.dart';
@@ -115,8 +116,17 @@ void main() async {
   // Google permits only https redirects for a Web client, and the Web client is
   // the only kind a browser can use — which is what keeps one Google account
   // mapped to one Sui address across app and web, since `aud` feeds the address.
+  // 2-of-3 salt custody: share A here, share B in the user's Drive, share C on
+  // the backend. Any two reconstruct the salt, so no single holder disappearing —
+  // including us — can permanently lock a user out of their funds.
+  final saltCustody = SuiSaltCustodyService(
+    apiClient: apiClient,
+    secureStorage: secureStorage,
+  );
+
   final zkLoginService = SuiZkLoginService(
     apiClient: apiClient,
+    saltCustody: saltCustody,
     oauthProvider: GoogleZkLoginOAuthProvider(
       clientId: kZkLoginGoogleClientId,
       redirectUri: kZkLoginRedirectUri,

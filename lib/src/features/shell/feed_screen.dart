@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../activity/activity_screen.dart';
+import '../activity/feed_content_screen.dart';
 
-/// Feed — the new primary landing tab (ZEND BETA spec §5).
+/// Feed — the primary landing tab (ZEND BETA spec §5-7, §21-24).
 ///
-/// "What's happening between me and my people?" not "what's my financial
-/// balance?" — this is a thin wrapper around the existing [ActivityScreen]
-/// (which already renders the threaded/legacy/graph activity views this
-/// spec calls "Activities"), plumbing through the one new piece the spec
-/// requires here: a tap on the header balance opens the Wallet.
-///
-/// Deliberately NOT a rewrite of ActivityScreen's body — the feed content,
-/// empty/error states, and privacy-aware activity list are the subject of
-/// their own dedicated redesign pass. This screen exists so the shell's tab
-/// list has a stable "Feed" destination to route to today.
+/// "What's happening between me and my people?" — a flat, mixed timeline
+/// of the viewer's private Activities and their mutuals' public-to-Mutual
+/// Activities, per [FeedContentScreen]. This wrapper exists only so the
+/// shell's tab list has a stable "Feed" destination name independent of
+/// where the actual content implementation lives.
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key, required this.onOpenWallet});
 
@@ -23,6 +18,6 @@ class FeedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ActivityScreen(onOpenWallet: onOpenWallet);
+    return FeedContentScreen(onOpenWallet: onOpenWallet);
   }
 }
