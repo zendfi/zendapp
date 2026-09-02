@@ -1,30 +1,35 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
-import '../../design/zend_tokens.dart';import '../../navigation/zend_routes.dart';
+import '../../design/zend_tokens.dart';
+import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
 import 'account_information_screen.dart';
-import 'bridge_kyc_screen.dart';
-import 'change_pin_screen.dart';
-import 'connected_apps_screen.dart';
-import 'security_settings_screen.dart';
-import 'connected_banks_screen.dart';
 import 'contact_support_screen.dart';
-import '../request/payment_requests_screen.dart';
+import 'settings_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+/// You — ZEND BETA spec §29-30 (LOCKED): "You is deliberately boring.
+/// That's a compliment." Avatar + @tag, then exactly three rows —
+/// Settings, Help, Log out. Everything else (activity, mutuals, pools)
+/// belongs contextually elsewhere per spec §1.1's minimalism principle —
+/// this tab does not surface any of them, even as a summary.
+///
+/// Tapping the avatar/tag opens [AccountInformationScreen] (spec §30 —
+/// "edit username, profile photo, identity information" — an identity
+/// editor, not a social profile dashboard). Account/security/appearance/
+/// privacy controls that used to live directly on this screen now live
+/// one tap deeper in [SettingsScreen] — this screen only routes to them.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, this.showBackButton = true});
 
-  /// Whether to render the back-arrow + "Profile" header.
+  /// Whether to render the back-arrow header.
   ///
   /// Defaults to `true` for the existing pushed-screen usage
   /// (`pushZendSlide(context, const ProfileScreen())`), where a Navigator
@@ -52,352 +57,68 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header ────────────────────────────────────────────────────
-            Padding(
-              padding: EdgeInsets.fromLTRB(showBackButton ? 8 : 20, 8, 20, 0),
-              child: Row(
-                children: [
-                  if (showBackButton)
+            if (showBackButton)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+                child: Row(
+                  children: [
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                     ),
-                  Expanded(
-                    child: Text(
-                      showBackButton ? 'Profile' : 'You',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
-                        color: zt.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Content ───────────────────────────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ── Identity card ──────────────────────────────────────
-                    Material(
-                      color: zt.bgSecondary,
-                      borderRadius: BorderRadius.circular(ZendRadii.xl),
-                      child: InkWell(
-                        onTap: () => pushZendSlide(context, const AccountInformationScreen()),
-                        borderRadius: BorderRadius.circular(ZendRadii.xl),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              _AvatarUploadButton(displayName: displayName),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      displayName,
-                                      style: TextStyle(
-                                        fontFamily: 'Geist',
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: zt.textPrimary,
-                                      ),
-                                    ),
-                                    if (zendtag.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        zendtag,
-                                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Icon(PhosphorIconsRegular.caretRight,
-                                  size: 18, color: zt.textSecondary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Account ────────────────────────────────────────────
-                    _SectionLabel('Account'),
-                    const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.bank,
-                        label: 'Connected banks',
-                        onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
-                      ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.link,
-                        label: 'Connected apps',
-                        onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
-                      ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.receipt,
-                        label: 'Payment requests',
-                        onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
-                      ),
-                    ]),
-
-                    const SizedBox(height: 24),
-
-                    // ── Drop ───────────────────────────────────────────────
-                    _SectionLabel('Drop'),
-                    const SizedBox(height: 8),
-                    _DropDiscoverabilityTile(),
-
-                    const SizedBox(height: 24),
-
-                    // ── Privacy ───────────────────────────────────────────
-                    _SectionLabel('Privacy'),
-                    const SizedBox(height: 8),
-                    _PresencePrivacyTile(),
-
-                    const SizedBox(height: 24),
-
-                    // ── Appearance ─────────────────────────────────────────
-                    _SectionLabel('Appearance'),
-                    const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _ToggleTile(
-                        icon: PhosphorIconsRegular.moon,
-                        label: 'Dark mode',
-                        value: model.isDarkMode,
-                        onChanged: (_) => model.toggleDarkMode(),
-                      ),
-                    ]),
-
-                    const SizedBox(height: 24),
-
-                    // ── Activity sharing ───────────────────────────────────
-                    _SectionLabel('Activity'),
-                    const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _ToggleTile(
-                        icon: PhosphorIconsRegular.bell,
-                        label: 'Notify network when I share',
-                        value: model.notifyMutualsOnShare,
-                        onChanged: (_) => unawaited(model.toggleNotifyMutualsOnShare()),
-                      ),
-                    ]),
-
-                    const SizedBox(height: 24),
-
-                    // ── Security ───────────────────────────────────────────
-                    _SectionLabel('Security'),
-                    const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.shieldCheck,
-                        label: 'Security settings',
-                        onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
-                      ),
-                      // Hidden for zkLogin accounts: they have no PIN, so this
-                      // would open a flow with nothing to change.
-                      if (!model.isZkLoginAccount)
-                        _Tile(
-                          icon: PhosphorIconsRegular.lockSimple,
-                          label: 'Change PIN',
-                          onTap: () =>
-                              pushZendSlide(context, const ChangePinScreen()),
-                        ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.identificationBadge,
-                        label: 'Identity verification',
-                        onTap: () => pushZendSlide(context, const BridgeKycScreen()),
-                      ),
-                    ]),
-
-                    const SizedBox(height: 24),
-
-                    // ── Support ────────────────────────────────────────────
-                    _SectionLabel('Support'),
-                    const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.headset,
-                        label: 'Contact support',
-                        onTap: () => pushZendSlide(context, const ContactSupportScreen()),
-                      ),
-                    ]),
-
-                    const SizedBox(height: 32),
-
-                    // ── Log out ────────────────────────────────────────────
-                    Material(
-                      color: ZendColors.destructive.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(ZendRadii.xl),
-                      child: InkWell(
-                        onTap: () => _confirmLogout(context),
-                        borderRadius: BorderRadius.circular(ZendRadii.xl),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(PhosphorIconsRegular.signOut,
-                                  size: 18, color: ZendColors.destructive),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Log out',
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: ZendColors.destructive,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Presence privacy tile ────────────────────────────────────────────────────
-
-class _PresencePrivacyTile extends StatefulWidget {
-  const _PresencePrivacyTile();
-
-  @override
-  State<_PresencePrivacyTile> createState() => _PresencePrivacyTileState();
-}
-
-class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
-  String _visibility = 'everyone';
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Load from shared prefs as a local cache
-    SharedPreferences.getInstance().then((prefs) {
-      if (mounted) {
-        setState(() => _visibility = prefs.getString('presence_visibility') ?? 'everyone');
-      }
-    });
-  }
-
-  Future<void> _update(String newVal) async {
-    if (_saving || newVal == _visibility) return;
-    setState(() => _saving = true);
-    try {
-      await ZendScope.of(context).dmService.updatePresencePrivacy(newVal);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('presence_visibility', newVal);
-      if (mounted) setState(() => _visibility = newVal);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update — try again')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(ZendRadii.xl),
-      child: ColoredBox(
-        color: zt.bgSecondary,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(PhosphorIconsRegular.eyeClosed, size: 20, color: zt.textSecondary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Online status & last seen',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                  const SizedBox(height: 24),
+                  // ── Identity: avatar + @tag (spec §29 wireframe) ──
+                  Center(
+                    child: GestureDetector(
+                      onTap: () => pushZendSlide(context, const AccountInformationScreen()),
+                      child: Column(
+                        children: [
+                          _AvatarUploadButton(displayName: displayName),
+                          const SizedBox(height: 12),
+                          Text(
+                            zendtag.isNotEmpty ? zendtag : displayName,
+                            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  if (_saving) ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
+                  const SizedBox(height: 28),
+                  Divider(color: zt.border, height: 1, indent: 20, endIndent: 20),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _TileGroup(tiles: [
+                      _Tile(
+                        label: 'Settings',
+                        onTap: () => pushZendSlide(context, const SettingsScreen()),
+                      ),
+                      _Tile(
+                        label: 'Help',
+                        onTap: () => pushZendSlide(context, const ContactSupportScreen()),
+                      ),
+                    ]),
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: _Tile(
+                      label: 'Log out',
+                      destructive: true,
+                      onTap: () => _confirmLogout(context),
+                    ),
+                  ),
                 ],
               ),
             ),
-            for (final option in [
-              ('everyone', 'Everyone', 'Anyone you chat with'),
-              ('contacts', 'Contacts only', 'People you\'ve transacted with'),
-              ('nobody',   'Nobody',   'Appear offline to everyone'),
-            ]) ...[
-              Divider(color: zt.border, height: 1, indent: 48, endIndent: 0),
-              InkWell(
-                onTap: () => _update(option.$1),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 32),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(option.$2, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                            Text(option.$3, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      if (_visibility == option.$1)
-                        Icon(PhosphorIconsRegular.checkCircle, size: 18, color: zt.accent),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 6),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'Geist',
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: zt.textSecondary,
         ),
       ),
     );
@@ -421,13 +142,7 @@ class _TileGroup extends StatelessWidget {
           children: [
             for (var i = 0; i < tiles.length; i++) ...[
               tiles[i],
-              if (i < tiles.length - 1)
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: zt.border,
-                  indent: 48,
-                ),
+              if (i < tiles.length - 1) Divider(height: 1, thickness: 1, color: zt.border, indent: 16),
             ],
           ],
         ),
@@ -436,94 +151,36 @@ class _TileGroup extends StatelessWidget {
   }
 }
 
-// ── Standard nav tile ─────────────────────────────────────────────────────────
+// ── Standard nav tile — spec §29's "Settings →" / "Help →" / "Log out →" ──
 
 class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _Tile({required this.label, required this.onTap, this.destructive = false});
 
-  final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final color = destructive ? ZendColors.destructive : zt.textPrimary;
     return Material(
-      color: Colors.transparent,
+      color: destructive ? ZendColors.destructive.withValues(alpha: 0.08) : Colors.transparent,
+      borderRadius: destructive ? BorderRadius.circular(ZendRadii.xl) : null,
       child: InkWell(
         onTap: onTap,
+        borderRadius: destructive ? BorderRadius.circular(ZendRadii.xl) : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: zt.textSecondary),
-              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: zt.textPrimary,
-                  ),
-                ),
+                child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: color)),
               ),
-              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
+              Icon(PhosphorIconsRegular.caretRight, size: 16, color: destructive ? color : zt.textSecondary),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Toggle tile ───────────────────────────────────────────────────────────────
-
-class _ToggleTile extends StatelessWidget {
-  const _ToggleTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: zt.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: zt.textPrimary,
-              ),
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: zt.accentBright,
-            activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
-          ),
-        ],
       ),
     );
   }
@@ -578,12 +235,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               ),
               Text(
                 'Profile photo',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: zt.textPrimary,
-                ),
+                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
               ),
               const SizedBox(height: 12),
               _PickerRow(
@@ -664,22 +316,15 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       child: Stack(
         children: [
           ZendAvatar(
-            radius: 28,
+            radius: 32,
             photoUrl: model.currentAvatarUrl,
-            initials: widget.displayName.isNotEmpty
-                ? widget.displayName[0].toUpperCase()
-                : null,
+            initials: widget.displayName.isNotEmpty ? widget.displayName[0].toUpperCase() : null,
           ),
           if (_uploading)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0x66000000),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: ZendLoader(size: 18, strokeWidth: 2, color: Colors.white),
-                ),
+                decoration: const BoxDecoration(color: Color(0x66000000), shape: BoxShape.circle),
+                child: const Center(child: ZendLoader(size: 18, strokeWidth: 2, color: Colors.white)),
               ),
             )
           else
@@ -687,13 +332,10 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               right: 0,
               bottom: 0,
               child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: ZendColors.accentBright,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(PhosphorIconsRegular.pencilSimple, size: 9, color: Colors.white),
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(color: ZendColors.accentBright, shape: BoxShape.circle),
+                child: const Icon(PhosphorIconsRegular.pencilSimple, size: 10, color: Colors.white),
               ),
             ),
         ],
@@ -732,15 +374,7 @@ class _PickerRow extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 14),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-              ),
+              Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: color)),
             ],
           ),
         ),
@@ -776,30 +410,17 @@ Future<void> _confirmLogout(BuildContext context) async {
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: zt.border,
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                ),
+                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
               ),
             ),
             Text(
               'Log out?',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
-                fontSize: 22,
-                color: zt.textPrimary,
-              ),
+              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               "You'll need to sign in again to access your account.",
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 14,
-                color: zt.textSecondary,
-                height: 1.4,
-              ),
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 24),
             PrimaryButton(
@@ -811,10 +432,7 @@ Future<void> _confirmLogout(BuildContext context) async {
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               style: TextButton.styleFrom(foregroundColor: zt.textSecondary),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15),
-              ),
+              child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist', fontSize: 15)),
             ),
             const SizedBox(height: 4),
           ],
@@ -841,155 +459,4 @@ Future<void> _confirmLogout(BuildContext context) async {
   }
   if (!context.mounted) return;
   pushAndRemoveUntilZendSlide(context, const WelcomeScreen(), rootNavigator: true);
-}
-
-// ── Drop Discoverability Tile ─────────────────────────────────────────────────
-
-class _DropDiscoverabilityTile extends StatelessWidget {
-  const _DropDiscoverabilityTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final model = ZendScope.of(context);
-    final service = model.dropDiscoverabilityService;
-
-    return ListenableBuilder(
-      listenable: service,
-      builder: (context, _) {
-        final zt = ZendTheme.of(context);
-        final isOn = service.isDiscoverable;
-        final isLoading = service.isLoading;
-
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(ZendRadii.xl),
-          child: ColoredBox(
-            color: zt.bgSecondary,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Toggle row ──────────────────────────────────────────
-                  Row(
-                    children: [
-                      // Live indicator dot
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isOn
-                              ? zt.accentBright
-                              : zt.textSecondary.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Icon(
-                        PhosphorIconsRegular.bluetoothConnected,
-                        size: 20,
-                        color: isOn ? zt.accentBright : zt.textSecondary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Be Discoverable',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: zt.textPrimary,
-                          ),
-                        ),
-                      ),
-                      if (isLoading)
-                        ZendLoader(size: 20, strokeWidth: 2, color: zt.accentBright)
-                      else
-                        Switch.adaptive(
-                          value: isOn,
-                          onChanged: (_) => service.toggle(),
-                          activeThumbColor: zt.accentBright,
-                          activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
-                        ),
-                    ],
-                  ),
-
-                  // ── Description ─────────────────────────────────────────
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 17),
-                    child: Text(
-                      isOn
-                          ? 'Broadcasting a secure Bluetooth signal. Nearby Zend users can send you money via Drop automatically.'
-                          : 'Let nearby Zend users send you money via Drop — no sharing your zendtag needed.',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 12,
-                        color: zt.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-
-                  // ── "Broadcasting as" label ─────────────────────────────
-                  if (isOn && service.currentPayload != null) ...[
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 17),
-                      child: Row(
-                        children: [
-                          Icon(PhosphorIconsRegular.record,
-                              size: 10, color: zt.accentBright),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Broadcasting as @${service.currentPayload!.zendtag}',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accentBright),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  // ── Error banner ────────────────────────────────────────
-                  if (!isOn && !isLoading && service.lastError != null) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 17),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: ZendColors.destructive.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(ZendRadii.md),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(PhosphorIconsRegular.warningCircle,
-                                size: 14, color: ZendColors.destructive),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                service.lastError!,
-                                style: const TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 11,
-                                  color: ZendColors.destructive,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
