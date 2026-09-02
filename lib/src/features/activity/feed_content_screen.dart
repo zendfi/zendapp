@@ -243,7 +243,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                       child: Text(
                         model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w500, color: zt.textSecondary),
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 19, fontWeight: FontWeight.w600, color: zt.textSecondary),
                       ),
                     ),
                   ),

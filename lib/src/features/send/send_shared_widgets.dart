@@ -469,3 +469,54 @@ class SendErrorStage extends StatelessWidget {
     );
   }
 }
+
+/// Network uncertainty after submission — spec §16 (LOCKED): "Do not
+/// immediately tell the user Failed if the server hasn't confirmed whether
+/// the payment happened... We're checking that now. Don't send again yet."
+///
+/// Deliberately has no Retry/Cancel buttons — the whole point of this
+/// stage is that the user cannot act again until it resolves into
+/// [SendStage.success] or [SendStage.error] on its own (enforced by
+/// [SendFlowSheet]'s PopScope also blocking dismissal here). Offering a
+/// way out would recreate exactly the double-send risk this state exists
+/// to prevent.
+class SendUncertainStage extends StatelessWidget {
+  const SendUncertainStage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ZendLoader(size: 40, strokeWidth: 3, color: zt.textSecondary),
+            const SizedBox(height: 24),
+            Text(
+              "We're checking that now.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w700,
+                fontSize: 22,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Don't send again yet.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                color: zt.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

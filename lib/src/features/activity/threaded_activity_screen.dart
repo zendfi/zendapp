@@ -356,8 +356,8 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                           model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
                           style: TextStyle(
                             fontFamily: 'Geist',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w600,
                             color: zt.textSecondary,
                           ),
                         ),

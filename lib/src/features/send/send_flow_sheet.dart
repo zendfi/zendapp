@@ -7,7 +7,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/api_exceptions.dart';
+import '../../models/api_exceptions.dart' show ApiException, PinDecryptionException, RequestTimeoutException;
 import '../../models/email_intent.dart';
 import '../../models/recent_contact.dart';
 import '../../services/payment_rails.dart' show RailUnavailableException;
@@ -26,6 +26,14 @@ enum SendStage {
   emailIntent,
   emailIntentPin,
   emailIntentSuccess,
+  // Spec §16 "Network uncertainty after submission" (LOCKED): the request
+  // timed out with no server response — meaning we genuinely don't know
+  // whether the transfer landed. Distinct from [error] (a definite
+  // rejection) specifically so the UI never claims "failed" when the
+  // truth is "unknown", and never lets the user tap Send again while
+  // that's still unresolved — that's exactly the double-send spec §64
+  // ("Idempotency... is a UX requirement") is worried about.
+  uncertain,
 }
 
 Future<void> showSendFlowSheet(
@@ -141,6 +149,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       case SendStage.emailIntentPin:
         return 0.70;
       case SendStage.emailIntentSuccess:
+        return 0.55;
+      case SendStage.uncertain:
         return 0.55;
     }
   }
@@ -342,6 +352,14 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       unawaited(SoundService.playZentSuccess());
     } on PinDecryptionException {
       rethrow;
+    } on RequestTimeoutException {
+      // Spec §16: the server never responded — we genuinely don't know if
+      // this landed. Never guess "failed" here; resolve it against the
+      // account's own history instead of trusting the absence of a
+      // response either way.
+      if (!mounted) return;
+      setState(() => _stage = SendStage.uncertain);
+      unawaited(_resolveUncertainTransfer());
     } on RailUnavailableException catch (e) {
       // No rail this account can actually use is available — for example the
       // account is not in the rollout yet. Naming that beats the wallet-backup
@@ -364,6 +382,73 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         _stage = SendStage.error;
       });
     }
+  }
+
+  /// Resolves a [SendStage.uncertain] transfer by polling the account's own
+  /// transfer history for a matching, recent entry to this same recipient
+  /// and amount — the same signal [ZendAppModel.fetchHistory] already
+  /// treats as ground truth for the Feed/Wallet. No dedicated
+  /// transfer-status-by-idempotency-key endpoint exists on the backend
+  /// today; this is the closest honest signal reachable from the client
+  /// without inventing a new API contract for a single edge case.
+  ///
+  /// Polls briefly rather than once — the transfer may still be in
+  /// backend-side flight when the client's own request timed out, so an
+  /// immediate single check can't tell "not there yet" apart from "never
+  /// happened". Times out itself after a bounded window rather than
+  /// polling forever.
+  Future<void> _resolveUncertainTransfer() async {
+    final model = ZendScope.of(context);
+    const maxAttempts = 6;
+    const interval = Duration(seconds: 3);
+
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      await Future<void>.delayed(interval);
+      if (!mounted) return;
+      try {
+        await model.fetchHistory();
+      } catch (_) {
+        continue; // Network still down — keep trying within the window.
+      }
+      if (!mounted) return;
+
+      final found = model.recentTransactions.any((tx) {
+        final entry = tx.entry;
+        if (entry == null) return false;
+        final matchesRecipient = entry.recipientZendtag.toLowerCase() == _recipientZendtag?.toLowerCase();
+        final entryAmount = double.tryParse(entry.amountUsdc) ?? -1;
+        final matchesAmount = (entryAmount - widget.amount).abs() < 0.005;
+        final isRecent = DateTime.now().difference(entry.createdAt) < const Duration(minutes: 5);
+        return matchesRecipient && matchesAmount && isRecent;
+      });
+
+      if (found) {
+        await model.recordTransfer(
+          recipientZendtag: _recipientZendtag!,
+          recipientDisplayName: _recipientDisplayName ?? '?',
+          amount: widget.amount,
+          note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        );
+        unawaited(model.fetchBalance());
+        if (!mounted) return;
+        setState(() => _stage = SendStage.success);
+        HapticFeedback.mediumImpact();
+        unawaited(SoundService.playZentSuccess());
+        return;
+      }
+    }
+
+    // Still unresolved after the polling window — this is the one place
+    // spec §16 doesn't give exact copy for, since it's the tail case even
+    // the spec expects to be rare. Land on the error stage but keep the
+    // wording honest: we don't actually know it failed, only that we
+    // couldn't confirm it succeeded, so the retry path (re-entering the
+    // recipient stage) is safe rather than presenting a false "failed".
+    if (!mounted) return;
+    setState(() {
+      _errorMessage = "We still can't confirm this went through. Check Activity before sending again.";
+      _stage = SendStage.error;
+    });
   }
 
   void _onEmailIntentSelected(String email) {
@@ -531,7 +616,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     final screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
-      canPop: _stage != SendStage.processing,
+      canPop: _stage != SendStage.processing && _stage != SendStage.uncertain,
       child: AnimatedContainer(
           duration: _sheetResize,
           curve: Curves.easeOutCubic,
@@ -574,6 +659,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   Widget _buildStageContent() {
     switch (_stage) {
+      case SendStage.uncertain:
+        return const SendUncertainStage(key: ValueKey('uncertain'));
       case SendStage.recipient:
         return _RecipientStage(
           key: const ValueKey('recipient'),

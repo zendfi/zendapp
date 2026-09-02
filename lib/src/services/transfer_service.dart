@@ -56,9 +56,24 @@ class TransferService {
   /// and on session restore, once the account type is known. A setter rather than
   /// a constructor argument because the account type is not known at composition
   /// time — the app has to read it from storage first.
+  ///
+  /// Recorded even when no router is present. Previously this was
+  /// `_railRouter?.allowLocalKeyRailFallback = value`, which silently discarded
+  /// the value in that case — and discarding *false* is the dangerous direction:
+  /// it leaves a zkLogin account believing it may fall back to Solana, which is
+  /// precisely the state that produces a misleading `WALLET_NOT_REGISTERED`.
+  /// Keeping the field means [_bindingFor] can assert on it rather than depending
+  /// on call ordering.
   set accountUsesLocalKeyRail(bool value) {
+    _accountUsesLocalKeyRail = value;
     _railRouter?.allowLocalKeyRailFallback = value;
   }
+
+  /// Last value given to [accountUsesLocalKeyRail], or null if never set.
+  ///
+  /// Null is distinct from `true`: it means the account type was never
+  /// established, which is a wiring fault rather than a legacy account.
+  bool? _accountUsesLocalKeyRail;
 
   /// Resolves the rail for [operations], falling back to the fixed pair when no
   /// router was supplied.
@@ -67,7 +82,21 @@ class TransferService {
   ) async {
     final router = _railRouter;
     if (router == null) {
+      // The fixed pair is Solana, so an account that cannot sign with a local key
+      // has no usable rail here. Failing with the real reason beats proceeding and
+      // surfacing `WALLET_NOT_REGISTERED`, which tells a Google-sign-in user to
+      // store a wallet backup — a concept their account does not have.
+      if (_accountUsesLocalKeyRail == false) {
+        throw const RailUnavailableException(null);
+      }
       return (client: _railClient, signer: _transactionSigner);
+    }
+    // Re-assert rather than trusting that the setter ran before the router was
+    // attached. Cheap, and it removes an ordering dependency between sign-in and
+    // service composition that has already caused one production incident.
+    final localKeyRail = _accountUsesLocalKeyRail;
+    if (localKeyRail != null) {
+      router.allowLocalKeyRailFallback = localKeyRail;
     }
     final binding = await router.resolve(
       operations: operations,
