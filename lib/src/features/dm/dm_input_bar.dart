@@ -500,8 +500,13 @@ class _DmInputBarState extends State<DmInputBar>
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
+                // "Zend" — the product's one verb (spec §4/§55), not
+                // "Pay"/"Send"/"Transfer". Contextual here: identity is
+                // already established by the open thread, so this hands
+                // off straight to payment — spec §27's "context should
+                // remove work, not remove control."
                 icon: PhosphorIconsRegular.currencyDollar,
-                label: 'Pay',
+                label: 'Zend',
                 zt: zt,
                 onTap: () { _closePanel(); widget.onPayRecipient?.call(); },
               ),

@@ -6,20 +6,24 @@ import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/recent_contact.dart';
 import '../../navigation/zend_routes.dart';
+import '../activity/activity_grouping.dart';
 import '../profile/user_profile_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// People — the identity/relationship gateway tab (ZEND BETA spec §17).
 ///
-/// "Not a contact list. The gateway to relationships." Structure per spec:
-/// search first, then Recent (people the user has actually transacted
-/// with), then a secondary/lightweight discovery row. No Mutuals section
-/// yet — the backend doesn't expose a mutual-connections list to the
-/// client today (only server-side `mutual_connections` used for activity
-/// visibility authorization), so that section is deferred until that data
-/// is surfaced rather than faked with placeholder content.
+/// "Not a contact list. The gateway to relationships." Order per spec:
+/// search, then Recent (people the viewer has actually transacted with —
+/// this is what §1.5 means by Mutuals surfacing contextually rather than
+/// owning a standalone section; there is no separate "Mutuals" backend
+/// list distinct from transaction history, so Recent *is* that surface),
+/// then a secondary/lightweight "People you might know" discovery row
+/// sourced from the existing second-degree-connections endpoint.
+///
+/// Discovery stays strictly secondary (spec §69): capped at 5, no infinite
+/// scroll, no engagement bait — just the one row the backend already
+/// computes (`GET /api/zend/social/suggested-connections`).
 class PeopleScreen extends StatefulWidget {
   const PeopleScreen({super.key});
 
@@ -35,6 +39,18 @@ class _PeopleScreenState extends State<PeopleScreen> {
 
   List<Map<String, dynamic>> _searchResults = [];
   bool _searching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final model = ZendScope.of(context);
+      if (model.suggestedConnections.isEmpty) model.fetchSuggestedConnections();
+      // Recent's "N activities together" counts need the same data source
+      // Feed already uses — no separate fetch, just make sure it's warm.
+      if (model.threadedActivityEdges.isEmpty) model.fetchThreadedActivity();
+    });
+  }
 
   @override
   void dispose() {
@@ -89,6 +105,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
     final model = ZendScope.of(context);
     final isSearching = _query.isNotEmpty;
 
+    final threads = groupByCounterparty(
+      model.threadedActivityEdges,
+      countIsExact: !model.threadedActivityHasMore,
+    ).where((t) => !t.counterparty.isPool).toList();
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -100,12 +121,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: Text(
                 'People',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: zt.textPrimary,
-                ),
+                style: TextStyle(fontFamily: 'Geist', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary),
               ),
             ),
             // ── Search — blends in, doesn't dominate ──
@@ -113,10 +129,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Container(
                 height: 44,
-                decoration: BoxDecoration(
-                  color: zt.bgSecondary,
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                ),
+                decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocus,
@@ -142,7 +155,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
               ),
             ),
             Expanded(
-              child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model.recentContacts),
+              child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model, threads),
             ),
           ],
         ),
@@ -182,8 +195,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
     );
   }
 
-  Widget _buildDefault(ZendTheme zt, List<RecentContact> recent) {
-    if (recent.isEmpty) {
+  Widget _buildDefault(ZendTheme zt, ZendAppModel model, List<CounterpartyThread> threads) {
+    if (threads.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -195,28 +208,66 @@ class _PeopleScreenState extends State<PeopleScreen> {
         ),
       );
     }
-    return ListView.builder(
+
+    final suggestions = model.suggestedConnections.take(5).toList();
+
+    return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      itemCount: recent.length + 1,
-      itemBuilder: (context, i) {
-        if (i == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8, top: 4),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, top: 4),
+          child: Text(
+            'Recent',
+            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+          ),
+        ),
+        for (final thread in threads)
+          _PersonRow(
+            displayName: thread.counterparty.displayLabel,
+            subtitle: '${thread.edges.length}${thread.countIsExact ? '' : '+'} '
+                'activit${thread.edges.length == 1 ? 'y' : 'ies'} together',
+            avatarUrl: thread.counterparty.avatarUrl,
+            avatarLabel: thread.counterparty.initialLetter,
+            onTap: () => _openProfile(
+              zendtag: thread.counterparty.zendtag,
+              userId: thread.counterparty.id,
+              displayName: thread.counterparty.displayLabel,
+              avatarUrl: thread.counterparty.avatarUrl,
+            ),
+          ),
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
             child: Text(
-              'Recent',
+              'People you might know',
               style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
             ),
-          );
-        }
-        final c = recent[i - 1];
-        return _PersonRow(
-          displayName: c.name.isNotEmpty ? c.name : c.tag,
-          subtitle: '@${c.tag}',
-          avatarUrl: c.avatarUrl,
-          avatarLabel: c.avatarLabel,
-          onTap: () => _openProfile(zendtag: c.tag, displayName: c.name, avatarUrl: c.avatarUrl),
-        );
-      },
+          ),
+          SizedBox(
+            height: 84,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: suggestions.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 16),
+              itemBuilder: (context, i) {
+                final s = suggestions[i];
+                final tag = s['zendtag'] as String? ?? '';
+                final name = (s['display_name'] as String?)?.trim().isNotEmpty == true
+                    ? s['display_name'] as String
+                    : tag;
+                final avatarUrl = s['avatar_url'] as String?;
+                return _DiscoveryColumn(
+                  displayName: name,
+                  avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  avatarUrl: avatarUrl,
+                  onTap: () => _openProfile(zendtag: tag, displayName: name, avatarUrl: avatarUrl),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -254,19 +305,53 @@ class _PersonRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      displayName,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
-                    ),
+                    Text(displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
+                    Text(subtitle, style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single avatar + name column in the horizontal "People you might know"
+/// strip — deliberately plain (no mutual-count badge, no follow button) so
+/// it reads as a quiet, secondary row rather than a recommendation feed.
+class _DiscoveryColumn extends StatelessWidget {
+  const _DiscoveryColumn({
+    required this.displayName,
+    required this.avatarLabel,
+    required this.onTap,
+    this.avatarUrl,
+  });
+
+  final String displayName;
+  final String avatarLabel;
+  final String? avatarUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          children: [
+            ZendAvatar(radius: 26, initials: avatarLabel, photoUrl: avatarUrl),
+            const SizedBox(height: 6),
+            Text(
+              displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 11.5, color: zt.textSecondary),
+            ),
+          ],
         ),
       ),
     );

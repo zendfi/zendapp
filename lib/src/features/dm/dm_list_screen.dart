@@ -13,6 +13,9 @@ import '../../models/notification_category.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/e2ee_service.dart' show kE2eePrefix;
 import '../../services/wallet_session_cache.dart';
+import '../pools/create_pool_drawer.dart';
+import '../pools/pool.dart';
+import '../pools/pool_detail_screen.dart';
 import 'dm_thread_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -75,8 +78,9 @@ class _DmListScreenState extends State<DmListScreen> {
       _loading = _threads.isEmpty;
       _loadError = false;
     });
+    final model = ZendScope.of(context);
+    if (model.pools.isEmpty && !model.poolsLoading) unawaited(model.fetchPools());
     try {
-      final model = ZendScope.of(context);
       final threads = await model.dmService.listThreads();
       if (mounted) {
         setState(() {
@@ -246,6 +250,15 @@ class _DmListScreenState extends State<DmListScreen> {
                       ),
                     ),
                   ),
+                  // New pool — spec §32: "Create Pool. Invite people."
+                  // Reachable from Chats now that Pools are group
+                  // conversations under this tab (spec §25), not a
+                  // separate top-level drawer.
+                  IconButton(
+                    onPressed: () => showCreatePoolDrawer(context, targetAmount: 0),
+                    icon: Icon(PhosphorIconsRegular.usersThree, color: zt.textSecondary, size: 22),
+                    tooltip: 'Create pool',
+                  ),
                   // Notification mute toggle
                   IconButton(
                     onPressed: _toggleMute,
@@ -295,6 +308,12 @@ class _DmListScreenState extends State<DmListScreen> {
             ),
 
             // ── Thread list ──
+            // Pools render as their own labeled section below 1:1 threads
+            // rather than interleaved by recency — Pool has no
+            // last-message timestamp on the client today, so sorting it
+            // against DM recency would be a misleading proxy, not a real
+            // merge. Spec §25 only requires Pools be reachable as group
+            // conversations under Chats, not literally interleaved.
             Expanded(
               child: _loading
                   ? const DmListSkeleton()
@@ -303,27 +322,51 @@ class _DmListScreenState extends State<DmListScreen> {
                           title: "Couldn't load your chats",
                           onRetry: _loadThreads,
                         )
-                      : displayThreads.isEmpty
-                      ? _searchQuery.isNotEmpty
-                          ? Center(
-                              child: Text(
-                                'No chats matching "$_searchQuery"',
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                              ),
-                            )
-                          : const _EmptyState()
-                      : RefreshIndicator(
-                          onRefresh: _loadThreads,
-                          child: ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: displayThreads.length,
-                            itemBuilder: (_, i) => _DmThreadTile(
-                              thread: displayThreads[i],
-                              onTap: () => _openThread(displayThreads[i]),
+                      : Builder(builder: (context) {
+                          final model = ZendScope.of(context);
+                          final pools = _searchQuery.isEmpty
+                              ? model.pools
+                              : model.pools.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
+
+                          if (displayThreads.isEmpty && pools.isEmpty) {
+                            return _searchQuery.isNotEmpty
+                                ? Center(
+                                    child: Text(
+                                      'No chats matching "$_searchQuery"',
+                                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                                    ),
+                                  )
+                                : const _EmptyState();
+                          }
+
+                          return RefreshIndicator(
+                            onRefresh: () => Future.wait([_loadThreads(), model.fetchPools()]),
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                              children: [
+                                for (final thread in displayThreads)
+                                  _DmThreadTile(thread: thread, onTap: () => _openThread(thread)),
+                                if (pools.isNotEmpty) ...[
+                                  if (displayThreads.isNotEmpty) const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: Text(
+                                      'Pools',
+                                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+                                    ),
+                                  ),
+                                  for (final pool in pools)
+                                    _PoolThreadTile(
+                                      pool: pool,
+                                      hasNewMessage: model.poolsWithNewMessages.contains(pool.id),
+                                      onTap: () => pushZendSlide(context, PoolDetailScreen(pool: pool)).then((_) => _loadThreads()),
+                                    ),
+                                ],
+                              ],
                             ),
-                          ),
-                        ),
+                          );
+                        }),
             ),
           ],
         ),
@@ -441,6 +484,88 @@ class _DmThreadTile extends StatelessWidget {
                           ),
                         ],
                       ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A Pool rendered as a group-conversation row — spec §25 ("Pools may
+/// appear as group conversations"). Same row shape as [_DmThreadTile] so
+/// it reads as "another conversation," not a separate financial-app
+/// section bolted onto the chat list.
+class _PoolThreadTile extends StatelessWidget {
+  const _PoolThreadTile({required this.pool, required this.hasNewMessage, required this.onTap});
+
+  final Pool pool;
+  final bool hasNewMessage;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final subtitle = pool.targetAmount > 0
+        ? '${pool.formattedGathered} of ${pool.formattedTarget}'
+        : pool.formattedGathered;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          child: Row(
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(PhosphorIconsRegular.usersThree, size: 22, color: zt.textSecondary),
+                  ),
+                  if (hasNewMessage)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: ZendColors.destructive,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: zt.bgPrimary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pool.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: hasNewMessage ? FontWeight.w700 : FontWeight.w600, color: zt.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
                     ),
                   ],
                 ),

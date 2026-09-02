@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
@@ -7,17 +5,26 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/api_models.dart';
+import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
 import '../../navigation/zend_shell_controller.dart';
+import '../activity/activity_comment_sheet.dart';
+import '../activity/activity_grouping.dart';
+import '../activity/activity_receipt_builder.dart';
+import '../activity/transaction_receipt_sheet.dart';
 import '../dm/dm_thread_screen.dart';
-import '../send/qr_payment_sheet.dart';
-import '../../models/qr_payment_intent.dart';
+import '../shell/zend_entry_sheet.dart';
 import 'account_information_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-/// Public user profile screen — reachable from search results, activity
-/// threads, DM headers, and zdfi.me/@username deep links.
+/// Person page — ZEND BETA spec §18-20.
+///
+/// "A person page is a miniature one-to-one relationship feed. It isn't a
+/// public social profile." Structure per spec: avatar, @tag, activity
+/// count, then Chat/Zend buttons, then the actual activity list — not a
+/// bio/mutual-context-card/streak-card social profile. Reachable from
+/// search results, People's Recent/discovery rows, activity threads, DM
+/// headers, and zdfi.me/@username deep links.
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({
     super.key,
@@ -38,55 +45,179 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  PublicUserProfile? _profile;
-  bool _loading = true;
-  String? _error;
+  String? _userId;
+  String? _zendtag;
+  String? _displayName;
+  String? _avatarUrl;
+  bool _loadingIdentity = true;
+  String? _identityError;
+
+  List<ActivityEdge> _edges = [];
+  bool _loadingEdges = true;
+  String? _edgesError;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _resolveIdentity();
   }
 
-  Future<void> _loadProfile() async {
+  bool get _isOwnProfile {
+    final model = ZendScope.of(context);
+    if (_userId == null && _zendtag == null) return false;
+    return _userId == model.currentUserId ||
+        (_zendtag != null && _zendtag!.toLowerCase() == model.currentZendtag?.toLowerCase());
+  }
+
+  Future<void> _resolveIdentity() async {
+    final model = ZendScope.of(context);
     setState(() {
-      _loading = true;
-      _error = null;
+      _loadingIdentity = true;
+      _identityError = null;
     });
     try {
-      final model = ZendScope.of(context);
-      // Use zendtag if available, otherwise resolve from userId
-      final tag = widget.zendtag ??
-          await _resolveTagFromUserId(model, widget.userId!);
-      if (tag == null) throw Exception('User not found');
-      final profile = await model.walletService.apiClient.getUserProfile(tag);
-      if (mounted) {
+      if (widget.zendtag != null) {
+        // getUserProfile (not zendtagService.resolve) — the resolve
+        // endpoint doesn't return a userId, and the activity-edges fetch
+        // below needs one. This screen just doesn't render the
+        // bio/mutual-context/streak fields the fuller response also
+        // carries — spec §18-30 wants avatar/tag/count only.
+        final profile = await model.walletService.apiClient.getUserProfile(widget.zendtag!);
+        if (!mounted) return;
         setState(() {
-          _profile = profile;
-          _loading = false;
+          _userId = profile.userId;
+          _zendtag = profile.zendtag;
+          _displayName = profile.displayName.trim().isNotEmpty ? profile.displayName : '@${profile.zendtag}';
+          _avatarUrl = profile.avatarUrl;
+          _loadingIdentity = false;
         });
+        _loadEdges();
+      } else {
+        // userId-only entry (e.g. Person page reached from a userId-keyed
+        // source) — use whatever the caller already knew and let the
+        // activity-edges fetch below be the actual data source; no
+        // additional identity round-trip needed.
+        setState(() {
+          _userId = widget.userId;
+          _displayName = widget.knownDisplayName;
+          _avatarUrl = widget.knownAvatarUrl;
+          _loadingIdentity = false;
+        });
+        _loadEdges();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Could not load profile';
-          _loading = false;
+          _identityError = 'Could not load this profile';
+          _loadingIdentity = false;
         });
       }
     }
   }
 
-  Future<String?> _resolveTagFromUserId(ZendAppModel model, String userId) async {
-    // userId resolution not yet implemented — callers should always provide zendtag
-    return null;
+  Future<void> _loadEdges() async {
+    if (_userId == null) {
+      setState(() => _loadingEdges = false);
+      return;
+    }
+    final model = ZendScope.of(context);
+    setState(() {
+      _loadingEdges = true;
+      _edgesError = null;
+    });
+    try {
+      final response = await model.activityDataService.getActivityEdgesForUser(_userId!, limit: 50);
+      if (mounted) {
+        setState(() {
+          _edges = response.edges;
+          _loadingEdges = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _edgesError = e.toString();
+          _loadingEdges = false;
+        });
+      }
+    }
   }
 
-  bool get _isOwnProfile {
+  String get _label {
+    if (_zendtag != null && _zendtag!.isNotEmpty) return '@$_zendtag';
+    if (_displayName != null && _displayName!.isNotEmpty) return _displayName!;
+    return 'Zend user';
+  }
+
+  String get _initial => _label.startsWith('@')
+      ? (_label.length > 1 ? _label[1].toUpperCase() : '?')
+      : (_label.isNotEmpty ? _label[0].toUpperCase() : '?');
+
+  void _openDm() {
     final model = ZendScope.of(context);
-    if (_profile == null) return false;
-    return _profile!.userId == model.currentUserId ||
-        _profile!.zendtag.toLowerCase() ==
-            model.currentZendtag?.toLowerCase();
+    if (model.currentUserId == null || _userId == null) return;
+
+    final existing = model.dmService.cachedThreads.where((t) => t.counterparty.userId == _userId).firstOrNull;
+    if (existing != null) {
+      pushZendSlide(context, DmThreadScreen(roomId: existing.roomId, counterparty: existing.counterparty));
+      return;
+    }
+
+    model.dmService.getOrCreateRoom(_userId!).then((result) {
+      if (!context.mounted) return;
+      pushZendSlide(
+        context, // ignore: use_build_context_synchronously
+        DmThreadScreen(roomId: result.roomId, counterparty: result.counterparty),
+      );
+    }).catchError((_) {
+      if (context.mounted) {
+        ZendShellController.instance?.switchToTab(2);
+      }
+    });
+  }
+
+  void _openZend() {
+    // Contextual identity — spec §20: "The user should not have to select
+    // James again." Preselects whichever identity string we already have.
+    showZendEntrySheet(context, prefilledRecipient: _zendtag);
+  }
+
+  String _describeEdge(ActivityEdge edge) {
+    final verb = feedVerbFor(edge);
+    if (edge.direction == 'external') {
+      return '${edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone'} $verb '
+          '${edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone'}';
+    }
+    final isSelfSender = edge.direction == 'outgoing';
+    return isSelfSender ? 'You $verb $_label' : '$_label $verb';
+  }
+
+  void _openReceipt(ActivityEdge edge) {
+    final model = ZendScope.of(context);
+    final entry = entryFromEdgeForViewer(edge, model);
+    if (entry == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
+      );
+      return;
+    }
+    final tx = zendTransactionFromEdge(edge, entry, avatarLabel: edge.counterparty.initialLetter, avatarUrl: edge.counterparty.avatarUrl);
+    showTransactionReceipt(context, tx: tx);
+  }
+
+  void _openActivity(ActivityEdge edge, String headline) {
+    final isExternal = edge.direction == 'external';
+    showActivityCommentSheet(
+      context,
+      edge: edge,
+      headline: headline,
+      avatarUrl: isExternal ? edge.senderAvatarUrl : _avatarUrl,
+      avatarInitial: isExternal
+          ? (edge.senderZendtag?.isNotEmpty == true ? edge.senderZendtag![0].toUpperCase() : '?')
+          : _initial,
+      onViewReceipt: () => _openReceipt(edge),
+      onOpenChat: isExternal ? null : _openDm,
+    );
   }
 
   @override
@@ -99,394 +230,174 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft,
-                        color: zt.textPrimary),
+                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: _loading
-                  ? const UserProfileSkeleton()
-                  : _error != null
-                      ? _ErrorState(
-                          message: _error!,
-                          onRetry: _loadProfile,
-                        )
-                      : _ProfileContent(
-                          profile: _profile!,
-                          isOwnProfile: _isOwnProfile,
-                          onRefresh: _loadProfile,
-                        ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileContent extends StatelessWidget {
-  const _ProfileContent({
-    required this.profile,
-    required this.isOwnProfile,
-    required this.onRefresh,
-  });
-
-  final PublicUserProfile profile;
-  final bool isOwnProfile;
-  final VoidCallback onRefresh;
-
-  void _openDm(BuildContext context, PublicUserProfile profile) {
-    final model = ZendScope.of(context);
-    if (model.currentUserId == null || profile.userId.isEmpty) return;
-
-    // Check cache first for instant navigation
-    final existing = model.dmService.cachedThreads
-        .where((t) => t.counterparty.userId == profile.userId)
-        .firstOrNull;
-
-    if (existing != null) {
-      pushZendSlide(
-        context,
-        DmThreadScreen(roomId: existing.roomId, counterparty: existing.counterparty),
-      );
-      return;
-    }
-
-    // No cached thread — get the server-canonical room_id (creates the room
-    // if it doesn't exist yet). Show a brief loading indicator via async nav.
-    model.dmService.getOrCreateRoom(profile.userId).then((result) {
-      if (!context.mounted) return;
-      pushZendSlide(
-        context, // ignore: use_build_context_synchronously
-        DmThreadScreen(
-          roomId: result.roomId,
-          counterparty: result.counterparty,
-        ),
-      );
-    }).catchError((_) {
-      // Fallback: switch to Chats tab — user can find/start the thread there
-      if (context.mounted) {
-        ZendShellController.instance?.switchToTab(2);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    final model = ZendScope.of(context);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Hero ──────────────────────────────────────────────────────────
-          Column(
-            children: [
-              const SizedBox(height: 8),
-              ZendAvatar(
-                radius: 44,
-                photoUrl: profile.avatarUrl,
-                initials: profile.initialLetter,
-              ),
-              const SizedBox(height: 14),
-              Text(
-                profile.displayName,
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 26,
-                  color: zt.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '@${profile.zendtag}',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
-              ),
-              if (profile.bio?.isNotEmpty == true) ...[
-                const SizedBox(height: 10),
-                Text(
-                  profile.bio!,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    color: zt.textSecondary,
-                    height: 1.4,
+            if (_loadingIdentity)
+              const Expanded(child: UserProfileSkeleton())
+            else if (_identityError != null)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_identityError!, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _resolveIdentity,
+                        child: Text('Retry', style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.accent)),
+                      ),
+                    ],
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // ── Action buttons ─────────────────────────────────────────────────
-          if (isOwnProfile)
-            OutlineActionButton(
-              label: 'Edit profile',
-              onPressed: () =>
-                  pushZendSlide(context, const AccountInformationScreen()),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+              )
+            else
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: _ActionButton(
-                        icon: PhosphorIconsRegular.currencyDollar,
-                        label: 'Send',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          showQrPaymentSheet(
-                            context,
-                            intent: QrPaymentIntent(zendtag: profile.zendtag),
-                          );
-                        },
+                    const SizedBox(height: 8),
+                    // ── Hero: avatar, tag, activity count (spec §18) ──
+                    Center(
+                      child: Column(
+                        children: [
+                          ZendAvatar(radius: 40, photoUrl: _avatarUrl, initials: _initial),
+                          const SizedBox(height: 12),
+                          Text(
+                            _label,
+                            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary),
+                          ),
+                          if (!_loadingEdges) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together',
+                              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _ActionButton(
-                        icon: PhosphorIconsRegular.arrowSquareUp,
-                        label: 'Request',
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          showQrPaymentSheet(
-                            context,
-                            intent: QrPaymentIntent(zendtag: profile.zendtag),
-                          );
-                        },
-                      ),
+                    const SizedBox(height: 20),
+                    // ── Chat / Zend (own profile gets Edit instead — spec §1.5) ──
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _isOwnProfile
+                          ? OutlineActionButton(
+                              label: 'Edit profile',
+                              onPressed: () => pushZendSlide(context, const AccountInformationScreen()),
+                            )
+                          : Row(
+                              children: [
+                                Expanded(child: OutlineActionButton(label: 'Chat', onPressed: _openDm)),
+                                const SizedBox(width: 12),
+                                Expanded(child: PrimaryButton(label: 'Zend', onPressed: _openZend)),
+                              ],
+                            ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(height: 20),
+                    Divider(color: zt.border, height: 1),
+                    const SizedBox(height: 8),
+                    // ── Activities — the miniature relationship feed ──
                     Expanded(
-                      child: _ActionButton(
-                        icon: PhosphorIconsRegular.chatDots,
-                        label: 'Message',
-                        onTap: () => _openDm(context, profile),
-                      ),
+                      child: _loadingEdges
+                          ? const PersonActivitySkeleton()
+                          : _edgesError != null
+                              ? ZendErrorState(
+                                  title: "Couldn't load activity",
+                                  onRetry: _loadEdges,
+                                )
+                              : _edges.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        'No activity yet',
+                                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                      itemCount: _edges.length,
+                                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                                      itemBuilder: (context, i) {
+                                        final edge = _edges[i];
+                                        final headline = _describeEdge(edge);
+                                        return _PersonActivityRow(
+                                          headline: headline,
+                                          edge: edge,
+                                          onTap: () => _openActivity(edge, headline),
+                                        );
+                                      },
+                                    ),
                     ),
                   ],
                 ),
-              ],
-            ),
-
-          const SizedBox(height: 20),
-
-          // ── Mutual context ─────────────────────────────────────────────────
-          if (!isOwnProfile && profile.mutualContext != null) ...[
-            _MutualContextCard(context: profile.mutualContext!),
-            const SizedBox(height: 16),
-          ],
-
-          // ── Streak placeholder (wired in Phase 3) ─────────────────────────
-          if (!isOwnProfile) ...[
-            Builder(builder: (ctx) {
-              final streak = model.activeStreaks[profile.userId];
-              if (streak == null || !streak.isActive) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _StreakCard(streakWeeks: streak.streakWeeks, longestStreak: streak.longestStreak),
-              );
-            }),
-          ],
-
-          // ── Public activity count hint ─────────────────────────────────────
-          if (profile.publicActivityCount > 0 && !isOwnProfile) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                '${profile.publicActivityCount} shared activities',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: zt.textSecondary,
-                ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: zt.bgSecondary,
-                borderRadius: BorderRadius.circular(ZendRadii.xl),
-              ),
-              child: Text(
-                'Tap Activity to see shared posts',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  color: zt.textSecondary,
-                ),
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _PersonActivityRow extends StatelessWidget {
+  const _PersonActivityRow({required this.headline, required this.edge, required this.onTap});
 
-  final IconData icon;
-  final String label;
+  final String headline;
+  final ActivityEdge edge;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: zt.bgSecondary,
-          borderRadius: BorderRadius.circular(ZendRadii.xl),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: zt.accentBright),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: zt.textPrimary,
+    final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+
+    return Material(
+      color: zt.bgSecondary,
+      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                    ),
+                    if (edge.note?.isNotEmpty == true) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        edge.note!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                amountLabel,
+                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _MutualContextCard extends StatelessWidget {
-  const _MutualContextCard({required this.context});
-  final MutualContext context;
-
-  @override
-  Widget build(BuildContext buildContext) {
-    final zt = ZendTheme.of(buildContext);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: zt.accentBright.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
-      ),
-      child: Row(
-        children: [
-          Icon(PhosphorIconsRegular.arrowsLeftRight,
-              size: 16, color: zt.accentBright),
-          const SizedBox(width: 10),
-          Text(
-            "You've sent each other ${context.transactionCount} time${context.transactionCount == 1 ? '' : 's'}"
-            " · \$${context.totalUsdc} total",
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 13,
-              color: zt.accentBright,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StreakCard extends StatelessWidget {
-  const _StreakCard({required this.streakWeeks, required this.longestStreak});
-  final int streakWeeks;
-  final int longestStreak;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
-      ),
-      child: Row(
-        children: [
-          const Text('🔥', style: TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$streakWeeks week streak',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: zt.textPrimary,
-                  ),
-                ),
-                Text(
-                  'Longest: $longestStreak weeks',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(message,
-              style: TextStyle(
-                  fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: onRetry,
-            child: Text('Retry',
-                style: TextStyle(
-                    fontFamily: 'Geist', fontSize: 14, color: zt.accent)),
-          ),
-        ],
       ),
     );
   }

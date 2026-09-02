@@ -7,7 +7,6 @@ import '../features/activity/activity_comment_sheet.dart';
 import '../features/activity/public_feed_screen.dart';
 import '../features/dm/dm_thread_screen.dart';
 import '../features/pools/pool_detail_screen.dart';
-import '../features/pools/mission_room_sheet.dart';
 import '../features/savings/savings_screen.dart';
 import '../models/activity_edge.dart';
 import '../models/dm_thread.dart';
@@ -87,7 +86,10 @@ class NotificationNavigator {
         if (!context.mounted) return;
         pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
 
-      // ── Pool chat: open pool detail then immediately open mission room ────────
+      // ── Pool chat ────────────────────────────────────────────────────────────
+      // PoolDetailScreen IS the group chat now (spec §31-34's Chat-primary
+      // restructure) — a single push lands directly in the conversation,
+      // no separate mission-room sheet needed on top of it anymore.
       case NotifPoolChat(:final poolId):
         final pool = model.pools.firstWhereOrNull((p) => p.id == poolId);
         if (pool == null) {
@@ -95,15 +97,8 @@ class NotificationNavigator {
           ZendShellController.instance?.switchToTab(0);
           return;
         }
-        // Note: once Pools are surfaced as Chats-tab group conversations
-        // (spec §31-34), this fallback and the pool-chat hand-off below
-        // should route through Chats(2) instead of a direct push — tracked
-        // as follow-up screen work, not part of this nav restructure.
         if (!context.mounted) return;
         pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
-        await Future<void>.delayed(const Duration(milliseconds: 400));
-        if (!context.mounted) return;
-        showMissionRoomSheet(context, pool: pool);
 
       // ── Home / Money tab ─────────────────────────────────────────────────────
       case NotifHomeFeed():

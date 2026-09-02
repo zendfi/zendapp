@@ -1,28 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
-import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
-import 'contribute_sheet.dart';
-import 'manage_sheet.dart';
-import 'mission_room_sheet.dart';
+import 'mission_room.dart';
 import 'pool.dart';
-import 'pool_progress_bar.dart';
+import 'pool_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-/// Full-screen detail view for a single [Pool].
+/// A Pool's primary surface — ZEND BETA spec §31-34: "A Pool begins as a
+/// Group Chat with a shared wallet attached... the Chat is primary. The
+/// Pool financial state is accessed through the Chat header."
 ///
-/// Shows the pool name, status badge/banner, gathered/target amounts,
-/// progress bar, participant list, and timeline.
-///
-/// Action buttons at the bottom:
-/// - "Message" — always visible for all members, opens the Mission Room sheet
-/// - "Contribute" — visible to non-creator participants when pool is active
-/// - "Manage" — visible to the creator when pool is active
+/// This screen IS the group chat ([MissionRoom]) — not a financial
+/// dashboard with a "Message" button bolted on. The header Pool icon
+/// (spec §33: "Header Pool icon opens the Pool sheet") is the only route
+/// into gathered/target amounts, Contribute, and participant contributions
+/// — all of that now lives in [showPoolSheet], reached from here.
 class PoolDetailScreen extends StatefulWidget {
   const PoolDetailScreen({super.key, required this.pool});
 
@@ -40,15 +36,9 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
   void initState() {
     super.initState();
     _pool = widget.pool;
-    // Live-update pool status/gathered amount while this screen is open.
-    // Previously _pool was a static snapshot passed in from the caller with
-    // no live-update mechanism at all — if the pool closed (completed,
-    // expired, or cancelled by the creator) or a contribution landed while
-    // this exact screen was open, the Contribute button stayed visible and
-    // enabled against stale data, and the gathered/target amounts and
-    // progress bar simply never moved until the screen was closed and
-    // reopened. Mirrors the same SSE subscription mission_room.dart
-    // already uses for the pool chat screen.
+    // Live-update pool status/gathered amount while this screen is open —
+    // the header badge and the Pool sheet (when opened) both need to
+    // reflect a contribution or status change that lands mid-session.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final model = ZendScope.of(context);
@@ -92,404 +82,46 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
     super.dispose();
   }
 
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  static String _formatDate(DateTime date) =>
-      '${_months[date.month - 1]} ${date.day}, ${date.year}';
-
-  Color _statusColor(PoolStatus status, ZendTheme zt) => switch (status) {
-        PoolStatus.active => zt.accentBright,
-        PoolStatus.completed => zt.accent,
-        PoolStatus.expired => ZendColors.destructive,
-        PoolStatus.cancelled => zt.textSecondary,
-      };
-
   @override
   Widget build(BuildContext context) {
-    final model = ZendScope.of(context);
     final zt = ZendTheme.of(context);
-    final isCreator = model.currentUserId == _pool.creatorUserId;
-    final isActive = _pool.status == PoolStatus.active;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Back button ──────────────────────────────────────────────
+            // ── Header: ← Pool name  ◉ (spec §33 wireframe) ──
             Padding(
-              padding: const EdgeInsets.only(left: 4, top: 8),
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
               child: Row(
                 children: [
                   IconButton(
                     icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  const Spacer(),
-                  // Share link — only when pool has a short code
-                  if (_pool.shortCode != null)
-                    IconButton(
-                      icon: Icon(PhosphorIconsRegular.share, color: zt.textSecondary),
-                      tooltip: 'Share pool link',
-                      onPressed: () {
-                        Share.share(
-                          'Join my Zend pool: https://zdfi.me/pool/${_pool.shortCode}',
-                          subject: _pool.name,
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-
-            // ── Scrollable summary ───────────────────────────────────────
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                children: [
-                  // Pool name
-                  Text(
-                    _pool.name,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary,
+                  Expanded(
+                    child: Text(
+                      _pool.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
                     ),
                   ),
-                  const SizedBox(height: ZendSpacing.sm),
-
-                  // Status badge
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _statusColor(_pool.status, zt)
-                            .withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                      ),
-                      child: Text(
-                        _pool.status.name,
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _statusColor(_pool.status, zt),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: ZendSpacing.md),
-
-                  // Status banners
-                  if (_pool.status == PoolStatus.completed)
-                    _StatusBanner(
-                      message: 'Goal reached! 🎉',
-                      color: zt.accent,
-                    ),
-                  if (_pool.status == PoolStatus.expired)
-                    _StatusBanner(
-                      message: 'Pool expired',
-                      color: ZendColors.destructive,
-                    ),
-                  if (_pool.status == PoolStatus.cancelled)
-                    _StatusBanner(
-                      message: 'Pool cancelled',
-                      color: zt.textSecondary,
-                    ),
-
-                  // Gathered / Target
-                  Text(
-                    '${_pool.formattedGathered} of ${_pool.formattedTarget}',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 15,
-                      color: zt.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: ZendSpacing.xs),
-
-                  // Progress circle
-                  PoolProgressBar(progress: _pool.progress, style: PoolProgressBarStyle.circle, circleSize: 140, strokeWidth: 10),
-                  const SizedBox(height: ZendSpacing.xl),
-
-                  // Participants
-                  Text(
-                    'PARTICIPANTS',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                      color: zt.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: ZendSpacing.sm),
-                  ..._pool.participants.map(_buildParticipantRow),
-                  const SizedBox(height: ZendSpacing.xl),
-
-                  // Timeline
-                  _TimelineRow(
-                    label: 'Created',
-                    value: _formatDate(_pool.createdAt),
-                  ),
-                  const SizedBox(height: ZendSpacing.xs),
-                  _TimelineRow(
-                    label: 'Deadline',
-                    value: _pool.deadline != null
-                        ? _formatDate(_pool.deadline!)
-                        : 'No deadline',
+                  IconButton(
+                    onPressed: () => showPoolSheet(context, pool: _pool),
+                    icon: Icon(PhosphorIconsRegular.usersThree, color: zt.textSecondary, size: 22),
+                    tooltip: 'Pool details',
                   ),
                 ],
               ),
             ),
-
-            // ── Action buttons ───────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Open contribution row — shown when link contributions are on
-                  if (isActive && _pool.allowOpenContributions && _pool.shortCode != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Share.share(
-                            'Contribute to "${_pool.name}": https://zdfi.me/pool/${_pool.shortCode}',
-                            subject: _pool.name,
-                          );
-                        },
-                        icon: const Icon(PhosphorIconsRegular.link, size: 16),
-                        label: const Text(
-                          'Share contribution link',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: zt.textSecondary,
-                          side: BorderSide(color: zt.border),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(ZendRadii.lg),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      // Contribute — non-creator, active pool only
-                      if (isActive && !isCreator) ...[
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () =>
-                                showContributeSheet(context, pool: _pool),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: zt.textPrimary,
-                              side: BorderSide(color: zt.border),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(ZendRadii.lg),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              'Contribute',
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: ZendSpacing.sm),
-                      ],
-
-                      // Manage — creator, active pool only
-                      if (isActive && isCreator) ...[
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () =>
-                                showManageSheet(context, pool: _pool),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: zt.accent,
-                              foregroundColor: ZendColors.textOnDeep,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(ZendRadii.lg),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              'Manage',
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: ZendSpacing.sm),
-                      ],
-
-                      // Message — always visible for all members
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              showMissionRoomSheet(context, pool: _pool),
-                          icon: const Icon(PhosphorIconsRegular.chatDots, size: 16),
-                          label: const Text(
-                            'Message',
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: zt.accentBright,
-                            side: BorderSide(color: zt.accentBright),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(ZendRadii.lg),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            Divider(color: zt.border, height: 1),
+            Expanded(child: MissionRoom(pool: _pool)),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildParticipantRow(PoolParticipant p) {
-    final zt = ZendTheme.of(context);
-    final contribution = p.contribution == 0
-        ? '\$0.00'
-        : '\$${p.contribution.toStringAsFixed(2)}';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: ZendSpacing.sm),
-      child: Row(
-        children: [
-          ZendAvatar(
-            radius: 14,
-            photoUrl: p.avatarUrl,
-            initials: p.avatarLabel,
-          ),
-          const SizedBox(width: ZendSpacing.xs),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  p.displayName,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    color: zt.textPrimary,
-                  ),
-                ),
-                if (p.isExternal)
-                  Text(
-                    'external',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11,
-                      color: zt.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            contribution,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Status banner ─────────────────────────────────────────────────────────────
-
-class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({required this.message, required this.color});
-  final String message;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: ZendSpacing.sm),
-      padding: const EdgeInsets.symmetric(
-          horizontal: ZendSpacing.md, vertical: ZendSpacing.xs),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(ZendRadii.md),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        message,
-        style: TextStyle(
-          fontFamily: 'Geist',
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Timeline row ──────────────────────────────────────────────────────────────
-
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Row(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 13,
-            color: zt.textSecondary,
-          ),
-        ),
-        const SizedBox(width: ZendSpacing.xs),
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 13,
-            color: zt.textPrimary,
-          ),
-        ),
-      ],
     );
   }
 }

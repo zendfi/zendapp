@@ -10,18 +10,15 @@ import '../../navigation/zend_shell_controller.dart';
 import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../../services/pending_notification_service.dart';
-import '../onboarding/zendtag_prompt_sheet.dart';
-import '../receive/receive_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
-import '../send/withdraw_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../dm/dm_list_screen.dart';
 import '../dm/dm_thread_screen.dart';
 import '../../navigation/zend_routes.dart';
 import 'feed_screen.dart';
 import 'people_screen.dart';
-import 'wallet_screen.dart';
+import 'wallet_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -149,43 +146,9 @@ class _ZendShellState extends State<ZendShell> {
   }
 
   Future<void> _openWallet(BuildContext context) {
-    return Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => WalletScreen(
-          onOpenReceive: () => _openReceiveScreen(context),
-          onOpenWithdraw: () => showWithdrawSheet(context),
-          onViewAll: () => Navigator.of(context).pop(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openReceiveScreen(BuildContext context) async {
-    final model = ZendScope.of(context);
-
-    // The receive screen publishes a `zdfi.me/@handle` link as a QR, a share
-    // sheet, and an NFC tag. While the handle is still an email placeholder that
-    // link resolves to nothing — placeholders are excluded from public
-    // resolution — and sharing it would hand out the user's email address. So the
-    // handle is claimed first; the user can still decline, they just don't get a
-    // broken link.
-    if (model.zendtagIsPlaceholder) {
-      await showZendtagPromptSheet(context);
-      if (!mounted || model.zendtagIsPlaceholder) return;
-    }
-    if (!context.mounted) return;
-
-    final openSend = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => ReceiveScreen(username: model.username),
-      ),
-    );
-    // Send is no longer a tab to jump to — it's the floating Zend action.
-    // "Open send" from ReceiveScreen now opens that same identity-first
-    // entry sheet instead of switching tabs.
-    if (openSend == true && context.mounted) {
-      showZendEntrySheet(context);
-    }
+    // Wallet is a sheet, not a pushed screen — spec §7/§56 ("pulling
+    // something closer, not opening a new application").
+    return showWalletSheet(context);
   }
 
   @override
