@@ -765,7 +765,7 @@ class _DmInputBarState extends State<DmInputBar>
                 backgroundColor: const Color(0xFFFF6B9D),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -795,7 +795,7 @@ class _DmInputBarState extends State<DmInputBar>
         backgroundColor: onTap != null ? zt.textPrimary : zt.border,
         foregroundColor: onTap != null ? zt.bgPrimary : zt.textSecondary,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: Text(label, style: const TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w700)),

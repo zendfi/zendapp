@@ -208,7 +208,7 @@ class _WarningStage extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: zt.accent,
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
               ),
               child: const Text('I understand — export backup',
                 style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
@@ -257,7 +257,7 @@ class _DoneStage extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: zt.accent,
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
               ),
               child: const Text('Done', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
             ),

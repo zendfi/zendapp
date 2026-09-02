@@ -96,12 +96,13 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
   @override
   Widget build(BuildContext context) {
     final greeting = _greetings[_index];
-    // Fixed dark canvas, independent of light/dark theme — this is a
-    // pre-auth, pre-theme moment (the user's theme preference doesn't
-    // exist yet), so it uses the brand's deep surface directly rather
-    // than ZendTheme.of(context).
+    // Follows the app's own light/dark theme (via ZendTheme, which reads
+    // Theme.of(context).brightness — resolved from system brightness by
+    // default, same as every other pre-auth screen) instead of a fixed
+    // brand-green surface.
+    final zt = ZendTheme.of(context);
     return Scaffold(
-      backgroundColor: ZendColors.bgDeep,
+      backgroundColor: zt.bgPrimary,
       body: GestureDetector(
         onTap: _continue,
         behavior: HitTestBehavior.opaque,
@@ -109,35 +110,41 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
           child: Column(
             children: [
               const Spacer(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
-                child: Column(
-                  key: ValueKey(_index),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      greeting.text,
-                      style: const TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 44,
-                        fontWeight: FontWeight.w600,
-                        color: ZendColors.textOnDeep,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                  child: Column(
+                    key: ValueKey(_index),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting.text,
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 48,
+                          fontWeight: FontWeight.w600,
+                          color: zt.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      greeting.language,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 13,
-                        color: ZendColors.textOnDeep.withValues(alpha: 0.5),
-                        letterSpacing: 0.5,
+                      const SizedBox(height: 10),
+                      Text(
+                        greeting.language,
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 13,
+                          color: zt.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const Spacer(),
@@ -148,7 +155,7 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 13,
-                    color: ZendColors.textOnDeep.withValues(alpha: 0.45),
+                    color: zt.textSecondary.withValues(alpha: 0.7),
                     letterSpacing: 0.3,
                   ),
                 ),

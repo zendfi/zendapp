@@ -48,10 +48,17 @@ class FeedContentScreen extends StatefulWidget {
 }
 
 class _FeedContentScreenState extends State<FeedContentScreen> {
-  bool _searchActive = false;
   String _searchQuery = '';
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
+  final _listScrollController = ScrollController();
+
+  // Morph the full search bar into a compact pill once the list has
+  // scrolled past this offset — the bar starts fully formed (spec-styled
+  // like Chats' search bar) at rest, then collapses down to an icon
+  // alongside the balance as the user scrolls into the feed.
+  static const _morphThreshold = 24.0;
+  bool _collapsed = false;
 
   @override
   void initState() {
@@ -64,25 +71,34 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.toLowerCase().trim());
     });
+    _listScrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final offset = _listScrollController.hasClients ? _listScrollController.offset : 0.0;
+    final shouldCollapse = offset > _morphThreshold;
+    if (shouldCollapse != _collapsed) {
+      // Collapsing while the field is focused/has text would rip focus
+      // away and orphan the query — expand back out instead so the user
+      // never loses an in-progress search just by scrolling.
+      if (shouldCollapse && (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) return;
+      setState(() => _collapsed = shouldCollapse);
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocus.dispose();
+    _listScrollController.removeListener(_onScroll);
+    _listScrollController.dispose();
     super.dispose();
   }
 
-  void _toggleSearch() {
-    setState(() {
-      _searchActive = !_searchActive;
-      if (!_searchActive) {
-        _searchController.clear();
-        _searchFocus.unfocus();
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
-      }
-    });
+  void _expandSearch() {
+    if (!_collapsed) return;
+    setState(() => _collapsed = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
   }
 
   Future<void> _openDm(ActivityCounterparty counterparty) async {
@@ -225,71 +241,37 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header — "Activities" + restrained balance gateway ──
+            // ── Header — no "Activities" heading. At rest: a fully-formed
+            // search bar (same styling as Chats' search pill). Once the
+            // feed scrolls past a small threshold, it morphs into a
+            // compact search icon sitting in a pill alongside the balance —
+            // spec §5's "search should blend into the interface rather
+            // than become a dominant module" holds at both ends of that
+            // morph, just expressed differently once there's content to
+            // scroll past.
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Activities',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: widget.onOpenWallet,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                      child: Text(
-                        model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 19, fontWeight: FontWeight.w600, color: zt.textSecondary),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _toggleSearch,
-                    icon: Icon(
-                      _searchActive ? PhosphorIconsRegular.magnifyingGlassMinus : PhosphorIconsRegular.magnifyingGlass,
-                      color: _searchActive ? zt.accent : zt.textSecondary,
-                    ),
-                    tooltip: _searchActive ? 'Close search' : 'Search',
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Search — blends in, no dominant search module (spec §5) ──
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: _searchActive
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                      child: TextField(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: _collapsed
+                    ? _CollapsedSearchAndBalance(
+                        key: const ValueKey('collapsed'),
+                        balanceLabel: model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                        onOpenWallet: widget.onOpenWallet,
+                        onTapSearch: _expandSearch,
+                      )
+                    : _ExpandedSearchBar(
+                        key: const ValueKey('expanded'),
                         controller: _searchController,
                         focusNode: _searchFocus,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'Search...',
-                          hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                          filled: true,
-                          fillColor: zt.bgSecondary,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(ZendRadii.pill),
-                            borderSide: BorderSide.none,
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? GestureDetector(
-                                  onTap: () => _searchController.clear(),
-                                  child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
-                                )
-                              : null,
-                        ),
+                        hasQuery: _searchQuery.isNotEmpty,
+                        onClear: () => _searchController.clear(),
+                        balanceLabel: model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                        onOpenWallet: widget.onOpenWallet,
                       ),
-                    )
-                  : const SizedBox.shrink(),
+              ),
             ),
 
             // ── Content ──
@@ -303,6 +285,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         : edges.isEmpty
                             ? _buildEmptyOrNoMatch(zt)
                             : ListView.builder(
+                                controller: _listScrollController,
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                                 itemCount: edges.length,
@@ -381,6 +364,122 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             child: Text(
               'No matches for "$_searchQuery"',
               style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Feed's header at rest — a fully-formed search bar styled identically to
+/// Chats' persistent search pill (`dm_list_screen.dart`), with the balance
+/// sitting to its right as the one gateway into Wallet (spec §7).
+class _ExpandedSearchBar extends StatelessWidget {
+  const _ExpandedSearchBar({
+    super.key,
+    required this.controller,
+    required this.focusNode,
+    required this.hasQuery,
+    required this.onClear,
+    required this.balanceLabel,
+    required this.onOpenWallet,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool hasQuery;
+  final VoidCallback onClear;
+  final String balanceLabel;
+  final VoidCallback onOpenWallet;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Search activity',
+              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
+              prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+              suffixIcon: hasQuery
+                  ? GestureDetector(
+                      onTap: onClear,
+                      child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                    )
+                  : null,
+              filled: true,
+              fillColor: zt.bgSecondary,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: onOpenWallet,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Text(
+              balanceLabel,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 19, fontWeight: FontWeight.w600, color: zt.textSecondary),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Feed's header once scrolled — the search bar collapses down to a plain
+/// icon sitting in its own pill, alongside a second pill holding the
+/// balance. Tapping the search icon re-expands back to [_ExpandedSearchBar].
+class _CollapsedSearchAndBalance extends StatelessWidget {
+  const _CollapsedSearchAndBalance({
+    super.key,
+    required this.balanceLabel,
+    required this.onOpenWallet,
+    required this.onTapSearch,
+  });
+
+  final String balanceLabel;
+  final VoidCallback onOpenWallet;
+  final VoidCallback onTapSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: onTapSearch,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+          ),
+        ),
+        const Spacer(),
+        GestureDetector(
+          onTap: onOpenWallet,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            child: Text(
+              balanceLabel,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
             ),
           ),
         ),

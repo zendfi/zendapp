@@ -403,7 +403,7 @@ class _AmountStep extends StatelessWidget {
             backgroundColor: zt.accent,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: Text(
@@ -499,7 +499,7 @@ class _StickerStep extends StatelessWidget {
             backgroundColor: selected != null ? zt.accent : zt.border,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: const Text('Preview', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
@@ -563,7 +563,7 @@ class _PreviewStep extends StatelessWidget {
             backgroundColor: zt.accent,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: Row(

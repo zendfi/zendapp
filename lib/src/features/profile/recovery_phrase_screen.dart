@@ -221,7 +221,7 @@ class _ConfirmStage extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: confirmed ? zt.accent : zt.border,
               minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
             ),
             child: loading
                 ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
@@ -302,7 +302,7 @@ class _DisplayStage extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
           ),
           child: const Text('Done', style: TextStyle(fontFamily: 'Geist', fontSize: 15)),
         ),

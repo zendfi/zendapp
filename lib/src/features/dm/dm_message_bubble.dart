@@ -1019,7 +1019,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                           onPressed: onPay,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentColor, foregroundColor: Colors.white, elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
                           child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w700)),

@@ -53,7 +53,7 @@ class PrimaryButton extends StatelessWidget {
           foregroundColor: foregroundColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(ZendRadii.lg)),
+              borderRadius: BorderRadius.circular(ZendRadii.pill)),
         ),
         child: isLoading
             ? ZendLoader(size: 20, strokeWidth: 2, color: foregroundColor)

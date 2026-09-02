@@ -110,64 +110,61 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Scaffold(
       backgroundColor: zt.bgPrimary,
       body: SafeArea(
-        child: ZendScrollPage(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 96),
-                    Text(
-                      'Welcome to Zend',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 44,
-                        height: 1.1,
-                        fontWeight: FontWeight.w700,
-                        color: zt.textPrimary,
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Spacer(flex: 3),
+                  Text(
+                    'Welcome to Zend',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 44,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "The internet's money network.",
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 17,
-                        color: zt.textSecondary,
-                        height: 1.35,
-                      ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "The internet's money network.",
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 17,
+                      color: zt.textSecondary,
+                      height: 1.35,
                     ),
-                    const SizedBox(height: 36),
-                    PrimaryButton(
-                      label: 'Continue with Google',
-                      isLoading: _busy,
-                      onPressed: _continueWithGoogle,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 14),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          color: ZendColors.destructive,
-                        ),
-                      ),
-                    ],
+                  ),
+                  const Spacer(flex: 4),
+                  PrimaryButton(
+                    label: 'Continue with Google',
+                    isLoading: _busy,
+                    onPressed: _continueWithGoogle,
+                  ),
+                  if (_error != null) ...[
                     const SizedBox(height: 14),
                     Text(
-                      'Signing in creates your account if you don’t have one yet.',
+                      _error!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: zt.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: ZendColors.destructive,
+                      ),
                     ),
-                    const SizedBox(height: 24),
                   ],
-                ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Signing in creates your account if you don’t have one yet.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: zt.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
           ),

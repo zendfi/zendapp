@@ -1390,7 +1390,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         backgroundColor: const Color(0xFF6C63FF),
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text('Send request', style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700)),
