@@ -11,6 +11,7 @@ import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
+import 'src/features/onboarding/language_intro_screen.dart';
 import 'src/features/onboarding/welcome_screen.dart';
 import 'src/features/onboarding/device_unlock_screen.dart';
 import 'src/features/onboarding/pin_restore_screen.dart';
@@ -615,7 +616,13 @@ class _SplashWithSessionRestoreState
     if (!mounted) return;
 
     if (validation == SessionValidation.invalid) {
-      _finishSplashAndNavigate(const WelcomeScreen());
+      // The language intro is a first-install moment, not a "logged out"
+      // moment — LanguageIntroScreen.shouldShow() persists its own
+      // once-per-install flag, so a user who signs out and back in lands
+      // straight on WelcomeScreen instead of replaying it.
+      final showIntro = await LanguageIntroScreen.shouldShow();
+      if (!mounted) return;
+      _finishSplashAndNavigate(showIntro ? const LanguageIntroScreen() : const WelcomeScreen());
       return;
     }
 

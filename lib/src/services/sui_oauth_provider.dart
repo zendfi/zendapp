@@ -81,6 +81,7 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     this.httpsHost,
     this.httpsPath,
     this.implicitResponseType = 'id_token token',
+    this.requestDriveScope = false,
     http.Client? httpClient,
     Random? random,
   }) : _http = httpClient ?? http.Client(),
@@ -122,7 +123,45 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
   /// Still configurable so a provider-side rejection can be worked around without
   /// a code change, but dropping back to bare `id_token` disables Drive access and
   /// therefore share B.
+  ///
+  /// Prefer toggling [requestDriveScope], which keeps the response type and the
+  /// scope list consistent with each other.
   final String implicitResponseType;
+
+  /// Whether to bundle `drive.appdata` into the *sign-in* grant.
+  ///
+  /// Defaults to `false`, which is the important part. Bundling Drive into
+  /// sign-in couples the core authentication path to a recovery feature: any
+  /// Drive-side misconfiguration — the Drive API not enabled on the Cloud
+  /// project, the scope not declared under Data Access, the consent screen still
+  /// restricted — fails the *entire sign-in* with a Google 403, so nobody can log
+  /// in at all. That is not a hypothetical; it is exactly how this broke.
+  ///
+  /// With the default, Drive access is requested separately and in context by
+  /// [authorizeDriveAppdata], so a Drive problem degrades salt recovery instead
+  /// of authentication.
+  ///
+  /// Set to `true` only to deliberately reinstate the single-grant behaviour.
+  /// When `false`, the access token is dropped from sign-in too, since its only
+  /// purpose is reaching Drive.
+  final bool requestDriveScope;
+
+  /// Scopes for the sign-in grant.
+  ///
+  /// `openid` yields the ID token; `email` and `profile` populate the placeholder
+  /// handle and display name the backend assigns on first sign-in. Google expands
+  /// the latter two to their `userinfo.*` forms in the request it records.
+  ///
+  /// These three are the lowest-friction scopes Google offers and the ones that
+  /// must never fail — keep this list minimal.
+  String get _scope => requestDriveScope
+      ? 'openid email profile $_driveAppdataScope'
+      : 'openid email profile';
+
+  /// Effective implicit response type, forced to bare `id_token` when no Drive
+  /// scope is requested so we never ask for an access token we cannot use.
+  String get _effectiveImplicitResponseType =>
+      requestDriveScope ? implicitResponseType : 'id_token';
 
   final http.Client _http;
   final Random _random;
@@ -142,24 +181,15 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     final parameters = <String, String>{
       'client_id': clientId,
       'redirect_uri': redirectUri,
-      // `openid` yields the ID token; email and profile populate the placeholder
-      // handle and display name the backend assigns on first sign-in.
-      //
-      // `drive.appdata` grants access to a hidden per-app folder in the user's
-      // Drive and nothing else — it cannot see their other files. Google
-      // classifies it as non-sensitive, so it needs no OAuth verification or app
-      // store listing. It is where share B of the sharded salt lives, which is
-      // what lets a user recover their wallet on a new device without us.
-      //
-      // Note it is not a *basic* identity scope, so requesting it forfeits the
-      // exemption that lets any user sign in while the consent screen is in
-      // Testing. The consent screen must be In Production.
-      'scope': 'openid email profile $_driveAppdataScope',
+      // Identity scopes only by default. Drive is requested separately by
+      // [authorizeDriveAppdata] so that a Drive-side problem cannot take down
+      // authentication. See [requestDriveScope].
+      'scope': _scope,
       'nonce': nonce,
       'state': state,
       ...prompt.parameters,
       if (flow == SuiOAuthFlow.implicitIdToken) ...{
-        'response_type': implicitResponseType,
+        'response_type': _effectiveImplicitResponseType,
         'response_mode': 'fragment',
       },
       if (flow == SuiOAuthFlow.authorizationCodePkce) ...{
@@ -220,6 +250,148 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     return tokens;
   }
 
+  /// Requests `drive.appdata` for an account that is already signed in.
+  ///
+  /// This is Google's incremental authorization pattern: ask for the minimum at
+  /// sign-in, then ask for more later, at a moment where the reason is obvious to
+  /// the user ("set up wallet recovery") rather than buried in an onboarding or
+  /// money-claim flow.
+  ///
+  /// ## Why the same-account guarantee still holds
+  ///
+  /// The single-grant design existed to make it impossible for the Drive account
+  /// and the zkLogin account to diverge — writing share B into the wrong person's
+  /// Drive would be silent and unrecoverable. Splitting the grant reintroduces
+  /// that risk, so it is closed explicitly rather than by construction:
+  ///
+  ///   * `login_hint` steers Google to the account already signed in.
+  ///   * The returned ID token's `sub` is compared against [currentIdToken]'s, and
+  ///     a mismatch throws. `login_hint` is a hint, not an enforcement — the user
+  ///     can still switch accounts on the consent screen, so the check is what
+  ///     actually guarantees the property.
+  ///   * A fresh `nonce` is generated and verified, so a replayed redirect from an
+  ///     earlier grant cannot be substituted.
+  ///
+  /// Returns `null` when the user declines. That is a normal outcome, not an
+  /// error: the caller falls back to `provider_stored` salt custody.
+  @override
+  Future<SuiOAuthTokens?> authorizeDriveAppdata({
+    required String currentIdToken,
+  }) async {
+    final expectedSubject = _claim(currentIdToken, 'sub');
+    if (expectedSubject == null || expectedSubject.isEmpty) {
+      throw const SuiOAuthException(
+        'Cannot request Drive access without an established identity',
+      );
+    }
+
+    final state = _randomUrlSafe(24);
+    // Not a zkLogin nonce — nothing is bound to an ephemeral key here. It exists
+    // purely so this grant's response cannot be replaced by an older one.
+    final nonce = _randomUrlSafe(16);
+    final verifier = flow == SuiOAuthFlow.authorizationCodePkce
+        ? _randomUrlSafe(48)
+        : null;
+
+    final parameters = <String, String>{
+      'client_id': clientId,
+      'redirect_uri': redirectUri,
+      // `openid` is requested alongside Drive so Google returns an ID token we can
+      // use for the same-account check. Without it we would receive an access
+      // token with no verifiable owner.
+      'scope': 'openid $_driveAppdataScope',
+      'nonce': nonce,
+      'state': state,
+      'login_hint': _claim(currentIdToken, 'email') ?? expectedSubject,
+      // Preserve scopes already granted, so this grant adds Drive rather than
+      // replacing the identity scopes.
+      'include_granted_scopes': 'true',
+      // Google shows no consent UI for an already-granted scope set, which would
+      // silently return no access token on a retry. Forcing consent makes the
+      // outcome deterministic.
+      'prompt': 'consent',
+      if (flow == SuiOAuthFlow.implicitIdToken) ...{
+        'response_type': 'id_token token',
+        'response_mode': 'fragment',
+      },
+      if (flow == SuiOAuthFlow.authorizationCodePkce) ...{
+        'response_type': 'code',
+        'code_challenge': _s256Challenge(verifier!),
+        'code_challenge_method': 'S256',
+      },
+    };
+
+    final authorizationUrl = Uri.parse(
+      _authorizationEndpoint,
+    ).replace(queryParameters: parameters).toString();
+
+    final String callback;
+    try {
+      callback = await FlutterWebAuth2.authenticate(
+        url: authorizationUrl,
+        callbackUrlScheme: callbackUrlScheme,
+        options: FlutterWebAuth2Options(
+          httpsHost: httpsHost,
+          httpsPath: httpsPath,
+        ),
+      );
+    } on Exception {
+      // Dismissing the browser is a decline, not a failure.
+      return null;
+    }
+
+    final returned = _parseCallback(callback);
+    if (returned['error'] != null) {
+      // `access_denied` is the user refusing the Drive consent. Anything else is a
+      // configuration fault worth surfacing, because it is silent otherwise: the
+      // Drive API not enabled on the project, or the scope not declared under
+      // Data Access, both land here.
+      if (returned['error'] == 'access_denied') return null;
+      throw SuiOAuthException(
+        'Google rejected the Drive authorization request: ${returned['error']}',
+      );
+    }
+    if (returned['state'] != state) {
+      throw const SuiOAuthException(
+        'OAuth state did not match the Drive authorization request.',
+      );
+    }
+
+    final tokens = switch (flow) {
+      SuiOAuthFlow.implicitIdToken => SuiOAuthTokens(
+        idToken: returned['id_token'] ?? '',
+        accessToken: returned['access_token'],
+      ),
+      SuiOAuthFlow.authorizationCodePkce => await _exchangeCode(
+        code: returned['code'],
+        verifier: verifier!,
+      ),
+    };
+
+    if (tokens.idToken.isEmpty) {
+      throw const SuiOAuthException(
+        'Google returned no ID token for the Drive authorization',
+      );
+    }
+    _assertNonceMatches(idToken: tokens.idToken, expected: nonce);
+
+    if (_claim(tokens.idToken, 'sub') != expectedSubject) {
+      // The user picked a different Google account. Writing share B here would
+      // put it in the wrong Drive, and the loss would only surface on a future
+      // recovery attempt.
+      throw const SuiOAuthException(
+        'Drive access was granted for a different Google account. '
+        'Wallet recovery must use the account you signed in with.',
+      );
+    }
+
+    if (tokens.accessToken == null || tokens.accessToken!.isEmpty) {
+      // Granular permissions let a user approve the sign-in and refuse Drive.
+      return null;
+    }
+    return tokens;
+  }
+
   /// Exchanges an authorization code for an ID token.
   ///
   /// No client secret is sent: this path is only valid for a public (installed
@@ -271,19 +443,33 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
   }
 
   void _assertNonceMatches({required String idToken, required String expected}) {
+    if (_claims(idToken)['nonce'] != expected) {
+      throw const SuiOAuthException(
+        'The ID token nonce does not match this sign-in attempt',
+      );
+    }
+  }
+
+  /// Reads one string claim, or null when absent or not a string.
+  ///
+  /// Local decode only, with no signature verification — acceptable because every
+  /// security decision derived from this token is made by the backend against a
+  /// verified copy. These reads only steer the client: which account to hint at,
+  /// and whether the account changed mid-flow.
+  String? _claim(String idToken, String name) {
+    final value = _claims(idToken)[name];
+    return value is String ? value : null;
+  }
+
+  Map<String, dynamic> _claims(String idToken) {
     final parts = idToken.split('.');
     if (parts.length != 3) {
       throw const SuiOAuthException('Google returned a malformed ID token');
     }
     var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
     payload = payload.padRight((payload.length + 3) ~/ 4 * 4, '=');
-    final claims =
-        jsonDecode(utf8.decode(base64.decode(payload))) as Map<String, dynamic>;
-    if (claims['nonce'] != expected) {
-      throw const SuiOAuthException(
-        'The ID token nonce does not match this sign-in attempt',
-      );
-    }
+    return jsonDecode(utf8.decode(base64.decode(payload)))
+        as Map<String, dynamic>;
   }
 
   String _s256Challenge(String verifier) {

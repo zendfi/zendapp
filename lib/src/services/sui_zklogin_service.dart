@@ -17,21 +17,32 @@ import 'sui_zklogin_models.dart';
 /// nonce. An implementation must run an OpenID Connect flow with
 /// `response_type=id_token`, `scope=openid`, and the supplied nonce.
 abstract interface class SuiOAuthProvider {
-  /// Returns a raw ID token whose `nonce` claim equals [nonce], plus the access
-  /// token from the same grant when one was issued.
+  /// Returns a raw ID token whose `nonce` claim equals [nonce].
   ///
-  /// Both come from a single round trip on purpose. Share B of the sharded salt
-  /// lives in the user's Google Drive `appdata` folder, which needs an access
-  /// token — obtaining it separately (for example through `google_sign_in`) would
-  /// allow the Drive account and the zkLogin account to diverge, writing the share
-  /// into the wrong person's Drive. One grant makes that mismatch impossible
-  /// rather than something to validate against.
+  /// Requests identity scopes only. Drive access is obtained separately by
+  /// [authorizeDriveAppdata], so that a Drive-side misconfiguration degrades
+  /// wallet recovery rather than blocking all authentication. `accessToken` on the
+  /// result is therefore normally null on this path.
   ///
   /// [prompt] controls how much user interaction is requested; see
   /// `SuiOAuthPrompt`. Implementations that cannot vary it may ignore it.
   Future<SuiOAuthTokens> signInForIdToken({
     required String nonce,
     SuiOAuthPrompt prompt,
+  });
+
+  /// Requests `drive.appdata` for the account identified by [currentIdToken].
+  ///
+  /// Called at the moment Drive is actually needed — provisioning or recovering
+  /// salt shares — so the consent prompt carries obvious context.
+  ///
+  /// Returns null when the user declines, which is a normal outcome that callers
+  /// must handle by falling back to non-Drive custody. Implementations must
+  /// guarantee the grant belongs to the same Google account as [currentIdToken]:
+  /// share B written into the wrong person's Drive fails silently now and
+  /// unrecoverably later.
+  Future<SuiOAuthTokens?> authorizeDriveAppdata({
+    required String currentIdToken,
   });
 }
 
@@ -71,11 +82,18 @@ class _ActiveSession {
   final String jwtRandomness;
   final String idToken;
 
-  /// Google API access token from the same grant as [idToken], used to reach the
-  /// Drive `appdata` folder holding share B. Short-lived and never refreshed, so
-  /// it is only good for the window right after sign-in — which is exactly when
-  /// provisioning and recovery happen.
-  final String? accessToken;
+  /// Google API access token used to reach the Drive `appdata` folder holding
+  /// share B.
+  ///
+  /// Normally null immediately after sign-in, because sign-in requests identity
+  /// scopes only. Populated by `ensureDriveAccess()` when a Drive-backed operation
+  /// actually needs it, then cached here so one provisioning or recovery sequence
+  /// prompts at most once.
+  ///
+  /// Short-lived and never refreshed, so it is only good for the window after the
+  /// grant. Verified to belong to the same Google account as [idToken] before being
+  /// set — see `SuiOAuthProvider.authorizeDriveAppdata`.
+  String? accessToken;
   final int maxEpoch;
   final DateTime expiresAt;
 
@@ -263,10 +281,29 @@ class SuiZkLoginService {
     final custody = _custody;
     if (custody == null) return null;
 
+    // Reconstruction needs any two of three shares. The device share is present on
+    // a device that has provisioned before, so the common case needs no Drive and
+    // therefore no consent prompt mid-transfer. Only when the device share is
+    // missing — a reinstall, or a new device — is Drive the second share, and only
+    // then is it worth interrupting the user.
+    //
+    // Deliberately best-effort: if the prompt is declined, fall through and let
+    // reconstruction fail on its own terms with a message about shares rather than
+    // about Google.
+    // On web `keepsDeviceShare` is false, so this always takes the Drive branch —
+    // which is correct, since the web client deliberately holds no share.
+    var accessToken = session.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      final deviceShare = await custody.readDeviceShare();
+      if (deviceShare == null || deviceShare.isEmpty) {
+        accessToken = await ensureDriveAccess();
+      }
+    }
+
     final salt = await custody.reconstructSalt(
       sessionId: session.sessionId,
       idToken: session.idToken,
-      accessToken: session.accessToken,
+      accessToken: accessToken,
     );
     try {
       return saltToDecimalString(salt);
@@ -284,14 +321,36 @@ class SuiZkLoginService {
   /// user's address — the address derives from the salt, so a fresh one would
   /// strand any funds already held.
   ///
-  /// Requires an active session whose OAuth grant included Drive access.
+  /// Acquires Drive access for the current session if it does not already have it.
+  ///
+  /// Sign-in deliberately does not request Drive, so this is where the second,
+  /// in-context consent happens. Caches the token on the session so a single
+  /// provisioning or recovery sequence prompts at most once.
+  ///
+  /// Returns null when the user declines.
+  Future<String?> ensureDriveAccess() async {
+    final session = _requireSession();
+    final existing = session.accessToken;
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final granted = await _oauth.authorizeDriveAppdata(
+      currentIdToken: session.idToken,
+    );
+    final token = granted?.accessToken;
+    if (token == null || token.isEmpty) return null;
+
+    session.accessToken = token;
+    return token;
+  }
+
+  /// Prompts for Drive access if the session does not already hold it.
   Future<void> provisionSaltShares() async {
     final custody = _custody;
     if (custody == null) {
       throw StateError('Salt custody is not configured');
     }
     final session = _requireSession();
-    final accessToken = session.accessToken;
+    final accessToken = await ensureDriveAccess();
     if (accessToken == null || accessToken.isEmpty) {
       throw const SuiSaltRecoveryException(
         'Google Drive access is required to set up wallet recovery',
@@ -490,6 +549,16 @@ class ManualIdTokenOAuthProvider implements SuiOAuthProvider {
     // No access token: a pasted ID token carries no Drive grant, so share B is
     // unreachable on this path. Acceptable, since this provider is debug-only.
     return SuiOAuthTokens(idToken: _idToken);
+  }
+
+  @override
+  Future<SuiOAuthTokens?> authorizeDriveAppdata({
+    required String currentIdToken,
+  }) async {
+    // No browser round trip is possible here, so Drive-backed custody is simply
+    // unavailable when driving the flow with a pasted token. Null is the
+    // "declined" signal, which callers already handle by falling back.
+    return null;
   }
 
   Map<String, dynamic> _decodeClaims(String jwt) {

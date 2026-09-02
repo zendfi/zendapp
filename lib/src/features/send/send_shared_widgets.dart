@@ -276,11 +276,13 @@ class SendSuccessStage extends StatefulWidget {
     required this.amountFormattedExact,
     required this.recipientZendtag,
     required this.onDone,
+    this.note,
   });
 
   final String amountFormattedExact;
   final String recipientZendtag;
   final VoidCallback onDone;
+  final String? note;
 
   @override
   State<SendSuccessStage> createState() => _SendSuccessStageState();
@@ -333,8 +335,21 @@ class _SendSuccessStageState extends State<SendSuccessStage>
               ),
             ),
             const SizedBox(height: 20),
+            // Spec §14 (LOCKED): "Sent / $20 / to @omooba / note" —
+            // lightweight, no exclamation flourish (spec §59's microcopy
+            // bar: short, human, confident — not decorative).
             Text(
-              'Zent It!',
+              'Sent',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w700,
+                fontSize: 32,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.amountFormattedExact,
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
@@ -344,13 +359,26 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.amountFormattedExact} to @${widget.recipientZendtag}',
+              'to @${widget.recipientZendtag}',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 15,
                 color: zt.textSecondary,
               ),
             ),
+            if (widget.note != null && widget.note!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                '"${widget.note}"',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -398,12 +426,14 @@ class SendErrorStage extends StatelessWidget {
               child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
             ),
             const SizedBox(height: 20),
+            // Spec §60-61: specific, human, recoverable — not decorative
+            // filler like "Oops".
             Text(
-              'Oops',
+              "Couldn't complete that",
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
-                fontSize: 32,
+                fontSize: 28,
                 color: zt.textPrimary,
               ),
             ),

@@ -281,7 +281,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = "Couldn't complete that. Try again.";
         _stage = SendStage.error;
       });
     }
@@ -360,7 +360,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = "Couldn't complete that. Try again.";
         _stage = SendStage.error;
       });
     }
@@ -448,7 +448,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = "Couldn't complete that. Try again.";
         _stage = SendStage.error;
       });
     }
@@ -501,7 +501,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = "Couldn't complete that. Try again.";
         _stage = SendStage.error;
       });
     }
@@ -614,6 +614,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           key: const ValueKey('success'),
           amountFormattedExact: _amountFormattedExact,
           recipientZendtag: _recipientZendtag ?? '',
+          note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
           onDone: _dismiss,
         );
       case SendStage.error:
@@ -1037,13 +1038,29 @@ class _RecipientStageState extends State<_RecipientStage> {
                   Divider(color: zt.border, height: 1),
                   const SizedBox(height: 20),
 
-                  // ── Balance warning ───────────────────────────────────
+                  // ── Balance warning — spec §16 exact copy: "You don't
+                  // have enough available cash. Available $X. You're
+                  // trying to send $Y." ──
                   if (_insufficientBalance)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Insufficient balance · \$${model.spendableBalance.toStringAsFixed(2)} available',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "You don't have enough available cash.",
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: ZendColors.destructive),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Available · \$${model.spendableBalance.toStringAsFixed(2)}',
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                          ),
+                          Text(
+                            "You're trying to send · ${widget.amountFormatted}",
+                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
 

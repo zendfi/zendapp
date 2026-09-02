@@ -122,20 +122,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   children: [
                     const SizedBox(height: 96),
                     Text(
-                      'Send money,\nanywhere.',
+                      'Welcome to Zend',
                       style: TextStyle(
                         fontFamily: 'Geist',
-                        fontSize: 56,
-                        height: 1.08,
+                        fontSize: 44,
+                        height: 1.1,
                         fontWeight: FontWeight.w700,
                         color: zt.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     Text(
-                      'To anyone, in any country, instantly.',
+                      "The internet's money network.",
                       style: TextStyle(
-                        fontSize: 16,
+                        fontFamily: 'Geist',
+                        fontSize: 17,
                         color: zt.textSecondary,
                         height: 1.35,
                       ),
