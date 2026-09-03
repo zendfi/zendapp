@@ -72,7 +72,9 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
   }
 
   void _scheduleNext() {
-    _timer = Timer(const Duration(milliseconds: 1400), () {
+    // Slower, more deliberate cadence — enough time to actually read each
+    // greeting before it fades to the next one.
+    _timer = Timer(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
       setState(() => _index = (_index + 1) % _greetings.length);
       _scheduleNext();
@@ -107,15 +109,29 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
         onTap: _continue,
         behavior: HitTestBehavior.opaque,
         child: SafeArea(
+          // `stretch` is the fix for the "drifting" left edge: with the
+          // default `center` cross-axis alignment, the Padding below sizes
+          // itself to its child's natural (language-dependent) width, and
+          // the outer Column then centers that variable-width box on
+          // screen — so the greeting's left edge visibly shifts left/right
+          // every time a shorter or longer word swaps in. Stretching the
+          // Column instead makes the Padding always span the full screen
+          // width, so `Alignment.centerLeft` below has a fixed reference
+          // frame and the text's left edge never moves.
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
+                  duration: const Duration(milliseconds: 600),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [...previousChildren, ?currentChild],
+                  ),
                   transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
                   child: Column(
                     key: ValueKey(_index),
@@ -150,13 +166,15 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.only(bottom: 40),
-                child: Text(
-                  'tap to continue',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 13,
-                    color: zt.textSecondary.withValues(alpha: 0.7),
-                    letterSpacing: 0.3,
+                child: Center(
+                  child: Text(
+                    'tap to continue',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: zt.textSecondary.withValues(alpha: 0.7),
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
               ),

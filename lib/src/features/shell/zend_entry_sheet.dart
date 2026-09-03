@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -264,7 +265,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           Container(
             decoration: BoxDecoration(
               color: zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.lg),
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
             ),
             child: TextField(
               controller: _searchController,
@@ -296,9 +297,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
   List<Widget> _buildLiveResults(ZendTheme zt) {
     if (_searching && _results.isEmpty) {
-      return [
-        Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: ZendLoader(size: 24))),
-      ];
+      // Skeleton rows shaped like the real identity rows below them
+      // (avatar + two text lines) rather than a spinner — the loading
+      // state previews the shape of what's about to appear instead of
+      // just signaling "wait".
+      return const [SearchUsersSkeleton()];
     }
     if (_results.isEmpty) {
       return [];

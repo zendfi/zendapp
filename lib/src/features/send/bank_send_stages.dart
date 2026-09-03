@@ -272,7 +272,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
               filled: true,
               fillColor: zt.bgSecondary,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.lg),
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
                 borderSide: BorderSide.none,
               ),
             ),
@@ -1521,7 +1521,7 @@ class _FormField extends StatelessWidget {
             filled: true,
             fillColor: zt.bgSecondary,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ZendRadii.lg),
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
               borderSide: BorderSide.none,
             ),
           ),

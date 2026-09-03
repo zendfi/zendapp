@@ -390,7 +390,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
@@ -465,7 +465,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
@@ -491,7 +491,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
                   filled: true,
                   fillColor: zt.bgSecondary,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.md),
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(

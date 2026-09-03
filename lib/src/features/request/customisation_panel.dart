@@ -108,15 +108,15 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
               filled: true,
               fillColor: zt.bgPrimary,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.sm),
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
                 borderSide: BorderSide(color: zt.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.sm),
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
                 borderSide: BorderSide(color: zt.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.sm),
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.all(ZendSpacing.sm),

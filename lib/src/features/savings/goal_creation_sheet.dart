@@ -320,7 +320,7 @@ class _NameEmojiStage extends StatelessWidget {
               filled: true,
               fillColor: zt.bgSecondary,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.md),
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
                 borderSide: BorderSide.none,
               ),
               counterStyle: TextStyle(

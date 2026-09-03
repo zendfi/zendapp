@@ -13,10 +13,10 @@ import '../../models/notification_category.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/e2ee_service.dart' show kE2eePrefix;
 import '../../services/wallet_session_cache.dart';
-import '../pools/create_pool_drawer.dart';
 import '../pools/pool.dart';
 import '../pools/pool_detail_screen.dart';
 import 'dm_thread_screen.dart';
+import 'new_chat_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DmListScreen extends StatefulWidget {
@@ -213,20 +213,31 @@ class _DmListScreenState extends State<DmListScreen> {
     ).then((_) => _loadThreads());
   }
 
+  void _openPool(Pool pool) {
+    pushZendSlide(context, PoolDetailScreen(pool: pool)).then((_) => _loadThreads());
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final model = ZendScope.of(context);
 
-    final displayThreads = _searchQuery.isEmpty
-        ? _threads
-        : _threads.where((t) {
-            final name = t.counterparty.displayName.toLowerCase();
-            final tag = t.counterparty.zendtag.toLowerCase();
-            final preview = t.lastMessagePreview.toLowerCase();
-            return name.contains(_searchQuery) ||
-                tag.contains(_searchQuery) ||
-                preview.contains(_searchQuery);
-          }).toList();
+    // One unified, sorted list — DMs and Pools mixed together with
+    // identical row styling, the way WhatsApp mixes groups and 1:1 chats
+    // in a single list rather than splitting them into separate sections.
+    // Pool has no last-activity timestamp on the client today (only
+    // created_at) — createdAt is used as the best available recency proxy
+    // for sort position until the backend exposes a real one; this only
+    // affects where an inactive pool lands in the list, never its row
+    // appearance.
+    final items = <_ChatListItem>[
+      ..._threads.map(_ChatListItem.fromThread),
+      ...model.pools.map((p) => _ChatListItem.fromPool(p, hasNewMessage: model.poolsWithNewMessages.contains(p.id))),
+    ]..sort((a, b) => b.sortTime.compareTo(a.sortTime));
+
+    final displayItems = _searchQuery.isEmpty
+        ? items
+        : items.where((item) => item.matches(_searchQuery)).toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -249,15 +260,6 @@ class _DmListScreenState extends State<DmListScreen> {
                         color: zt.textPrimary,
                       ),
                     ),
-                  ),
-                  // New pool — spec §32: "Create Pool. Invite people."
-                  // Reachable from Chats now that Pools are group
-                  // conversations under this tab (spec §25), not a
-                  // separate top-level drawer.
-                  IconButton(
-                    onPressed: () => showCreatePoolDrawer(context, targetAmount: 0),
-                    icon: Icon(PhosphorIconsRegular.usersThree, color: zt.textSecondary, size: 22),
-                    tooltip: 'Create pool',
                   ),
                   // Notification mute toggle
                   IconButton(
@@ -307,13 +309,7 @@ class _DmListScreenState extends State<DmListScreen> {
               ),
             ),
 
-            // ── Thread list ──
-            // Pools render as their own labeled section below 1:1 threads
-            // rather than interleaved by recency — Pool has no
-            // last-message timestamp on the client today, so sorting it
-            // against DM recency would be a misleading proxy, not a real
-            // merge. Spec §25 only requires Pools be reachable as group
-            // conversations under Chats, not literally interleaved.
+            // ── Unified chat list ──
             Expanded(
               child: _loading
                   ? const DmListSkeleton()
@@ -322,53 +318,98 @@ class _DmListScreenState extends State<DmListScreen> {
                           title: "Couldn't load your chats",
                           onRetry: _loadThreads,
                         )
-                      : Builder(builder: (context) {
-                          final model = ZendScope.of(context);
-                          final pools = _searchQuery.isEmpty
-                              ? model.pools
-                              : model.pools.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
-
-                          if (displayThreads.isEmpty && pools.isEmpty) {
-                            return _searchQuery.isNotEmpty
-                                ? Center(
-                                    child: Text(
-                                      'No chats matching "$_searchQuery"',
-                                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                                    ),
-                                  )
-                                : const _EmptyState();
-                          }
-
-                          return RefreshIndicator(
-                            onRefresh: () => Future.wait([_loadThreads(), model.fetchPools()]),
-                            child: ListView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                              children: [
-                                for (final thread in displayThreads)
-                                  _DmThreadTile(thread: thread, onTap: () => _openThread(thread)),
-                                if (pools.isNotEmpty) ...[
-                                  if (displayThreads.isNotEmpty) const SizedBox(height: 8),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                                    child: Text(
-                                      'Pools',
-                                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
-                                    ),
+                      : displayItems.isEmpty
+                          ? _searchQuery.isNotEmpty
+                              ? Center(
+                                  child: Text(
+                                    'No chats matching "$_searchQuery"',
+                                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
                                   ),
-                                  for (final pool in pools)
-                                    _PoolThreadTile(
-                                      pool: pool,
-                                      hasNewMessage: model.poolsWithNewMessages.contains(pool.id),
-                                      onTap: () => pushZendSlide(context, PoolDetailScreen(pool: pool)).then((_) => _loadThreads()),
-                                    ),
-                                ],
-                              ],
+                                )
+                              : const _EmptyState()
+                          : RefreshIndicator(
+                              onRefresh: () => Future.wait([_loadThreads(), model.fetchPools()]),
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                                itemCount: displayItems.length,
+                                itemBuilder: (context, i) {
+                                  final item = displayItems[i];
+                                  return item.thread != null
+                                      ? _DmThreadTile(thread: item.thread!, onTap: () => _openThread(item.thread!))
+                                      : _PoolThreadTile(
+                                          pool: item.pool!,
+                                          hasNewMessage: item.hasNewMessage,
+                                          onTap: () => _openPool(item.pool!),
+                                        );
+                                },
+                              ),
                             ),
-                          );
-                        }),
             ),
           ],
+        ),
+      ),
+      // New chat/pool — spec §31-32, plus the request that this feel like
+      // Zend's own action pattern (visually matching the Zend FAB) rather
+      // than a plain header icon. Search/select from contacts to start a
+      // DM, or create a pool — both from one entry point.
+      floatingActionButton: _NewChatFab(onTap: () => showNewChatSheet(context)),
+    );
+  }
+}
+
+/// Wraps either a [DmThread] or a [Pool] so both can live in one sorted,
+/// mixed list — exactly one of [thread]/[pool] is non-null.
+class _ChatListItem {
+  const _ChatListItem._({this.thread, this.pool, this.hasNewMessage = false});
+
+  factory _ChatListItem.fromThread(DmThread t) => _ChatListItem._(thread: t);
+
+  factory _ChatListItem.fromPool(Pool p, {required bool hasNewMessage}) =>
+      _ChatListItem._(pool: p, hasNewMessage: hasNewMessage);
+
+  final DmThread? thread;
+  final Pool? pool;
+  final bool hasNewMessage;
+
+  DateTime get sortTime => thread?.lastMessageAt ?? pool!.createdAt;
+
+  bool matches(String query) {
+    if (thread != null) {
+      final t = thread!;
+      return t.counterparty.displayName.toLowerCase().contains(query) ||
+          t.counterparty.zendtag.toLowerCase().contains(query) ||
+          t.lastMessagePreview.toLowerCase().contains(query);
+    }
+    return pool!.name.toLowerCase().contains(query);
+  }
+}
+
+/// Floating action for starting a new conversation or pool — visually
+/// identical to the Zend FAB (`zend_shell.dart`'s `_ZendFab`: same deep
+/// surface, size, and shadow) so the two primary floating actions in the
+/// app read as one consistent pattern, just with a different glyph.
+class _NewChatFab extends StatelessWidget {
+  const _NewChatFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: const BoxDecoration(
+          color: ZendColors.bgDeep,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: const Center(
+          child: Icon(PhosphorIconsRegular.plus, color: ZendColors.accentPop, size: 26),
         ),
       ),
     );

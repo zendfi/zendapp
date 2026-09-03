@@ -1355,7 +1355,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       hintText: 'Add a note…',
                       hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
                       filled: true, fillColor: zt.bgPrimary,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.lg), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),

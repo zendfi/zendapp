@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_error_modal.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart' show ApiException, PinDecryptionException, RequestTimeoutException;
@@ -18,21 +19,33 @@ import 'send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 enum SendStage {
+  // A brief resting/loading state — the default stage whenever a
+  // recipient is already known (i.e. every live caller today, since Zend
+  // is identity-first per redesign.md §10-16: identity is always resolved
+  // before this sheet opens). Also the stage shown behind an error modal
+  // while nothing else fits, so there's never a stale "old sheet" stage
+  // sitting visible underneath.
+  preparing,
+  // Legacy full-page identity picker (search / recent contacts / device
+  // contacts). Deliberately deactivated from the normal flow: reachable
+  // only if a caller invokes this sheet with no [SendFlowSheet.prefilledRecipient]
+  // at all, which no live call site does anymore. Kept, not deleted, as a
+  // defensive fallback rather than leaving the sheet with nothing to show
+  // for a theoretical future caller that doesn't yet know who to pay.
   recipient,
   pin,
   processing,
   success,
-  error,
   emailIntent,
   emailIntentPin,
   emailIntentSuccess,
   // Spec §16 "Network uncertainty after submission" (LOCKED): the request
   // timed out with no server response — meaning we genuinely don't know
-  // whether the transfer landed. Distinct from [error] (a definite
-  // rejection) specifically so the UI never claims "failed" when the
-  // truth is "unknown", and never lets the user tap Send again while
-  // that's still unresolved — that's exactly the double-send spec §64
-  // ("Idempotency... is a UX requirement") is worried about.
+  // whether the transfer landed. Distinct from a definite rejection
+  // specifically so the UI never claims "failed" when the truth is
+  // "unknown", and never lets the user tap Send again while that's still
+  // unresolved — that's exactly the double-send spec §64 ("Idempotency...
+  // is a UX requirement") is worried about.
   uncertain,
 }
 
@@ -78,7 +91,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     with SingleTickerProviderStateMixin {
   static const Duration _stageTransition = Duration(milliseconds: 180);
   static const Duration _sheetResize = Duration(milliseconds: 220);
-  SendStage _stage = SendStage.recipient;
+  SendStage _stage = SendStage.preparing;
 
   String? _recipientZendtag;
   String? _recipientDisplayName;
@@ -92,8 +105,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   String _pinDigits = '';
   int _pinAttempts = 0;
   String? _pinError;
-
-  String? _errorMessage;
 
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
@@ -122,6 +133,19 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       if (widget.prefilledNote != null) {
         _noteController.text = widget.prefilledNote!;
       }
+      // Identity is already resolved by whoever opened this sheet (the
+      // Zend entry flow is identity-first — redesign.md §10-16) — skip
+      // the old full-page recipient picker entirely and go straight into
+      // deciding whether a PIN is needed. `_stage` starts at `preparing`
+      // (set as the enum's/field's default) so there's nothing stale to
+      // flash before this runs.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _proceedFromRecipient();
+      });
+    } else {
+      // Defensive fallback only — no live caller reaches this branch
+      // today, since every entry point resolves identity first.
+      _stage = SendStage.recipient;
     }
   }
 
@@ -134,6 +158,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   double get _sheetHeightFraction {
     switch (_stage) {
+      case SendStage.preparing:
+        return 0.45;
       case SendStage.recipient:
         return 1.0;   // full app height
       case SendStage.pin:
@@ -142,8 +168,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         return 0.45;
       case SendStage.success:
         return 0.50;
-      case SendStage.error:
-        return 0.55;
       case SendStage.emailIntent:
         return 0.70;
       case SendStage.emailIntentPin:
@@ -167,6 +191,33 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   void _goTo(SendStage stage) {
     setState(() => _stage = stage);
+  }
+
+  /// Shows a definite-failure error as a real modal dialog rather than an
+  /// in-sheet "error stage" — the sheet itself resets to [SendStage.preparing]
+  /// underneath (a neutral, poppable state) so there's nothing stale for
+  /// "Try again" or "Cancel" to navigate back through. This is the fix for
+  /// the old behavior where retrying/dismissing moved the sheet backward
+  /// through its own stage history instead of just retrying the payment or
+  /// closing outright.
+  void _showTransferError(String message, {bool allowRetry = true}) {
+    if (!mounted) return;
+    setState(() => _stage = SendStage.preparing);
+    showZendErrorModal(
+      context,
+      message: message,
+      onRetry: allowRetry ? _retryFromError : null,
+      onDismiss: _dismiss,
+    );
+  }
+
+  /// For failures with nothing sensible to retry (account locked, PIN
+  /// attempts exhausted) — modal with only a dismiss action, which closes
+  /// the whole sheet.
+  void _showTerminalError(String message) {
+    if (!mounted) return;
+    setState(() => _stage = SendStage.preparing);
+    showZendErrorModal(context, message: message, onDismiss: _dismiss);
   }
 
   void _onRecipientConfirmed(String tag, String displayName) {
@@ -246,10 +297,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
-            setState(() {
-              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
-              _stage = SendStage.error;
-            });
+            _showTerminalError('Too many incorrect PIN attempts. Please unlock again.');
           } else {
             _shakeController.forward(from: 0);
             setState(() {
@@ -270,10 +318,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       if (!mounted) return;
       _pinAttempts++;
       if (_pinAttempts >= 5) {
-        setState(() {
-          _errorMessage = 'Too many incorrect PIN attempts.';
-          _stage = SendStage.error;
-        });
+        _showTerminalError('Too many incorrect PIN attempts.');
       } else {
         _shakeController.forward(from: 0);
         setState(() {
@@ -283,17 +328,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         });
       }
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.userMessage;
-        _stage = SendStage.error;
-      });
+      _showTransferError(e.userMessage);
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = "Couldn't complete that. Try again.";
-        _stage = SendStage.error;
-      });
+      _showTransferError("Couldn't complete that. Try again.");
     }
   }
 
@@ -364,23 +401,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       // No rail this account can actually use is available — for example the
       // account is not in the rollout yet. Naming that beats the wallet-backup
       // error a fallback to Solana would have produced.
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.userMessage;
-        _stage = SendStage.error;
-      });
+      _showTransferError(e.userMessage);
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.userMessage;
-        _stage = SendStage.error;
-      });
+      _showTransferError(e.userMessage);
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = "Couldn't complete that. Try again.";
-        _stage = SendStage.error;
-      });
+      _showTransferError("Couldn't complete that. Try again.");
     }
   }
 
@@ -440,15 +465,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
     // Still unresolved after the polling window — this is the one place
     // spec §16 doesn't give exact copy for, since it's the tail case even
-    // the spec expects to be rare. Land on the error stage but keep the
-    // wording honest: we don't actually know it failed, only that we
-    // couldn't confirm it succeeded, so the retry path (re-entering the
-    // recipient stage) is safe rather than presenting a false "failed".
-    if (!mounted) return;
-    setState(() {
-      _errorMessage = "We still can't confirm this went through. Check Activity before sending again.";
-      _stage = SendStage.error;
-    });
+    // the spec expects to be rare. Show the modal but keep the wording
+    // honest: we don't actually know it failed, only that we couldn't
+    // confirm it succeeded, so the retry path (re-checking) is safe
+    // rather than presenting a false "failed".
+    _showTransferError("We still can't confirm this went through. Check Activity before sending again.");
   }
 
   void _onEmailIntentSelected(String email) {
@@ -490,10 +511,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
-            setState(() {
-              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
-              _stage = SendStage.error;
-            });
+            _showTerminalError('Too many incorrect PIN attempts. Please unlock again.');
           } else {
             _shakeController.forward(from: 0);
             setState(() {
@@ -512,10 +530,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       if (!mounted) return;
       _pinAttempts++;
       if (_pinAttempts >= 5) {
-        setState(() {
-          _errorMessage = 'Too many incorrect PIN attempts.';
-          _stage = SendStage.error;
-        });
+        _showTerminalError('Too many incorrect PIN attempts.');
       } else {
         _shakeController.forward(from: 0);
         setState(() {
@@ -525,17 +540,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         });
       }
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.userMessage;
-        _stage = SendStage.error;
-      });
+      _showTransferError(e.userMessage);
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = "Couldn't complete that. Try again.";
-        _stage = SendStage.error;
-      });
+      _showTransferError("Couldn't complete that. Try again.");
     }
   }
 
@@ -548,10 +555,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       final model = ZendScope.of(context);
       final service = model.emailIntentService;
       if (service == null) {
-        setState(() {
-          _errorMessage = 'Email intent service not available.';
-          _stage = SendStage.error;
-        });
+        _showTerminalError('Email is not available right now.');
         return;
       }
 
@@ -578,27 +582,22 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     } on PinDecryptionException {
       rethrow;
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.userMessage;
-        _stage = SendStage.error;
-      });
+      _showTransferError(e.userMessage);
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = "Couldn't complete that. Try again.";
-        _stage = SendStage.error;
-      });
+      _showTransferError("Couldn't complete that. Try again.");
     }
   }
 
   /// Retry after a send error — re-uses the session cache if available,
-  /// exactly like the initial proceed-from-recipient flow.
+  /// exactly like the initial proceed-from-recipient flow. Called from the
+  /// error modal's "Try again" button, at which point the sheet is already
+  /// back on [SendStage.preparing] (set by [_showTransferError]/[_showTerminalError]
+  /// before the modal opened), so this just re-drives the same decision
+  /// logic as the very first attempt — no stage to "come back from".
   Future<void> _retryFromError() async {
     setState(() {
       _pinDigits = '';
       _pinError = null;
-      _errorMessage = null;
     });
     if (_emailRecipient != null) {
       await _proceedFromEmailIntentRecipient(_emailRecipient!);
@@ -659,6 +658,12 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   Widget _buildStageContent() {
     switch (_stage) {
+      case SendStage.preparing:
+        return SendProcessingStage(
+          key: const ValueKey('preparing'),
+          amountFormatted: _amountFormatted,
+          recipientZendtag: _recipientZendtag ?? '',
+        );
       case SendStage.uncertain:
         return const SendUncertainStage(key: ValueKey('uncertain'));
       case SendStage.recipient:
@@ -703,13 +708,6 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           recipientZendtag: _recipientZendtag ?? '',
           note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
           onDone: _dismiss,
-        );
-      case SendStage.error:
-        return SendErrorStage(
-          key: const ValueKey('error'),
-          errorMessage: _errorMessage ?? 'Something went wrong.',
-          onRetry: _retryFromError,
-          onCancel: _dismiss,
         );
       case SendStage.emailIntent:
         return _EmailIntentStage(

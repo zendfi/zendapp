@@ -4,15 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
-import '../../design/zend_avatar.dart';
+import '../../design/zend_error_modal.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sound_service.dart';
 import 'payment_request.dart';
 import 'request_qr_sheet.dart';
-import 'request_utils.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+/// Requesting money — visually mirrors [SendFlowSheet]'s identity-first,
+/// amount-entry design (redesign.md §12-13: "Same structure" as Send, just
+/// "Request" instead of "Send"). The old full-page form (`_FormStage`,
+/// with its own To/Note/Amount field layout) is deactivated — every live
+/// caller already supplies an identity via [prefilledRecipient], the same
+/// way Send's old recipient-picker page is no longer reachable in
+/// practice.
 Future<void> showRequestDrawer(
   BuildContext context, {
   double? initialAmount,
@@ -22,22 +28,20 @@ Future<void> showRequestDrawer(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => FractionallySizedBox(
-      heightFactor: 1.0,
-      child: RequestDrawerSheet(
-        initialAmount: initialAmount,
-        amountReadOnly: amountReadOnly,
-        prefilledRecipient: prefilledRecipient,
-      ),
+    builder: (_) => RequestDrawerSheet(
+      initialAmount: initialAmount,
+      amountReadOnly: amountReadOnly,
+      prefilledRecipient: prefilledRecipient,
     ),
   );
 }
 
-// ── Stage enum — mirrors SendStage pattern ────────────────────────────────────
+// ── Stage enum — mirrors SendStage ────────────────────────────────────────────
 
-enum _RequestStage { form, loading, success }
+enum _RequestStage { amount, loading, success }
 
 // ── Main sheet widget ─────────────────────────────────────────────────────────
 
@@ -53,9 +57,9 @@ class RequestDrawerSheet extends StatefulWidget {
   final bool amountReadOnly;
 
   /// A zendtag already established by an identity-first entry point (the
-  /// new Zend entry flow — pick identity, then Send/Request). When set, the
-  /// "who" field starts populated and resolved instead of empty — mirrors
-  /// [SendFlowSheet.prefilledRecipient].
+  /// Zend entry flow — pick identity, then Send/Request). Every live
+  /// caller supplies this; the sheet has no independent identity picker
+  /// of its own anymore, matching [SendFlowSheet]'s equivalent change.
   final String? prefilledRecipient;
 
   @override
@@ -63,26 +67,14 @@ class RequestDrawerSheet extends StatefulWidget {
 }
 
 class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
-  static const int _noteMaxLength = 140;
   static const Duration _stageTransition = Duration(milliseconds: 180);
   static const Duration _sheetResize = Duration(milliseconds: 220);
 
-  _RequestStage _stage = _RequestStage.form;
+  _RequestStage _stage = _RequestStage.amount;
 
-  // Form state
   double _amount = 0;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
-  final TextEditingController _toController = TextEditingController();
-
-  String _toValue = '';
-  bool _resolving = false;
-  String? _resolvedZendtag;
-  String? _resolvedDisplayName;
-  String? _resolvedAvatarUrl;
-  String? _recipientEmail;
-  String? _resolveError;
-  Timer? _debounceTimer;
 
   PaymentRequest? _createdRequest;
 
@@ -91,24 +83,12 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     super.initState();
     _amount = widget.initialAmount ?? 0;
     if (_amount > 0) _amountController.text = _amount.toStringAsFixed(2);
-    _toController.addListener(() {});
-    if (widget.prefilledRecipient != null) {
-      _toController.text = widget.prefilledRecipient!;
-      // Deferred to a post-frame callback (not called synchronously here)
-      // since resolving needs ZendScope.of(context), which is illegal in
-      // initState — see ZendScope's own doc comment on .of() vs .read().
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _onToChanged(widget.prefilledRecipient!);
-      });
-    }
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     _amountController.dispose();
     _noteController.dispose();
-    _toController.dispose();
     super.dispose();
   }
 
@@ -119,62 +99,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   bool get _canCreate => _amount > 0;
 
-  bool get _hasValidRecipient => _resolvedZendtag != null || _recipientEmail != null;
-
-  void _onToChanged(String v) {
-    setState(() {
-      _toValue = v;
-      _resolvedZendtag = null;
-      _resolvedDisplayName = null;
-      _resolvedAvatarUrl = null;
-      _recipientEmail = null;
-      _resolveError = null;
-    });
-    _debounceTimer?.cancel();
-    if (v.trim().isEmpty) return;
-
-    final trimmed = v.trim();
-    if (trimmed.contains('@') && trimmed.contains('.') && !trimmed.startsWith('@')) {
-      // Looks like an email
-      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-      if (emailRegex.hasMatch(trimmed)) {
-        setState(() => _recipientEmail = trimmed);
-      }
-      return;
-    }
-
-    // Zendtag — strip @ prefix and resolve
-    final tag = trimmed.replaceAll('@', '').toLowerCase();
-    if (tag.isEmpty) return;
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () => _resolveTag(tag));
-  }
-
-  Future<void> _resolveTag(String tag) async {
-    if (!mounted) return;
-    final model = ZendScope.of(context);
-    if (tag == model.currentZendtag) {
-      setState(() => _resolveError = "Can't request from yourself");
-      return;
-    }
-    setState(() { _resolving = true; _resolveError = null; });
-    try {
-      final resolved = await model.zendtagService.resolve(tag);
-      if (!mounted) return;
-      setState(() {
-        _resolvedZendtag = resolved.zendtag;
-        _resolvedDisplayName = resolved.displayName.trim().isNotEmpty ? resolved.displayName : '@${resolved.zendtag}';
-        _resolvedAvatarUrl = resolved.avatarUrl;
-        _resolving = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() { _resolving = false; });
-    }
-  }
-
   Future<void> _submit() async {
     if (!_canCreate || _stage == _RequestStage.loading) return;
     final model = ZendScope.of(context);
+    final tag = widget.prefilledRecipient?.replaceAll('@', '');
 
     setState(() => _stage = _RequestStage.loading);
 
@@ -184,8 +112,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
         amountUsdc: _amount,
         description: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
         expiresAt: null,
-        recipientZendtag: _resolvedZendtag,
-        recipientEmail: _recipientEmail,
+        recipientZendtag: tag,
+        recipientEmail: null,
       );
       request = PaymentRequest(
         id: response['id'] as String,
@@ -195,29 +123,29 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
         createdAt: DateTime.now(),
         expiryDate: null,
         status: PaymentRequestStatus.pending,
-        recipientZendtag: response['recipient_zendtag'] as String? ?? _resolvedZendtag,
-        recipientEmail: response['recipient_email'] as String? ?? _recipientEmail,
+        recipientZendtag: response['recipient_zendtag'] as String? ?? tag,
+        recipientEmail: response['recipient_email'] as String?,
       );
     } catch (_) {
-      final requestId = generateRequestId();
-      request = PaymentRequest(
-        id: requestId,
-        link: buildRequestLink(model.username, requestId),
-        amount: _amount,
-        description: _noteController.text.trim(),
-        createdAt: DateTime.now(),
-        expiryDate: null,
-        status: PaymentRequestStatus.pending,
-        recipientZendtag: _resolvedZendtag,
-        recipientEmail: _recipientEmail,
+      if (!mounted) return;
+      setState(() => _stage = _RequestStage.amount);
+      showZendErrorModal(
+        context,
+        message: "Couldn't complete that. Try again.",
+        onRetry: _submit,
+        onDismiss: () => Navigator.of(context).pop(),
       );
+      return;
     }
 
     model.addPaymentRequest(request);
     if (!mounted) return;
     HapticFeedback.mediumImpact();
     unawaited(SoundService.playZentSuccess());
-    setState(() { _stage = _RequestStage.success; _createdRequest = request; });
+    setState(() {
+      _stage = _RequestStage.success;
+      _createdRequest = request;
+    });
   }
 
   @override
@@ -225,7 +153,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     final double heightFraction = switch (_stage) {
-      _RequestStage.form    => 1.0,
+      _RequestStage.amount  => 0.55,
       _RequestStage.loading => 0.45,
       _RequestStage.success => 0.55,
     };
@@ -269,29 +197,19 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   Widget _buildStage() {
     return switch (_stage) {
-      _RequestStage.form    => _FormStage(
-          key: const ValueKey('form'),
+      _RequestStage.amount => _RequestAmountStage(
+          key: const ValueKey('amount'),
           amountController: _amountController,
           amountReadOnly: widget.amountReadOnly,
           noteController: _noteController,
-          noteMaxLength: _noteMaxLength,
-          toController: _toController,
-          toValue: _toValue,
-          resolving: _resolving,
-          resolvedZendtag: _resolvedZendtag,
-          resolvedDisplayName: _resolvedDisplayName,
-          resolvedAvatarUrl: _resolvedAvatarUrl,
-          recipientEmail: _recipientEmail,
-          resolveError: _resolveError,
-          canCreate: _canCreate,
-          hasValidRecipient: _hasValidRecipient,
+          recipientLabel: widget.prefilledRecipient,
           amountFormatted: _amountFormatted,
+          canCreate: _canCreate,
           onAmountChanged: (v) => setState(() => _amount = double.tryParse(v) ?? 0),
-          onToChanged: _onToChanged,
           onSubmit: _submit,
         ),
-      _RequestStage.loading => _LoadingStage(key: const ValueKey('loading')),
-      _RequestStage.success => _SuccessStage(
+      _RequestStage.loading => const _RequestLoadingStage(key: ValueKey('loading')),
+      _RequestStage.success => _RequestSuccessStage(
           key: const ValueKey('success'),
           request: _createdRequest!,
           onDone: () => Navigator.of(context).pop(),
@@ -301,200 +219,83 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   }
 }
 
-// ── Form Stage ────────────────────────────────────────────────────────────────
+// ── Amount Stage — mirrors ZendEntrySheet's Send-amount stage exactly ────────
 
-class _FormStage extends StatelessWidget {
-  const _FormStage({
+class _RequestAmountStage extends StatelessWidget {
+  const _RequestAmountStage({
     super.key,
     required this.amountController,
     required this.amountReadOnly,
     required this.noteController,
-    required this.noteMaxLength,
-    required this.toController,
-    required this.toValue,
-    required this.resolving,
-    required this.resolvedZendtag,
-    required this.resolvedDisplayName,
-    required this.resolvedAvatarUrl,
-    required this.recipientEmail,
-    required this.resolveError,
-    required this.canCreate,
-    required this.hasValidRecipient,
+    required this.recipientLabel,
     required this.amountFormatted,
+    required this.canCreate,
     required this.onAmountChanged,
-    required this.onToChanged,
     required this.onSubmit,
   });
 
   final TextEditingController amountController;
   final bool amountReadOnly;
   final TextEditingController noteController;
-  final int noteMaxLength;
-  final TextEditingController toController;
-  final String toValue;
-  final bool resolving;
-  final String? resolvedZendtag;
-  final String? resolvedDisplayName;
-  final String? resolvedAvatarUrl;
-  final String? recipientEmail;
-  final String? resolveError;
-  final bool canCreate;
-  final bool hasValidRecipient;
+  final String? recipientLabel;
   final String amountFormatted;
+  final bool canCreate;
   final ValueChanged<String> onAmountChanged;
-  final ValueChanged<String> onToChanged;
   final VoidCallback onSubmit;
-
-  String get _buttonLabel {
-    if (!hasValidRecipient) return 'Request $amountFormatted';
-    if (resolvedZendtag != null) return 'Request from @$resolvedZendtag';
-    return 'Send to $recipientEmail';
-  }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final keyboardOpen = keyboardHeight > 50;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned.fill(
-            bottom: 72 + (keyboardOpen ? keyboardHeight : 0),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── Header ──
-                  Text(
-                    'Request $amountFormatted',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Amount field (editable unless read-only) ──
-                  if (!amountReadOnly) ...[
-                    _FieldRow(
-                      label: r'$',
-                      child: TextField(
-                        controller: amountController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textInputAction: TextInputAction.next,
-                        onChanged: onAmountChanged,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: '0.00',
-                          hintStyle: TextStyle(color: zt.textSecondary),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Divider(color: zt.border, height: 1),
-                    const SizedBox(height: 4),
-                  ],
-
-                  // ── To field ──
-                  _FieldRow(
-                    label: 'To',
-                    child: TextField(
-                      controller: toController,
-                      onChanged: onToChanged,
-                      textInputAction: TextInputAction.next,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: '@username or email',
-                        hintStyle: TextStyle(color: zt.textSecondary),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        suffixIconConstraints: const BoxConstraints(maxWidth: 24, maxHeight: 24),
-                        suffixIcon: resolving
-                            ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
-                            : (resolvedZendtag != null || recipientEmail != null)
-                                ? Icon(PhosphorIconsRegular.checkCircle, size: 16, color: zt.accentBright)
-                                : null,
-                      ),
-                    ),
-                  ),
-
-                  // Resolved name or error
-                  if (resolvedDisplayName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 48, top: 4),
-                      child: Row(
-                        children: [
-                          if (resolvedAvatarUrl != null) ...[
-                            ZendAvatar(radius: 10, photoUrl: resolvedAvatarUrl, initials: resolvedDisplayName![0].toUpperCase()),
-                            const SizedBox(width: 6),
-                          ],
-                          Text(resolvedDisplayName!, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accentBright)),
-                        ],
-                      ),
-                    )
-                  else if (resolveError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 48, top: 4),
-                      child: Text(resolveError!, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive)),
-                    ),
-
-                  const SizedBox(height: 4),
-                  Divider(color: zt.border, height: 1),
-                  const SizedBox(height: 4),
-
-                  // ── Note field ──
-                  _FieldRow(
-                    label: 'Note',
-                    child: TextField(
-                      controller: noteController,
-                      maxLength: noteMaxLength,
-                      textInputAction: TextInputAction.done,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'optional',
-                        hintStyle: TextStyle(color: zt.textSecondary),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        counterText: '',
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-                  Divider(color: zt.border, height: 1),
-                ],
-              ),
+          Text(
+            'Request',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w600, color: zt.textPrimary),
+          ),
+          if (recipientLabel != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              recipientLabel!.startsWith('@') ? recipientLabel! : '@$recipientLabel',
+              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textSecondary),
+            ),
+          ],
+          const SizedBox(height: 20),
+          TextField(
+            controller: amountController,
+            autofocus: !amountReadOnly,
+            readOnly: amountReadOnly,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
+            decoration: InputDecoration(
+              prefixText: '\$',
+              prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 32, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              hintText: '0',
+              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textSecondary),
+              border: InputBorder.none,
+            ),
+            onChanged: onAmountChanged,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: noteController,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Add a note',
+              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              border: InputBorder.none,
             ),
           ),
-
-          // ── Floating request button ──
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: (keyboardOpen ? keyboardHeight : 0) + 16,
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
             child: PrimaryButton(
-              label: _buttonLabel,
+              label: canCreate ? 'Request $amountFormatted' : 'Enter an amount',
               onPressed: canCreate ? onSubmit : null,
             ),
           ),
@@ -506,8 +307,8 @@ class _FormStage extends StatelessWidget {
 
 // ── Loading Stage ─────────────────────────────────────────────────────────────
 
-class _LoadingStage extends StatelessWidget {
-  const _LoadingStage({super.key});
+class _RequestLoadingStage extends StatelessWidget {
+  const _RequestLoadingStage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -527,18 +328,18 @@ class _LoadingStage extends StatelessWidget {
 
 // ── Success Stage ─────────────────────────────────────────────────────────────
 
-class _SuccessStage extends StatefulWidget {
-  const _SuccessStage({super.key, required this.request, required this.onDone, required this.onShowQr});
+class _RequestSuccessStage extends StatefulWidget {
+  const _RequestSuccessStage({super.key, required this.request, required this.onDone, required this.onShowQr});
 
   final PaymentRequest request;
   final VoidCallback onDone;
   final VoidCallback onShowQr;
 
   @override
-  State<_SuccessStage> createState() => _SuccessStageState();
+  State<_RequestSuccessStage> createState() => _RequestSuccessStageState();
 }
 
-class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderStateMixin {
+class _RequestSuccessStageState extends State<_RequestSuccessStage> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
@@ -553,23 +354,13 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
 
-  String _headline() {
-    if (widget.request.recipientZendtag != null) return 'Zent it!';
-    if (widget.request.recipientEmail != null) return 'Request emailed!';
-    return 'Link created!';
-  }
-
-  String _subline() {
-    if (widget.request.recipientZendtag != null) return '@${widget.request.recipientZendtag} will get a notification.';
-    if (widget.request.recipientEmail != null) return 'Sent to ${widget.request.recipientEmail}';
-    return 'Share the link or show the QR.';
-  }
-
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amount = widget.request.amount;
     final amountStr = amount == amount.roundToDouble() ? '\$${amount.toStringAsFixed(0)}' : '\$${amount.toStringAsFixed(2)}';
+    final tag = widget.request.recipientZendtag;
+    final note = widget.request.description;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -586,43 +377,22 @@ class _SuccessStageState extends State<_SuccessStage> with SingleTickerProviderS
             ),
           ),
           const SizedBox(height: 20),
-          Text(_headline(), style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
-          const SizedBox(height: 6),
-          Text(amountStr, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textSecondary)),
+          // Spec §14's confirmation pattern, mirrored for Request: "Sent"
+          // becomes "Requested" — same lightweight amount / to / note shape.
+          Text('Requested', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textPrimary)),
           const SizedBox(height: 4),
-          Text(_subline(), textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+          Text(amountStr, style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
+          const SizedBox(height: 8),
+          if (tag != null)
+            Text('from @$tag', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('"$note"', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontStyle: FontStyle.italic, color: zt.textSecondary)),
+          ],
           const SizedBox(height: 32),
           SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr)),
           const SizedBox(height: 12),
           SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Done', onPressed: widget.onDone)),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Shared field row widget ───────────────────────────────────────────────────
-
-class _FieldRow extends StatelessWidget {
-  const _FieldRow({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 36,
-            child: Text(label, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: child),
         ],
       ),
     );

@@ -555,7 +555,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 filled: true,
                 fillColor: zt.bgSecondary,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(ZendRadii.lg),
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
                   borderSide: BorderSide.none,
                 ),
               ),

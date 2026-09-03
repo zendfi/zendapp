@@ -107,17 +107,20 @@ ThemeData buildZendTheme() {
       fillColor: ZendColors.bgSecondary,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // Fully rounded — matches PrimaryButton/OutlineActionButton's pill
+      // shape, so every text box in the app reads as the same rounded
+      // language as its buttons.
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
       // No focus highlight — clean, no border on focus
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
     ),
@@ -234,16 +237,16 @@ ThemeData buildZendDarkTheme() {
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
       // No focus highlight — clean, no border on focus
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
         borderSide: BorderSide.none,
       ),
     ),
