@@ -19,37 +19,38 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// Originally spec'd as three separate screens (Identity → Identity Found
 /// with Send/Request buttons → a dedicated Send or Request screen), this
 /// was deliberately merged into one continuous flow: pick a person, then
-/// type an amount, then decide Request/Zend/Vibe — closer to "click user
-/// → type amount → add note → send or receive → done" than three discrete
-/// screen transitions. Reasoning: the amount and note are shared context
-/// regardless of direction, and asking the user to declare intent
-/// (Send-vs-Request) before they've even typed an amount is a decision
-/// made too early — better made at the point of actual commitment. See
-/// the redesign.md changelog for the full discussion; this is a
-/// deliberate, agreed departure from the original three-screen LOCKED
-/// spec, not a silent deviation.
+/// type an amount, then decide Request/Zend/Vibe. See redesign.md §10.1
+/// for the rationale — this is an agreed departure from the original
+/// three-screen LOCKED spec, not a silent deviation.
 ///
-///   1. Identity — search by @username or email, or pick from Recent.
-///   2. Amount — one screen: avatar/name header, amount keypad, note,
-///      then Request / Zend / Vibe.
-///   3. Hand-off — Zend delegates to [SendFlowSheet] (PIN/processing/
-///      confirmation pipeline unchanged); Request posts directly and
-///      shows its own lightweight confirmation inline, since Request has
-///      no PIN/signing step to hand off to. Vibe is not yet built —
-///      tapping it shows a "coming soon" notice (spec has no Vibe
-///      screens; Vibes were previously scoped as Phase 5 of zend-social,
-///      not part of this beta round).
+/// ── Layout contract (do not break) ──────────────────────────────────────
+/// This sheet is built on a **bounded** height, and that is deliberate:
+///
+///   * The sheet gets an explicit height that shrinks by the keyboard
+///     inset, so it is always fully on-screen and never covered.
+///   * Because the height is bounded, `Expanded` works inside it — each
+///     stage can give its scrollable region a real, finite height.
+///   * The action buttons live *outside* any scroll view, pinned at the
+///     bottom, so they are always visible regardless of scroll position.
+///
+/// A previous revision made this sheet content-sized (`MainAxisSize.min`
+/// inside a `SingleChildScrollView`), which broke three separate things at
+/// once and is why the contract above is spelled out:
+///   1. The sheet collapsed to a short box instead of opening full length.
+///   2. `Row(crossAxisAlignment: stretch)` for the action buttons became
+///      illegal — inside an unbounded scroll view its children receive a
+///      `tightFor(height: infinity)` constraint, so the buttons rendered
+///      as nothing at all.
+///   3. That broken RenderFlex poisoned paint/hit-testing for its
+///      siblings, leaving the amount and note fields unresponsive.
 Future<void> showZendEntrySheet(
   BuildContext context, {
   String? prefilledRecipient,
 }) {
-  // Mirrors `showZendtagPromptSheet`'s configuration exactly — the one
-  // sheet in this app with a real OS-keyboard TextField that demonstrably
-  // works. Specifically: NO `useSafeArea` (the sheet applies its own
-  // `SafeArea(top: false)` internally instead) and NO
-  // `FractionallySizedBox` wrapper, so the sheet sizes to its content and
-  // can be lifted by the keyboard rather than being pinned to a fixed
-  // fraction of the screen that the keyboard then covers.
+  // No `useSafeArea` and no `FractionallySizedBox` wrapper — the sheet
+  // computes its own height (keyboard-aware) and applies its own
+  // `SafeArea` internally, matching `zendtag_prompt_sheet.dart`, the one
+  // OS-keyboard sheet in this app that demonstrably works.
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -84,8 +85,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   // and amount fields. AnimatedSwitcher keeps the outgoing stage mounted
   // during its cross-fade, so with autofocus on both, two TextFields race
   // to claim focus on every stage change and can end up with *neither*
-  // focused — which is why no input field responded at all. Focus is now
-  // requested explicitly, once, for whichever stage is becoming active.
+  // focused. Focus is requested explicitly, once, per stage.
   final _searchFocus = FocusNode();
   final _amountFocus = FocusNode();
   Timer? _debounce;
@@ -112,7 +112,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     } else {
       _stage = _EntryStage.identity;
     }
-    // Claim focus once, after first layout, for whichever stage opened.
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusForStage());
   }
 
@@ -126,6 +125,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     _debounce?.cancel();
     super.dispose();
   }
+
+  double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
   /// Single owner of stage transitions, so focus is always handed to
   /// exactly one field per stage — never contested between the outgoing
@@ -148,8 +149,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         FocusManager.instance.primaryFocus?.unfocus();
     }
   }
-
-  double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
   void _onQueryChanged(String value) {
     setState(() {
@@ -241,9 +240,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     _goToStage(_EntryStage.amount);
   }
 
-  void _changeIdentity() {
-    _goToStage(_EntryStage.identity);
-  }
+  void _changeIdentity() => _goToStage(_EntryStage.identity);
 
   void _confirmZend() {
     if (_amount <= 0) return;
@@ -316,10 +313,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: PrimaryButton(label: 'Got it', onPressed: () => Navigator.of(dialogContext).pop()),
-                ),
+                PrimaryButton(label: 'Got it', onPressed: () => Navigator.of(dialogContext).pop()),
               ],
             ),
           ),
@@ -334,27 +328,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     final mq = MediaQuery.of(context);
     final keyboardInset = mq.viewInsets.bottom;
 
-    // Deliberately NO Scaffold here. A Scaffold inserts a MediaQuery for
-    // its body subtree with the bottom view insets *stripped*
-    // (MediaQuery.removeViewInsets), so reading viewInsets.bottom inside a
-    // Scaffold body always yields 0 — any keyboard padding computed there
-    // is silently a no-op. Nesting a Scaffold as a bottom sheet's root
-    // also breaks the sheet's layout geometry (it isn't designed for that
-    // position), which is what produced the transparent background and
-    // dead hit-testing on every input in this sheet.
-    //
-    // This mirrors `zendtag_prompt_sheet.dart` — the proven-working
-    // OS-keyboard sheet in this app: viewInsets padding at the very root,
-    // then the coloured surface, then SafeArea, then min-sized content.
-    //
-    // The content is height-capped and scrollable rather than fixed, so a
-    // long Recent list can't overflow, and the cap shrinks as the keyboard
-    // takes space instead of being covered by it.
-    final maxContentHeight = ((mq.size.height - keyboardInset) * 0.82).clamp(200.0, double.infinity);
+    // Bounded, keyboard-aware height. Shrinking by the keyboard inset (as
+    // well as padding the sheet up by it) is what keeps the whole sheet
+    // on-screen instead of having its lower half covered. Everything
+    // inside can therefore rely on a finite height — see the layout
+    // contract on [showZendEntrySheet].
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92)
+        .clamp(280.0, mq.size.height);
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardInset),
       child: Container(
+        height: sheetHeight,
         decoration: BoxDecoration(
           color: zt.bgPrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
@@ -362,23 +347,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         child: SafeArea(
           top: false,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-              const Center(child: ZendSheetHandle()),
+              const ZendSheetHandle(),
               const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxContentHeight),
-                child: SingleChildScrollView(
-                  child: AnimatedSwitcher(
-                    duration: ZendMotion.sheetEnter,
-                    child: switch (_stage) {
-                      _EntryStage.identity => _buildIdentityStage(zt),
-                      _EntryStage.amount => _buildAmountStage(zt),
-                      _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
-                    },
-                  ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: ZendMotion.sheetEnter,
+                  child: switch (_stage) {
+                    _EntryStage.identity => _buildIdentityStage(zt),
+                    _EntryStage.amount => _buildAmountStage(zt),
+                    _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
+                  },
                 ),
               ),
             ],
@@ -388,14 +368,17 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     );
   }
 
+  // ── Identity stage ────────────────────────────────────────────────────
+  // Search field pinned at top, results/recents scroll in the remaining
+  // (bounded) space via Expanded.
+
   Widget _buildIdentityStage(ZendTheme zt) {
     final model = ZendScope.of(context);
     return Padding(
       key: const ValueKey('identity'),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
           // "Zend user_input" — the Z mark sits inline to the left of the
           // field instead of a standalone "Zend" heading above it, so the
@@ -420,11 +403,15 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     focusNode: _searchFocus,
                     onChanged: _onQueryChanged,
                     onSubmitted: (_) => _submitRaw(),
+                    textInputAction: TextInputAction.search,
                     style: TextStyle(fontFamily: 'Geist', fontSize: 16, color: zt.textPrimary),
                     decoration: InputDecoration(
                       hintText: '@username or email',
                       hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 16, color: zt.textSecondary),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                   ),
@@ -439,62 +426,77 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive),
             ),
           ],
-          const SizedBox(height: 20),
-          if (_query.length >= 2) ..._buildLiveResults(zt) else ..._buildRecent(zt, model.recentContacts),
+          const SizedBox(height: 16),
+          Expanded(child: _buildIdentityResults(zt, model.recentContacts)),
         ],
       ),
     );
   }
 
-  List<Widget> _buildLiveResults(ZendTheme zt) {
-    if (_searching && _results.isEmpty) {
-      // Skeleton rows shaped like the real identity rows below them
-      // (avatar + two text lines) rather than a spinner — the loading
-      // state previews the shape of what's about to appear instead of
-      // just signaling "wait".
-      return const [SearchUsersSkeleton()];
-    }
-    if (_results.isEmpty) {
-      return [];
-    }
-    return _results.map((u) {
-      final tag = u['zendtag'] as String? ?? '';
-      final name = (u['display_name'] as String?)?.trim().isNotEmpty == true ? u['display_name'] as String : tag;
-      return _IdentityRow(
-        displayName: name,
-        subtitle: '@$tag',
-        avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
-        avatarUrl: u['avatar_url'] as String?,
-        onTap: () => _pickSearchResult(u),
+  Widget _buildIdentityResults(ZendTheme zt, List<RecentContact> recent) {
+    if (_query.length >= 2) {
+      if (_searching && _results.isEmpty) {
+        // Skeleton rows shaped like the real identity rows rather than a
+        // spinner — the loading state previews the shape of what's about
+        // to appear instead of just signalling "wait".
+        return const SearchUsersSkeleton();
+      }
+      if (_results.isEmpty) return const SizedBox.shrink();
+      return ListView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: _results.length,
+        itemBuilder: (context, i) {
+          final u = _results[i];
+          final tag = u['zendtag'] as String? ?? '';
+          final name = (u['display_name'] as String?)?.trim().isNotEmpty == true ? u['display_name'] as String : tag;
+          return _IdentityRow(
+            displayName: name,
+            subtitle: '@$tag',
+            avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
+            avatarUrl: u['avatar_url'] as String?,
+            onTap: () => _pickSearchResult(u),
+          );
+        },
       );
-    }).toList();
+    }
+
+    if (recent.isEmpty) return const SizedBox.shrink();
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: recent.length + 1,
+      itemBuilder: (context, i) {
+        if (i == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              'Recent',
+              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+            ),
+          );
+        }
+        final c = recent[i - 1];
+        return _IdentityRow(
+          displayName: c.name.isNotEmpty ? c.name : c.tag,
+          subtitle: '@${c.tag}',
+          avatarLabel: c.avatarLabel,
+          avatarUrl: c.avatarUrl,
+          onTap: () => _pickContact(c),
+        );
+      },
+    );
   }
 
-  List<Widget> _buildRecent(ZendTheme zt, List<RecentContact> recent) {
-    if (recent.isEmpty) return [];
-    return [
-      Text(
-        'Recent',
-        style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
-      ),
-      const SizedBox(height: 4),
-      ...recent.take(6).map((c) => _IdentityRow(
-            displayName: c.name.isNotEmpty ? c.name : c.tag,
-            subtitle: '@${c.tag}',
-            avatarLabel: c.avatarLabel,
-            avatarUrl: c.avatarUrl,
-            onTap: () => _pickContact(c),
-          )),
-    ];
-  }
+  // ── Amount stage ──────────────────────────────────────────────────────
+  // Scrollable middle (identity header + amount + note) with the action
+  // row pinned outside the scroll view, so the buttons are always visible
+  // and never depend on scroll position.
 
   Widget _buildAmountStage(ZendTheme zt) {
-    final canAct = _amount > 0;
+    final canAct = _amount > 0 && !_submittingRequest;
     return Padding(
       key: const ValueKey('amount'),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -512,99 +514,149 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               ),
             ],
           ),
-          // Identity header, tappable to change person (mirrors the
-          // reference screen's avatar+plus).
-          GestureDetector(
-            onTap: widget.prefilledRecipient == null ? _changeIdentity : null,
-            child: Column(
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ZendAvatar(
-                      radius: 28,
-                      initials: (_displayName?.isNotEmpty ?? false) ? _displayName![0].toUpperCase() : '?',
-                      photoUrl: _avatarUrl,
-                    ),
-                    if (widget.prefilledRecipient == null)
-                      Positioned(
-                        right: -2,
-                        bottom: -2,
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(color: zt.bgPrimary, shape: BoxShape.circle, border: Border.all(color: zt.border)),
-                          child: Icon(PhosphorIconsRegular.plus, size: 12, color: zt.accent),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Identity header, tappable to change person.
+                  GestureDetector(
+                    onTap: widget.prefilledRecipient == null ? _changeIdentity : null,
+                    child: Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            ZendAvatar(
+                              radius: 28,
+                              initials: (_displayName?.isNotEmpty ?? false) ? _displayName![0].toUpperCase() : '?',
+                              photoUrl: _avatarUrl,
+                            ),
+                            if (widget.prefilledRecipient == null)
+                              Positioned(
+                                right: -2,
+                                bottom: -2,
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: zt.bgPrimary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: zt.border),
+                                  ),
+                                  child: Icon(PhosphorIconsRegular.plus, size: 12, color: zt.accent),
+                                ),
+                              ),
+                          ],
                         ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _zendtag != null ? '@$_zendtag' : (_displayName ?? _email ?? ''),
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                        ),
+                        if (_email != null)
+                          Text(_email!, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _amountController,
+                    focusNode: _amountFocus,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    decoration: InputDecoration(
+                      prefixText: '\$',
+                      prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 38, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      hintText: '0',
+                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                      // Explicitly borderless/unfilled — the global
+                      // InputDecorationTheme fills and pill-rounds inputs
+                      // by default, which would draw a capsule around the
+                      // big amount figure.
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    ),
+                    child: TextField(
+                      controller: _noteController,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.done,
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: "What's this for?",
+                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _zendtag != null ? '@$_zendtag' : (_displayName ?? _email ?? ''),
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
-                ),
-                if (_email != null)
-                  Text(_email!, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _amountController,
-            focusNode: _amountFocus,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
-            decoration: InputDecoration(
-              prefixText: '\$',
-              prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 38, fontWeight: FontWeight.w700, color: zt.textPrimary),
-              hintText: '0',
-              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textSecondary),
-              border: InputBorder.none,
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-            ),
-            child: TextField(
-              controller: _noteController,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-              decoration: InputDecoration(
-                hintText: "What's this for?",
-                hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          // Request / Zend / Vibe — one row, the decision made at the
-          // point of actual commitment, not before the amount exists.
+          // ── Action row — pinned outside the scroll view ──
+          // NOTE: no `crossAxisAlignment: stretch` here. Each child sizes
+          // itself to an explicit height instead; `stretch` would force a
+          // tightFor(height:) constraint that breaks these buttons if this
+          // row ever ends up in unbounded vertical space again.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: Opacity(
-                  opacity: canAct && !_submittingRequest ? 1 : 0.4,
-                  child: OutlineActionButton(
-                    label: 'Request',
-                    onPressed: canAct && !_submittingRequest ? _confirmRequest : () {},
+                  opacity: canAct ? 1 : 0.4,
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: canAct ? _confirmRequest : null,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: zt.textPrimary,
+                        side: BorderSide(color: zt.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                      ),
+                      child: const Text(
+                        'Request',
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 flex: 2,
-                child: PrimaryButton(
-                  label: 'Zend',
-                  isLoading: _submittingRequest,
-                  onPressed: canAct && !_submittingRequest ? _confirmZend : null,
+                child: SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: canAct ? _confirmZend : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: zt.accent,
+                      foregroundColor: ZendColors.textOnDeep,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                    ),
+                    child: _submittingRequest
+                        ? const ZendLoader(size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
+                        : const Text(
+                            'Zend',
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                          ),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -624,20 +676,22 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     );
   }
 
+  // ── Request confirmation ──────────────────────────────────────────────
+
   Widget _buildRequestSuccessStage(ZendTheme zt) {
     final request = _createdRequest!;
     final amountStr = request.amount == request.amount.roundToDouble()
         ? '\$${request.amount.toStringAsFixed(0)}'
         : '\$${request.amount.toStringAsFixed(2)}';
-    return Padding(
+    return SingleChildScrollView(
       key: const ValueKey('requestSuccess'),
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
             child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
           ),
@@ -650,12 +704,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             Text('from @${request.recipientZendtag}', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
           if (request.description.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text('"${request.description}"', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontStyle: FontStyle.italic, color: zt.textSecondary)),
+            Text(
+              '"${request.description}"',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontStyle: FontStyle.italic, color: zt.textSecondary),
+            ),
           ],
-          const SizedBox(height: 32),
-          SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: () => showRequestQrSheet(context, request: request))),
+          const SizedBox(height: 28),
+          PrimaryButton(label: 'Show QR', onPressed: () => showRequestQrSheet(context, request: request)),
           const SizedBox(height: 12),
-          SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Done', onPressed: () => Navigator.of(context).pop())),
+          OutlineActionButton(label: 'Done', onPressed: () => Navigator.of(context).pop()),
         ],
       ),
     );

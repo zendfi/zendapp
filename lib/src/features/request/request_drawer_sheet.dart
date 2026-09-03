@@ -163,19 +163,21 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     final keyboardInset = mq.viewInsets.bottom;
     final zt = ZendTheme.of(context);
 
-    // Same structure as ZendEntrySheet / zendtag_prompt_sheet: NO Scaffold
-    // (its body subtree has bottom viewInsets stripped, so keyboard padding
-    // computed inside is always 0), NO fixed height fraction (a fixed
-    // height can't be lifted clear of the keyboard). Root-level viewInsets
-    // padding, then the coloured surface, then SafeArea, then min-sized
-    // content capped to a scrollable max height.
-    final maxContentHeight = ((mq.size.height - keyboardInset) * 0.82).clamp(200.0, double.infinity);
+    // Bounded, keyboard-aware height — same contract as ZendEntrySheet.
+    // No Scaffold (its body subtree has bottom viewInsets stripped, so any
+    // keyboard padding computed inside is silently 0), and an explicit
+    // height that shrinks by the keyboard inset rather than a fixed
+    // fraction that the keyboard then covers. A bounded height is also
+    // what makes `Expanded` legal inside each stage.
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.62)
+        .clamp(300.0, mq.size.height);
 
     return PopScope(
       canPop: _stage != _RequestStage.loading,
       child: Padding(
         padding: EdgeInsets.only(bottom: keyboardInset),
         child: Container(
+          height: sheetHeight,
           decoration: BoxDecoration(
             color: zt.bgPrimary,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
@@ -183,28 +185,24 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           child: SafeArea(
             top: false,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 14),
                 const ZendSheetHandle(),
                 const SizedBox(height: 8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: maxContentHeight),
-                  child: SingleChildScrollView(
-                    child: AnimatedSwitcher(
-                      duration: _stageTransition,
-                      reverseDuration: const Duration(milliseconds: 140),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
-                          child: child,
-                        ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: _stageTransition,
+                    reverseDuration: const Duration(milliseconds: 140),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
+                        child: child,
                       ),
-                      child: _buildStage(),
                     ),
+                    child: _buildStage(),
                   ),
                 ),
               ],
@@ -269,58 +267,84 @@ class _RequestAmountStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    // Scrollable middle + pinned action button, so the button is always
+    // visible and never depends on scroll position. Relies on this stage
+    // receiving a bounded height from the sheet's Expanded.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Request',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w600, color: zt.textPrimary),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Text(
+                    'Request',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                  ),
+                  if (recipientLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      recipientLabel!.startsWith('@') ? recipientLabel! : '@$recipientLabel',
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: amountController,
+                    focusNode: amountFocus,
+                    readOnly: amountReadOnly,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    decoration: InputDecoration(
+                      prefixText: '\$',
+                      prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 32, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      hintText: '0',
+                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                      // Explicitly borderless/unfilled — the global
+                      // InputDecorationTheme fills and pill-rounds inputs,
+                      // which would draw a capsule around the big figure.
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                    onChanged: onAmountChanged,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    ),
+                    child: TextField(
+                      controller: noteController,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.done,
+                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Add a note',
+                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
           ),
-          if (recipientLabel != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              recipientLabel!.startsWith('@') ? recipientLabel! : '@$recipientLabel',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textSecondary),
-            ),
-          ],
-          const SizedBox(height: 20),
-          TextField(
-            controller: amountController,
-            focusNode: amountFocus,
-            readOnly: amountReadOnly,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
-            decoration: InputDecoration(
-              prefixText: '\$',
-              prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 32, fontWeight: FontWeight.w700, color: zt.textPrimary),
-              hintText: '0',
-              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textSecondary),
-              border: InputBorder.none,
-            ),
-            onChanged: onAmountChanged,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: noteController,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Add a note',
-              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-              border: InputBorder.none,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: PrimaryButton(
-              label: canCreate ? 'Request $amountFormatted' : 'Enter an amount',
-              onPressed: canCreate ? onSubmit : null,
-            ),
+          PrimaryButton(
+            label: canCreate ? 'Request $amountFormatted' : 'Enter an amount',
+            onPressed: canCreate ? onSubmit : null,
           ),
         ],
       ),
