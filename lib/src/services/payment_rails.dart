@@ -763,6 +763,13 @@ class RailRouter {
     }
   }
 
+  /// Whether [rail] can only be signed for with a locally held private key.
+  ///
+  /// Solana signing needs a keypair on the device. Sui signing under zkLogin needs
+  /// an ephemeral key plus a proof, which a Google sign-in produces on demand — so
+  /// a zkLogin account can use Sui but has nothing to sign a Solana transfer with.
+  static bool _requiresLocalKey(PaymentRail rail) => rail == PaymentRail.solana;
+
   /// Whether falling back to a rail that signs with a local key is meaningful.
   ///
   /// Set false for a zkLogin account. Such an account has no Solana wallet, so
@@ -784,6 +791,19 @@ class RailRouter {
     final capabilities = await _capabilities();
     if (capabilities != null) {
       for (final rail in _preference) {
+        // Skip rails this account cannot sign for, *inside the preference loop*
+        // and not only in the fallback below.
+        //
+        // The backend advertises Solana as enabled to everyone, because it is
+        // enabled — as infrastructure. It has no way to know this particular
+        // account holds no Solana keypair. So whenever Sui is unavailable for this
+        // account (wrong network, no cohort), the loop would find Solana
+        // "supported", return it, and never reach the allowLocalKeyRailFallback
+        // guard at all. The guard only ever covered the capabilities-unreadable
+        // path, which made it look effective while silently doing nothing in the
+        // case it was written for.
+        if (!allowLocalKeyRailFallback && _requiresLocalKey(rail)) continue;
+
         final binding = _registry.maybeResolve(rail);
         if (binding == null) continue;
         if (capabilities.supports(
