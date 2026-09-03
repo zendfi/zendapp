@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -202,10 +203,7 @@ class _WalletSheetState extends State<WalletSheet> {
                     ),
                     const SizedBox(height: 10),
                     if (model.historyLoading && model.recentTransactions.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: ZendLoader(size: 20, strokeWidth: 1.5, color: zt.textSecondary)),
-                      )
+                      const WalletRecentSkeleton()
                     else if (model.recentTransactions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),

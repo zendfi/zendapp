@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -119,7 +120,7 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
             const SizedBox(height: 8),
             Expanded(
               child: _loading
-                  ? const Center(child: ZendLoader(size: 22))
+                  ? const CompactThreadListSkeleton()
                   : filtered.isEmpty
                       ? Center(
                           child: Text(

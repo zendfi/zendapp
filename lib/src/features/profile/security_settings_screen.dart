@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
@@ -280,7 +281,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             const SizedBox(height: 8),
             if (_loading)
               const Expanded(
-                child: Center(child: ZendLoader()),
+                child: GroupedListSkeleton(count: 4),
               )
             else
               Expanded(

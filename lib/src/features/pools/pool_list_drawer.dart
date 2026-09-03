@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
@@ -112,9 +113,7 @@ class PoolListDrawer extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, ZendAppModel model, ZendTheme zt) {
     if (model.poolsLoading && model.pools.isEmpty) {
-      return Center(
-        child: ZendLoader(color: zt.accentBright),
-      );
+      return const GroupedListSkeleton(count: 4, rowHeight: 84);
     }
 
     if (model.lastPoolsError != null && model.pools.isEmpty) {

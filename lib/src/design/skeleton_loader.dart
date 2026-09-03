@@ -725,6 +725,194 @@ class SearchUsersSkeleton extends StatelessWidget {
   }
 }
 
+// ── Wallet recent-transactions skeleton ───────────────────────────────────────
+
+/// Skeleton for WalletSheet's "Recent" section — small avatar + name + amount
+/// rows, matching `_RecentRow`'s exact shape.
+class WalletRecentSkeleton extends StatelessWidget {
+  const WalletRecentSkeleton({super.key, this.count = 4});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Column(
+        children: List.generate(count, (i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Container(width: 32, height: 32, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                const SizedBox(width: 10),
+                Expanded(child: _SkeletonBox(width: 100 + (i % 3) * 24.0, height: 13)),
+                const SizedBox(width: 12),
+                _SkeletonBox(width: 44, height: 13),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Grouped-tile-list skeleton (Settings, KYC, Payment requests, Pools) ─────
+
+/// Generic skeleton for a scrollable page whose content is a stack of
+/// grouped-card rows (icon/label/trailing, or label/status/description) —
+/// covers SecuritySettingsScreen, PaymentRequestsScreen, PoolListDrawer,
+/// BridgeKycScreen. [rowHeight] and [count] let each caller approximate its
+/// own real row density without needing a bespoke skeleton per screen.
+class GroupedListSkeleton extends StatelessWidget {
+  const GroupedListSkeleton({super.key, this.count = 4, this.rowHeight = 58});
+  final int count;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < count; i++) ...[
+              Container(
+                height: rowHeight,
+                decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl)),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Customise-page-style form skeleton ────────────────────────────────────────
+
+/// Skeleton for CustomisePageScreen — a preview card followed by a couple
+/// of form-section blocks.
+class CustomiseFormSkeleton extends StatelessWidget {
+  const CustomiseFormSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(height: 140, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl))),
+            const SizedBox(height: 24),
+            Container(height: 120, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl))),
+            const SizedBox(height: 16),
+            Container(height: 90, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── DM/thread-style compact list skeleton ─────────────────────────────────────
+
+/// Compact avatar+name+subtitle row skeleton — used for DmForwardSheet's
+/// thread list, sized smaller than [DmListSkeleton] since it's a sheet, not
+/// a full tab screen.
+class CompactThreadListSkeleton extends StatelessWidget {
+  const CompactThreadListSkeleton({super.key, this.count = 5});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Column(
+        children: List.generate(count, (i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: Row(
+              children: [
+                Container(width: 40, height: 40, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                const SizedBox(width: 12),
+                _SkeletonBox(width: 120 + (i % 3) * 20.0, height: 14),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Small inline row-list skeleton (message info, contributors) ─────────────
+
+/// A handful of narrow label+value rows — used for DmMessageInfoSheet's
+/// read-receipt rows and the Pool contributors sheet's contributor list.
+class InlineRowsSkeleton extends StatelessWidget {
+  const InlineRowsSkeleton({super.key, this.count = 3});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Column(
+        children: List.generate(count, (i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Container(width: 18, height: 18, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                const SizedBox(width: 10),
+                _SkeletonBox(width: 90, height: 12),
+                const Spacer(),
+                _SkeletonBox(width: 60, height: 12),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Horizontal chip-list skeleton (crypto chain picker) ──────────────────────
+
+/// Skeleton for a vertical list of selectable rows with a leading icon
+/// circle and a name — used for CryptoSendSheet's chain picker.
+class SelectableRowListSkeleton extends StatelessWidget {
+  const SelectableRowListSkeleton({super.key, this.count = 4});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return _Shimmer(
+      child: Column(
+        children: List.generate(count, (i) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Container(width: 28, height: 28, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                const SizedBox(width: 12),
+                _SkeletonBox(width: 90 + (i % 3) * 16.0, height: 13),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
 // ── Person activity screen skeleton ──────────────────────────────────────────
 
 /// Skeleton for PersonActivityScreen — same row shape as ActivityFeedSkeleton

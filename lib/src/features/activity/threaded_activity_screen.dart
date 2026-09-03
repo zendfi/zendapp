@@ -1286,8 +1286,8 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
             ),
             if (_loading)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: ZendLoader(size: 24)),
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: InlineRowsSkeleton(count: 4),
               )
             else if (_error != null)
               Padding(

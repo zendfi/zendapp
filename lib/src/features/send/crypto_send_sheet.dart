@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -446,8 +447,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             // Chain list
             if (_loadingChains)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: ZendLoader(size: 24)),
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: SelectableRowListSkeleton(),
               )
             else if (_filteredChains.isEmpty)
               Padding(

@@ -150,7 +150,13 @@ void main() async {
   // the mix. This must also match the backend's SUI_NETWORK: the rail policy
   // compares the requested network against the cohort's, so a mismatch is denied
   // rather than silently routed.
-  const suiNetwork = PaymentNetwork.mainnet;
+  // Testnet until a funding route onto Sui mainnet exists. Mainnet USDC cannot
+  // currently reach a user's Sui address — there is no native ramp and the
+  // Solana-to-Sui path is unbuilt — so a mainnet rail would be provably correct
+  // and unreachable. Flip this and SUI_NETWORK together; a mismatch is denied by
+  // rail policy, and the client silently falls back to Solana, which for a
+  // zkLogin account surfaces as the wrong error entirely.
+  const suiNetwork = PaymentNetwork.testnet;
   final suiRail = PaymentRailBinding(
     identity: SuiWalletIdentity(apiClient: apiClient, network: suiNetwork),
     signer: SuiTransactionSigner(

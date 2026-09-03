@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -158,7 +159,7 @@ class _CustomisePageScreenState extends State<CustomisePageScreen> {
             ),
             const SizedBox(height: 4),
             if (_loading)
-              Expanded(child: Center(child: ZendLoader()))
+              const Expanded(child: CustomiseFormSkeleton())
             else
               Expanded(
                 child: ZendScrollPage(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -115,7 +116,12 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
             ),
             const SizedBox(height: 8),
               if (_loading)
-                Expanded(child: Center(child: ZendLoader()))
+                const Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: GroupedListSkeleton(count: 2, rowHeight: 100),
+                  ),
+                )
               else
                 Expanded(
                   child: Padding(

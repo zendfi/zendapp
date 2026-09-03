@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -170,7 +171,7 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
             // ── Content ──
             Expanded(
               child: _loading
-                  ? Center(child: ZendLoader())
+                  ? const GroupedListSkeleton(count: 5, rowHeight: 92)
                   : _error != null
                       ? Center(
                           child: Column(

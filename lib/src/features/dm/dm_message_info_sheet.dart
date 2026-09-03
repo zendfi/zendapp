@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
@@ -124,8 +125,8 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: _loading
                 ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: ZendLoader(size: 20)),
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: InlineRowsSkeleton(count: 2),
                   )
                 : _error
                     ? Padding(
