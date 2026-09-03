@@ -292,7 +292,13 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     final recentContacts = _buildRecentPoolContacts(model.recentContacts);
     final nameRemaining = _nameMaxLength - _nameController.text.length;
 
-    return Container(
+    // Root-level keyboard inset — this drawer is full-height and
+    // scrollable, so without it the lower text fields (pool name, add
+    // participant, email/phone) sit underneath the keyboard and can't be
+    // scrolled clear of it.
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
       decoration: BoxDecoration(
         color: zt.bgPrimary,
         borderRadius: const BorderRadius.vertical(
@@ -626,6 +632,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

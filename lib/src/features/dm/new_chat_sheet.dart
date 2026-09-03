@@ -22,16 +22,19 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// grouped here with starting a 1:1 chat since both are "start a new
 /// conversation" actions from the user's point of view.
 Future<void> showNewChatSheet(BuildContext context) {
+  // No `useSafeArea` / no `FractionallySizedBox` here — this sheet has a
+  // search TextField, so it must be able to lift clear of the keyboard.
+  // A fixed height fraction can't: it stays pinned while the keyboard
+  // covers its lower half, and its content Container then no longer spans
+  // the sheet's painted area, letting the route's transparent background
+  // show through. Sizing and safe-area handling live inside the sheet
+  // instead (see build), which is the pattern zendtag_prompt_sheet uses.
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const FractionallySizedBox(
-      heightFactor: 0.92,
-      child: NewChatSheet(),
-    ),
+    builder: (_) => const NewChatSheet(),
   );
 }
 
@@ -126,21 +129,32 @@ class _NewChatSheetState extends State<NewChatSheet> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
+    final mq = MediaQuery.of(context);
+    final keyboardInset = mq.viewInsets.bottom;
     final isSearching = _query.isNotEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 12),
-            const Center(child: ZendSheetHandle()),
-            const SizedBox(height: 16),
+    // Height is computed against the space actually left above the
+    // keyboard, not the raw screen height — the inner list uses Expanded,
+    // so it needs a bounded height, but that bound has to shrink when the
+    // keyboard appears or the bottom of the list ends up underneath it.
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92).clamp(240.0, double.infinity);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Container(
+        height: sheetHeight,
+        decoration: BoxDecoration(
+          color: zt.bgPrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 12),
+              const Center(child: ZendSheetHandle()),
+              const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
@@ -178,10 +192,11 @@ class _NewChatSheetState extends State<NewChatSheet> {
                 ),
               ),
             ),
-            Expanded(
-              child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model.recentContacts),
-            ),
-          ],
+              Expanded(
+                child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model.recentContacts),
+              ),
+            ],
+          ),
         ),
       ),
     );

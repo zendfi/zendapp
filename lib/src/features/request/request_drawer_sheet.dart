@@ -68,13 +68,16 @@ class RequestDrawerSheet extends StatefulWidget {
 
 class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   static const Duration _stageTransition = Duration(milliseconds: 180);
-  static const Duration _sheetResize = Duration(milliseconds: 220);
 
   _RequestStage _stage = _RequestStage.amount;
 
   double _amount = 0;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  // Explicit focus rather than `autofocus` — AnimatedSwitcher keeps the
+  // outgoing stage mounted mid-transition, and competing autofocus fields
+  // can leave nothing focused at all.
+  final FocusNode _amountFocus = FocusNode();
 
   PaymentRequest? _createdRequest;
 
@@ -83,12 +86,18 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     super.initState();
     _amount = widget.initialAmount ?? 0;
     if (_amount > 0) _amountController.text = _amount.toStringAsFixed(2);
+    if (!widget.amountReadOnly) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _amountFocus.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -150,58 +159,52 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+    final mq = MediaQuery.of(context);
+    final keyboardInset = mq.viewInsets.bottom;
+    final zt = ZendTheme.of(context);
 
-    final double heightFraction = switch (_stage) {
-      _RequestStage.amount  => 0.55,
-      _RequestStage.loading => 0.45,
-      _RequestStage.success => 0.55,
-    };
+    // Same structure as ZendEntrySheet / zendtag_prompt_sheet: NO Scaffold
+    // (its body subtree has bottom viewInsets stripped, so keyboard padding
+    // computed inside is always 0), NO fixed height fraction (a fixed
+    // height can't be lifted clear of the keyboard). Root-level viewInsets
+    // padding, then the coloured surface, then SafeArea, then min-sized
+    // content capped to a scrollable max height.
+    final maxContentHeight = ((mq.size.height - keyboardInset) * 0.82).clamp(200.0, double.infinity);
 
     return PopScope(
       canPop: _stage != _RequestStage.loading,
-      // Explicit Scaffold + resizeToAvoidBottomInset:false — this sheet's
-      // AnimatedContainer sizes to a *fixed* fraction of screen height
-      // with no Scaffold/keyboard handling of its own. Without this, the
-      // amount field's autofocus opens the keyboard and the fixed-height,
-      // non-scrolling Column has nowhere to reflow — the same
-      // detached-hit-test/unresponsive-button symptom this fixes in
-      // ZendEntrySheet. The AnimatedContainer's own height now also grows
-      // by the keyboard inset so its content still fits instead of being
-      // squeezed into the original (pre-keyboard) height fraction.
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: false,
-        body: AnimatedContainer(
-          duration: _sheetResize,
-          curve: Curves.easeOutCubic,
-          height: (screenHeight * heightFraction) + keyboardInset,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
+            color: zt.bgPrimary,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
           ),
-          child: Padding(
-            padding: EdgeInsets.only(bottom: keyboardInset),
+          child: SafeArea(
+            top: false,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 14),
                 const ZendSheetHandle(),
                 const SizedBox(height: 8),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: _stageTransition,
-                    reverseDuration: const Duration(milliseconds: 140),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (child, animation) => FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
-                        child: child,
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxContentHeight),
+                  child: SingleChildScrollView(
+                    child: AnimatedSwitcher(
+                      duration: _stageTransition,
+                      reverseDuration: const Duration(milliseconds: 140),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
+                          child: child,
+                        ),
                       ),
+                      child: _buildStage(),
                     ),
-                    child: RepaintBoundary(child: SingleChildScrollView(child: _buildStage())),
                   ),
                 ),
               ],
@@ -217,6 +220,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
       _RequestStage.amount => _RequestAmountStage(
           key: const ValueKey('amount'),
           amountController: _amountController,
+          amountFocus: _amountFocus,
           amountReadOnly: widget.amountReadOnly,
           noteController: _noteController,
           recipientLabel: widget.prefilledRecipient,
@@ -242,6 +246,7 @@ class _RequestAmountStage extends StatelessWidget {
   const _RequestAmountStage({
     super.key,
     required this.amountController,
+    required this.amountFocus,
     required this.amountReadOnly,
     required this.noteController,
     required this.recipientLabel,
@@ -252,6 +257,7 @@ class _RequestAmountStage extends StatelessWidget {
   });
 
   final TextEditingController amountController;
+  final FocusNode amountFocus;
   final bool amountReadOnly;
   final TextEditingController noteController;
   final String? recipientLabel;
@@ -283,7 +289,7 @@ class _RequestAmountStage extends StatelessWidget {
           const SizedBox(height: 20),
           TextField(
             controller: amountController,
-            autofocus: !amountReadOnly,
+            focusNode: amountFocus,
             readOnly: amountReadOnly,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textAlign: TextAlign.center,

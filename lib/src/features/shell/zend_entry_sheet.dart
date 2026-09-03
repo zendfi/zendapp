@@ -43,15 +43,19 @@ Future<void> showZendEntrySheet(
   BuildContext context, {
   String? prefilledRecipient,
 }) {
+  // Mirrors `showZendtagPromptSheet`'s configuration exactly — the one
+  // sheet in this app with a real OS-keyboard TextField that demonstrably
+  // works. Specifically: NO `useSafeArea` (the sheet applies its own
+  // `SafeArea(top: false)` internally instead) and NO
+  // `FractionallySizedBox` wrapper, so the sheet sizes to its content and
+  // can be lifted by the keyboard rather than being pinned to a fixed
+  // fraction of the screen that the keyboard then covers.
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    useSafeArea: true,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => FractionallySizedBox(
-      heightFactor: 1.0,
-      child: ZendEntrySheet(prefilledRecipient: prefilledRecipient),
-    ),
+    builder: (_) => ZendEntrySheet(prefilledRecipient: prefilledRecipient),
   );
 }
 
@@ -76,6 +80,14 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   final _searchController = TextEditingController();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
+  // Explicit focus nodes instead of `autofocus: true` on both the search
+  // and amount fields. AnimatedSwitcher keeps the outgoing stage mounted
+  // during its cross-fade, so with autofocus on both, two TextFields race
+  // to claim focus on every stage change and can end up with *neither*
+  // focused — which is why no input field responded at all. Focus is now
+  // requested explicitly, once, for whichever stage is becoming active.
+  final _searchFocus = FocusNode();
+  final _amountFocus = FocusNode();
   Timer? _debounce;
   String _query = '';
   bool _searching = false;
@@ -100,6 +112,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     } else {
       _stage = _EntryStage.identity;
     }
+    // Claim focus once, after first layout, for whichever stage opened.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focusForStage());
   }
 
   @override
@@ -107,8 +121,32 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     _searchController.dispose();
     _amountController.dispose();
     _noteController.dispose();
+    _searchFocus.dispose();
+    _amountFocus.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  /// Single owner of stage transitions, so focus is always handed to
+  /// exactly one field per stage — never contested between the outgoing
+  /// and incoming stage during the AnimatedSwitcher cross-fade.
+  void _goToStage(_EntryStage stage) {
+    setState(() => _stage = stage);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focusForStage());
+  }
+
+  void _focusForStage() {
+    if (!mounted) return;
+    switch (_stage) {
+      case _EntryStage.identity:
+        _searchFocus.requestFocus();
+      case _EntryStage.amount:
+        _amountFocus.requestFocus();
+      case _EntryStage.requestSuccess:
+        // Nothing to type on the confirmation view — drop the keyboard so
+        // it doesn't sit over the Show QR / Done actions.
+        FocusManager.instance.primaryFocus?.unfocus();
+    }
   }
 
   double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
@@ -152,8 +190,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _displayName = raw.split('@').first;
         _zendtag = null;
         _avatarUrl = null;
-        _stage = _EntryStage.amount;
       });
+      _goToStage(_EntryStage.amount);
       return;
     }
 
@@ -169,8 +207,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _avatarUrl = resolved.avatarUrl;
         _email = null;
         _searching = false;
-        _stage = _EntryStage.amount;
       });
+      _goToStage(_EntryStage.amount);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -186,8 +224,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       _displayName = c.name.isNotEmpty ? c.name : c.tag;
       _avatarUrl = c.avatarUrl;
       _email = null;
-      _stage = _EntryStage.amount;
     });
+    _goToStage(_EntryStage.amount);
   }
 
   void _pickSearchResult(Map<String, dynamic> u) {
@@ -199,12 +237,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           : '@$tag';
       _avatarUrl = u['avatar_url'] as String?;
       _email = null;
-      _stage = _EntryStage.amount;
     });
+    _goToStage(_EntryStage.amount);
   }
 
   void _changeIdentity() {
-    setState(() => _stage = _EntryStage.identity);
+    _goToStage(_EntryStage.identity);
   }
 
   void _confirmZend() {
@@ -245,8 +283,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       setState(() {
         _submittingRequest = false;
         _createdRequest = request;
-        _stage = _EntryStage.requestSuccess;
       });
+      _goToStage(_EntryStage.requestSuccess);
     } catch (_) {
       if (!mounted) return;
       setState(() => _submittingRequest = false);
@@ -293,35 +331,47 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    // Explicit Scaffold + resizeToAvoidBottomInset:false + manual
-    // viewInsets padding — the same keyboard-handling pattern the
-    // pre-existing, working _RecipientStage/PIN stages use elsewhere in
-    // this app. Without it, this sheet's fixed FractionallySizedBox(1.0)
-    // + non-scrolling Column never reflows when the keyboard opens (the
-    // amount field autofocuses immediately on the Amount stage), which is
-    // what caused the reported "detached"/unresponsive controls — the
-    // hit-test boxes for the buttons stop matching what's actually
-    // painted once the keyboard changes the available height.
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
-      body: Container(
+    final mq = MediaQuery.of(context);
+    final keyboardInset = mq.viewInsets.bottom;
+
+    // Deliberately NO Scaffold here. A Scaffold inserts a MediaQuery for
+    // its body subtree with the bottom view insets *stripped*
+    // (MediaQuery.removeViewInsets), so reading viewInsets.bottom inside a
+    // Scaffold body always yields 0 — any keyboard padding computed there
+    // is silently a no-op. Nesting a Scaffold as a bottom sheet's root
+    // also breaks the sheet's layout geometry (it isn't designed for that
+    // position), which is what produced the transparent background and
+    // dead hit-testing on every input in this sheet.
+    //
+    // This mirrors `zendtag_prompt_sheet.dart` — the proven-working
+    // OS-keyboard sheet in this app: viewInsets padding at the very root,
+    // then the coloured surface, then SafeArea, then min-sized content.
+    //
+    // The content is height-capped and scrollable rather than fixed, so a
+    // long Recent list can't overflow, and the cap shrinks as the keyboard
+    // takes space instead of being covered by it.
+    final maxContentHeight = ((mq.size.height - keyboardInset) * 0.82).clamp(200.0, double.infinity);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Container(
         decoration: BoxDecoration(
           color: zt.bgPrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
         ),
         child: SafeArea(
           top: false,
-          child: Padding(
-            padding: EdgeInsets.only(top: 12, bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Center(child: ZendSheetHandle()),
-                  const SizedBox(height: 8),
-                  AnimatedSwitcher(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              const Center(child: ZendSheetHandle()),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxContentHeight),
+                child: SingleChildScrollView(
+                  child: AnimatedSwitcher(
                     duration: ZendMotion.sheetEnter,
                     child: switch (_stage) {
                       _EntryStage.identity => _buildIdentityStage(zt),
@@ -329,9 +379,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                       _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
                     },
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -367,7 +417,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    autofocus: true,
+                    focusNode: _searchFocus,
                     onChanged: _onQueryChanged,
                     onSubmitted: (_) => _submitRaw(),
                     style: TextStyle(fontFamily: 'Geist', fontSize: 16, color: zt.textPrimary),
@@ -502,7 +552,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           const SizedBox(height: 24),
           TextField(
             controller: _amountController,
-            autofocus: true,
+            focusNode: _amountFocus,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textAlign: TextAlign.center,
             style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
