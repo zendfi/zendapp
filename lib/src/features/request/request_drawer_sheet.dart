@@ -151,6 +151,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     final double heightFraction = switch (_stage) {
       _RequestStage.amount  => 0.55,
@@ -160,36 +161,52 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
     return PopScope(
       canPop: _stage != _RequestStage.loading,
-      child: AnimatedContainer(
-        duration: _sheetResize,
-        curve: Curves.easeOutCubic,
-        height: screenHeight * heightFraction,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 14),
-            const ZendSheetHandle(),
-            const SizedBox(height: 8),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: _stageTransition,
-                reverseDuration: const Duration(milliseconds: 140),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
-                    child: child,
+      // Explicit Scaffold + resizeToAvoidBottomInset:false — this sheet's
+      // AnimatedContainer sizes to a *fixed* fraction of screen height
+      // with no Scaffold/keyboard handling of its own. Without this, the
+      // amount field's autofocus opens the keyboard and the fixed-height,
+      // non-scrolling Column has nowhere to reflow — the same
+      // detached-hit-test/unresponsive-button symptom this fixes in
+      // ZendEntrySheet. The AnimatedContainer's own height now also grows
+      // by the keyboard inset so its content still fits instead of being
+      // squeezed into the original (pre-keyboard) height fraction.
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: false,
+        body: AnimatedContainer(
+          duration: _sheetResize,
+          curve: Curves.easeOutCubic,
+          height: (screenHeight * heightFraction) + keyboardInset,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: keyboardInset),
+            child: Column(
+              children: [
+                const SizedBox(height: 14),
+                const ZendSheetHandle(),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: _stageTransition,
+                    reverseDuration: const Duration(milliseconds: 140),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: RepaintBoundary(child: SingleChildScrollView(child: _buildStage())),
                   ),
                 ),
-                child: RepaintBoundary(child: _buildStage()),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

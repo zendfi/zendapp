@@ -293,30 +293,45 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Center(child: ZendSheetHandle()),
-              const SizedBox(height: 8),
-              AnimatedSwitcher(
-                duration: ZendMotion.sheetEnter,
-                child: switch (_stage) {
-                  _EntryStage.identity => _buildIdentityStage(zt),
-                  _EntryStage.amount => _buildAmountStage(zt),
-                  _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
-                },
+    // Explicit Scaffold + resizeToAvoidBottomInset:false + manual
+    // viewInsets padding — the same keyboard-handling pattern the
+    // pre-existing, working _RecipientStage/PIN stages use elsewhere in
+    // this app. Without it, this sheet's fixed FractionallySizedBox(1.0)
+    // + non-scrolling Column never reflows when the keyboard opens (the
+    // amount field autofocuses immediately on the Amount stage), which is
+    // what caused the reported "detached"/unresponsive controls — the
+    // hit-test boxes for the buttons stop matching what's actually
+    // painted once the keyboard changes the available height.
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: false,
+      body: Container(
+        decoration: BoxDecoration(
+          color: zt.bgPrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(top: 12, bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Center(child: ZendSheetHandle()),
+                  const SizedBox(height: 8),
+                  AnimatedSwitcher(
+                    duration: ZendMotion.sheetEnter,
+                    child: switch (_stage) {
+                      _EntryStage.identity => _buildIdentityStage(zt),
+                      _EntryStage.amount => _buildAmountStage(zt),
+                      _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
