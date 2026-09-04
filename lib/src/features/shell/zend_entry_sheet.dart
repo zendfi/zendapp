@@ -543,7 +543,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                                     shape: BoxShape.circle,
                                     border: Border.all(color: zt.border),
                                   ),
-                                  child: Icon(PhosphorIconsRegular.plus, size: 12, color: zt.accent),
+                                  child: Icon(PhosphorIconsRegular.arrowsLeftRight, size: 12, color: zt.accent),
                                 ),
                               ),
                           ],
@@ -559,57 +559,79 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  TextField(
-                    controller: _amountController,
-                    focusNode: _amountFocus,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                    decoration: InputDecoration(
-                      prefixText: '\$',
-                      prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 38, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                      hintText: '0',
-                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textSecondary),
-                      // Explicitly borderless/unfilled — the global
-                      // InputDecorationTheme fills and pill-rounds inputs
-                      // by default, which would draw a capsule around the
-                      // big amount figure.
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: zt.bgSecondary,
-                      borderRadius: BorderRadius.circular(ZendRadii.pill),
-                    ),
-                    child: TextField(
-                      controller: _noteController,
-                      textAlign: TextAlign.center,
-                      textInputAction: TextInputAction.done,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: "What's this for?",
-                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  // The amount reads as one tight unit: a smaller "$" glyph
+                  // sits immediately to the left of the number instead of
+                  // via InputDecoration.prefixText, which pads the prefix
+                  // away from the figure and (with textAlign.center) leaves
+                  // a visible "$    1" gap. The Row is centered and the
+                  // field shrink-wraps its content (IntrinsicWidth) so the
+                  // "$" always hugs the digits.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        '\$',
+                        style: TextStyle(fontFamily: 'Geist', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
                       ),
-                    ),
+                      const SizedBox(width: 2),
+                      IntrinsicWidth(
+                        child: TextField(
+                          controller: _amountController,
+                          focusNode: _amountFocus,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.left,
+                          style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: '0',
+                            hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                            // Explicitly borderless/unfilled — the global
+                            // InputDecorationTheme fills and pill-rounds inputs
+                            // by default, which would draw a capsule around the
+                            // big amount figure.
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
                 ],
               ),
             ),
           ),
+          // ── Note field — pinned above the action row ──
+          // Lives outside the scroll view (a fixed-height, non-Expanded
+          // sibling) so it always sits directly above the buttons, matching
+          // the reference. A smaller, squarer radius reads as a rounded
+          // rectangle input rather than a capsule.
+          Container(
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              borderRadius: BorderRadius.circular(ZendRadii.md),
+            ),
+            child: TextField(
+              controller: _noteController,
+              textAlign: TextAlign.center,
+              textInputAction: TextInputAction.done,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+              decoration: InputDecoration(
+                hintText: "What's this for?",
+                hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           // ── Action row — pinned outside the scroll view ──
           // NOTE: no `crossAxisAlignment: stretch` here. Each child sizes
           // itself to an explicit height instead; `stretch` would force a
@@ -639,7 +661,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                flex: 2,
                 child: SizedBox(
                   height: 52,
                   child: ElevatedButton(
