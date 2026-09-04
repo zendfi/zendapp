@@ -392,13 +392,14 @@ class SuiZkLoginService {
     return bytes;
   }
 
-  /// Mints a pending session plus an ID token that proves a *just now* Google
-  /// authentication.
+  /// Mints a pending session plus an ID token minted *just now* by Google.
   ///
   /// Used for releasing salt share C, which the backend guards with
-  /// `authenticated_within` and which fails closed when `auth_time` is missing.
-  /// `SuiOAuthPrompt.reauthenticate` sends `prompt=login` and `max_age=0`, which
-  /// is what makes Google include that claim at all.
+  /// `issued_within`: the token's `iat` must be recent and it must carry the
+  /// single-use nonce from [init]. Those two together are what prove the token was
+  /// minted for this one request, so no special OAuth parameter is needed — see
+  /// `SuiOAuthPrompt.stepUp` for why the old `prompt=login`/`max_age=0` pairing
+  /// could never work.
   ///
   /// The session is deliberately left **pending**: the release endpoint calls
   /// `claim_pending_session`, so redeeming it here would consume the very thing
@@ -413,7 +414,7 @@ class SuiZkLoginService {
       );
       final tokens = await _oauth.signInForIdToken(
         nonce: init.nonce,
-        prompt: SuiOAuthPrompt.reauthenticate,
+        prompt: SuiOAuthPrompt.stepUp,
       );
       return (sessionId: init.sessionId, idToken: tokens.idToken);
     } finally {
@@ -474,9 +475,11 @@ class SuiZkLoginService {
 
   /// Satisfies the backend's step-up requirement for a high-value transfer.
   ///
-  /// Forces Google to re-verify the person rather than accepting a cached
-  /// authentication, which is what makes this stronger than any local prompt: it
-  /// needs the Google credential, not just possession of the device.
+  /// The token must be freshly minted and must carry the single-use nonce this
+  /// call just obtained, so a remote attacker holding only a stolen Zend session
+  /// cannot satisfy it. It does not force Google to re-verify the person, and so
+  /// does not defend against someone holding the unlocked device — Google does not
+  /// support reauth requests, see `SuiOAuthPrompt.stepUp`.
   ///
   /// Deliberately does not replace the active signing session. A step-up proves
   /// who is present; it is not a new signing grant, and conflating the two would
@@ -490,7 +493,7 @@ class SuiZkLoginService {
       );
       final tokens = await _oauth.signInForIdToken(
         nonce: init.nonce,
-        prompt: SuiOAuthPrompt.reauthenticate,
+        prompt: SuiOAuthPrompt.stepUp,
       );
       await _api.suiZkLoginStepUp(
         sessionId: init.sessionId,

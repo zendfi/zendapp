@@ -34,24 +34,33 @@ enum SuiOAuthFlow { implicitIdToken, authorizationCodePkce }
 ///     signed in. Google answers without any UI when its own session is alive,
 ///     which is what keeps the daily zkLogin session expiry invisible. Fails with
 ///     `login_required` when interaction would be needed.
-///   * [reauthenticate] — step-up for a high-value action. `max_age=0` forces
-///     Google itself to re-verify the person, which device possession alone
-///     cannot satisfy.
+///   * [stepUp] — a sensitive action: releasing salt share C, or authorizing a
+///     high-value transfer. Must produce a *newly minted* token, because the
+///     backend bounds its `iat`.
+///
+/// Note what [stepUp] deliberately no longer attempts. It used to send
+/// `prompt=login` with `max_age=0`, so that Google would re-verify the person and
+/// the backend could check `auth_time`. That cannot work, and it silently blocked
+/// every transfer: Google states it "does not support Google Account reauth
+/// requests", documents neither `login` nor `max_age` as supported parameters,
+/// and omits `auth_time` from its advertised `claims_supported`. The claim never
+/// arrived, so the backend's fail-closed gate rejected every caller. Freshness is
+/// now proven by `iat` plus the single-use, server-generated nonce, needing no
+/// special request parameters. What [stepUp] still guarantees is that the
+/// round-trip is *interactive*, so no token can be minted without the user acting.
 enum SuiOAuthPrompt {
   selectAccount,
   none,
-  reauthenticate;
+  stepUp;
 
   Map<String, String> get parameters => switch (this) {
     SuiOAuthPrompt.selectAccount => const {'prompt': 'select_account'},
     SuiOAuthPrompt.none => const {'prompt': 'none'},
-    // `prompt=login` and `max_age=0` together: the first asks for
-    // re-authentication, the second makes any cached authentication too old to
-    // reuse, so the backend can verify freshness from `auth_time`.
-    SuiOAuthPrompt.reauthenticate => const {
-      'prompt': 'login',
-      'max_age': '0',
-    },
+    // Same parameter as a first sign-in, for a different reason: `select_account`
+    // is the strongest interaction Google actually honours, and it rules out a
+    // silent grant. Kept a distinct variant so call sites still read as step-ups,
+    // and so this stays the single place to change if Google ever ships reauth.
+    SuiOAuthPrompt.stepUp => const {'prompt': 'select_account'},
   };
 }
 
