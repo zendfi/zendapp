@@ -60,6 +60,24 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   static const _morphThreshold = 24.0;
   bool _collapsed = false;
 
+  // ── Derived feed state, computed off the build path ────────────────────
+  //
+  // Sorting the whole edge list and then filtering it used to happen inside
+  // build(). That made every rebuild O(n log n) + O(n) with a string
+  // allocation per edge — and this widget rebuilds on *every*
+  // notifyListeners() from the app model (an SSE transfer alone fans out
+  // into several), plus on every keystroke and every scroll-morph toggle.
+  //
+  // Split by what actually invalidates each one:
+  //   * [_sortedEdges] depends only on model data → recomputed in
+  //     didChangeDependencies, which InheritedNotifier fires exactly once
+  //     per notify.
+  //   * [_visibleEdges] depends on data *and* the query → recomputed on
+  //     either, so a keystroke re-filters without re-sorting.
+  // build() now just reads them.
+  List<ActivityEdge> _sortedEdges = const [];
+  List<ActivityEdge> _visibleEdges = const [];
+
   @override
   void initState() {
     super.initState();
@@ -68,10 +86,54 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       model.fetchHistory();
       model.fetchThreadedActivity();
     });
-    _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.toLowerCase().trim());
-    });
+    _searchController.addListener(_onQueryChanged);
     _listScrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _rebuildSortedEdges();
+  }
+
+  void _onQueryChanged() {
+    final next = _searchController.text.toLowerCase().trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+      _applyFilter();
+    });
+  }
+
+  /// Flat, mixed, reverse-chronological — spec §6.2 priority (private
+  /// involving the viewer, then public-to-mutual) is expressed as a natural
+  /// consequence of sorting by recency across both sets, not a rigid
+  /// two-section split. Nothing here re-filters by visibility; that's
+  /// already been decided server-side before this list arrives.
+  void _rebuildSortedEdges() {
+    final model = ZendScope.of(context);
+    _sortedEdges = List<ActivityEdge>.of(model.threadedActivityEdges)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _applyFilter();
+  }
+
+  void _applyFilter() {
+    final q = _searchQuery;
+    if (q.isEmpty) {
+      // Share the list rather than copying it — nothing mutates it.
+      _visibleEdges = _sortedEdges;
+      return;
+    }
+    _visibleEdges = _sortedEdges.where((e) {
+      final label = e.isDirectParticipant ? e.counterparty.displayLabel.toLowerCase() : '';
+      final sender = (e.senderZendtag ?? '').toLowerCase();
+      final recipient = (e.recipientZendtag ?? '').toLowerCase();
+      final note = (e.note ?? '').toLowerCase();
+      return label.contains(q) ||
+          sender.contains(q) ||
+          recipient.contains(q) ||
+          note.contains(q);
+    }).toList();
   }
 
   void _onScroll() {
@@ -88,6 +150,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_onQueryChanged);
     _searchController.dispose();
     _searchFocus.dispose();
     _listScrollController.removeListener(_onScroll);
@@ -211,26 +274,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    // Flat, mixed, reverse-chronological — spec §6.2 priority (private
-    // involving the viewer, then public-to-mutual) is expressed as a
-    // natural consequence of sorting by recency across both sets, not a
-    // rigid two-section split; nothing here re-filters by visibility,
-    // that's already been decided server-side before this list arrives.
-    final allEdges = List<ActivityEdge>.of(model.threadedActivityEdges)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    final edges = _searchQuery.isEmpty
-        ? allEdges
-        : allEdges.where((e) {
-            final label = e.isDirectParticipant ? e.counterparty.displayLabel.toLowerCase() : '';
-            final sender = (e.senderZendtag ?? '').toLowerCase();
-            final recipient = (e.recipientZendtag ?? '').toLowerCase();
-            final note = (e.note ?? '').toLowerCase();
-            return label.contains(_searchQuery) ||
-                sender.contains(_searchQuery) ||
-                recipient.contains(_searchQuery) ||
-                note.contains(_searchQuery);
-          }).toList();
+    // Both lists are derived off the build path — see the fields' doc.
+    final allEdges = _sortedEdges;
+    final edges = _visibleEdges;
 
     final isLoading = model.threadedActivityLoading && allEdges.isEmpty;
     final isNewUser = !isLoading && allEdges.isEmpty && model.spendableBalance == 0;

@@ -39,8 +39,20 @@ class AppDatabase {
     final path = join(dir.path, 'zend_pool_messages.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // v1 -> v2: adds ui_snapshots, backing cache-first render of the
+        // balance and the first feed page. Existing installs are on v1 with
+        // pool tables already present, so only the new table is created —
+        // and nothing here touches pool data, since losing cached pool
+        // messages would be a visible regression for the one screen that was
+        // already cache-first.
+        if (oldVersion < 2) {
+          await _createSnapshotTable(db);
+        }
+      },
       onCreate: (db, version) async {
+        await _createSnapshotTable(db);
         await db.execute('''
           CREATE TABLE pool_messages (
             id TEXT PRIMARY KEY,
@@ -93,6 +105,24 @@ class AppDatabase {
         );
       },
     );
+  }
+
+  /// Key/value store for "what the user saw last time", so screens can paint
+  /// real content on launch instead of a skeleton.
+  ///
+  /// Scoped by `user_id` rather than assuming one account per install: a
+  /// device signed into a second account must never render the first
+  /// account's balance or feed, even for one frame.
+  static Future<void> _createSnapshotTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ui_snapshots (
+        user_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        saved_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, key)
+      )
+    ''');
   }
 
   Future<void> close() async {

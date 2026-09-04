@@ -196,7 +196,7 @@ class _CardFace extends StatelessWidget {
           children: [
             // Wordmark
             Image.asset(
-              'assets/logo/Zend.png',
+              'assets/logo/zend-mark.png',
               height: 32,
             ),
             const SizedBox(height: 28),
@@ -231,7 +231,7 @@ class _CardFace extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     padding: const EdgeInsets.all(9),
-                    child: Image.asset('assets/logo/Zend.png'),
+                    child: Image.asset('assets/logo/zend-mark.png'),
                   ),
                 ],
               ),

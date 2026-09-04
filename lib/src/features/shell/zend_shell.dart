@@ -82,7 +82,11 @@ class _ZendShellState extends State<ZendShell> {
       if (pendingDest != null) {
         Future<void>.delayed(const Duration(milliseconds: 200), () {
           if (!mounted) return;
-          NotificationNavigator.dispatch(context, pendingDest, ZendScope.of(context)); // ignore: use_build_context_synchronously
+          NotificationNavigator.dispatch(
+            context,
+            pendingDest,
+            ZendScope.of(context),
+          ); // ignore: use_build_context_synchronously
         });
       }
     });
@@ -138,7 +142,11 @@ class _ZendShellState extends State<ZendShell> {
     model.clearPendingActivityComment();
   }
 
-  void _payFromBanner(BuildContext context, ZendAppModel model, PaymentRequestNotification notification) {
+  void _payFromBanner(
+    BuildContext context,
+    ZendAppModel model,
+    PaymentRequestNotification notification,
+  ) {
     _dismissBanner(model);
     showSendFlowSheet(
       context,
@@ -276,7 +284,8 @@ class _ZendShellState extends State<ZendShell> {
     }
 
     if (pendingReaction != null) {
-      final key = '${pendingReaction.edgeKind}:${pendingReaction.edgeId}:${pendingReaction.emoji}:${pendingReaction.reactorZendtag}';
+      final key =
+          '${pendingReaction.edgeKind}:${pendingReaction.edgeId}:${pendingReaction.emoji}:${pendingReaction.reactorZendtag}';
       if (key != _lastReactionBannerKey) {
         _lastReactionBannerKey = key;
         _reactionBannerTimer?.cancel();
@@ -289,7 +298,8 @@ class _ZendShellState extends State<ZendShell> {
     }
 
     if (pendingComment != null) {
-      final key = '${pendingComment.edgeKind}:${pendingComment.edgeId}:${pendingComment.body}';
+      final key =
+          '${pendingComment.edgeKind}:${pendingComment.edgeId}:${pendingComment.body}';
       if (key != _lastCommentBannerKey) {
         _lastCommentBannerKey = key;
         _commentBannerTimer?.cancel();
@@ -316,148 +326,202 @@ class _ZendShellState extends State<ZendShell> {
     // alive — prevents full rebuilds when switching between tabs.
     // RepaintBoundary isolates each tab's render tree so SSE-driven
     // notifyListeners() calls don't cause cross-tab repaints.
-    final keepAlivePages = pages
-        .map((p) => _KeepAlive(child: RepaintBoundary(child: p)))
-        .toList();
-
-    // Banner stack offsets, computed once so adding or removing a banner
-    // doesn't mean hand-editing four cumulative expressions.
-    //
-    // The transfer banner sits at the top of the stack: it's feedback on
-    // something the user did a moment ago, which outranks incoming
-    // notifications for their attention.
-    final transferStatus = model.transferStatus.status;
-    const bannerSlot = 78.0;
-    final requestTop = transferStatus != null ? bannerSlot : 0.0;
-    final reactionTop = requestTop + (pending != null ? bannerSlot : 0.0);
-    final commentTop = reactionTop + (showReactionBanner ? bannerSlot : 0.0);
-    final dmTop = commentTop + (showCommentBanner ? bannerSlot : 0.0);
+    final keepAlivePages = <Widget>[
+      for (var i = 0; i < pages.length; i++)
+        _KeepAlive(
+          // Only the visible tab drives its animations — see [_KeepAlive].
+          tickersEnabled: i == _tabIndex,
+          child: RepaintBoundary(child: pages[i]),
+        ),
+    ];
 
     return Scaffold(
       body: RepaintBoundary(
         child: Stack(
           children: [
-          PageView(
-            controller: _pageController,
-            // Keep all pages alive so switching tabs doesn't rebuild heavy
-            // screens (activity feed, DM list) from scratch on every tap.
-            physics: const ClampingScrollPhysics(),
-            onPageChanged: (i) {
-              if (i != _tabIndex) {
-                setState(() => _tabIndex = i);
-                if (i == 0) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) ZendScope.of(context).markActivityRead();
-                  });
+            PageView(
+              controller: _pageController,
+              // Keep all pages alive so switching tabs doesn't rebuild heavy
+              // screens (activity feed, DM list) from scratch on every tap.
+              physics: const ClampingScrollPhysics(),
+              onPageChanged: (i) {
+                if (i != _tabIndex) {
+                  setState(() => _tabIndex = i);
+                  if (i == 0) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) ZendScope.of(context).markActivityRead();
+                    });
+                  }
+                  if (i == 2) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
+                    });
+                  }
                 }
-                if (i == 2) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
-                  });
-                }
-              }
-            },
-            children: keepAlivePages,
-          ),
-          // Outcome of the user's own send/request — see
-          // _TransferStatusBanner. Keyed on the action id, not the status,
-          // so `sending → sent` mutates this banner in place instead of
-          // tearing it down and replaying the slide-in.
-          if (transferStatus != null)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _TransferStatusBanner(
-                key: ValueKey('transfer-${transferStatus.actionId}'),
-                status: transferStatus,
-                onRetry: () => _retryTransferFromBanner(context, model, transferStatus),
-                onShowQr: () => _showRequestQrFromBanner(context, transferStatus),
-                onDismiss: model.transferStatus.dismiss,
-              ),
+              },
+              children: keepAlivePages,
             ),
-          // In-app payment request banner
-          if (pending != null)
-            Positioned(
-              top: requestTop,
-              left: 0,
-              right: 0,
-              child: _PaymentRequestBanner(
-                // Key on requestId so a new request always replays the animation
-                key: ValueKey(pending.requestId),
-                notification: pending,
-                onPay: () => _payFromBanner(context, model, pending),
-                onDismiss: () => _dismissBanner(model),
-              ),
-            ),
-          // In-app "someone reacted to your activity" banner — stacked
-          // below the payment-request banner if both are present.
-          // Suppressed while the Activity tab is already active — mirrors
-          // the DM banner's `_tabIndex != 3` check below. Previously this
-          // had no such check, so a reaction/comment banner would pop up
-          // and steal attention even while the user was already sitting on
-          // the Activity screen watching that exact update land live.
-          if (showReactionBanner)
-            Positioned(
-              top: reactionTop,
-              left: 0,
-              right: 0,
-              child: _ActivityReactionBanner(
-                key: ValueKey(_lastReactionBannerKey),
-                notification: pendingReaction,
-                onDismiss: () => _dismissReactionBanner(model),
-              ),
-            ),
-          // In-app "someone commented on your activity" banner — stacked
-          // below whichever of the above banners are present. Same
-          // active-tab suppression as the reaction banner above.
-          if (showCommentBanner)
-            Positioned(
-              top: commentTop,
-              left: 0,
-              right: 0,
-              child: _ActivityCommentBanner(
-                key: ValueKey(_lastCommentBannerKey),
-                notification: pendingComment,
-                onDismiss: () => _dismissCommentBanner(model),
-              ),
-            ),
-          // DM banner — shown when a new message arrives and the Chats tab isn't active
-          if (_pendingDmBanner != null && _tabIndex != 2)
-            Positioned(
-              top: dmTop,
-              left: 0,
-              right: 0,
-              child: _DmMessageBanner(
-                key: ValueKey(_lastDmBannerKey),
-                senderZendtag: _pendingDmBanner!['sender_zendtag'] as String? ?? '',
-                preview: _pendingDmBanner!['preview'] as String? ?? '',
-                onTap: () {
-                  final roomId = _pendingDmBanner!['room_id'] as String? ?? '';
-                  _dmBannerTimer?.cancel();
-                  setState(() => _pendingDmBanner = null);
-                  _setTab(2);
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (!mounted) return;
-                    final thread = model.dmService.cachedThreads
-                        .where((t) => t.roomId == roomId)
-                        .firstOrNull;
-                    if (thread != null) {
-                      pushZendSlide(
-                        context, // ignore: use_build_context_synchronously
-                        DmThreadScreen(roomId: roomId, counterparty: thread.counterparty),
-                      );
-                    }
-                  });
+            // ── Banner region ──────────────────────────────────────────────
+            //
+            // Subscribed to [TransferStatusController] here rather than through
+            // the app model. The controller used to forward its notifications
+            // into ZendAppModel so this shell picked them up for free, but that
+            // meant every transfer status tick — including the 3-second
+            // uncertain-transfer poll and the sending→sent transition —
+            // rebuilt all four kept-alive tab subtrees to move one banner.
+            //
+            // ListenableBuilder confines those rebuilds to this subtree. The
+            // PageView above is deliberately outside it.
+            //
+            // Positioned.fill is safe to lay over the PageView: a Stack neither
+            // paints nor absorbs hit tests of its own, so taps in the empty
+            // space between banners still reach the tab underneath.
+            Positioned.fill(
+              child: ListenableBuilder(
+                listenable: model.transferStatus,
+                builder: (context, _) {
+                  // Offsets computed in one place so adding or removing a
+                  // banner doesn't mean hand-editing four cumulative
+                  // expressions. The transfer banner takes the top slot: it's
+                  // feedback on something the user did a moment ago, which
+                  // outranks incoming notifications for their attention.
+                  final transferStatus = model.transferStatus.status;
+                  const bannerSlot = 78.0;
+                  final requestTop = transferStatus != null ? bannerSlot : 0.0;
+                  final reactionTop =
+                      requestTop + (pending != null ? bannerSlot : 0.0);
+                  final commentTop =
+                      reactionTop + (showReactionBanner ? bannerSlot : 0.0);
+                  final dmTop =
+                      commentTop + (showCommentBanner ? bannerSlot : 0.0);
+
+                  return Stack(
+                    children: [
+                      // Outcome of the user's own send/request — see
+                      // _TransferStatusBanner. Keyed on the action id, not the
+                      // status, so `sending → sent` mutates this banner in place
+                      // instead of tearing it down and replaying the slide-in.
+                      if (transferStatus != null)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: _TransferStatusBanner(
+                            key: ValueKey(
+                              'transfer-${transferStatus.actionId}',
+                            ),
+                            status: transferStatus,
+                            onRetry: () => _retryTransferFromBanner(
+                              context,
+                              model,
+                              transferStatus,
+                            ),
+                            onShowQr: () => _showRequestQrFromBanner(
+                              context,
+                              transferStatus,
+                            ),
+                            onDismiss: model.transferStatus.dismiss,
+                          ),
+                        ),
+                      // In-app payment request banner
+                      if (pending != null)
+                        Positioned(
+                          top: requestTop,
+                          left: 0,
+                          right: 0,
+                          child: _PaymentRequestBanner(
+                            // Key on requestId so a new request always replays the animation
+                            key: ValueKey(pending.requestId),
+                            notification: pending,
+                            onPay: () =>
+                                _payFromBanner(context, model, pending),
+                            onDismiss: () => _dismissBanner(model),
+                          ),
+                        ),
+                      // In-app "someone reacted to your activity" banner — stacked
+                      // below the payment-request banner if both are present.
+                      // Suppressed while the Activity tab is already active — mirrors
+                      // the DM banner's `_tabIndex != 3` check below. Previously this
+                      // had no such check, so a reaction/comment banner would pop up
+                      // and steal attention even while the user was already sitting on
+                      // the Activity screen watching that exact update land live.
+                      if (showReactionBanner)
+                        Positioned(
+                          top: reactionTop,
+                          left: 0,
+                          right: 0,
+                          child: _ActivityReactionBanner(
+                            key: ValueKey(_lastReactionBannerKey),
+                            notification: pendingReaction,
+                            onDismiss: () => _dismissReactionBanner(model),
+                          ),
+                        ),
+                      // In-app "someone commented on your activity" banner — stacked
+                      // below whichever of the above banners are present. Same
+                      // active-tab suppression as the reaction banner above.
+                      if (showCommentBanner)
+                        Positioned(
+                          top: commentTop,
+                          left: 0,
+                          right: 0,
+                          child: _ActivityCommentBanner(
+                            key: ValueKey(_lastCommentBannerKey),
+                            notification: pendingComment,
+                            onDismiss: () => _dismissCommentBanner(model),
+                          ),
+                        ),
+                      // DM banner — shown when a new message arrives and the Chats tab isn't active
+                      if (_pendingDmBanner != null && _tabIndex != 2)
+                        Positioned(
+                          top: dmTop,
+                          left: 0,
+                          right: 0,
+                          child: _DmMessageBanner(
+                            key: ValueKey(_lastDmBannerKey),
+                            senderZendtag:
+                                _pendingDmBanner!['sender_zendtag']
+                                    as String? ??
+                                '',
+                            preview:
+                                _pendingDmBanner!['preview'] as String? ?? '',
+                            onTap: () {
+                              final roomId =
+                                  _pendingDmBanner!['room_id'] as String? ?? '';
+                              _dmBannerTimer?.cancel();
+                              setState(() => _pendingDmBanner = null);
+                              _setTab(2);
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () {
+                                  if (!mounted) return;
+                                  final thread = model.dmService.cachedThreads
+                                      .where((t) => t.roomId == roomId)
+                                      .firstOrNull;
+                                  if (thread != null) {
+                                    pushZendSlide(
+                                      context, // ignore: use_build_context_synchronously
+                                      DmThreadScreen(
+                                        roomId: roomId,
+                                        counterparty: thread.counterparty,
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                            onDismiss: () {
+                              _dmBannerTimer?.cancel();
+                              setState(() => _pendingDmBanner = null);
+                            },
+                          ),
+                        ),
+                    ],
+                  );
                 },
-                onDismiss: () {
-                  _dmBannerTimer?.cancel();
-                  setState(() => _pendingDmBanner = null);
-                },
               ),
             ),
-        ],
-        ),  // close RepaintBoundary
+          ],
+        ), // close RepaintBoundary
       ),
       // Zend — the primary action (spec §4) — floats over Feed and People
       // only. Not present on Chats (Zend is reachable contextually from
@@ -496,12 +560,19 @@ class _ZendFab extends StatelessWidget {
           color: ZendColors.bgDeep,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4)),
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
           ],
         ),
         child: Center(
           child: ColorFiltered(
-            colorFilter: const ColorFilter.mode(ZendColors.accentPop, BlendMode.srcIn),
+            colorFilter: const ColorFilter.mode(
+              ZendColors.accentPop,
+              BlendMode.srcIn,
+            ),
             child: Image.asset(
               'assets/icons/zend-icon-navbar.png',
               width: 26,
@@ -620,6 +691,7 @@ class _BottomNavIcon extends StatelessWidget {
 
   /// Regular-weight glyph shown when this tab isn't active.
   final IconData icon;
+
   /// Fill-weight glyph shown when this tab is active — gives active/inactive
   /// its own visual language on top of the color change (quiet outline vs
   /// solid, matching the "simple, quiet, rounded" icon brief).
@@ -630,6 +702,7 @@ class _BottomNavIcon extends StatelessWidget {
   final Color activeColor;
   final Color inactiveColor;
   final Color badgeBorderColor;
+
   /// Unread count to display as a badge. 0 = no badge.
   final int badgeCount;
 
@@ -652,24 +725,42 @@ class _BottomNavIcon extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Center(
-                    child: Icon(active ? activeIcon : icon, color: color, size: 24),
+                    child: Icon(
+                      active ? activeIcon : icon,
+                      color: color,
+                      size: 24,
+                    ),
                   ),
                   if (badgeCount > 0 && !active)
                     Positioned(
                       top: 0,
                       right: 0,
                       child: Container(
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: ZendColors.destructive,
                           borderRadius: BorderRadius.circular(ZendRadii.pill),
-                          border: Border.all(color: badgeBorderColor, width: 1.5),
+                          border: Border.all(
+                            color: badgeBorderColor,
+                            width: 1.5,
+                          ),
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, height: 1.0),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
@@ -783,7 +874,8 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (n.description != null && n.description!.isNotEmpty) ...[
+                        if (n.description != null &&
+                            n.description!.isNotEmpty) ...[
                           const SizedBox(height: 1),
                           Text(
                             n.description!,
@@ -804,7 +896,10 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                   GestureDetector(
                     onTap: widget.onPay,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: ZendColors.accentPop,
                         borderRadius: BorderRadius.circular(8),
@@ -854,19 +949,26 @@ class _ActivityReactionBanner extends StatefulWidget {
   final VoidCallback onDismiss;
 
   @override
-  State<_ActivityReactionBanner> createState() => _ActivityReactionBannerState();
+  State<_ActivityReactionBanner> createState() =>
+      _ActivityReactionBannerState();
 }
 
-class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with SingleTickerProviderStateMixin {
+class _ActivityReactionBannerState extends State<_ActivityReactionBanner>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<Offset> _slide;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -894,14 +996,22 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                     width: 36,
                     height: 36,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A4ADE80),
+                      shape: BoxShape.circle,
+                    ),
                     child: Text(n.emoji, style: const TextStyle(fontSize: 18)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '@${n.reactorZendtag} reacted ${n.emoji} to your activity',
-                      style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFF0F0F0),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -909,7 +1019,11 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner> with S
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(
+                      PhosphorIconsRegular.xCircle,
+                      size: 16,
+                      color: Color(0x66F0F0F0),
+                    ),
                   ),
                 ],
               ),
@@ -938,16 +1052,22 @@ class _ActivityCommentBanner extends StatefulWidget {
   State<_ActivityCommentBanner> createState() => _ActivityCommentBannerState();
 }
 
-class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with SingleTickerProviderStateMixin {
+class _ActivityCommentBannerState extends State<_ActivityCommentBanner>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<Offset> _slide;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -975,8 +1095,15 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                     width: 36,
                     height: 36,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                    child: const Icon(PhosphorIconsRegular.chatDots, size: 16, color: ZendColors.accentPop),
+                    decoration: const BoxDecoration(
+                      color: Color(0x1A4ADE80),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      PhosphorIconsRegular.chatDots,
+                      size: 16,
+                      color: ZendColors.accentPop,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -986,13 +1113,22 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                       children: [
                         Text(
                           '@${n.authorZendtag} commented on your activity',
-                          style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFF0F0F0)),
+                          style: const TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFF0F0F0),
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           n.body,
-                          style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: Color(0x99F0F0F0)),
+                          style: const TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 11,
+                            color: Color(0x99F0F0F0),
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1002,7 +1138,11 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner> with Sin
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: widget.onDismiss,
-                    child: const Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x66F0F0F0)),
+                    child: const Icon(
+                      PhosphorIconsRegular.xCircle,
+                      size: 16,
+                      color: Color(0x66F0F0F0),
+                    ),
                   ),
                 ],
               ),
@@ -1044,9 +1184,13 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
-    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     _ctrl.forward();
   }
 
@@ -1072,11 +1216,17 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                 child: Row(
                   children: [
                     Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: const BoxDecoration(
-                        color: Color(0x1A4ADE80), shape: BoxShape.circle),
-                      child: const Icon(PhosphorIconsRegular.chatDots,
-                          size: 18, color: ZendColors.accentPop),
+                        color: Color(0x1A4ADE80),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        PhosphorIconsRegular.chatDots,
+                        size: 18,
+                        color: ZendColors.accentPop,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1087,18 +1237,20 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                           Text(
                             '@${widget.senderZendtag}',
                             style: const TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFF0F0F0)),
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFF0F0F0),
+                            ),
                           ),
                           if (widget.preview.isNotEmpty)
                             Text(
                               widget.preview,
                               style: const TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 11,
-                                  color: Color(0x99F0F0F0)),
+                                fontFamily: 'Geist',
+                                fontSize: 11,
+                                color: Color(0x99F0F0F0),
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1108,8 +1260,11 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: widget.onDismiss,
-                      child: const Icon(PhosphorIconsRegular.xCircle,
-                          size: 16, color: Color(0x66F0F0F0)),
+                      child: const Icon(
+                        PhosphorIconsRegular.xCircle,
+                        size: 16,
+                        color: Color(0x66F0F0F0),
+                      ),
                     ),
                   ],
                 ),
@@ -1159,9 +1314,14 @@ class _TransferStatusBannerState extends State<_TransferStatusBanner>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -1201,23 +1361,26 @@ class _TransferStatusBannerState extends State<_TransferStatusBanner>
   /// Only failure and uncertainty carry a second line — the specific
   /// reason. Success needs no elaboration.
   String? get _subtitle => switch (widget.status.kind) {
-        TransferStatusKind.failed || TransferStatusKind.uncertain => widget.status.message,
-        _ => null,
-      };
+    TransferStatusKind.failed ||
+    TransferStatusKind.uncertain => widget.status.message,
+    _ => null,
+  };
 
   Color get _tint => switch (widget.status.kind) {
-        TransferStatusKind.sent || TransferStatusKind.requested => ZendColors.positive,
-        TransferStatusKind.failed => ZendColors.destructive,
-        TransferStatusKind.uncertain => ZendColors.accentPop,
-        TransferStatusKind.sending => ZendColors.accentPop,
-      };
+    TransferStatusKind.sent ||
+    TransferStatusKind.requested => ZendColors.positive,
+    TransferStatusKind.failed => ZendColors.destructive,
+    TransferStatusKind.uncertain => ZendColors.accentPop,
+    TransferStatusKind.sending => ZendColors.accentPop,
+  };
 
   Widget _buildIcon() {
     if (_inFlight) {
       return ZendLoader(size: 18, strokeWidth: 2, color: _tint);
     }
     final icon = switch (widget.status.kind) {
-      TransferStatusKind.sent || TransferStatusKind.requested => PhosphorIconsRegular.check,
+      TransferStatusKind.sent ||
+      TransferStatusKind.requested => PhosphorIconsRegular.check,
       TransferStatusKind.failed => PhosphorIconsRegular.warningCircle,
       TransferStatusKind.uncertain => PhosphorIconsRegular.clockCountdown,
       TransferStatusKind.sending => PhosphorIconsRegular.check,
@@ -1303,7 +1466,10 @@ class _TransferStatusBannerState extends State<_TransferStatusBanner>
                         GestureDetector(
                           onTap: showRetry ? widget.onRetry : widget.onShowQr,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: ZendColors.accentPop,
                               borderRadius: BorderRadius.circular(8),
@@ -1368,13 +1534,29 @@ class _GlassBannerBox extends StatelessWidget {
             color: const Color(0xFF252525).withValues(alpha: 0.80),
             borderRadius: BorderRadius.circular(14),
             border: Border(
-              top:    BorderSide(color: Colors.white.withValues(alpha: 0.07), width: 0.5),
-              left:   BorderSide(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
-              right:  BorderSide(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
-              bottom: BorderSide(color: Colors.black.withValues(alpha: 0.15), width: 0.5),
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.07),
+                width: 0.5,
+              ),
+              left: BorderSide(
+                color: Colors.white.withValues(alpha: 0.04),
+                width: 0.5,
+              ),
+              right: BorderSide(
+                color: Colors.white.withValues(alpha: 0.04),
+                width: 0.5,
+              ),
+              bottom: BorderSide(
+                color: Colors.black.withValues(alpha: 0.15),
+                width: 0.5,
+              ),
             ),
             boxShadow: const [
-              BoxShadow(color: Color(0x40000000), blurRadius: 12, offset: Offset(0, 4)),
+              BoxShadow(
+                color: Color(0x40000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
             ],
           ),
           child: child,
@@ -1392,8 +1574,18 @@ class _GlassBannerBox extends StatelessWidget {
 // cause of the lag when switching between Activity, Home, and Messages tabs.
 
 class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
+  const _KeepAlive({required this.child, required this.tickersEnabled});
   final Widget child;
+
+  /// False for tabs that aren't the active one.
+  ///
+  /// Keeping a tab alive keeps its `AnimationController`s alive too, and a
+  /// ticker doesn't care that its widget is off-screen — a shimmering
+  /// skeleton or a spinner on a swiped-away tab goes on requesting frames
+  /// and repainting forever. [TickerMode] is how the framework itself
+  /// handles this for routes buried under another route; the same reasoning
+  /// applies to a kept-alive tab.
+  final bool tickersEnabled;
 
   @override
   State<_KeepAlive> createState() => _KeepAliveState();
@@ -1407,6 +1599,6 @@ class _KeepAliveState extends State<_KeepAlive>
   @override
   Widget build(BuildContext context) {
     super.build(context); // required by AutomaticKeepAliveClientMixin
-    return widget.child;
+    return TickerMode(enabled: widget.tickersEnabled, child: widget.child);
   }
 }

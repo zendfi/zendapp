@@ -60,6 +60,26 @@ class _PeopleScreenState extends State<PeopleScreen> {
     super.dispose();
   }
 
+  /// Counterparty threads grouped off the build path.
+  ///
+  /// [groupByCounterparty] builds two maps over every edge, folds a sum and
+  /// reduces a max per group, parses amounts and sorts the result. Running
+  /// that inside build() meant paying for it on every notifyListeners() from
+  /// the app model — including while this tab was swiped away, since the
+  /// shell keeps all four tabs mounted. didChangeDependencies fires once per
+  /// notify, which is the actual invalidation point.
+  List<CounterpartyThread> _threads = const [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final model = ZendScope.of(context);
+    _threads = groupByCounterparty(
+      model.threadedActivityEdges,
+      countIsExact: !model.threadedActivityHasMore,
+    ).where((t) => !t.counterparty.isPool).toList();
+  }
+
   void _onQueryChanged(String value) {
     setState(() {
       _query = value.trim();
@@ -104,11 +124,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final isSearching = _query.isNotEmpty;
-
-    final threads = groupByCounterparty(
-      model.threadedActivityEdges,
-      countIsExact: !model.threadedActivityHasMore,
-    ).where((t) => !t.counterparty.isPool).toList();
+    // Grouped in didChangeDependencies — see the field's doc.
+    final threads = _threads;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -211,18 +228,32 @@ class _PeopleScreenState extends State<PeopleScreen> {
 
     final suggestions = model.suggestedConnections.take(5).toList();
 
-    return ListView(
+    // Lazy, not eager. This was a `ListView(children: [...])` with an
+    // uncapped `for (final thread in threads)` spread into it, so every
+    // person the user has ever transacted with was constructed on every
+    // rebuild whether or not they were anywhere near the viewport.
+    //
+    // Slot layout: [0] = "Recent" header, [1..n] = person rows,
+    // [n+1] = the whole discovery section (capped at 5, so one widget).
+    final hasSuggestions = suggestions.isNotEmpty;
+    final itemCount = 1 + threads.length + (hasSuggestions ? 1 : 0);
+
+    return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8, top: 4),
-          child: Text(
-            'Recent',
-            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
-          ),
-        ),
-        for (final thread in threads)
-          _PersonRow(
+      itemCount: itemCount,
+      itemBuilder: (context, i) {
+        if (i == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8, top: 4),
+            child: Text(
+              'Recent',
+              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+            ),
+          );
+        }
+        if (i <= threads.length) {
+          final thread = threads[i - 1];
+          return _PersonRow(
             displayName: thread.counterparty.displayLabel,
             subtitle: '${thread.edges.length}${thread.countIsExact ? '' : '+'} '
                 'activit${thread.edges.length == 1 ? 'y' : 'ies'} together',
@@ -234,40 +265,44 @@ class _PeopleScreenState extends State<PeopleScreen> {
               displayName: thread.counterparty.displayLabel,
               avatarUrl: thread.counterparty.avatarUrl,
             ),
-          ),
-        if (suggestions.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              'People you might know',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                'People you might know',
+                style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+              ),
             ),
-          ),
-          SizedBox(
-            height: 84,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: suggestions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 16),
-              itemBuilder: (context, i) {
-                final s = suggestions[i];
-                final tag = s['zendtag'] as String? ?? '';
-                final name = (s['display_name'] as String?)?.trim().isNotEmpty == true
-                    ? s['display_name'] as String
-                    : tag;
-                final avatarUrl = s['avatar_url'] as String?;
-                return _DiscoveryColumn(
-                  displayName: name,
-                  avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  avatarUrl: avatarUrl,
-                  onTap: () => _openProfile(zendtag: tag, displayName: name, avatarUrl: avatarUrl),
-                );
-              },
+            SizedBox(
+              height: 84,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: suggestions.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, j) {
+                  final s = suggestions[j];
+                  final tag = s['zendtag'] as String? ?? '';
+                  final name = (s['display_name'] as String?)?.trim().isNotEmpty == true
+                      ? s['display_name'] as String
+                      : tag;
+                  final avatarUrl = s['avatar_url'] as String?;
+                  return _DiscoveryColumn(
+                    displayName: name,
+                    avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    avatarUrl: avatarUrl,
+                    onTap: () => _openProfile(zendtag: tag, displayName: name, avatarUrl: avatarUrl),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 }

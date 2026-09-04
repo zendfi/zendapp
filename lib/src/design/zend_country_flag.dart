@@ -59,11 +59,19 @@ class ZendCountryFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Decode at the size actually drawn rather than the asset's full size.
+    // The flag PNGs are wider than tall and BoxFit.cover crops horizontally,
+    // so height is the constraining dimension. This matters because [size]
+    // is caller-controlled: without it, a caller asking for a large flag and
+    // a caller asking for a small one both pay full-resolution decode.
+    final decodeHeight =
+        (size * MediaQuery.devicePixelRatioOf(context)).round();
     return ClipOval(
       child: Image.asset(
         country.assetPath,
         width: size,
         height: size,
+        cacheHeight: decodeHeight,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _InitialsBadge(
           country: country,

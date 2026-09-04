@@ -138,15 +138,26 @@ class AuthService {
     await _saveUserIdentity(profile);
   }
 
-  /// Validates the locally-stored JWT against the backend.
+  /// Confirms the locally-stored JWT against the backend.
   ///
-  /// This is the ONLY reliable way to know whether a session is actually
+  /// This is the only reliable way to know whether a session is actually
   /// still authenticated — [isAuthenticated] only checks token *presence*,
-  /// which is true even for an expired/revoked token. Callers that gate
-  /// [ZendAppModel.setAuthenticated] (and therefore SSE/push/pool/savings/
-  /// Drop service startup) on session validity must use this method, not
-  /// [isAuthenticated] (zendapp-hardening Req 1.3).
-  Future<SessionValidation> tryRestoreSession() async {
+  /// which is true even for an expired or revoked token (zendapp-hardening
+  /// Req 1.3).
+  ///
+  /// Deliberately designed to be called **without awaiting** on the launch
+  /// path: it costs a full network round trip, and only one of its three
+  /// outcomes is actionable. `unknown` (offline, 5xx) must never be treated
+  /// as a dead session or opening the app without a network would sign the
+  /// user out, and `valid` changes nothing. That leaves a confirmed 401,
+  /// which [ApiClient]'s interceptor already handles globally by deleting the
+  /// token and invoking `ZendAppModel.handleUnauthorized` (Req 1.4).
+  ///
+  /// Callers must therefore not gate first paint on this. Note also that
+  /// `handleUnauthorized` no-ops while `isAuthenticated` is false, so fire
+  /// this only *after* the session has been established locally — otherwise
+  /// a confirmed-dead session waits for the next API call to be noticed.
+  Future<SessionValidation> validateStoredSession() async {
     final token = await _secureStorage.read(key: _tokenKey);
     if (token == null || token.isEmpty) return SessionValidation.invalid;
     try {
@@ -170,10 +181,15 @@ class AuthService {
     }
   }
 
-  /// Whether a JWT is present in secure storage. This does NOT mean the
-  /// session is valid — an expired or server-revoked token still passes
-  /// this check. Use [tryRestoreSession] wherever the answer needs to be
-  /// trustworthy (i.e. before granting authenticated access).
+  /// Whether a JWT is present in secure storage. Local only — a single
+  /// Keychain read, no network.
+  ///
+  /// This does NOT mean the session is valid: an expired or server-revoked
+  /// token still passes. It is enough to decide *routing* at launch (signed
+  /// out vs. resume), which is what the splash path uses it for; correctness
+  /// against the server is then established by
+  /// [validateStoredSession] in the background and by [ApiClient]'s global
+  /// 401 handling.
   Future<bool> isAuthenticated() async {
     final token = await _secureStorage.read(key: _tokenKey);
     return token != null && token.isNotEmpty;
@@ -204,11 +220,27 @@ class AuthService {
   }
 
   Future<UserProfileResponse?> tryRestoreUserIdentity() async {
-    final userId = await _secureStorage.read(key: _userIdKey);
-    final zendtag = await _secureStorage.read(key: _zendtagKey);
-    final displayName = await _secureStorage.read(key: _displayNameKey);
-    final walletAddress = await _secureStorage.read(key: _walletAddressKey);
-    final avatarUrlRaw = await _secureStorage.read(key: _avatarUrlKey);
+    // Concurrent, not sequential. This sits directly on the cold-launch path
+    // (the native splash is held until session restore finishes), and each of
+    // these is its own platform-channel round trip into the Keychain /
+    // Keystore. Awaited one at a time, their latencies stacked; there is no
+    // ordering dependency between them.
+    //
+    // Deliberately five targeted reads rather than one `readAll()`: readAll
+    // would also pull and decrypt every unrelated entry in secure storage,
+    // including the encrypted wallet key material.
+    final values = await Future.wait([
+      _secureStorage.read(key: _userIdKey),
+      _secureStorage.read(key: _zendtagKey),
+      _secureStorage.read(key: _displayNameKey),
+      _secureStorage.read(key: _walletAddressKey),
+      _secureStorage.read(key: _avatarUrlKey),
+    ]);
+    final userId = values[0];
+    final zendtag = values[1];
+    final displayName = values[2];
+    final walletAddress = values[3];
+    final avatarUrlRaw = values[4];
     final avatarUrl = (avatarUrlRaw != null && avatarUrlRaw.isNotEmpty)
         ? avatarUrlRaw
         : null;

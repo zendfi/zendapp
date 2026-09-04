@@ -878,8 +878,14 @@ class WalletService {
   /// Any device with the current KDF version is either already migrated or was
   /// created after the migration system launched — either way, no upgrade needed.
   Future<bool> needsMigration() async {
-    final pinLength = await _secureStorage.read(key: _pinLengthKey);
-    final kdfVersion = await _secureStorage.read(key: _kdfVersionKey);
+    // Both reads happen on the cold-launch path before the splash is
+    // released, and neither depends on the other.
+    final values = await Future.wait([
+      _secureStorage.read(key: _pinLengthKey),
+      _secureStorage.read(key: _kdfVersionKey),
+    ]);
+    final pinLength = values[0];
+    final kdfVersion = values[1];
 
     // If pin_length is explicitly '6', never needs migration.
     if (pinLength == '6') return false;

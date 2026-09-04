@@ -209,7 +209,7 @@ class _RequestConfirmationContentState
                       shape: BoxShape.circle,
                     ),
                     padding: const EdgeInsets.all(8),
-                    child: Image.asset('assets/logo/Zend.png'),
+                    child: Image.asset('assets/logo/zend-mark.png'),
                   ),
                 ],
               ),

@@ -332,7 +332,7 @@ class _ShowingView extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         padding: const EdgeInsets.all(9),
-                        child: Image.asset('assets/logo/Zend.png'),
+                        child: Image.asset('assets/logo/zend-mark.png'),
                       ),
                     ],
                   ),

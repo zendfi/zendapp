@@ -15,7 +15,7 @@ class SoundService {
     if (_initialized) return;
     try {
       _pool = await AudioPool.createFromAsset(
-        path: 'sounds/zent_success.wav',
+        path: 'sounds/zent_success.mp3',
         maxPlayers: 2,
       );
       _initialized = true;
@@ -51,11 +51,11 @@ class PoolSoundService {
     if (_initialized) return;
     try {
       _contributionPool = await AudioPool.createFromAsset(
-        path: 'sounds/pool_contribution.wav',
+        path: 'sounds/pool_contribution.mp3',
         maxPlayers: 2,
       );
       _messagePool = await AudioPool.createFromAsset(
-        path: 'sounds/pool_message.wav',
+        path: 'sounds/pool_message.mp3',
         maxPlayers: 2,
       );
       _initialized = true;

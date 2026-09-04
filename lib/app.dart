@@ -6,7 +6,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
 import 'src/design/zend_tokens.dart';
-import 'src/services/auth_service.dart' show SessionValidation;
+
 import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
@@ -148,7 +148,11 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   /// decrypting a local Solana key that a zkLogin account does not have.
   Future<void> _maybeShowBiometricGate(ZendAppModel model) async {
     if (!model.isAuthenticated) return;
-    if (!await model.authService.isZkLoginAccount()) return;
+    // Reads the in-session mirror rather than going back to secure storage.
+    // _restoreSession already resolved this and assigned model.isZkLoginAccount
+    // before authenticating, so a second Keychain round trip here would only
+    // re-derive a value we already hold.
+    if (!model.isZkLoginAccount) return;
     if (!await BiometricService().isAppLockEnabled()) return;
     if (!mounted) return;
 
@@ -598,24 +602,29 @@ class _SplashWithSessionRestoreState
   }
 
   Future<void> _restoreSession() async {
-    // Validate the stored JWT against the backend rather than only checking
-    // token presence. `isAuthenticated()` would treat an expired or
-    // server-revoked token as good forever, which previously let
-    // setAuthenticated() (and everything it starts — SSE, push
-    // registration, pool/savings fetch, Drop discoverability) run on a
-    // dead session. See zendapp-hardening spec Req 1.3.
+    // Route from the *local* token; confirm it against the backend afterwards,
+    // off the critical path (see below).
     //
-    // `unknown` (no network / server hiccup at cold launch) is treated the
-    // same as a valid session so the app degrades gracefully offline,
-    // exactly like every other network call in this codebase — it is only
-    // `invalid` (a confirmed 401 from the backend) that must never be
-    // treated as authenticated. Any session that turns out to actually be
-    // invalid will be caught by the very next authenticated API call via
-    // ApiClient's centralized 401 handler.
-    final validation = await widget.model.authService.tryRestoreSession();
+    // This used to await AuthService.validateStoredSession() here, which meant
+    // a full HTTP round trip — or its timeout — sat between the user tapping
+    // the app icon and seeing any pixel of UI, since the native splash is held
+    // for this whole method. The response body was then discarded.
+    //
+    // It also could only ever act on one of three outcomes. `unknown` (no
+    // network, 5xx) is deliberately treated as a live session so the app
+    // degrades gracefully offline, and `valid` changes nothing; only a
+    // confirmed 401 is actionable. That case is already handled
+    // deterministically from anywhere in the app — ApiClient's interceptor
+    // deletes the token and calls ZendAppModel.handleUnauthorized, which
+    // resets state and navigates to WelcomeScreen (zendapp-hardening Req 1.4).
+    //
+    // So the guarantee in Req 1.3 is preserved: a dead session still never
+    // keeps running. It's just discovered a moment after first paint instead
+    // of before it.
+    final hasStoredSession = await widget.model.authService.isAuthenticated();
     if (!mounted) return;
 
-    if (validation == SessionValidation.invalid) {
+    if (!hasStoredSession) {
       // The language intro is a first-install moment, not a "logged out"
       // moment — LanguageIntroScreen.shouldShow() persists its own
       // once-per-install flag, so a user who signs out and back in lands
@@ -637,6 +646,15 @@ class _SplashWithSessionRestoreState
 
     await widget.model.restoreUserIdentity();
     if (!mounted) return;
+
+    // Ordering matters: this is fired only now, after restoreUserIdentity()
+    // has called setAuthenticated(). handleUnauthorized() no-ops while
+    // `isAuthenticated` is false, so validating any earlier would let a
+    // confirmed-dead session slip past the sign-out and wait to be noticed by
+    // some later request instead.
+    //
+    // Not awaited — that's the entire point. Nothing below needs its answer.
+    unawaited(widget.model.authService.validateStoredSession());
 
     // zkLogin accounts are routed before the keypair checks below, because those
     // checks assume every account owns a local Solana key protected by a PIN. A
@@ -670,8 +688,14 @@ class _SplashWithSessionRestoreState
       return;
     }
 
-    final hasLocalKeypair = await widget.model.walletService.hasLocalKeypair();
-    final hasPinSetup = await widget.model.walletService.hasPinSetup();
+    // Two independent secure-storage reads, concurrent rather than stacked —
+    // still on the held-splash path.
+    final walletChecks = await Future.wait([
+      widget.model.walletService.hasLocalKeypair(),
+      widget.model.walletService.hasPinSetup(),
+    ]);
+    final hasLocalKeypair = walletChecks[0];
+    final hasPinSetup = walletChecks[1];
     if (!mounted) return;
 
     if (hasLocalKeypair && hasPinSetup) {

@@ -48,6 +48,8 @@ class SuiZkLoginIdentity {
     this.suiAddress,
     this.addressSource,
     this.saltBackedUp = false,
+    this.saltStrategy,
+    this.saltSharesProvisioned = false,
   });
 
   final bool linked;
@@ -57,6 +59,28 @@ class SuiZkLoginIdentity {
   final String? addressSource;
   final bool saltBackedUp;
 
+  /// Custody strategy recorded for this identity, e.g. `sharded_2of3`.
+  ///
+  /// Informational. Do **not** branch salt reconstruction on this — see
+  /// [saltSharesProvisioned].
+  final String? saltStrategy;
+
+  /// Whether the salt has actually been split into shares.
+  ///
+  /// The authoritative signal for whether salt reconstruction is required, and
+  /// sufficient on its own: the backend writes the strategy and this flag in the
+  /// same statement, so `true` implies `sharded_2of3`.
+  ///
+  /// [saltStrategy] is not a substitute. It is recorded when the identity is
+  /// created, before any split has happened, so an identity can read as
+  /// `sharded_2of3` while the backend still holds an unsplit whole salt. Treating
+  /// the strategy as proof of sharding is what made every transfer attempt call
+  /// share release and fail.
+  ///
+  /// Defaults to `false` so an older backend that omits the field degrades into
+  /// "not sharded" rather than into a doomed reconstruction attempt.
+  final bool saltSharesProvisioned;
+
   factory SuiZkLoginIdentity.fromJson(Map<String, dynamic> json) {
     return SuiZkLoginIdentity(
       linked: json['linked'] as bool? ?? false,
@@ -65,6 +89,8 @@ class SuiZkLoginIdentity {
       suiAddress: json['sui_address'] as String?,
       addressSource: json['address_source'] as String?,
       saltBackedUp: json['salt_backed_up'] as bool? ?? false,
+      saltStrategy: json['salt_strategy'] as String?,
+      saltSharesProvisioned: json['salt_shares_provisioned'] as bool? ?? false,
     );
   }
 }
@@ -188,6 +214,9 @@ class SuiZkLoginPublicSignIn {
               suiAddress: identity['sui_address'] as String?,
               addressSource: identity['address_source'] as String?,
               saltBackedUp: identity['salt_backed_up'] as bool? ?? false,
+              saltStrategy: identity['salt_strategy'] as String?,
+              saltSharesProvisioned:
+                  identity['salt_shares_provisioned'] as bool? ?? false,
             )
           : const SuiZkLoginIdentity(linked: false),
     );

@@ -35,21 +35,77 @@ class _DmListScreenState extends State<DmListScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
 
+  // ── Derived list state, computed off the build path ─────────────────────
+  //
+  // Merging DMs with pools, sorting the result, and then search-filtering it
+  // used to happen inside build(). Every rebuild therefore allocated a
+  // wrapper per row, sorted, and lowercased three strings per row — and this
+  // widget rebuilds on every notifyListeners() from the app model, not just
+  // when the chat list actually changes.
+  //
+  // Inputs are [_threads] (local), model.pools / model.poolsWithNewMessages
+  // (model), and [_searchQuery] (local), so this is refreshed from both
+  // didChangeDependencies and the setState paths that touch those.
+  List<_ChatListItem> _items = const [];
+  List<_ChatListItem> _displayItems = const [];
+
   @override
   void initState() {
     super.initState();
     _loadThreads();
     _loadMutePreference();
-    _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.toLowerCase().trim());
-    });
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fires on every model notify, because build() takes a ZendScope
+    // dependency. Reads with `read` since the dependency already exists.
+    _rebuildItems();
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final next = _searchController.text.toLowerCase().trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+      _applySearch();
+    });
+  }
+
+  /// One unified, sorted list — DMs and Pools mixed together with identical
+  /// row styling, the way WhatsApp mixes groups and 1:1 chats in a single
+  /// list rather than splitting them into separate sections.
+  ///
+  /// Pool has no last-activity timestamp on the client today (only
+  /// created_at), so createdAt is the best available recency proxy for sort
+  /// position until the backend exposes a real one. That only affects where
+  /// an inactive pool lands in the list, never its row appearance.
+  void _rebuildItems() {
+    final model = ZendScope.read(context);
+    _items = <_ChatListItem>[
+      ..._threads.map(_ChatListItem.fromThread),
+      ...model.pools.map((p) => _ChatListItem.fromPool(
+            p,
+            hasNewMessage: model.poolsWithNewMessages.contains(p.id),
+          )),
+    ]..sort((a, b) => b.sortTime.compareTo(a.sortTime));
+    _applySearch();
+  }
+
+  void _applySearch() {
+    _displayItems = _searchQuery.isEmpty
+        ? _items
+        : _items.where((item) => item.matches(_searchQuery)).toList();
   }
 
   Future<void> _loadMutePreference() async {
@@ -87,6 +143,7 @@ class _DmListScreenState extends State<DmListScreen> {
           _threads = threads;
           _loading = false;
           _loadError = false;
+          _rebuildItems();
         });
         final total = threads.fold<int>(0, (sum, t) => sum + t.unreadCount);
         if (model.dmUnreadTotal != total) {
@@ -199,7 +256,11 @@ class _DmListScreenState extends State<DmListScreen> {
       if (decrypted == null) return; // decryption failed — leave the fallback text
       lastMsg.content = decrypted;
       lastMsg.isEncrypted = true;
-      if (mounted) setState(() {});
+      // _ChatListItem holds the thread by reference, so the row picks the new
+      // preview up without rebuilding the merged list. The search filter
+      // reads through to it though, so re-apply that in case a query is
+      // active and this row now matches (or stops matching).
+      if (mounted) setState(_applySearch);
     } catch (_) {
       // Never let a decrypt failure bubble up — the model-level fallback
       // already covers display safety.
@@ -222,22 +283,8 @@ class _DmListScreenState extends State<DmListScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    // One unified, sorted list — DMs and Pools mixed together with
-    // identical row styling, the way WhatsApp mixes groups and 1:1 chats
-    // in a single list rather than splitting them into separate sections.
-    // Pool has no last-activity timestamp on the client today (only
-    // created_at) — createdAt is used as the best available recency proxy
-    // for sort position until the backend exposes a real one; this only
-    // affects where an inactive pool lands in the list, never its row
-    // appearance.
-    final items = <_ChatListItem>[
-      ..._threads.map(_ChatListItem.fromThread),
-      ...model.pools.map((p) => _ChatListItem.fromPool(p, hasNewMessage: model.poolsWithNewMessages.contains(p.id))),
-    ]..sort((a, b) => b.sortTime.compareTo(a.sortTime));
-
-    final displayItems = _searchQuery.isEmpty
-        ? items
-        : items.where((item) => item.matches(_searchQuery)).toList();
+    // Merged, sorted and filtered off the build path — see the fields' doc.
+    final displayItems = _displayItems;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

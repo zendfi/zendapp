@@ -214,7 +214,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
                           shape: BoxShape.circle,
                         ),
                         padding: const EdgeInsets.all(10),
-                        child: Image.asset('assets/logo/Zend.png'),
+                        child: Image.asset('assets/logo/zend-mark.png'),
                       ),
                     ],
                   );

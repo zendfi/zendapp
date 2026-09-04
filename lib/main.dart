@@ -80,15 +80,15 @@ void main() async {
     debugPrint('${details.stack}');
   };
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    // Firebase init failure is non-fatal — app works without push notifications
-    debugPrint('Firebase init failed: $e');
-  }
+  // Started here but deliberately NOT awaited yet. Initialising the native
+  // Firebase SDK is one of the most expensive things on the launch path, and
+  // nothing between this line and the Future.wait further down needs it —
+  // service construction below is all plain synchronous constructors. The one
+  // thing that does need it (reading a notification tap that cold-launched
+  // us) is chained onto this future at that Future.wait, so Firebase init
+  // overlaps with the keychain and SharedPreferences reads instead of running
+  // strictly before them.
+  final firebaseReady = _initFirebase();
 
   // Pre-warm audio — completely non-fatal
   SoundService.init().ignore();
@@ -230,11 +230,6 @@ void main() async {
   // zendapp-hardening spec Req 1.4.
   apiClient.onUnauthorized = model.handleUnauthorized;
 
-  await model.hydrateRecentContacts();
-  await model.loadPersistedPreferences();
-
-  await DeepLinkHandler.init();
-
   // Register pool message badge callback early — before auth — so FCM messages
   // that arrive before authentication completes still mark the pool as unread.
   PushNotificationService.onPoolMessageReceived = (poolId) {
@@ -242,12 +237,46 @@ void main() async {
     model.triggerRebuild();
   };
 
-  // Check for a notification tap that launched the app from a killed state
-  // (getInitialMessage) — must happen BEFORE runApp so the destination is
-  // stored in PendingNotificationService before the widget tree builds.
-  await _checkInitialNotificationTap();
+  // Everything still needed before the first frame, run concurrently.
+  //
+  // These are mutually independent — no one of them consumes another's
+  // result — but each is a platform-channel round trip (keychain,
+  // SharedPreferences, app_links, FCM) and they used to run strictly one
+  // after another while the native splash was held on screen. On a cold
+  // process the first keychain access is the expensive one, and stacking
+  // these serially meant paying every latency in sequence.
+  //
+  // The notification-tap read stays gated on Firebase being up, but only on
+  // that — it no longer waits for the storage reads, and they no longer wait
+  // for it.
+  await Future.wait<void>([
+    model.hydrateRecentContacts(),
+    model.loadPersistedPreferences(),
+    DeepLinkHandler.init(),
+    // Must still complete BEFORE runApp so the destination is parked in
+    // PendingNotificationService before the widget tree builds.
+    firebaseReady.then((_) => _checkInitialNotificationTap()),
+  ]);
 
   runApp(ZendApp(model: model));
+}
+
+/// Brings up Firebase and registers the background message handler.
+///
+/// Swallows its own failures rather than propagating them: Firebase being
+/// unavailable costs push notifications, not the app, and because the
+/// returned future is not awaited immediately an escaping error would
+/// surface as an unhandled async exception instead.
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    // Firebase init failure is non-fatal — app works without push notifications
+    debugPrint('Firebase init failed: $e');
+  }
 }
 
 /// Checks Firebase's `getInitialMessage` for a notification tap that cold-launched

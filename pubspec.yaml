@@ -142,15 +142,16 @@ dependencies:
   firebase_messaging: ^15.2.5
   flutter_local_notifications: ^18.0.1
 
-  # Local SQLite persistence via drift
-  drift: ^2.18.0
-  drift_flutter: ^0.2.0
-  sqlite3_flutter_libs: ^0.5.0
+  # Local SQLite persistence. sqflite only — it talks to the SQLite already
+  # present on the platform, so there is no bundled native library.
+  #
+  # drift/drift_flutter/sqlite3_flutter_libs were removed: nothing in lib/ ever
+  # imported them (AppDatabase and PoolMessageRepository are plain sqflite),
+  # and sqlite3_flutter_libs in particular ships a native .so per ABI purely to
+  # give drift its own SQLite build.
+  sqflite: ^2.3.0
   path_provider: ^2.1.0
   path: ^1.9.0
-
-  # Direct SQLite access (no code generation required)
-  sqflite: ^2.3.0
 
   # UUID generation for client-side message IDs
   uuid: ^4.4.0
@@ -171,8 +172,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  drift_dev: ^2.18.0
-  build_runner: ^2.4.0
+  # drift_dev and build_runner removed alongside drift — there is no code
+  # generation in this project (no build.yaml, no .g.dart or .drift.dart
+  # anywhere), so they only slowed `pub get` down.
+  #
+  # Desktop SQLite for tests only. sqflite has no implementation under
+  # flutter_test, so without this the SnapshotCache tests — which cover
+  # per-user scoping and the clear-on-sign-out path — could not run at all.
+  sqflite_common_ffi: ^2.3.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -197,11 +204,20 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/logo/Zend.png
-    - assets/logo/Zend-splash.png
+    # Only what the app actually loads at runtime is listed here.
+    #
+    # Deliberately NOT bundled:
+    #   assets/logo/Zend.png       — 1024x1024 source for flutter_launcher_icons
+    #                                only (iOS App Store requires 1024). Read
+    #                                from disk at generation time, so shipping
+    #                                it would be a megabyte of dead weight.
+    #   assets/logo/Zend-splash.png — same deal for flutter_native_splash.
+    # Runtime code wants the small mark below, not either of those.
+    - assets/logo/zend-mark.png
     - assets/icons/zend-icon-navbar.png
     - assets/sounds/
-    - assets/countries/
+    # assets/countries/ itself held only unused SVGs (there's no SVG renderer
+    # in this project), so only the flags directory is bundled.
     - assets/countries/flags/
 
   # An image asset can refer to one or more resolution-specific "variants", see

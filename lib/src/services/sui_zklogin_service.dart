@@ -74,6 +74,7 @@ class _ActiveSession {
     required this.idToken,
     required this.maxEpoch,
     required this.expiresAt,
+    required this.saltSharesProvisioned,
     this.accessToken,
   });
 
@@ -81,6 +82,18 @@ class _ActiveSession {
   final SuiEphemeralKeyPair keyPair;
   final String jwtRandomness;
   final String idToken;
+
+  /// Whether this account's salt has actually been split into shares, as reported
+  /// by the backend when the session was established.
+  ///
+  /// Required rather than defaulted so every construction site has to state it.
+  /// The alternative — inferring "sharded" from the fact that a custody service is
+  /// configured — is what caused every transfer to call salt share release against
+  /// accounts whose salt was never split, and fail.
+  ///
+  /// Mutable because `provisionSaltShares()` flips custody mid-session: leaving it
+  /// stale would skip the reconstruction that has just become mandatory.
+  bool saltSharesProvisioned;
 
   /// Google API access token used to reach the Drive `appdata` folder holding
   /// share B.
@@ -170,6 +183,7 @@ class SuiZkLoginService {
           accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
+          saltSharesProvisioned: identity.saltSharesProvisioned,
         ),
       );
       return identity;
@@ -218,6 +232,7 @@ class SuiZkLoginService {
           accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
+          saltSharesProvisioned: result.identity.saltSharesProvisioned,
         ),
       );
       return result;
@@ -280,6 +295,16 @@ class SuiZkLoginService {
   Future<String?> _reconstructSaltIfSharded(_ActiveSession session) async {
     final custody = _custody;
     if (custody == null) return null;
+
+    // Having a custody service configured says nothing about whether *this*
+    // account's salt was ever split. Only the backend knows, and until it says so
+    // the salt is whole and server-side, so there is nothing to reconstruct and
+    // the proof needs no client-supplied salt.
+    //
+    // Without this check the method contradicted its own name: it attempted
+    // reconstruction for every account, which meant calling salt share release
+    // against identities that hold no share, and failing the transfer with a 400.
+    if (!session.saltSharesProvisioned) return null;
 
     // Reconstruction needs any two of three shares. The device share is present on
     // a device that has provisioned before, so the common case needs no Drive and
@@ -370,6 +395,9 @@ class SuiZkLoginService {
         idToken: session.idToken,
         accessToken: accessToken,
       );
+      // Custody has just changed under this live session. From here the backend
+      // holds only share C, so proofs require a reconstructed salt.
+      session.saltSharesProvisioned = true;
     } finally {
       for (var i = 0; i < salt.length; i++) {
         salt[i] = 0;
@@ -447,7 +475,11 @@ class SuiZkLoginService {
         prompt: SuiOAuthPrompt.none,
       );
 
-      await _api.redeemSuiZkLoginSession(
+      // The identity is re-read rather than discarded: custody can have changed
+      // since the last session (recovery setup provisions shares), and a stale
+      // flag here would either skip a required reconstruction or attempt an
+      // impossible one.
+      final identity = await _api.redeemSuiZkLoginSession(
         sessionId: init.sessionId,
         idToken: tokens.idToken,
       );
@@ -461,6 +493,7 @@ class SuiZkLoginService {
           accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
           expiresAt: init.expiresAt,
+          saltSharesProvisioned: identity.saltSharesProvisioned,
         ),
       );
     } catch (error) {

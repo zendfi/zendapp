@@ -36,6 +36,7 @@ import '../services/zendtag_service.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/recovery_service.dart';
 import '../data/local/app_database.dart';
+import '../data/local/snapshot_cache.dart';
 import '../models/payment_request_notification.dart';
 import '../models/payment_request_item.dart';
 import '../models/pocket_models.dart';
@@ -226,9 +227,94 @@ class ZendAppModel extends ChangeNotifier {
   /// Its notifications are forwarded through this model so the shell's
   /// existing `ZendScope.of(context)` rebuild picks up banner changes with
   /// no extra listener wiring, exactly like [pendingPaymentRequest].
+  /// Deliberately NOT forwarded into this model's own [notifyListeners].
+  ///
+  /// It used to be (`..addListener(notifyListeners)`), so that the shell's
+  /// existing `ZendScope.of(context)` subscription picked banner changes up
+  /// with no extra wiring. That convenience was the wrong trade: because
+  /// `ZendScope` is an `InheritedNotifier` with no narrowing, every status
+  /// tick — the sending→sent transition, and the uncertain-transfer poll
+  /// firing every 3 seconds — rebuilt every widget in the app subscribed to
+  /// this model, including all four kept-alive tab subtrees, in order to
+  /// move a single banner.
+  ///
+  /// Listen to this controller directly instead (see the `ListenableBuilder`
+  /// wrapping the banner region in `zend_shell.dart`).
   TransferStatusController? _transferStatus;
-  TransferStatusController get transferStatus => _transferStatus ??=
-      (TransferStatusController(model: this)..addListener(notifyListeners));
+  TransferStatusController get transferStatus =>
+      _transferStatus ??= TransferStatusController(model: this);
+
+  /// Last-seen balance and feed, so launch paints content instead of a
+  /// skeleton. See [SnapshotCache].
+  late final SnapshotCache _snapshots = SnapshotCache(localDb);
+
+  /// Populates [balance], [spendableBalance] and [threadedActivityEdges] from
+  /// the previous session's snapshot.
+  ///
+  /// Every write is guarded on the live value still being empty: the network
+  /// fetches kicked off by [setAuthenticated] race this, and a cached figure
+  /// must never overwrite a fresher one that has already landed. Losing the
+  /// race is the good outcome — it means the real data beat the cache.
+  Future<void> hydrateFromCache() async {
+    final userId = currentUserId;
+    if (userId == null || userId.isEmpty) return;
+
+    var changed = false;
+
+    if (balance == 0.0 && spendableBalance == 0.0) {
+      final cached = await _snapshots.getMap(userId, SnapshotCache.keyBalance);
+      if (cached != null && balance == 0.0 && spendableBalance == 0.0) {
+        balance = (cached['balance'] as num?)?.toDouble() ?? 0.0;
+        spendableBalance = (cached['spendable'] as num?)?.toDouble() ?? balance;
+        changed = true;
+      }
+    }
+
+    if (threadedActivityEdges.isEmpty) {
+      final cached = await _snapshots.getMap(userId, SnapshotCache.keyFeedPage1);
+      final rawEdges = cached?['edges'];
+      if (rawEdges is List && threadedActivityEdges.isEmpty) {
+        try {
+          threadedActivityEdges = rawEdges
+              .whereType<Map<String, dynamic>>()
+              .map(ActivityEdge.fromJson)
+              .toList();
+          changed = true;
+        } catch (_) {
+          // A shape change in ActivityEdge since this was written — ignore the
+          // snapshot rather than failing the launch.
+        }
+      }
+    }
+
+    if (changed) notifyListeners();
+  }
+
+  Future<void> _cacheBalance() {
+    final userId = currentUserId;
+    if (userId == null) return Future<void>.value();
+    return _snapshots.put(userId, SnapshotCache.keyBalance, {
+      'balance': balance,
+      'spendable': spendableBalance,
+    });
+  }
+
+  /// Caches the first page only. The feed auto-loads every remaining page in
+  /// the background, and persisting all of them would grow without bound for
+  /// a heavy user while buying nothing — one screenful is all that has to be
+  /// on-screen at launch before the network catches up.
+  Future<void> _cacheFeedPage1() {
+    final userId = currentUserId;
+    if (userId == null || threadedActivityEdges.isEmpty) {
+      return Future<void>.value();
+    }
+    return _snapshots.put(userId, SnapshotCache.keyFeedPage1, {
+      'edges': threadedActivityEdges
+          .take(50)
+          .map((e) => e.toJson())
+          .toList(),
+    });
+  }
 
   /// Single source of truth for muted notification categories — see
   /// NotificationPreferencesService's own doc comment. Lazily constructed
@@ -903,6 +989,8 @@ class ZendAppModel extends ChangeNotifier {
         threadedActivityEdges = response.edges;
       }
       _threadedActivityNextCursor = response.nextCursor;
+      // Snapshot the first page for the next launch — fire-and-forget.
+      unawaited(_cacheFeedPage1());
 
       // Immediately show the first page, then auto-load all remaining pages
       // in the background so the thread list is complete without requiring
@@ -1196,6 +1284,10 @@ class ZendAppModel extends ChangeNotifier {
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
       lastBalanceError = null;
+      // Snapshot the confirmed figure for the next launch. Fire-and-forget:
+      // SnapshotCache swallows its own failures and nothing here depends on
+      // the write landing.
+      unawaited(_cacheBalance());
     } on RailUnavailableException catch (e) {
       // Names the real cause (for example: not yet in the rollout) instead of the
       // wallet-backup error a fallback to Solana would have produced.
@@ -1547,6 +1639,11 @@ class ZendAppModel extends ChangeNotifier {
     pendingReservedZendtag = null;
     pendingWaitlistFullName = null;
     notifyListeners();
+    // Paint the previous session's balance and feed straight away, before any
+    // of the network work below can return. Guarded internally so the live
+    // values always win — see [hydrateFromCache]. This is the first point at
+    // which currentUserId is known, which is what the snapshot is keyed on.
+    unawaited(hydrateFromCache());
     startPolling();
     // Start the inactivity lock timer now that the user is authenticated
     appLockService.startTimer();
@@ -1640,6 +1737,15 @@ class ZendAppModel extends ChangeNotifier {
     // CRITICAL: zero and clear the in-memory keypair so it cannot be reused
     // by a subsequent user logging in on the same device.
     WalletSessionCache.instance.clear();
+
+    // Drop this account's on-disk balance/feed snapshot too. In-memory state
+    // being cleared is not enough — a snapshot left behind would be rendered
+    // on the next launch of this account, and on a shared device that means
+    // showing figures to someone who has since signed out.
+    final departingUserId = currentUserId;
+    if (departingUserId != null && departingUserId.isNotEmpty) {
+      unawaited(_snapshots.clearForUser(departingUserId));
+    }
 
     // ── Balance ──
     balance = 0.0;

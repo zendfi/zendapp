@@ -627,6 +627,9 @@ class ApiClient {
         suiAddress: body['sui_address'] as String?,
         addressSource: body['address_source'] as String?,
         saltBackedUp: body['salt_backed_up'] as bool? ?? false,
+        saltStrategy: body['salt_strategy'] as String?,
+        saltSharesProvisioned:
+            body['salt_shares_provisioned'] as bool? ?? false,
       );
     } on DioException catch (e) {
       throw e.error ?? e;
