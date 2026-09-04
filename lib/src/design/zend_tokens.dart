@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
 
+/// Raw, non-mode-aware brand colors. Prefer [ZendTheme.of] for anything that
+/// needs to react to light/dark mode — this class exists for the rare spot
+/// that genuinely wants one fixed value regardless of mode (e.g. a splash
+/// screen that renders before Theme is available).
 class ZendColors {
-  //static const bgPrimary = Color(0xFFFAFAF7);
-  static const bgPrimary = Color(0xFFFFFFFF);
+  static const bgPrimary = Color(0xFFFAFAF8);
   static const bgSecondary = Color(0xFFF2F0EA);
-  static const accent = Color(0xFF2D6A4F);
-  static const accentBright = Color(0xFF52B788);
-  static const accentPop = Color(0xFF95D5B2);
+
+  /// Restrained-accent rule: this green is only for a primary CTA fill, a
+  /// sent-message bubble, or a positive-state indicator (a completed
+  /// transfer, a success tick). It never fills chrome, nav, icons, or cards.
+  /// Everything else in the app stays neutral so these moments stay legible
+  /// as "this needs your attention" rather than becoming wallpaper.
+  static const accent = Color(0xFF16A34A);
+  static const accentBright = Color(0xFF22C55E);
+  static const accentPop = Color(0xFFDCFCE7);
+
   static const textPrimary = Color(0xFF1A1A1A);
   static const textSecondary = Color(0xFF6B7A6E);
   static const textOnDeep = Color(0xFFF0F0F0);
-  static const positive = Color(0xFF52B788);
+
+  static const positive = Color(0xFF22C55E);
+  /// Negative amounts render in near-black, not red — a deliberate "boring"
+  /// choice so a debit doesn't read as an alarm. [destructive] is reserved
+  /// for actual destructive actions (delete, remove card), not routine
+  /// negative numbers.
   static const negative = Color(0xFF1A1A1A);
   static const destructive = Color(0xFFC94F2A);
+
   static const border = Color(0xFFE5E2DA);
   static const bgDeep = Color(0xFF122018);
   static const bgAccentSurface = Color(0xFF0A1A0D);
@@ -43,6 +59,7 @@ class ZendTheme {
   final Color bgCard;
   final Color bgElevated;
   final Color bgAccentSurface;
+
   /// Chat-thread canvas colour — deliberately distinct from [bgPrimary] (the
   /// app-wide scaffold background) and from [bubbleReceived], so a message
   /// thread reads as its own surface with bubbles sitting visibly *on* it
@@ -50,26 +67,43 @@ class ZendTheme {
   /// WhatsApp/iMessage pattern where the chat canvas and the bubble fill are
   /// always a few percent apart in luminance.
   final Color chatBg;
+
   /// Fill colour for incoming (received) text/payment bubbles. Kept separate
   /// from [bgSecondary] — which is reused all over the app for cards, input
   /// fills, sheets, etc — so bumping bubble contrast never risks regressing
-  /// any of those unrelated surfaces.
+  /// any of those unrelated surfaces. Always neutral: only the *sent* side
+  /// of a thread carries [accentBright].
   final Color bubbleReceived;
+
   final Color textPrimary;
   final Color textSecondary;
   final Color border;
+
+  /// Text/icon-safe brand green — passes AA contrast on [bgPrimary]/[bgCard],
+  /// so it's the one to reach for on links, active tab labels, or an icon
+  /// that needs to read as "on-brand" without a filled background behind it.
   final Color accent;
+
+  /// Higher-chroma green for filled surfaces: the primary CTA button, the
+  /// sent-message bubble, a positive/success indicator. Never used for body
+  /// text directly — pair it with a dark-on-fill text colour, not white.
   final Color accentBright;
+
+  /// Soft, low-chroma green wash for chips, badges, and success banners —
+  /// a background tint, never a text colour.
   final Color accentPop;
+
   final Color positive;
   final Color destructive;
   final bool isDark;
 
   static const _light = ZendTheme._(
-    //bgPrimary: Color(0xFFFAFAF7),
-    bgPrimary: Color(0xFFFFFFFF),
+    bgPrimary: Color(0xFFFAFAF8),
     bgSecondary: Color(0xFFF2F0EA),
-    bgCard: Color(0xFFF2F0EA),
+    // Cards render pure white against the warm off-white page — that small
+    // luminance gap is what makes a card read as an object sitting *on* the
+    // page rather than a tinted rectangle blending into it.
+    bgCard: Color(0xFFFFFFFF),
     bgElevated: Color(0xFFFFFFFF),
     bgAccentSurface: Color(0xFFF2F0EA),
     // Warm beige canvas (WhatsApp-style wallpaper tone) with a crisp white
@@ -80,37 +114,42 @@ class ZendTheme {
     textPrimary: Color(0xFF1A1A1A),
     textSecondary: Color(0xFF6B7A6E),
     border: Color(0xFFE5E2DA),
-    accent: Color(0xFF2D6A4F),
-    accentBright: Color(0xFF52B788),
-    accentPop: Color(0xFF95D5B2),
-    positive: Color(0xFF52B788),
+    accent: Color(0xFF16A34A),
+    accentBright: Color(0xFF22C55E),
+    accentPop: Color(0xFFDCFCE7),
+    positive: Color(0xFF22C55E),
     destructive: Color(0xFFC94F2A),
     isDark: false,
   );
 
   static const _dark = ZendTheme._(
-    // bgPrimary: Color(0xFF0D0D0D),
-    bgPrimary: Color(0xFF000000),
+    // Off-black, not pure black — true #000000 causes light-text halation
+    // on OLED and reads harsher than it needs to for a screen people look
+    // at for minutes at a time.
+    bgPrimary: Color(0xFF101010),
     bgSecondary: Color(0xFF161616),
     bgCard: Color(0xFF1E1E1E),
     bgElevated: Color(0xFF252525),
     bgAccentSurface: Color(0xFF0A1A0D),
-    // Near-black canvas with a clearly lighter, elevated bubble fill —
-    // matches iMessage/WhatsApp dark mode's "bubble sits above the canvas"
-    // depth instead of the ~3% gap bgPrimary/bgSecondary gave it before.
-    chatBg: Color(0xFF101010),
+    // A step lighter than bgPrimary — same "canvas distinct from scaffold"
+    // logic as light mode, just compressed since dark-mode luminance steps
+    // are smaller to begin with.
+    chatBg: Color(0xFF141414),
     bubbleReceived: Color(0xFF262626),
+    // Off-white, not pure white — mirrors the bgPrimary reasoning: full
+    // #FFFFFF text on a near-black surface glows/smears for a lot of eyes.
     textPrimary: Color(0xFFF0F0F0),
     textSecondary: Color(0xFF8A8A8A),
     border: Color(0xFF2A2A2A),
-    accent: Color(0xFF52B788),
-    // accentBright in dark is deliberately quieter than light — the #52B788
-    // / #6FCF97 values were too vivid against the dark background, clashing
-    // with the muted dark palette. A slightly desaturated mid-green reads as
-    // "branded" without the visual shout.
-    accentBright: Color(0xFF4A9E72),
-    accentPop: Color(0xFF7BC4A0),
-    positive: Color(0xFF4A9E72),
+    // Brighter than the light-mode accent on purpose — dark surfaces can
+    // carry more saturated color before it feels aggressive, so this still
+    // reads calm rather than muted-to-the-point-of-invisible.
+    accent: Color(0xFF22C55E),
+    accentBright: Color(0xFF4ADE80),
+    // Dark, low-chroma wash rather than a pale one — a light mint chip would
+    // float awkwardly bright against a near-black card.
+    accentPop: Color(0xFF14532D),
+    positive: Color(0xFF4ADE80),
     destructive: Color(0xFFE05C3A),
     isDark: true,
   );
