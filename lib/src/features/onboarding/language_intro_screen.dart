@@ -58,7 +58,14 @@ const _greetings = [
   _Greeting('Bonjour', 'Français'),
   _Greeting('你好', '中文'),
   _Greeting('مرحبا', 'العربية'),
-  _Greeting('Welcome', 'English'),
+  _Greeting('Hallo', 'Deutsch'),
+  _Greeting('Ciao', 'Italiano'),
+  _Greeting('Olá', 'Português'),
+  _Greeting('Привет', 'Русский'),
+  _Greeting('नमस्ते', 'हिन्दी'),
+  _Greeting('안녕하세요', '한국어'),
+  _Greeting('Jambo', 'Kiswahili'),
+  _Greeting('Sannu', 'Hausa'),
 ];
 
 class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
@@ -168,7 +175,7 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
                 padding: const EdgeInsets.only(bottom: 40),
                 child: Center(
                   child: Text(
-                    'tap to continue',
+                    'Tap to Continue',
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 13,

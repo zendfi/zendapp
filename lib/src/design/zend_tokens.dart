@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ZendColors {
-  static const bgPrimary = Color(0xFFFAFAF7);
+  //static const bgPrimary = Color(0xFFFAFAF7);
+  static const bgPrimary = Color(0xFFFFFFFF);
   static const bgSecondary = Color(0xFFF2F0EA);
   static const accent = Color(0xFF2D6A4F);
   static const accentBright = Color(0xFF52B788);
@@ -65,7 +66,8 @@ class ZendTheme {
   final bool isDark;
 
   static const _light = ZendTheme._(
-    bgPrimary: Color(0xFFFAFAF7),
+    //bgPrimary: Color(0xFFFAFAF7),
+    bgPrimary: Color(0xFFFFFFFF),
     bgSecondary: Color(0xFFF2F0EA),
     bgCard: Color(0xFFF2F0EA),
     bgElevated: Color(0xFFFFFFFF),
@@ -87,7 +89,8 @@ class ZendTheme {
   );
 
   static const _dark = ZendTheme._(
-    bgPrimary: Color(0xFF0D0D0D),
+    // bgPrimary: Color(0xFF0D0D0D),
+    bgPrimary: Color(0xFF000000),
     bgSecondary: Color(0xFF161616),
     bgCard: Color(0xFF1E1E1E),
     bgElevated: Color(0xFF252525),

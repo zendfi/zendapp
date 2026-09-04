@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../design/zend_tokens.dart';
 import '../features/pools/pool.dart';
 import '../features/request/payment_request.dart';
+import '../features/send/transfer_status_controller.dart';
 import '../models/api_models.dart';
 import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
@@ -215,6 +216,19 @@ class ZendAppModel extends ChangeNotifier {
 
   /// Signing policy service — controls session vs PIN-per-payment behaviour.
   final SigningPolicyService signingPolicyService = SigningPolicyService();
+
+  /// Owns send/request execution and the status the in-app transfer banner
+  /// renders. Lives here, above the navigator, because the instant flow
+  /// closes the sheet the moment the user commits — so the sheet's `State`
+  /// can't own an outcome that resolves after it's disposed (the
+  /// uncertain-transfer poller alone runs for up to 18 seconds).
+  ///
+  /// Its notifications are forwarded through this model so the shell's
+  /// existing `ZendScope.of(context)` rebuild picks up banner changes with
+  /// no extra listener wiring, exactly like [pendingPaymentRequest].
+  TransferStatusController? _transferStatus;
+  TransferStatusController get transferStatus => _transferStatus ??=
+      (TransferStatusController(model: this)..addListener(notifyListeners));
 
   /// Single source of truth for muted notification categories — see
   /// NotificationPreferencesService's own doc comment. Lazily constructed
@@ -726,6 +740,10 @@ class ZendAppModel extends ChangeNotifier {
   void dispose() {
     _stopAll();
     _dropConfirmedController.close();
+    // Cancels any pending auto-dismiss timer. Accessed through the backing
+    // field so a model that never sent anything doesn't construct a
+    // controller purely in order to throw it away.
+    _transferStatus?.dispose();
     sseService.dispose();
     super.dispose();
   }
@@ -1670,6 +1688,9 @@ class ZendAppModel extends ChangeNotifier {
     pendingPaymentRequest = null;
     outboundPaymentRequests = [];
     inboundPaymentRequests = [];
+    // A transfer banner naming the previous user's recipient must never
+    // survive into the next session.
+    _transferStatus?.dismiss();
 
     // ── DMs / E2EE ──
     dmUnreadTotal = 0;

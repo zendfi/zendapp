@@ -112,10 +112,25 @@ class SuiSaltCustodyService {
   /// path), then device + backend (for a user who revoked Drive access).
   ///
   /// The caller owns the returned bytes and must zeroize them after use.
+  /// [freshAuth] mints a *freshly re-authenticated* session and ID token, and is
+  /// invoked only if the device and Drive shares were not enough.
+  ///
+  /// The backend refuses to release share C unless the token proves the provider
+  /// authenticated the person within the last few minutes, and it fails closed
+  /// when the `auth_time` claim is absent entirely. Google only emits `auth_time`
+  /// when the request carried `max_age` or `prompt=login`, so the ambient
+  /// sign-in token — obtained with `prompt=select_account` — never satisfies it
+  /// and the release returns 401. Hence a purpose-made grant rather than reusing
+  /// the session's token.
+  ///
+  /// Lazily invoked on purpose: a device that still holds share A combines it with
+  /// Drive and never prompts, so the interruption only happens when the backend
+  /// share is genuinely required.
   Future<Uint8List> reconstructSalt({
     required String sessionId,
     required String idToken,
     String? accessToken,
+    Future<({String sessionId, String idToken})> Function()? freshAuth,
   }) async {
     final collected = <SaltShare>[];
     final failures = <String>[];
@@ -150,9 +165,16 @@ class SuiSaltCustodyService {
     // enough that a burst of them is a meaningful signal.
     if (collected.length < 2) {
       try {
+        var releaseSessionId = sessionId;
+        var releaseIdToken = idToken;
+        if (freshAuth != null) {
+          final grant = await freshAuth();
+          releaseSessionId = grant.sessionId;
+          releaseIdToken = grant.idToken;
+        }
         final shareC = await _api.releaseSuiSaltShare(
-          sessionId: sessionId,
-          idToken: idToken,
+          sessionId: releaseSessionId,
+          idToken: releaseIdToken,
         );
         collected.add(SaltShare.decode(shareC));
       } catch (error) {
@@ -180,15 +202,21 @@ class SuiSaltCustodyService {
   /// The address is unchanged, because the salt is unchanged. What changes is that
   /// previously leaked shares stop combining with the new ones — which is the
   /// point of rotation, and why it is mandatory after a suspected compromise.
+  /// [freshAuth] is forwarded to [reconstructSalt] and used only if the device and
+  /// Drive shares were not enough. Without it, gathering share C would fall back to
+  /// [idToken] — an ordinary sign-in token with no `auth_time` claim — which the
+  /// backend refuses with 401.
   Future<void> rotateShares({
     required String sessionId,
     required String idToken,
     required String accessToken,
+    Future<({String sessionId, String idToken})> Function()? freshAuth,
   }) async {
     final salt = await reconstructSalt(
       sessionId: sessionId,
       idToken: idToken,
       accessToken: accessToken,
+      freshAuth: freshAuth,
     );
     try {
       await provisionShares(

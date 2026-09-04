@@ -304,6 +304,7 @@ class SuiZkLoginService {
       sessionId: session.sessionId,
       idToken: session.idToken,
       accessToken: accessToken,
+      freshAuth: _freshReauthGrant,
     );
     try {
       return saltToDecimalString(salt);
@@ -389,6 +390,36 @@ class SuiZkLoginService {
       remaining = remaining >> 8;
     }
     return bytes;
+  }
+
+  /// Mints a pending session plus an ID token that proves a *just now* Google
+  /// authentication.
+  ///
+  /// Used for releasing salt share C, which the backend guards with
+  /// `authenticated_within` and which fails closed when `auth_time` is missing.
+  /// `SuiOAuthPrompt.reauthenticate` sends `prompt=login` and `max_age=0`, which
+  /// is what makes Google include that claim at all.
+  ///
+  /// The session is deliberately left **pending**: the release endpoint calls
+  /// `claim_pending_session`, so redeeming it here would consume the very thing
+  /// the release needs. This mints an authentication grant, not a signing session,
+  /// and never touches the active one.
+  Future<({String sessionId, String idToken})> _freshReauthGrant() async {
+    final keyPair = await _signing.generateEphemeralKeyPair();
+    try {
+      final init = await _api.createSuiZkLoginSession(
+        extendedEphemeralPublicKey: keyPair.extendedPublicKeyBase64,
+        jwtRandomness: _generateRandomness(),
+      );
+      final tokens = await _oauth.signInForIdToken(
+        nonce: init.nonce,
+        prompt: SuiOAuthPrompt.reauthenticate,
+      );
+      return (sessionId: init.sessionId, idToken: tokens.idToken);
+    } finally {
+      // This key pair only ever bound a nonce; nothing signs with it.
+      keyPair.zeroize();
+    }
   }
 
   /// Re-establishes a signing session without involving the user.

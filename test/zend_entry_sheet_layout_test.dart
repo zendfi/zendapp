@@ -37,6 +37,7 @@ import 'package:zendapp/src/services/wallet_service.dart';
 import 'package:zendapp/src/services/zendtag_service.dart';
 import 'package:zendapp/src/services/sui_oauth_provider.dart';
 import 'package:zendapp/src/services/sui_zklogin_service.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Mirrors the harness used by contribute_sheet_guard_test.dart — real
 /// services pointed at an unreachable host. No test here awaits a
@@ -110,7 +111,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Request'), findsOneWidget, reason: 'Request action must render');
-      expect(find.text('Zend'), findsOneWidget, reason: 'Zend action must render');
+      expect(find.text('Pay'), findsOneWidget, reason: 'Pay action must render');
       expect(find.byType(TextField), findsNWidgets(2),
           reason: 'amount field and note field must both render');
       expect(tester.takeException(), isNull);
@@ -145,24 +146,101 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('entering an amount enables the Request and Zend actions', (tester) async {
+    testWidgets('entering an amount enables the Request and Pay actions', (tester) async {
       final model = _buildModel();
       await tester.pumpWidget(_host(model, child: const ZendEntrySheet(prefilledRecipient: 'omooba')));
       await tester.pumpAndSettle();
 
       // Disabled while the amount is still zero.
-      final zendBefore = tester.widget<ElevatedButton>(
-        find.ancestor(of: find.text('Zend'), matching: find.byType(ElevatedButton)),
+      final payBefore = tester.widget<ElevatedButton>(
+        find.ancestor(of: find.text('Pay'), matching: find.byType(ElevatedButton)),
       );
-      expect(zendBefore.onPressed, isNull, reason: 'Zend must be disabled with no amount');
+      expect(payBefore.onPressed, isNull, reason: 'Pay must be disabled with no amount');
 
       await tester.enterText(find.byType(TextField).first, '20');
       await tester.pumpAndSettle();
 
-      final zendAfter = tester.widget<ElevatedButton>(
-        find.ancestor(of: find.text('Zend'), matching: find.byType(ElevatedButton)),
+      final payAfter = tester.widget<ElevatedButton>(
+        find.ancestor(of: find.text('Pay'), matching: find.byType(ElevatedButton)),
       );
-      expect(zendAfter.onPressed, isNotNull, reason: 'Zend must enable once an amount is entered');
+      expect(payAfter.onPressed, isNotNull, reason: 'Pay must enable once an amount is entered');
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── Two-tap confirm ─────────────────────────────────────────────────────
+  //
+  // A send is irreversible, and below the PIN threshold (default $500)
+  // nothing else stands between a thumb and the transfer — Pay sits inches
+  // from Request and from Vibe. These assert that the first tap only *arms*
+  // the confirmation, and that the confirmation can't outlive the amount it
+  // was shown for.
+  group('ZendEntrySheet two-tap confirm', () {
+    Future<void> openArmed(WidgetTester tester, ZendAppModel model) async {
+      await tester.pumpWidget(_host(model, child: const ZendEntrySheet(prefilledRecipient: 'omooba')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, '20');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pay'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('first tap on Pay arms a confirmation instead of sending', (tester) async {
+      final model = _buildModel();
+      await openArmed(tester, model);
+
+      // The resting row is replaced by a single button restating the whole
+      // commitment — amount *and* recipient, which is the only thing a
+      // confirm step needs to carry.
+      expect(find.text('Send \$20 to @omooba'), findsOneWidget,
+          reason: 'the armed state must restate amount and recipient');
+      expect(find.text('Request'), findsNothing,
+          reason: 'the resting action row must be replaced while armed');
+      expect(find.text('Pay'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the armed confirmation has an explicit way out', (tester) async {
+      final model = _buildModel();
+      await openArmed(tester, model);
+
+      // Someone who simply changed their mind must not have to guess.
+      await tester.tap(find.byIcon(PhosphorIconsRegular.x).last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Request'), findsOneWidget, reason: 'backing out restores the action row');
+      expect(find.text('Pay'), findsOneWidget);
+      expect(find.textContaining('Send \$'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('editing the amount disarms the confirmation', (tester) async {
+      final model = _buildModel();
+      await openArmed(tester, model);
+      expect(find.text('Send \$20 to @omooba'), findsOneWidget);
+
+      // Confirming $20 and then sending $200 is precisely what the confirm
+      // step exists to prevent, so any edit must invalidate it.
+      await tester.enterText(find.byType(TextField).first, '200');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Send \$20 to @omooba'), findsNothing,
+          reason: 'a stale confirmation must not survive an amount change');
+      expect(find.text('Pay'), findsOneWidget,
+          reason: 'the sheet returns to the resting row after an edit');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('editing the note disarms the confirmation', (tester) async {
+      final model = _buildModel();
+      await openArmed(tester, model);
+      expect(find.text('Send \$20 to @omooba'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'lunch');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Send \$20 to @omooba'), findsNothing);
+      expect(find.text('Pay'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

@@ -8,9 +8,8 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/recent_contact.dart';
-import '../request/payment_request.dart';
-import '../request/request_qr_sheet.dart';
 import '../send/send_flow_sheet.dart';
+import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// The Zend entry point — identity-first, per redesign.md §10-16, merged
@@ -74,7 +73,7 @@ class ZendEntrySheet extends StatefulWidget {
   State<ZendEntrySheet> createState() => _ZendEntrySheetState();
 }
 
-enum _EntryStage { identity, amount, requestSuccess }
+enum _EntryStage { identity, amount }
 
 class _ZendEntrySheetState extends State<ZendEntrySheet> {
   late _EntryStage _stage;
@@ -91,10 +90,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   Timer? _debounce;
   String _query = '';
   bool _searching = false;
-  bool _submittingRequest = false;
   List<Map<String, dynamic>> _results = [];
   String? _identityError;
-  PaymentRequest? _createdRequest;
+
+  /// True once Zend has been tapped once and is awaiting the confirming tap.
+  /// See [_armZendConfirm].
+  bool _confirmingZend = false;
+
+  /// True while [TransferAuth.resolve] is deciding whether this send needs a
+  /// PIN. Brief (secure-storage reads) but not instant, and it gates a
+  /// money-moving tap, so it must be visible rather than feel like a dead
+  /// button.
+  bool _preflighting = false;
 
   // Resolved identity, once established.
   String? _zendtag;
@@ -128,11 +135,20 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
   double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
+  String get _amountLabel => _amount == _amount.roundToDouble()
+      ? '\$${_amount.toStringAsFixed(0)}'
+      : '\$${_amount.toStringAsFixed(2)}';
+
   /// Single owner of stage transitions, so focus is always handed to
   /// exactly one field per stage — never contested between the outgoing
   /// and incoming stage during the AnimatedSwitcher cross-fade.
   void _goToStage(_EntryStage stage) {
-    setState(() => _stage = stage);
+    // Changing stage always means the pending confirmation no longer refers
+    // to what's on screen.
+    setState(() {
+      _stage = stage;
+      _confirmingZend = false;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _focusForStage());
   }
 
@@ -143,10 +159,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _searchFocus.requestFocus();
       case _EntryStage.amount:
         _amountFocus.requestFocus();
-      case _EntryStage.requestSuccess:
-        // Nothing to type on the confirmation view — drop the keyboard so
-        // it doesn't sit over the Show QR / Done actions.
-        FocusManager.instance.primaryFocus?.unfocus();
     }
   }
 
@@ -242,53 +254,105 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
   void _changeIdentity() => _goToStage(_EntryStage.identity);
 
-  void _confirmZend() {
+  String? get _note =>
+      _noteController.text.trim().isEmpty ? null : _noteController.text.trim();
+
+  /// First tap on Zend. Doesn't send — arms the confirmation, collapsing the
+  /// action row into a single button that restates the full commitment.
+  ///
+  /// A send is irreversible, and until now nothing stood between a thumb and
+  /// an irreversible transfer for any amount under the PIN threshold (default
+  /// $500): Zend sits inches from Request and Vibe, and a misfire moved real
+  /// money. This makes the irreversible action the only one that costs two
+  /// taps, without adding a screen to back out of.
+  void _armZendConfirm() {
     if (_amount <= 0) return;
-    Navigator.of(context).pop();
-    showSendFlowSheet(
-      context,
-      amount: _amount,
-      prefilledRecipient: _zendtag ?? _email,
-      prefilledNote: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
-    );
+    // Drop the keyboard so the confirm button isn't competing with it for
+    // the user's attention or the bottom of the screen.
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _confirmingZend = true);
   }
 
-  Future<void> _confirmRequest() async {
-    if (_amount <= 0 || _submittingRequest) return;
+  /// Any edit to what's being sent disarms the confirmation. Confirming an
+  /// amount and then silently sending a different one would be the whole
+  /// point of the step, defeated.
+  void _disarmZendConfirm() {
+    if (!_confirmingZend) return;
+    setState(() => _confirmingZend = false);
+  }
+
+  /// Second tap on Zend — the actual commitment.
+  ///
+  /// Runs the preflight *before* dismissing, because the answer decides which
+  /// flow the user gets: pin-less sends close the sheet immediately and report
+  /// through the banner, while a PIN-required send has input to collect and so
+  /// must stay in a sheet.
+  Future<void> _commitZend() async {
+    final amount = _amount;
+    if (amount <= 0 || _preflighting) return;
+
     final model = ZendScope.of(context);
-    setState(() => _submittingRequest = true);
-    try {
-      final response = await model.walletService.apiClient.createPaymentRequest(
-        amountUsdc: _amount,
-        description: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
-        expiresAt: null,
-        recipientZendtag: _zendtag,
-        recipientEmail: _email,
+    final note = _note;
+    final tag = _zendtag;
+    // Hold the navigator itself rather than reaching back through this
+    // sheet's context after it's been popped.
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    // A non-Zend recipient goes through the email-intent flow, which only
+    // the full send sheet implements.
+    if (tag == null) {
+      navigator.pop();
+      showSendFlowSheet(
+        navigator.context,
+        amount: amount,
+        prefilledRecipient: _email,
+        prefilledNote: note,
       );
-      final request = PaymentRequest(
-        id: response['id'] as String,
-        link: response['link_url'] as String,
-        amount: (response['amount_usdc'] as num?)?.toDouble() ?? _amount,
-        description: _noteController.text.trim(),
-        createdAt: DateTime.now(),
-        status: PaymentRequestStatus.pending,
-        recipientZendtag: response['recipient_zendtag'] as String? ?? _zendtag,
-        recipientEmail: response['recipient_email'] as String? ?? _email,
-      );
-      model.addPaymentRequest(request);
-      if (!mounted) return;
-      setState(() {
-        _submittingRequest = false;
-        _createdRequest = request;
-      });
-      _goToStage(_EntryStage.requestSuccess);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _submittingRequest = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't complete that. Try again.", style: TextStyle(fontFamily: 'Geist'))),
-      );
+      return;
     }
+
+    setState(() => _preflighting = true);
+    final auth = await TransferAuth.resolve(model, amount);
+    if (!mounted) return;
+    navigator.pop();
+
+    if (auth.needsPin) {
+      showSendFlowSheet(
+        navigator.context,
+        amount: amount,
+        prefilledRecipient: tag,
+        prefilledNote: note,
+      );
+      return;
+    }
+
+    // Fire and forget: the outcome belongs to the banner now, not to this
+    // sheet, which is already gone.
+    unawaited(model.transferStatus.send(
+      amount: amount,
+      recipientZendtag: tag,
+      auth: auth,
+      recipientDisplayName: _displayName,
+      note: note,
+    ));
+  }
+
+  /// Requests go through on one tap and get no confirmation step: a mistaken
+  /// request costs nothing to cancel, so making it as deliberate as an
+  /// irreversible transfer would be false symmetry.
+  void _commitRequest() {
+    final amount = _amount;
+    if (amount <= 0) return;
+    final model = ZendScope.of(context);
+    final note = _note;
+    Navigator.of(context, rootNavigator: true).pop();
+    unawaited(model.transferStatus.request(
+      amount: amount,
+      recipientZendtag: _zendtag,
+      recipientEmail: _email,
+      recipientDisplayName: _displayName,
+      note: note,
+    ));
   }
 
   void _showVibesComingSoon() {
@@ -357,7 +421,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   child: switch (_stage) {
                     _EntryStage.identity => _buildIdentityStage(zt),
                     _EntryStage.amount => _buildAmountStage(zt),
-                    _EntryStage.requestSuccess => _buildRequestSuccessStage(zt),
                   },
                 ),
               ),
@@ -492,7 +555,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   // and never depend on scroll position.
 
   Widget _buildAmountStage(ZendTheme zt) {
-    final canAct = _amount > 0 && !_submittingRequest;
+    final canAct = _amount > 0;
     return Padding(
       key: const ValueKey('amount'),
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -596,7 +659,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(vertical: 4),
                           ),
-                          onChanged: (_) => setState(() {}),
+                          // Editing the amount disarms a pending
+                          // confirmation — confirming $20 and then sending
+                          // $200 is exactly what the confirmation exists
+                          // to prevent.
+                          onChanged: (_) => setState(() => _confirmingZend = false),
                         ),
                       ),
                     ],
@@ -619,6 +686,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               controller: _noteController,
               textAlign: TextAlign.center,
               textInputAction: TextInputAction.done,
+              onChanged: (_) => _disarmZendConfirm(),
               style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
               decoration: InputDecoration(
                 hintText: "What's this for?",
@@ -632,113 +700,148 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             ),
           ),
           const SizedBox(height: 12),
-          // ── Action row — pinned outside the scroll view ──
-          // NOTE: no `crossAxisAlignment: stretch` here. Each child sizes
-          // itself to an explicit height instead; `stretch` would force a
-          // tightFor(height:) constraint that breaks these buttons if this
-          // row ever ends up in unbounded vertical space again.
-          Row(
-            children: [
-              Expanded(
-                child: Opacity(
-                  opacity: canAct ? 1 : 0.4,
-                  child: SizedBox(
-                    height: 52,
-                    child: OutlinedButton(
-                      onPressed: canAct ? _confirmRequest : null,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: zt.textPrimary,
-                        side: BorderSide(color: zt.border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                      ),
-                      child: const Text(
-                        'Request',
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: canAct ? _confirmZend : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: zt.accent,
-                      foregroundColor: ZendColors.textOnDeep,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                    ),
-                    child: _submittingRequest
-                        ? const ZendLoader(size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
-                        : const Text(
-                            'Pay',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
-                          ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: _showVibesComingSoon,
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                  child: Icon(PhosphorIconsRegular.gift, color: zt.accent, size: 22),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Request confirmation ──────────────────────────────────────────────
-
-  Widget _buildRequestSuccessStage(ZendTheme zt) {
-    final request = _createdRequest!;
-    final amountStr = request.amount == request.amount.roundToDouble()
-        ? '\$${request.amount.toStringAsFixed(0)}'
-        : '\$${request.amount.toStringAsFixed(2)}';
-    return SingleChildScrollView(
-      key: const ValueKey('requestSuccess'),
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-            child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
-          ),
-          const SizedBox(height: 20),
-          Text('Requested', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textPrimary)),
-          const SizedBox(height: 4),
-          Text(amountStr, style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
-          const SizedBox(height: 8),
-          if (request.recipientZendtag != null)
-            Text('from @${request.recipientZendtag}', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
-          if (request.description.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              '"${request.description}"',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontStyle: FontStyle.italic, color: zt.textSecondary),
+          // ── Action area — pinned outside the scroll view ──
+          // Fixed 52pt height, so the two states swap without the sheet's
+          // pinned bottom region changing size.
+          //
+          // NOTE: no `crossAxisAlignment: stretch` in either state. Each
+          // child sizes itself to an explicit height instead; `stretch`
+          // would force a tightFor(height:) constraint that breaks these
+          // buttons if this row ever ends up in unbounded vertical space
+          // again.
+          SizedBox(
+            height: 52,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _confirmingZend
+                  ? _buildZendConfirm(zt)
+                  : _buildActionRow(zt, canAct),
             ),
-          ],
-          const SizedBox(height: 28),
-          PrimaryButton(label: 'Show QR', onPressed: () => showRequestQrSheet(context, request: request)),
-          const SizedBox(height: 12),
-          OutlineActionButton(label: 'Done', onPressed: () => Navigator.of(context).pop()),
+          ),
         ],
       ),
     );
   }
+
+  /// Resting state: Request | Pay | Vibe.
+  Widget _buildActionRow(ZendTheme zt, bool canAct) {
+    return Row(
+      key: const ValueKey('actions'),
+      children: [
+        Expanded(
+          child: Opacity(
+            opacity: canAct ? 1 : 0.4,
+            child: SizedBox(
+              height: 52,
+              child: OutlinedButton(
+                // One tap, no confirmation — a request is reversible.
+                onPressed: canAct ? _commitRequest : null,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: zt.textPrimary,
+                  side: BorderSide(color: zt.border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                ),
+                child: const Text(
+                  'Request',
+                  style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              // Arms the confirmation rather than sending — see
+              // [_armZendConfirm].
+              onPressed: canAct ? _armZendConfirm : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: zt.accent,
+                foregroundColor: ZendColors.textOnDeep,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+              ),
+              child: const Text(
+                'Pay',
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: _showVibesComingSoon,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            child: Icon(PhosphorIconsRegular.gift, color: zt.accent, size: 22),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Armed state: one button restating the whole commitment, plus an
+  /// explicit way out.
+  ///
+  /// The label carries the amount and the recipient because that
+  /// restatement is the only thing a confirmation actually needs to do. A
+  /// generic "Send cash" would cost the same tap and tell the user nothing
+  /// they haven't already been shown.
+  Widget _buildZendConfirm(ZendTheme zt) {
+    final target = _zendtag != null ? '@$_zendtag' : (_email ?? 'them');
+    return Row(
+      key: const ValueKey('confirm'),
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _preflighting ? null : _commitZend,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: zt.accent,
+                foregroundColor: ZendColors.textOnDeep,
+                disabledBackgroundColor: zt.accent,
+                disabledForegroundColor: ZendColors.textOnDeep,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+              ),
+              child: _preflighting
+                  ? const ZendLoader(size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
+                  : Text(
+                      'Send $_amountLabel to $target',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Explicit escape. Editing the amount or the note also disarms, but
+        // relying only on that would leave someone who simply changed their
+        // mind with no obvious way back.
+        GestureDetector(
+          onTap: _preflighting ? null : _disarmZendConfirm,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            child: Icon(PhosphorIconsRegular.x, color: zt.textSecondary, size: 20),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // The old in-sheet "Requested" confirmation stage is gone. A request now
+  // closes this sheet immediately and reports through the in-app transfer
+  // banner, which carries the QR shortcut — see _TransferStatusBanner in
+  // zend_shell.dart. The request also stays in the Requests list, so the QR
+  // is never only reachable from a banner that fades.
 }
 
 class _IdentityRow extends StatelessWidget {

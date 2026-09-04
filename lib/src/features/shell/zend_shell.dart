@@ -10,8 +10,11 @@ import '../../navigation/zend_shell_controller.dart';
 import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../../services/pending_notification_service.dart';
+import '../../design/zend_primitives.dart';
+import '../request/request_qr_sheet.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
+import '../send/transfer_status_controller.dart';
 import '../profile/profile_screen.dart';
 import '../dm/dm_list_screen.dart';
 import '../dm/dm_thread_screen.dart';
@@ -151,6 +154,74 @@ class _ZendShellState extends State<ZendShell> {
     return showWalletSheet(context);
   }
 
+  /// Retries a failed send or request straight from the banner, carrying the
+  /// original amount, recipient and note so retrying never means retyping.
+  ///
+  /// Re-runs the preflight rather than reusing the original decision: the
+  /// session keypair may have been evicted since (app lock, timeout), in
+  /// which case the retry now needs a PIN. Collecting a PIN is input, and a
+  /// banner can't take input — so that case hands back to the full send
+  /// sheet instead of failing a second time.
+  Future<void> _retryTransferFromBanner(
+    BuildContext context,
+    ZendAppModel model,
+    TransferStatus status,
+  ) async {
+    if (status.isRequest) {
+      await model.transferStatus.request(
+        amount: status.amount,
+        recipientZendtag: status.recipientZendtag,
+        recipientEmail: status.recipientEmail,
+        recipientDisplayName: status.recipientDisplayName,
+        note: status.note,
+      );
+      return;
+    }
+
+    final tag = status.recipientZendtag;
+    if (tag == null || tag.isEmpty) {
+      // An email-intent send has no zendtag to retry against; the full
+      // sheet owns that flow.
+      model.transferStatus.dismiss();
+      return;
+    }
+
+    // Held before the await: the navigator's own context stays valid
+    // independently of whether this element survives the gap.
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    final auth = await TransferAuth.resolve(model, status.amount);
+    if (!mounted) return;
+    if (auth.needsPin) {
+      model.transferStatus.dismiss();
+      showSendFlowSheet(
+        navigator.context,
+        amount: status.amount,
+        prefilledRecipient: tag,
+        prefilledNote: status.note,
+      );
+      return;
+    }
+
+    await model.transferStatus.send(
+      amount: status.amount,
+      recipientZendtag: tag,
+      auth: auth,
+      recipientDisplayName: status.recipientDisplayName,
+      note: status.note,
+    );
+  }
+
+  /// Opens the QR for a request the user just created. A shortcut only —
+  /// the request also lives in the Requests list, so a banner that fades
+  /// never takes the QR with it.
+  void _showRequestQrFromBanner(BuildContext context, TransferStatus status) {
+    final request = status.request;
+    if (request == null || request.id.isEmpty) return;
+    ZendScope.of(context).transferStatus.dismiss();
+    showRequestQrSheet(context, request: request);
+  }
+
   @override
   Widget build(BuildContext context) {
     // ── Read only what's needed for the PageView and tab bar ──────────────
@@ -249,6 +320,19 @@ class _ZendShellState extends State<ZendShell> {
         .map((p) => _KeepAlive(child: RepaintBoundary(child: p)))
         .toList();
 
+    // Banner stack offsets, computed once so adding or removing a banner
+    // doesn't mean hand-editing four cumulative expressions.
+    //
+    // The transfer banner sits at the top of the stack: it's feedback on
+    // something the user did a moment ago, which outranks incoming
+    // notifications for their attention.
+    final transferStatus = model.transferStatus.status;
+    const bannerSlot = 78.0;
+    final requestTop = transferStatus != null ? bannerSlot : 0.0;
+    final reactionTop = requestTop + (pending != null ? bannerSlot : 0.0);
+    final commentTop = reactionTop + (showReactionBanner ? bannerSlot : 0.0);
+    final dmTop = commentTop + (showCommentBanner ? bannerSlot : 0.0);
+
     return Scaffold(
       body: RepaintBoundary(
         child: Stack(
@@ -275,10 +359,27 @@ class _ZendShellState extends State<ZendShell> {
             },
             children: keepAlivePages,
           ),
+          // Outcome of the user's own send/request — see
+          // _TransferStatusBanner. Keyed on the action id, not the status,
+          // so `sending → sent` mutates this banner in place instead of
+          // tearing it down and replaying the slide-in.
+          if (transferStatus != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _TransferStatusBanner(
+                key: ValueKey('transfer-${transferStatus.actionId}'),
+                status: transferStatus,
+                onRetry: () => _retryTransferFromBanner(context, model, transferStatus),
+                onShowQr: () => _showRequestQrFromBanner(context, transferStatus),
+                onDismiss: model.transferStatus.dismiss,
+              ),
+            ),
           // In-app payment request banner
           if (pending != null)
             Positioned(
-              top: 0,
+              top: requestTop,
               left: 0,
               right: 0,
               child: _PaymentRequestBanner(
@@ -298,7 +399,7 @@ class _ZendShellState extends State<ZendShell> {
           // the Activity screen watching that exact update land live.
           if (showReactionBanner)
             Positioned(
-              top: pending != null ? 78 : 0,
+              top: reactionTop,
               left: 0,
               right: 0,
               child: _ActivityReactionBanner(
@@ -312,7 +413,7 @@ class _ZendShellState extends State<ZendShell> {
           // active-tab suppression as the reaction banner above.
           if (showCommentBanner)
             Positioned(
-              top: (pending != null ? 78 : 0) + (showReactionBanner ? 78 : 0),
+              top: commentTop,
               left: 0,
               right: 0,
               child: _ActivityCommentBanner(
@@ -324,9 +425,7 @@ class _ZendShellState extends State<ZendShell> {
           // DM banner — shown when a new message arrives and the Chats tab isn't active
           if (_pendingDmBanner != null && _tabIndex != 2)
             Positioned(
-              top: (pending != null ? 78 : 0) +
-                  (showReactionBanner ? 78 : 0) +
-                  (showCommentBanner ? 78 : 0),
+              top: dmTop,
               left: 0,
               right: 0,
               child: _DmMessageBanner(
@@ -1023,9 +1122,233 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
   }
 }
 
+// ── In-app transfer status banner ────────────────────────────────────────────
+//
+// The visible half of the instant send/request flow: the sheet closes the
+// moment the user commits, and this reports the outcome. Its state lives on
+// [TransferStatusController] (above the navigator), not here, because the
+// outcome resolves after the sheet is gone — see that class for why.
+//
+// Unlike the four banners above, the dismiss timer is NOT owned by the
+// shell. Whether a status lingers is a property of the status itself
+// (`sent` fades, `failed` never does), so the controller owns it.
+
+class _TransferStatusBanner extends StatefulWidget {
+  const _TransferStatusBanner({
+    super.key,
+    required this.status,
+    required this.onRetry,
+    required this.onShowQr,
+    required this.onDismiss,
+  });
+
+  final TransferStatus status;
+  final VoidCallback onRetry;
+  final VoidCallback onShowQr;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_TransferStatusBanner> createState() => _TransferStatusBannerState();
+}
+
+class _TransferStatusBannerState extends State<_TransferStatusBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _isFailure => widget.status.kind == TransferStatusKind.failed;
+  bool get _inFlight => widget.status.kind == TransferStatusKind.sending;
+
+  /// Headline. Always names the amount and the person, including on
+  /// failure — "Couldn't send" on its own leaves the user guessing which
+  /// payment we're talking about.
+  String get _title {
+    final s = widget.status;
+    final isRequest = s.isRequest;
+    switch (s.kind) {
+      case TransferStatusKind.sending:
+        return isRequest
+            ? 'Requesting ${s.amountLabel} from ${s.recipientLabel}'
+            : 'Sending ${s.amountLabel} to ${s.recipientLabel}';
+      case TransferStatusKind.sent:
+        return 'Sent ${s.amountLabel} to ${s.recipientLabel}';
+      case TransferStatusKind.requested:
+        return 'Requested ${s.amountLabel} from ${s.recipientLabel}';
+      case TransferStatusKind.failed:
+        return isRequest
+            ? "Couldn't request ${s.amountLabel} from ${s.recipientLabel}"
+            : "Couldn't send ${s.amountLabel} to ${s.recipientLabel}";
+      case TransferStatusKind.uncertain:
+        return 'Still confirming ${s.amountLabel} to ${s.recipientLabel}';
+    }
+  }
+
+  /// Only failure and uncertainty carry a second line — the specific
+  /// reason. Success needs no elaboration.
+  String? get _subtitle => switch (widget.status.kind) {
+        TransferStatusKind.failed || TransferStatusKind.uncertain => widget.status.message,
+        _ => null,
+      };
+
+  Color get _tint => switch (widget.status.kind) {
+        TransferStatusKind.sent || TransferStatusKind.requested => ZendColors.positive,
+        TransferStatusKind.failed => ZendColors.destructive,
+        TransferStatusKind.uncertain => ZendColors.accentPop,
+        TransferStatusKind.sending => ZendColors.accentPop,
+      };
+
+  Widget _buildIcon() {
+    if (_inFlight) {
+      return ZendLoader(size: 18, strokeWidth: 2, color: _tint);
+    }
+    final icon = switch (widget.status.kind) {
+      TransferStatusKind.sent || TransferStatusKind.requested => PhosphorIconsRegular.check,
+      TransferStatusKind.failed => PhosphorIconsRegular.warningCircle,
+      TransferStatusKind.uncertain => PhosphorIconsRegular.clockCountdown,
+      TransferStatusKind.sending => PhosphorIconsRegular.check,
+    };
+    return Icon(icon, size: 20, color: _tint);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.status;
+    final showQr = s.kind == TransferStatusKind.requested && s.request != null;
+    final showRetry = _isFailure && s.canRetry;
+    final subtitle = _subtitle;
+
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              // Tapping a completed request opens it. The QR button is a
+              // shortcut, not the only door — the request also stays in the
+              // Requests list, so a banner that fades doesn't take the QR
+              // with it.
+              onTap: showQr ? widget.onShowQr : null,
+              child: _GlassBannerBox(
+                // Height changes as the subtitle appears on failure. Animate
+                // it so the banner appears to resolve in place rather than
+                // snapping to a new size.
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  alignment: Alignment.topCenter,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _tint.withValues(alpha: 0.16),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(child: _buildIcon()),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _title,
+                              style: const TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFF0F0F0),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (subtitle != null && subtitle.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                subtitle,
+                                style: const TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 11,
+                                  color: Color(0x99F0F0F0),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (showRetry || showQr) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: showRetry ? widget.onRetry : widget.onShowQr,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: ZendColors.accentPop,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              showRetry ? 'Retry' : 'Show QR',
+                              style: const TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: ZendColors.bgDeep,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      // Nothing to dismiss mid-flight — it resolves on its
+                      // own in a moment, and an X there would imply the
+                      // payment could be called back.
+                      if (!_inFlight) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: widget.onDismiss,
+                          child: const Icon(
+                            PhosphorIconsRegular.xCircle,
+                            size: 16,
+                            color: Color(0x66F0F0F0),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Shared glass banner container ────────────────────────────────────────────
 //
-// All four in-app notification banners use this wrapper so they share
+// All five in-app notification banners use this wrapper so they share
 // identical frosted-glass treatment: real BackdropFilter blur, semi-opaque
 // elevated surface, and a hairline white bevel on top.
 
