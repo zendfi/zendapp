@@ -674,7 +674,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     child: _submittingRequest
                         ? const ZendLoader(size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
                         : const Text(
-                            'Zend',
+                            'Pay',
                             style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
                           ),
                   ),
