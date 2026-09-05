@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -148,6 +149,11 @@ class SuiZkLoginService {
 
   _ActiveSession? _session;
 
+  /// In-flight proof request, shared so a send and a [warmProof] cannot both ask
+  /// the prover at once. Shinami caps proofs at two per address per minute, so a
+  /// duplicate request is not merely wasteful — it can be rejected.
+  Future<Map<String, dynamic>>? _proofRequest;
+
   /// True when a usable session is held, so the UI can skip re-authentication.
   bool get hasActiveSession => _session != null && !_session!.isExpired;
 
@@ -243,6 +249,62 @@ class SuiZkLoginService {
     }
   }
 
+  /// The session's zero-knowledge proof, fetched once and reused.
+  ///
+  /// Proof generation is the single most expensive step in a Sui send — measured at
+  /// roughly six seconds against Shinami's prover — and it dominated the end-to-end
+  /// time of the first transfer in a session while contributing nothing to the
+  /// remainder. It depends only on the session (ephemeral key, epoch window, salt),
+  /// never on the transaction, so it can be fetched at any point after sign-in.
+  ///
+  /// Concurrent callers share one in-flight request via [_proofRequest]. Without
+  /// that, a send racing the [warmProof] pre-fetch would issue a second proof
+  /// request and hit Shinami's limit of two proofs per address per minute.
+  Future<Map<String, dynamic>> _proofFor(_ActiveSession session) {
+    final cached = session.proof;
+    if (cached != null) return Future.value(cached);
+
+    return _proofRequest ??= () async {
+      try {
+        // Under sharded custody the backend cannot rebuild the salt, so it is
+        // reconstructed here and supplied with the proof request. Only needed when a
+        // proof is actually being fetched, so at most once per sign-in.
+        final fetched = (await _api.requestSuiZkLoginProof(
+          sessionId: session.sessionId,
+          idToken: session.idToken,
+          extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
+          jwtRandomness: session.jwtRandomness,
+          salt: await _reconstructSaltIfSharded(session),
+        )).payload;
+        session.proof = fetched;
+        return fetched;
+      } finally {
+        // Cleared on failure too, so a transient prover error does not poison every
+        // later send with the same rejected future.
+        _proofRequest = null;
+      }
+    }();
+  }
+
+  /// Fetches the session proof ahead of the first transfer.
+  ///
+  /// Call after sign-in. This moves roughly six seconds of prover time off the send
+  /// path, so the user waits for it while reading the home screen instead of after
+  /// tapping send.
+  ///
+  /// Deliberately swallows errors: a failed pre-warm must never block sign-in or
+  /// surface an error for something the user did not ask for. The send path fetches
+  /// the proof itself if this did not succeed, so the only cost of failure is the
+  /// latency we were trying to avoid.
+  Future<void> warmProof() async {
+    if (!hasActiveSession) return;
+    try {
+      await _proofFor(_requireSession());
+    } catch (error) {
+      debugPrint('[SuiZkLogin] proof pre-warm failed, will fetch on send: $error');
+    }
+  }
+
   /// Signs prepared Sui transaction bytes and returns a submittable zkLogin
   /// signature.
   ///
@@ -260,18 +322,7 @@ class SuiZkLoginService {
     }
 
     final session = _requireSession();
-
-    // Under sharded custody the backend cannot rebuild the salt, so it is
-    // reconstructed here and supplied with the proof request. Only needed when a
-    // proof is actually being fetched — proofs are cached for the whole session,
-    // so this is at most one reconstruction per sign-in rather than per transfer.
-    final proof = session.proof ??= (await _api.requestSuiZkLoginProof(
-      sessionId: session.sessionId,
-      idToken: session.idToken,
-      extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
-      jwtRandomness: session.jwtRandomness,
-      salt: await _reconstructSaltIfSharded(session),
-    )).payload;
+    final proof = await _proofFor(session);
 
     final signature = await _signing.signPreparedTransfer(
       transactionDataBcsBase64: transactionDataBcsBase64,
@@ -606,6 +657,20 @@ class SuiZkLoginService {
   void _replaceSession(_ActiveSession? next) {
     _session?.dispose();
     _session = next;
+
+    // A proof is bound to the session's ephemeral key and epoch window, so one
+    // in flight for the previous session is worthless — and worse, would be handed
+    // to the next caller as if it were valid.
+    _proofRequest = null;
+
+    // Start the proof now rather than on the first send. Deliberately not awaited:
+    // this is the whole point of pre-warming, and every sign-in path funnels through
+    // here, so it cannot be forgotten at a call site. `_proofFor` shares the
+    // in-flight request, so a send arriving mid-warm joins it instead of asking the
+    // prover twice.
+    if (next != null) {
+      unawaited(warmProof());
+    }
   }
 
   /// Generates `jwtRandomness` as a decimal string below 2^128, which is the
