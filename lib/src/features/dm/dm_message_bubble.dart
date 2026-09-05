@@ -32,7 +32,11 @@ const double _kInner = 5.0;
 ///
 /// The inner corner (the one facing the *next* bubble from the same sender)
 /// tightens for any bubble that isn't alone at that edge of the group.
-BorderRadius _groupedBorderRadius({required bool isMe, required bool isFirst, required bool isLast}) {
+BorderRadius _groupedBorderRadius({
+  required bool isMe,
+  required bool isFirst,
+  required bool isLast,
+}) {
   if (isMe) {
     // Sent: right side is the "inner" side (facing the screen edge is outer
     // on the left, tightened grouping shows on the right).
@@ -61,25 +65,29 @@ class _BubbleShape extends StatelessWidget {
     required this.isLast,
     required this.child,
     required this.color,
-    this.gradient,
     this.borderColor,
     this.borderWidth = 0,
   });
 
   final bool isMe, isFirst, isLast;
   final Widget child;
+
+  /// Flat fill. There is deliberately no gradient option — bubbles are a
+  /// single solid colour.
   final Color color;
-  final Gradient? gradient;
   final Color? borderColor;
   final double borderWidth;
 
   @override
   Widget build(BuildContext context) {
-    final radius = _groupedBorderRadius(isMe: isMe, isFirst: isFirst, isLast: isLast);
+    final radius = _groupedBorderRadius(
+      isMe: isMe,
+      isFirst: isFirst,
+      isLast: isLast,
+    );
     return Container(
       decoration: BoxDecoration(
-        color: gradient == null ? color : null,
-        gradient: gradient,
+        color: color,
         borderRadius: radius,
         border: borderColor != null && borderWidth > 0
             ? Border.all(color: borderColor!, width: borderWidth)
@@ -90,8 +98,8 @@ class _BubbleShape extends StatelessWidget {
   }
 }
 
-/// Renders a single DM message with iMessage-style grouped corners,
-/// gradient fills, bounce animation on arrival, and press feedback.
+/// Renders a single DM message with grouped corners, flat solid fills,
+/// bounce animation on arrival, and press feedback.
 class DmMessageBubble extends StatefulWidget {
   const DmMessageBubble({
     super.key,
@@ -116,18 +124,23 @@ class DmMessageBubble extends StatefulWidget {
   final bool isLast;
   final VoidCallback? onRetry;
   final void Function(DmPaymentRequestData)? onPayRequest;
+
   /// Called on long-press with the bubble's own on-screen bounds (global
   /// coordinates) — used by the caller to anchor the long-press action
   /// overlay's "lift and bounce" animation at the bubble's actual position.
   final void Function(BuildContext, DmMessage, Rect)? onLongPress;
+
   /// Called when the user swipes right to reply to this message.
   final void Function(DmMessage)? onReply;
+
   /// Called when the user taps a reaction chip directly — carries the emoji
   /// so the caller can toggle it without reopening the full emoji tray.
   final void Function(DmMessage, String emoji)? onReactionTap;
+
   /// Called when the user taps the in-bubble quote block to jump to the
   /// original message. The [DmMessage.replyToContent] is passed for matching.
   final void Function(DmMessage)? onReplyTap;
+
   /// When true, the exact timestamp is shown (revealed by left-edge swipe).
   final bool showTimestamp;
 
@@ -152,13 +165,21 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     if (renderBox == null) return;
     final offset = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
-    final center = Offset(offset.dx + size.width / 2, offset.dy + size.height / 2);
+    final center = Offset(
+      offset.dx + size.width / 2,
+      offset.dy + size.height / 2,
+    );
     final overlay = Overlay.of(ctx);
     late OverlayEntry entry;
-    entry = OverlayEntry(builder: (_) => _HeartPopup(
-      position: center,
-      onDone: () { entry.remove(); _heartOverlay = null; },
-    ));
+    entry = OverlayEntry(
+      builder: (_) => _HeartPopup(
+        position: center,
+        onDone: () {
+          entry.remove();
+          _heartOverlay = null;
+        },
+      ),
+    );
     _heartOverlay = entry;
     overlay.insert(entry);
   }
@@ -182,22 +203,34 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // Starts from 0.0 so the bubble literally pops in from nothing.
     _scaleAnim = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: 1.08)
-              .chain(CurveTween(curve: Curves.easeOutCubic)),
-          weight: 60),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.08,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 60,
+      ),
       TweenSequenceItem(
-          tween: Tween(begin: 1.08, end: 0.95)
-              .chain(CurveTween(curve: Curves.easeInOut)),
-          weight: 20),
+        tween: Tween(
+          begin: 1.08,
+          end: 0.95,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
       TweenSequenceItem(
-          tween: Tween(begin: 0.95, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 20),
+        tween: Tween(
+          begin: 0.95,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 20,
+      ),
     ]).animate(_arrivalCtrl);
 
-    final shouldAnimate = widget.message.localStatus == DmLocalStatus.sending ||
+    final shouldAnimate =
+        widget.message.localStatus == DmLocalStatus.sending ||
         (!widget.message.id.startsWith('local-') &&
-         widget.message.createdAt.isAfter(DateTime.now().subtract(const Duration(seconds: 3))));
+            widget.message.createdAt.isAfter(
+              DateTime.now().subtract(const Duration(seconds: 3)),
+            ));
 
     if (shouldAnimate) {
       _arrivalCtrl.forward();
@@ -209,13 +242,16 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // Immediate squish on press, springy elastic release.
     _pressCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 60),  // fast press-down
+      duration: const Duration(milliseconds: 60), // fast press-down
     );
     _pressAnim = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.91)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 100),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.91,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 100,
+      ),
     ]).animate(_pressCtrl);
   }
 
@@ -233,7 +269,8 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // Manual double-tap detection — replaces onDoubleTap to avoid
     // gesture arena delay that made swipe-to-reply feel stuck.
     final now = DateTime.now();
-    if (_lastTapTime != null && now.difference(_lastTapTime!).inMilliseconds < 300) {
+    if (_lastTapTime != null &&
+        now.difference(_lastTapTime!).inMilliseconds < 300) {
       HapticFeedback.lightImpact();
       _showHeartPop(context);
       _lastTapTime = null;
@@ -265,19 +302,29 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
 
     Widget child = switch (widget.message.type) {
       DmMessageType.payment => DmPaymentBubble(
-          message: widget.message, isMe: widget.isMe,
-          isFirst: widget.isFirst, isLast: widget.isLast),
+        message: widget.message,
+        isMe: widget.isMe,
+        isFirst: widget.isFirst,
+        isLast: widget.isLast,
+      ),
       DmMessageType.vibe => _buildVibeBubble(),
       DmMessageType.paymentRequest => DmPaymentRequestBubble(
-          message: widget.message, isMe: widget.isMe,
-          isFirst: widget.isFirst, isLast: widget.isLast,
-          onPay: widget.message.paymentRequestData != null && !widget.isMe
-              ? () => widget.onPayRequest?.call(widget.message.paymentRequestData!)
-              : null),
+        message: widget.message,
+        isMe: widget.isMe,
+        isFirst: widget.isFirst,
+        isLast: widget.isLast,
+        onPay: widget.message.paymentRequestData != null && !widget.isMe
+            ? () =>
+                  widget.onPayRequest?.call(widget.message.paymentRequestData!)
+            : null,
+      ),
       _ => _TextBubble(
-          message: widget.message, isMe: widget.isMe,
-          isFirst: widget.isFirst, isLast: widget.isLast,
-          onRetry: widget.onRetry),
+        message: widget.message,
+        isMe: widget.isMe,
+        isFirst: widget.isFirst,
+        isLast: widget.isLast,
+        onRetry: widget.onRetry,
+      ),
     };
 
     // ── Reply context (header + quote pill) rendered OUTSIDE/ABOVE the
@@ -287,8 +334,9 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         (widget.message.replyToSenderZendtag?.isNotEmpty ?? false);
     if (hasReply) {
       child = Column(
-        crossAxisAlignment:
-            widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: widget.isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           _ReplyHeader(
@@ -316,7 +364,12 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         final renderBox = context.findRenderObject() as RenderBox?;
         if (renderBox == null) return;
         final origin = renderBox.localToGlobal(Offset.zero);
-        final rect = Rect.fromLTWH(origin.dx, origin.dy, renderBox.size.width, renderBox.size.height);
+        final rect = Rect.fromLTWH(
+          origin.dx,
+          origin.dy,
+          renderBox.size.width,
+          renderBox.size.height,
+        );
         widget.onLongPress?.call(context, widget.message, rect);
       },
       onTapDown: _onTapDown,
@@ -343,7 +396,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           _replyTriggered = false;
         });
       },
-      onHorizontalDragCancel: () => setState(() { _swipeDx = 0.0; _replyTriggered = false; }),
+      onHorizontalDragCancel: () => setState(() {
+        _swipeDx = 0.0;
+        _replyTriggered = false;
+      }),
       // Press spring wraps the child directly
       child: AnimatedBuilder(
         animation: _pressAnim,
@@ -388,7 +444,8 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
             right: widget.isMe ? 4 : null,
             child: _ReactionRow(
               reactions: widget.message.reactions,
-              onTap: (emoji) => widget.onReactionTap?.call(widget.message, emoji),
+              onTap: (emoji) =>
+                  widget.onReactionTap?.call(widget.message, emoji),
             ),
           ),
         ],
@@ -404,7 +461,8 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
           // from behind the left edge. Tint accent when threshold reached.
           Positioned(
             left: 0,
-            top: 0, bottom: 0,
+            top: 0,
+            bottom: 0,
             child: Opacity(
               opacity: (_swipeDx / 36.0).clamp(0.0, 1.0),
               child: Center(
@@ -418,10 +476,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
               ),
             ),
           ),
-          Transform.translate(
-            offset: Offset(_swipeDx, 0),
-            child: child,
-          ),
+          Transform.translate(offset: Offset(_swipeDx, 0), child: child),
         ],
       );
     }
@@ -429,14 +484,21 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // Timestamp reveal — shown when parent sets showTimestamp = true.
     if (widget.showTimestamp) {
       child = Row(
-        mainAxisAlignment: widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: widget.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           Flexible(child: child),
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 2),
             child: Text(
               _exactTime(widget.message.createdAt),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendTheme.of(context).textSecondary.withValues(alpha: 0.6)),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 10,
+                color: ZendTheme.of(
+                  context,
+                ).textSecondary.withValues(alpha: 0.6),
+              ),
             ),
           ),
         ],
@@ -462,7 +524,14 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
 
   Widget _buildVibeBubble() {
     final vd = widget.message.vibeData;
-    if (vd == null) return DmPaymentBubble(message: widget.message, isMe: widget.isMe, isFirst: widget.isFirst, isLast: widget.isLast);
+    if (vd == null) {
+      return DmPaymentBubble(
+        message: widget.message,
+        isMe: widget.isMe,
+        isFirst: widget.isFirst,
+        isLast: widget.isLast,
+      );
+    }
     return VibeMessageBubble(
       emoji: vd.displayEmoji,
       amountUsdc: double.tryParse(vd.amountUsdc) ?? 0.0,
@@ -479,8 +548,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
 
 class _TextBubble extends StatelessWidget {
   const _TextBubble({
-    required this.message, required this.isMe,
-    required this.isFirst, required this.isLast,
+    required this.message,
+    required this.isMe,
+    required this.isFirst,
+    required this.isLast,
     this.onRetry,
   });
 
@@ -510,12 +581,6 @@ class _TextBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
 
-    final sentGradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
-    );
-
     // Sender bubbles align right, recipient bubbles align left.
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -524,15 +589,19 @@ class _TextBubble extends StatelessWidget {
         const SizedBox(width: 4),
         Flexible(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.74),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.74,
+            ),
             child: _BubbleShape(
               isMe: isMe,
               isFirst: isFirst,
               isLast: isLast,
               color: isMe ? zt.accent : zt.bubbleReceived,
-              gradient: isMe ? sentGradient : null,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -546,7 +615,9 @@ class _TextBubble extends StatelessWidget {
                             Icon(
                               PhosphorIconsRegular.arrowBendUpRight,
                               size: 11,
-                              color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                              color: isMe
+                                  ? Colors.white.withValues(alpha: 0.65)
+                                  : zt.textSecondary,
                             ),
                             const SizedBox(width: 3),
                             Text(
@@ -554,7 +625,9 @@ class _TextBubble extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontSize: 11.5,
-                                color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary,
+                                color: isMe
+                                    ? Colors.white.withValues(alpha: 0.65)
+                                    : zt.textSecondary,
                               ),
                             ),
                           ],
@@ -567,7 +640,9 @@ class _TextBubble extends StatelessWidget {
                           Icon(
                             PhosphorIconsRegular.prohibitInset,
                             size: 13,
-                            color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
+                            color: isMe
+                                ? Colors.white.withValues(alpha: 0.6)
+                                : zt.textSecondary,
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -575,61 +650,63 @@ class _TextBubble extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 14,
-                              color: isMe ? Colors.white.withValues(alpha: 0.6) : zt.textSecondary,
+                              color: isMe
+                                  ? Colors.white.withValues(alpha: 0.6)
+                                  : zt.textSecondary,
                             ),
                           ),
                         ],
                       )
                     else ...[
-                    if (message.displayContent?.isNotEmpty == true)
-                      // Timestamp + status float inline at the end of the
-                      // text via a trailing WidgetSpan (WhatsApp/iMessage
-                      // pattern) instead of always reserving their own row
-                      // below the message — a one-line message now stays a
-                      // genuinely compact one-line bubble; the meta only
-                      // drops to its own line when the text doesn't leave
-                      // room on the last line.
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: message.displayContent!,
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 15.5,
-                                color: isMe ? Colors.white : zt.textPrimary,
-                                height: 1.35,
-                                // Message content is arbitrary user text and
-                                // can be pure emoji (e.g. "🔥🔥🔥") — without
-                                // an explicit decoration/decorationColor,
-                                // some platforms render a stray underline
-                                // under emoji glyphs.
-                                decoration: TextDecoration.none,
-                                decorationColor: Colors.transparent,
+                      if (message.displayContent?.isNotEmpty == true)
+                        // Timestamp + status float inline at the end of the
+                        // text via a trailing WidgetSpan (WhatsApp/iMessage
+                        // pattern) instead of always reserving their own row
+                        // below the message — a one-line message now stays a
+                        // genuinely compact one-line bubble; the meta only
+                        // drops to its own line when the text doesn't leave
+                        // room on the last line.
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: message.displayContent!,
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 15.5,
+                                  color: isMe ? Colors.white : zt.textPrimary,
+                                  height: 1.35,
+                                  // Message content is arbitrary user text and
+                                  // can be pure emoji (e.g. "🔥🔥🔥") — without
+                                  // an explicit decoration/decorationColor,
+                                  // some platforms render a stray underline
+                                  // under emoji glyphs.
+                                  decoration: TextDecoration.none,
+                                  decorationColor: Colors.transparent,
+                                ),
                               ),
-                            ),
-                            const WidgetSpan(child: SizedBox(width: 8)),
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: _MessageMeta(
-                                message: message,
-                                isMe: isMe,
-                                showNotEncrypted: _showNotEncryptedBadge,
-                                onRetry: onRetry,
+                              const WidgetSpan(child: SizedBox(width: 8)),
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: _MessageMeta(
+                                  message: message,
+                                  isMe: isMe,
+                                  showNotEncrypted: _showNotEncryptedBadge,
+                                  onRetry: onRetry,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        )
+                      else
+                        // No text content (edge case) — meta still needs
+                        // somewhere to render.
+                        _MessageMeta(
+                          message: message,
+                          isMe: isMe,
+                          showNotEncrypted: _showNotEncryptedBadge,
+                          onRetry: onRetry,
                         ),
-                      )
-                    else
-                      // No text content (edge case) — meta still needs
-                      // somewhere to render.
-                      _MessageMeta(
-                        message: message,
-                        isMe: isMe,
-                        showNotEncrypted: _showNotEncryptedBadge,
-                        onRetry: onRetry,
-                      ),
                     ], // close the `else` branch of `if (message.isDeleted)`
                   ],
                 ),
@@ -671,18 +748,30 @@ class _MessageMeta extends StatelessWidget {
           Icon(
             PhosphorIconsRegular.lockKeyOpen,
             size: 10,
-            color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive,
+            color: isMe
+                ? Colors.white.withValues(alpha: 0.65)
+                : ZendColors.destructive,
           ),
           const SizedBox(width: 3),
           Text(
             'Not encrypted',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: isMe ? Colors.white.withValues(alpha: 0.65) : ZendColors.destructive),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 9.5,
+              color: isMe
+                  ? Colors.white.withValues(alpha: 0.65)
+                  : ZendColors.destructive,
+            ),
           ),
           const SizedBox(width: 6),
         ],
         Text(
           _formatTime(message.createdAt),
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 10,
+            color: isMe
+                ? Colors.white.withValues(alpha: 0.65)
+                : zt.textSecondary,
+          ),
         ),
         if (isMe) ...[
           const SizedBox(width: 4),
@@ -696,10 +785,7 @@ class _MessageMeta extends StatelessWidget {
 // ── Reply header — "↩ @bolu replied to you" line above the quote pill ────────
 
 class _ReplyHeader extends StatelessWidget {
-  const _ReplyHeader({
-    required this.senderZendtag,
-    required this.isMe,
-  });
+  const _ReplyHeader({required this.senderZendtag, required this.isMe});
 
   final String? senderZendtag;
   final bool isMe;
@@ -710,9 +796,7 @@ class _ReplyHeader extends StatelessWidget {
     final tag = senderZendtag ?? '';
 
     // Sent: "You replied to @{zendtag}", Received: "@{zendtag} replied to you"
-    final label = isMe
-        ? 'You replied to @$tag'
-        : '@$tag replied to you';
+    final label = isMe ? 'You replied to @$tag' : '@$tag replied to you';
 
     return Padding(
       padding: const EdgeInsets.only(left: 4, right: 4),
@@ -749,11 +833,7 @@ class _ReplyHeader extends StatelessWidget {
 // ── Quote pill — outline-only rounded rect showing the original message ──────
 
 class _QuotePill extends StatelessWidget {
-  const _QuotePill({
-    required this.content,
-    required this.isMe,
-    this.onTap,
-  });
+  const _QuotePill({required this.content, required this.isMe, this.onTap});
 
   final String? content;
   final bool isMe;
@@ -763,9 +843,7 @@ class _QuotePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
 
-    final borderColor = isMe
-        ? zt.accent.withValues(alpha: 0.15)
-        : zt.border;
+    final borderColor = isMe ? zt.accent.withValues(alpha: 0.15) : zt.border;
 
     return GestureDetector(
       onTap: onTap,
@@ -807,21 +885,37 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case DmLocalStatus.sending:
-        return Icon(PhosphorIconsRegular.clock, size: 11, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(
+          PhosphorIconsRegular.clock,
+          size: 11,
+          color: Colors.white.withValues(alpha: 0.6),
+        );
       case DmLocalStatus.delivered:
         // Single check — sent/delivered but not yet read. WhatsApp/iMessage
         // both use a single tick for this state, reserving the double tick
         // for "read".
-        return Icon(PhosphorIconsRegular.check, size: 12, color: Colors.white.withValues(alpha: 0.6));
+        return Icon(
+          PhosphorIconsRegular.check,
+          size: 12,
+          color: Colors.white.withValues(alpha: 0.6),
+        );
       case DmLocalStatus.read:
         // Double tick, tinted — the read-receipt state. Uses the app's
         // accentPop colour (not WhatsApp's blue) so it still reads as
         // "seen" while staying on-brand.
-        return const Icon(PhosphorIconsRegular.checks, size: 13, color: ZendColors.accentPop);
+        return const Icon(
+          PhosphorIconsRegular.checks,
+          size: 13,
+          color: ZendColors.accentPop,
+        );
       case DmLocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,
-          child: const Icon(PhosphorIconsRegular.xCircle, size: 11, color: ZendColors.destructive),
+          child: const Icon(
+            PhosphorIconsRegular.xCircle,
+            size: 11,
+            color: ZendColors.destructive,
+          ),
         );
     }
   }
@@ -852,7 +946,8 @@ class DmPaymentBubble extends StatelessWidget {
     final pd = message.paymentData;
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
-    final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
+    final amountFormatted =
+        '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
 
     // Monochromatic: sent uses the accent surface with a hairline accent border,
     // received uses the same elevated bubbleReceived fill as text bubbles so
@@ -881,9 +976,13 @@ class DmPaymentBubble extends StatelessWidget {
               maxWidth: MediaQuery.of(context).size.width * 0.62,
             ),
             child: _BubbleShape(
-              isMe: isMe, isFirst: isFirst, isLast: isLast,
+              isMe: isMe,
+              isFirst: isFirst,
+              isLast: isLast,
               color: bg,
-              borderColor: sentBorder != null ? zt.accent.withValues(alpha: 0.25) : null,
+              borderColor: sentBorder != null
+                  ? zt.accent.withValues(alpha: 0.25)
+                  : null,
               borderWidth: sentBorder != null ? 0.8 : 0,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
@@ -895,26 +994,45 @@ class DmPaymentBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isMe ? PhosphorIconsRegular.arrowSquareUp : PhosphorIconsRegular.arrowSquareDown,
-                          size: 11, color: iconColor,
+                          isMe
+                              ? PhosphorIconsRegular.arrowSquareUp
+                              : PhosphorIconsRegular.arrowSquareDown,
+                          size: 11,
+                          color: iconColor,
                         ),
                         const SizedBox(width: 3),
                         Text(
                           isMe ? 'sent' : 'received',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 10,
+                            color: labelColor,
+                            letterSpacing: 0.4,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
                       amountFormatted,
-                      style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 28,
+                        color: amountColor,
+                        height: 1.0,
+                      ),
                     ),
                     if (note != null && note.isNotEmpty && note != 'vibe') ...[
                       const SizedBox(height: 3),
                       Text(
                         note,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12,
+                          color: noteColor,
+                          decoration: TextDecoration.none,
+                          decorationColor: Colors.transparent,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -922,7 +1040,13 @@ class DmPaymentBubble extends StatelessWidget {
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
+                      child: Text(
+                        _formatTime(message.createdAt),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 10,
+                          color: labelColor,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -960,7 +1084,8 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final rd = message.paymentRequestData;
     final amountStr = rd?.amountUsdc ?? '0.00';
-    final amountFormatted = '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
+    final amountFormatted =
+        '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
     final isPending = rd?.isPending ?? true;
 
     final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;
@@ -983,7 +1108,9 @@ class DmPaymentRequestBubble extends StatelessWidget {
               maxWidth: MediaQuery.of(context).size.width * 0.65,
             ),
             child: _BubbleShape(
-              isMe: isMe, isFirst: isFirst, isLast: isLast,
+              isMe: isMe,
+              isFirst: isFirst,
+              isLast: isLast,
               color: bg,
               borderColor: hasBorder ? zt.accent.withValues(alpha: 0.25) : null,
               borderWidth: hasBorder ? 0.8 : 0,
@@ -993,20 +1120,49 @@ class DmPaymentRequestBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isMe ? PhosphorIconsRegular.receiptX : PhosphorIconsRegular.receipt, size: 11, color: accentColor),
-                      const SizedBox(width: 3),
-                      Text(isMe ? 'you requested' : 'payment request',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor, letterSpacing: 0.4)),
-                    ]),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isMe
+                              ? PhosphorIconsRegular.receiptX
+                              : PhosphorIconsRegular.receipt,
+                          size: 11,
+                          color: accentColor,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          isMe ? 'you requested' : 'payment request',
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 10,
+                            color: labelColor,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 2),
-                    Text(amountFormatted,
-                        style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: amountColor, height: 1.0)),
+                    Text(
+                      amountFormatted,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 28,
+                        color: amountColor,
+                        height: 1.0,
+                      ),
+                    ),
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
                         rd.note!,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: noteColor, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12,
+                          color: noteColor,
+                          decoration: TextDecoration.none,
+                          decorationColor: Colors.transparent,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1018,29 +1174,75 @@ class DmPaymentRequestBubble extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: onPay,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor, foregroundColor: Colors.white, elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                            backgroundColor: accentColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          child: Text('Pay $amountFormatted', style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w700)),
+                          child: Text(
+                            'Pay $amountFormatted',
+                            style: const TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       )
                     else if (isMe && isPending)
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(PhosphorIconsRegular.clock, size: 11, color: labelColor),
-                        const SizedBox(width: 4),
-                        Text('Waiting…', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
-                      ])
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            PhosphorIconsRegular.clock,
+                            size: 11,
+                            color: labelColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Waiting…',
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 10,
+                              color: labelColor,
+                            ),
+                          ),
+                        ],
+                      )
                     else if (!isPending)
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(PhosphorIconsRegular.checkCircle, size: 13, color: ZendColors.positive),
-                        const SizedBox(width: 4),
-                        Text('Paid', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.positive, fontWeight: FontWeight.w600)),
-                      ]),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            PhosphorIconsRegular.checkCircle,
+                            size: 13,
+                            color: ZendColors.positive,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Paid',
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 11,
+                              color: ZendColors.positive,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: Text(_formatTime(message.createdAt), style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: labelColor)),
+                      child: Text(
+                        _formatTime(message.createdAt),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 10,
+                          color: labelColor,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1133,13 +1335,8 @@ class _ReactionRow extends StatelessWidget {
                 : zt.border.withValues(alpha: 0.5),
             width: r.reactedByMe ? 1.2 : 1.0,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.16),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
+          // No drop shadow — the border alone separates the chip from the
+          // bubble it sits against.
         );
 
         return GestureDetector(
@@ -1153,7 +1350,11 @@ class _ReactionRow extends StatelessWidget {
               children: [
                 Text(
                   r.emoji,
-                  style: const TextStyle(fontSize: 13, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    decoration: TextDecoration.none,
+                    decorationColor: Colors.transparent,
+                  ),
                 ),
                 if (r.count > 1) ...[
                   const SizedBox(width: 3),
@@ -1196,18 +1397,43 @@ class _HeartPopupState extends State<_HeartPopup>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _scale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3).chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 20),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 0.0,
+          end: 1.3,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.3,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 20,
+      ),
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 30),
     ]).animate(_ctrl);
     _opacity = TweenSequence([
       TweenSequenceItem(tween: ConstantTween(1.0), weight: 60),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 40),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 40,
+      ),
     ]).animate(_ctrl);
-    _rise = Tween<double>(begin: 0, end: -40)
-        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.4, 1.0, curve: Curves.easeOut)));
+    _rise = Tween<double>(begin: 0, end: -40).animate(
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+      ),
+    );
 
     _ctrl.forward().then((_) => widget.onDone());
   }
@@ -1232,7 +1458,13 @@ class _HeartPopupState extends State<_HeartPopup>
               opacity: _opacity.value.clamp(0.0, 1.0),
               child: Transform.scale(
                 scale: _scale.value,
-                child: const Text('❤️', style: TextStyle(fontSize: 42, decoration: TextDecoration.none)),
+                child: const Text(
+                  '❤️',
+                  style: TextStyle(
+                    fontSize: 42,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
               ),
             ),
           ),

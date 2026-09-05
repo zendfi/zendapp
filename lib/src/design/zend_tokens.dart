@@ -18,7 +18,10 @@ class ZendColors {
   static const accentPop = Color(0xFFDCFCE7);
 
   static const textPrimary = Color(0xFF1A1A1A);
-  static const textSecondary = Color(0xFF6B7A6E);
+  // True neutral gray, not the old green-tinted #6B7A6E — with containers
+  // stripped back to hairline dividers, a tinted secondary text color reads
+  // as a mistake rather than a choice; there's no card fill left to justify it.
+  static const textSecondary = Color(0xFF8C8C86);
   static const textOnDeep = Color(0xFFF0F0F0);
 
   static const positive = Color(0xFF22C55E);
@@ -29,7 +32,10 @@ class ZendColors {
   static const negative = Color(0xFF1A1A1A);
   static const destructive = Color(0xFFC94F2A);
 
-  static const border = Color(0xFFE5E2DA);
+  // Lightened from #E5E2DA — this now doubles as a hairline row divider
+  // (transaction lists, settings rows), not just an outlined-button stroke,
+  // so it needs to sit closer to invisible.
+  static const border = Color(0xFFECECE8);
   static const bgDeep = Color(0xFF122018);
   static const bgAccentSurface = Color(0xFF0A1A0D);
 }
@@ -99,7 +105,9 @@ class ZendTheme {
 
   static const _light = ZendTheme._(
     bgPrimary: Color(0xFFFAFAF8),
-    bgSecondary: Color(0xFFF2F0EA),
+    // Slightly less warm than before — with textSecondary and border now
+    // true-neutral, a strongly beige secondary surface started to clash.
+    bgSecondary: Color(0xFFF4F3EF),
     // Cards render pure white against the warm off-white page — that small
     // luminance gap is what makes a card read as an object sitting *on* the
     // page rather than a tinted rectangle blending into it.
@@ -112,8 +120,8 @@ class ZendTheme {
     chatBg: Color(0xFFEDE8DC),
     bubbleReceived: Color(0xFFFFFFFF),
     textPrimary: Color(0xFF1A1A1A),
-    textSecondary: Color(0xFF6B7A6E),
-    border: Color(0xFFE5E2DA),
+    textSecondary: Color(0xFF8C8C86),
+    border: Color(0xFFECECE8),
     accent: Color(0xFF16A34A),
     accentBright: Color(0xFF22C55E),
     accentPop: Color(0xFFDCFCE7),
@@ -139,8 +147,13 @@ class ZendTheme {
     // Off-white, not pure white — mirrors the bgPrimary reasoning: full
     // #FFFFFF text on a near-black surface glows/smears for a lot of eyes.
     textPrimary: Color(0xFFF0F0F0),
-    textSecondary: Color(0xFF8A8A8A),
-    border: Color(0xFF2A2A2A),
+    // Slightly darker/more muted than before, matching the light-mode shift
+    // to true neutral gray now that it also has to work as a hairline row
+    // divider color's dark counterpart.
+    textSecondary: Color(0xFF7A7A7A),
+    // Lightened from #2A2A2A to work as an unobtrusive divider, not just an
+    // outlined-button stroke — same reasoning as the light-mode change.
+    border: Color(0xFF1F1F1F),
     // Brighter than the light-mode accent on purpose — dark surfaces can
     // carry more saturated color before it feels aggressive, so this still
     // reads calm rather than muted-to-the-point-of-invisible.

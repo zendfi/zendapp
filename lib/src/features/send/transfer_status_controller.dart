@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart'
     show ApiException, PinDecryptionException, RequestTimeoutException;
+import '../../services/payment_rail_models.dart' show TransferVisibility;
 import '../../services/payment_rails.dart' show RailUnavailableException;
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
@@ -59,7 +60,9 @@ class TransferAuth {
     if (await model.authService.isZkLoginAccount()) {
       return const TransferAuth._(TransferAuthMode.zkLogin, null);
     }
-    final needsPin = await model.signingPolicyService.requiresPinForAmount(amount);
+    final needsPin = await model.signingPolicyService.requiresPinForAmount(
+      amount,
+    );
     final cache = WalletSessionCache.instance;
     if (!needsPin && cache.hasKeypair) {
       return TransferAuth._(TransferAuthMode.session, cache.keypair);
@@ -248,16 +251,14 @@ class TransferStatusController extends ChangeNotifier {
   /// the class doc. [pending] carries the *failing* action's own details,
   /// so the banner names the right amount and recipient rather than
   /// whatever happens to be on screen.
-  void _fail(
-    TransferStatus pending,
-    String message, {
-    bool canRetry = true,
-  }) {
-    _set(pending.copyWith(
-      kind: TransferStatusKind.failed,
-      message: message,
-      canRetry: canRetry,
-    ));
+  void _fail(TransferStatus pending, String message, {bool canRetry = true}) {
+    _set(
+      pending.copyWith(
+        kind: TransferStatusKind.failed,
+        message: message,
+        canRetry: canRetry,
+      ),
+    );
   }
 
   // ── Send ────────────────────────────────────────────────────────────────
@@ -275,6 +276,10 @@ class TransferStatusController extends ChangeNotifier {
     required TransferAuth auth,
     String? recipientDisplayName,
     String? note,
+
+    /// Who may see this payment in Activity. Null inherits the sender's profile
+    /// default rather than forcing a choice.
+    TransferVisibility? visibility,
   }) async {
     assert(!auth.needsPin, 'PIN-required sends must stay in the send sheet');
     final gen = ++_generation;
@@ -295,6 +300,7 @@ class TransferStatusController extends ChangeNotifier {
         amount: amount,
         note: note,
         keypairBytes: auth.keypairBytes,
+        visibility: visibility,
       );
 
       await _model.recordTransfer(
@@ -307,7 +313,10 @@ class TransferStatusController extends ChangeNotifier {
       unawaited(_model.fetchHistory());
 
       if (_owns(gen)) {
-        _set(pending.copyWith(kind: TransferStatusKind.sent), linger: sentLinger);
+        _set(
+          pending.copyWith(kind: TransferStatusKind.sent),
+          linger: sentLinger,
+        );
       }
       HapticFeedback.mediumImpact();
       unawaited(SoundService.playZentSuccess());
@@ -315,10 +324,12 @@ class TransferStatusController extends ChangeNotifier {
       // Spec §16: the server never responded, so we don't know if this
       // landed. Never guess "failed" — resolve it against the account's
       // own history instead of trusting the absence of a response.
-      _set(pending.copyWith(
-        kind: TransferStatusKind.uncertain,
-        message: "Still confirming this one — we'll update you.",
-      ));
+      _set(
+        pending.copyWith(
+          kind: TransferStatusKind.uncertain,
+          message: "Still confirming this one — we'll update you.",
+        ),
+      );
       await _resolveUncertain(gen, pending);
     } on RailUnavailableException catch (e) {
       _fail(pending, e.userMessage);
@@ -327,7 +338,11 @@ class TransferStatusController extends ChangeNotifier {
     } on PinDecryptionException {
       // Shouldn't be reachable — this path never passes a raw PIN. If the
       // cached keypair is somehow unusable, retrying won't help.
-      _fail(pending, "We couldn't unlock your wallet to sign this.", canRetry: false);
+      _fail(
+        pending,
+        "We couldn't unlock your wallet to sign this.",
+        canRetry: false,
+      );
     } catch (_) {
       _fail(pending, "Couldn't complete that. Try again.");
     }
@@ -339,6 +354,7 @@ class TransferStatusController extends ChangeNotifier {
     required double amount,
     required String? note,
     required dynamic keypairBytes,
+    TransferVisibility? visibility,
   }) async {
     try {
       await _model.transferService.sendTransfer(
@@ -347,6 +363,7 @@ class TransferStatusController extends ChangeNotifier {
         pin: null,
         keypairBytes: keypairBytes,
         note: note,
+        visibility: visibility,
       );
     } on ApiException catch (e) {
       // The backend refuses large transfers from a PIN-less account until
@@ -361,6 +378,7 @@ class TransferStatusController extends ChangeNotifier {
         pin: null,
         keypairBytes: keypairBytes,
         note: note,
+        visibility: visibility,
       );
     }
   }
@@ -392,12 +410,14 @@ class TransferStatusController extends ChangeNotifier {
       final found = _model.recentTransactions.any((tx) {
         final entry = tx.entry;
         if (entry == null) return false;
-        final matchesRecipient = entry.recipientZendtag.toLowerCase() ==
+        final matchesRecipient =
+            entry.recipientZendtag.toLowerCase() ==
             pending.recipientZendtag?.toLowerCase();
         final entryAmount = double.tryParse(entry.amountUsdc) ?? -1;
         final matchesAmount = (entryAmount - pending.amount).abs() < 0.005;
         final isRecent =
-            DateTime.now().difference(entry.createdAt) < const Duration(minutes: 5);
+            DateTime.now().difference(entry.createdAt) <
+            const Duration(minutes: 5);
         return matchesRecipient && matchesAmount && isRecent;
       });
 
@@ -410,7 +430,10 @@ class TransferStatusController extends ChangeNotifier {
         );
         unawaited(_model.fetchBalance());
         if (_owns(gen)) {
-          _set(pending.copyWith(kind: TransferStatusKind.sent), linger: sentLinger);
+          _set(
+            pending.copyWith(kind: TransferStatusKind.sent),
+            linger: sentLinger,
+          );
         }
         HapticFeedback.mediumImpact();
         unawaited(SoundService.playZentSuccess());
@@ -459,13 +482,14 @@ class TransferStatusController extends ChangeNotifier {
     _set(pending);
 
     try {
-      final response = await _model.walletService.apiClient.createPaymentRequest(
-        amountUsdc: amount,
-        description: note,
-        expiresAt: null,
-        recipientZendtag: recipientZendtag,
-        recipientEmail: recipientEmail,
-      );
+      final response = await _model.walletService.apiClient
+          .createPaymentRequest(
+            amountUsdc: amount,
+            description: note,
+            expiresAt: null,
+            recipientZendtag: recipientZendtag,
+            recipientEmail: recipientEmail,
+          );
       final created = PaymentRequest(
         id: response['id'] as String,
         link: response['link_url'] as String,
@@ -473,14 +497,19 @@ class TransferStatusController extends ChangeNotifier {
         description: note ?? '',
         createdAt: DateTime.now(),
         status: PaymentRequestStatus.pending,
-        recipientZendtag: response['recipient_zendtag'] as String? ?? recipientZendtag,
-        recipientEmail: response['recipient_email'] as String? ?? recipientEmail,
+        recipientZendtag:
+            response['recipient_zendtag'] as String? ?? recipientZendtag,
+        recipientEmail:
+            response['recipient_email'] as String? ?? recipientEmail,
       );
       _model.addPaymentRequest(created);
 
       if (_owns(gen)) {
         _set(
-          pending.copyWith(kind: TransferStatusKind.requested, request: created),
+          pending.copyWith(
+            kind: TransferStatusKind.requested,
+            request: created,
+          ),
           linger: requestedLinger,
         );
       }

@@ -134,39 +134,64 @@ class _PeopleScreenState extends State<PeopleScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── Header ──
+            // Bottom padding sits on the search bar below rather than here, so
+            // the title has room above it instead of hugging the field.
+            //
+            // The top inset is 18 rather than 12 to match Chats: that header is
+            // a Row containing an IconButton, so its 48px minimum height
+            // vertically centres the 35px title and pushes it down ~6.5px.
+            // People has no trailing action, so the offset is applied directly.
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
               child: Text(
                 'People',
                 style: TextStyle(fontFamily: 'Geist', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary),
               ),
             ),
             // ── Search — blends in, doesn't dominate ──
+            // Built the same way as the Chats search pill. It previously used a
+            // fixed-height Container around a borderless field with
+            // `contentPadding: symmetric(vertical: 12)` — no *horizontal*
+            // padding at all, so the text began immediately after the prefix
+            // icon — and an IconButton suffix, whose 48px minimum fought the
+            // 44px box it sat in. Between those and an 8px gap to the title,
+            // the whole block read as cramped.
+            //
+            // Now: `filled` + a pill OutlineInputBorder with real padding on
+            // both axes, no forced height (so the field sizes to its content),
+            // and a bare tap target for clearing.
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocus,
-                  onChanged: _onQueryChanged,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Search username or email',
-                    hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                    prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 20, color: zt.textSecondary),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onQueryChanged('');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              // 16 above, to land on the same ~16.5px title-to-field gap Chats
+              // gets from its taller header row.
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                onChanged: _onQueryChanged,
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Search username or email',
+                  hintStyle: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textSecondary.withValues(alpha: 0.7),
+                  ),
+                  prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                  suffixIcon: _query.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchController.clear();
+                            _onQueryChanged('');
+                          },
+                          child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: zt.bgSecondary,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
@@ -334,8 +359,9 @@ class _PersonRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              ZendAvatar(radius: 20, initials: avatarLabel, photoUrl: avatarUrl),
-              const SizedBox(width: 12),
+              // radius 26 + 14px gap — same as the chat list tiles.
+              ZendAvatar(radius: 26, initials: avatarLabel, photoUrl: avatarUrl),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

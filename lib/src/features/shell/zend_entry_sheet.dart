@@ -8,7 +8,9 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/recent_contact.dart';
+import '../../services/payment_rail_models.dart' show TransferVisibility;
 import '../send/send_flow_sheet.dart';
+import '../send/send_shared_widgets.dart' show VisibilityPill;
 import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -96,6 +98,13 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   /// True once Zend has been tapped once and is awaiting the confirming tap.
   /// See [_armZendConfirm].
   bool _confirmingZend = false;
+
+  /// Who may see this payment in Activity.
+  ///
+  /// Defaults to private, matching the backend's default for a user who has never
+  /// chosen. Surfaced only once the confirmation is armed, so the resting state
+  /// stays a two-field form rather than a settings panel.
+  TransferVisibility _visibility = TransferVisibility.private;
 
   /// True while [TransferAuth.resolve] is deciding whether this send needs a
   /// PIN. Brief (secure-storage reads) but not instant, and it gates a
@@ -214,7 +223,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       if (!mounted) return;
       setState(() {
         _zendtag = resolved.zendtag;
-        _displayName = resolved.displayName.trim().isNotEmpty ? resolved.displayName : '@${resolved.zendtag}';
+        _displayName = resolved.displayName.trim().isNotEmpty
+            ? resolved.displayName
+            : '@${resolved.zendtag}';
         _avatarUrl = resolved.avatarUrl;
         _email = null;
         _searching = false;
@@ -224,7 +235,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       if (!mounted) return;
       setState(() {
         _searching = false;
-        _identityError = "We couldn't find anyone with that identity. Check the username or email and try again.";
+        _identityError =
+            "We couldn't find anyone with that identity. Check the username or email and try again.";
       });
     }
   }
@@ -328,13 +340,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
     // Fire and forget: the outcome belongs to the banner now, not to this
     // sheet, which is already gone.
-    unawaited(model.transferStatus.send(
-      amount: amount,
-      recipientZendtag: tag,
-      auth: auth,
-      recipientDisplayName: _displayName,
-      note: note,
-    ));
+    unawaited(
+      model.transferStatus.send(
+        amount: amount,
+        recipientZendtag: tag,
+        auth: auth,
+        recipientDisplayName: _displayName,
+        note: note,
+        visibility: _visibility,
+      ),
+    );
   }
 
   /// Requests go through on one tap and get no confirmation step: a mistaken
@@ -346,13 +361,15 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     final model = ZendScope.of(context);
     final note = _note;
     Navigator.of(context, rootNavigator: true).pop();
-    unawaited(model.transferStatus.request(
-      amount: amount,
-      recipientZendtag: _zendtag,
-      recipientEmail: _email,
-      recipientDisplayName: _displayName,
-      note: note,
-    ));
+    unawaited(
+      model.transferStatus.request(
+        amount: amount,
+        recipientZendtag: _zendtag,
+        recipientEmail: _email,
+        recipientDisplayName: _displayName,
+        note: note,
+      ),
+    );
   }
 
   void _showVibesComingSoon() {
@@ -362,7 +379,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         final zt = ZendTheme.of(dialogContext);
         return Dialog(
           backgroundColor: zt.bgPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
           insetPadding: const EdgeInsets.symmetric(horizontal: 32),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
@@ -374,10 +393,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 Text(
                   'Vibes are coming soon!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: zt.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 20),
-                PrimaryButton(label: 'Got it', onPressed: () => Navigator.of(dialogContext).pop()),
+                PrimaryButton(
+                  label: 'Got it',
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
               ],
             ),
           ),
@@ -397,8 +424,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     // on-screen instead of having its lower half covered. Everything
     // inside can therefore rely on a finite height — see the layout
     // contract on [showZendEntrySheet].
-    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92)
-        .clamp(280.0, mq.size.height);
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92).clamp(
+      280.0,
+      mq.size.height,
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardInset),
@@ -406,7 +435,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         height: sheetHeight,
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -457,7 +488,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   padding: const EdgeInsets.only(left: 14),
                   child: ColorFiltered(
                     colorFilter: ColorFilter.mode(zt.accent, BlendMode.srcIn),
-                    child: Image.asset('assets/icons/zend-icon-navbar.png', width: 20, height: 20, fit: BoxFit.contain),
+                    child: Image.asset(
+                      'assets/icons/zend-icon-navbar.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -467,15 +503,26 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     onChanged: _onQueryChanged,
                     onSubmitted: (_) => _submitRaw(),
                     textInputAction: TextInputAction.search,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 16, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 16,
+                      color: zt.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: '@username or email',
-                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 16, color: zt.textSecondary),
+                      hintStyle: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 16,
+                        color: zt.textSecondary,
+                      ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       filled: false,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -486,7 +533,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             const SizedBox(height: 8),
             Text(
               _identityError!,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                color: ZendColors.destructive,
+              ),
             ),
           ],
           const SizedBox(height: 16),
@@ -511,7 +562,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         itemBuilder: (context, i) {
           final u = _results[i];
           final tag = u['zendtag'] as String? ?? '';
-          final name = (u['display_name'] as String?)?.trim().isNotEmpty == true ? u['display_name'] as String : tag;
+          final name = (u['display_name'] as String?)?.trim().isNotEmpty == true
+              ? u['display_name'] as String
+              : tag;
           return _IdentityRow(
             displayName: name,
             subtitle: '@$tag',
@@ -533,7 +586,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               'Recent',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: zt.textSecondary,
+              ),
             ),
           );
         }
@@ -566,7 +624,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               if (widget.prefilledRecipient == null)
                 IconButton(
                   onPressed: _changeIdentity,
-                  icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                  icon: Icon(
+                    PhosphorIconsRegular.caretLeft,
+                    color: zt.textPrimary,
+                    size: 22,
+                  ),
                 )
               else
                 const SizedBox(width: 48),
@@ -583,7 +645,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 children: [
                   // Identity header, tappable to change person.
                   GestureDetector(
-                    onTap: widget.prefilledRecipient == null ? _changeIdentity : null,
+                    onTap: widget.prefilledRecipient == null
+                        ? _changeIdentity
+                        : null,
                     child: Column(
                       children: [
                         Stack(
@@ -591,7 +655,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           children: [
                             ZendAvatar(
                               radius: 28,
-                              initials: (_displayName?.isNotEmpty ?? false) ? _displayName![0].toUpperCase() : '?',
+                              initials: (_displayName?.isNotEmpty ?? false)
+                                  ? _displayName![0].toUpperCase()
+                                  : '?',
                               photoUrl: _avatarUrl,
                             ),
                             if (widget.prefilledRecipient == null)
@@ -606,18 +672,36 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                                     shape: BoxShape.circle,
                                     border: Border.all(color: zt.border),
                                   ),
-                                  child: Icon(PhosphorIconsRegular.arrowsLeftRight, size: 12, color: zt.accent),
+                                  child: Icon(
+                                    PhosphorIconsRegular.arrowsLeftRight,
+                                    size: 12,
+                                    color: zt.accent,
+                                  ),
                                 ),
                               ),
                           ],
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _zendtag != null ? '@$_zendtag' : (_displayName ?? _email ?? ''),
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                          _zendtag != null
+                              ? '@$_zendtag'
+                              : (_displayName ?? _email ?? ''),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: zt.textPrimary,
+                          ),
                         ),
                         if (_email != null)
-                          Text(_email!, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+                          Text(
+                            _email!,
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -635,19 +719,36 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     children: [
                       Text(
                         '\$',
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: zt.textPrimary,
+                        ),
                       ),
                       const SizedBox(width: 2),
                       IntrinsicWidth(
                         child: TextField(
                           controller: _amountController,
                           focusNode: _amountFocus,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           textAlign: TextAlign.left,
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 48,
+                            fontWeight: FontWeight.w700,
+                            color: zt.textPrimary,
+                          ),
                           decoration: InputDecoration(
                             hintText: '0',
-                            hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 48, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                            hintStyle: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 48,
+                              fontWeight: FontWeight.w700,
+                              color: zt.textSecondary,
+                            ),
                             // Explicitly borderless/unfilled — the global
                             // InputDecorationTheme fills and pill-rounds inputs
                             // by default, which would draw a capsule around the
@@ -657,17 +758,42 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             focusedBorder: InputBorder.none,
                             filled: false,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                            ),
                           ),
                           // Editing the amount disarms a pending
                           // confirmation — confirming $20 and then sending
                           // $200 is exactly what the confirmation exists
                           // to prevent.
-                          onChanged: (_) => setState(() => _confirmingZend = false),
+                          onChanged: (_) =>
+                              setState(() => _confirmingZend = false),
                         ),
                       ),
                     ],
                   ),
+
+                  // ── Note, as receipt text, only while confirming ──────
+                  //
+                  // Once the confirm button is up, the note stops being an
+                  // input and becomes part of what is being confirmed —
+                  // amount, then what it is for, the way the receipt will
+                  // read. The editable field below hides at the same time,
+                  // so the note appears in exactly one place per state
+                  // rather than twice.
+                  if (_confirmingZend && _note != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _note!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -677,27 +803,54 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           // sibling) so it always sits directly above the buttons, matching
           // the reference. A smaller, squarer radius reads as a rounded
           // rectangle input rather than a capsule.
-          Container(
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.md),
-            ),
-            child: TextField(
-              controller: _noteController,
-              textAlign: TextAlign.center,
-              textInputAction: TextInputAction.done,
-              onChanged: (_) => _disarmZendConfirm(),
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-              decoration: InputDecoration(
-                hintText: "What's this for?",
-                hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              ),
-            ),
+          // Swapped for the visibility control while confirming: the note has
+          // moved up under the amount by then, and this is where a choice about
+          // the payment belongs — immediately above the button that commits it.
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: _confirmingZend
+                ? Align(
+                    key: const ValueKey('visibility'),
+                    alignment: Alignment.centerRight,
+                    child: VisibilityPill(
+                      value: _visibility,
+                      onChanged: (next) => setState(() => _visibility = next),
+                    ),
+                  )
+                : Container(
+                    key: const ValueKey('note'),
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
+                      borderRadius: BorderRadius.circular(ZendRadii.md),
+                    ),
+                    child: TextField(
+                      controller: _noteController,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (_) => _disarmZendConfirm(),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: "What's this for?",
+                        hintStyle: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(height: 12),
           // ── Action area — pinned outside the scroll view ──
@@ -739,11 +892,17 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: zt.textPrimary,
                   side: BorderSide(color: zt.border),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
                 child: const Text(
                   'Request',
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -761,11 +920,17 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 backgroundColor: zt.accent,
                 foregroundColor: ZendColors.textOnDeep,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
               child: const Text(
                 'Pay',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -776,7 +941,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           child: Container(
             width: 52,
             height: 52,
-            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              shape: BoxShape.circle,
+            ),
             child: Icon(PhosphorIconsRegular.gift, color: zt.accent, size: 22),
           ),
         ),
@@ -807,15 +975,25 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 disabledBackgroundColor: zt.accent,
                 disabledForegroundColor: ZendColors.textOnDeep,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
               child: _preflighting
-                  ? const ZendLoader(size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
+                  ? const ZendLoader(
+                      size: 20,
+                      strokeWidth: 2,
+                      color: ZendColors.textOnDeep,
+                    )
                   : Text(
                       'Send $_amountLabel to $target',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
             ),
           ),
@@ -829,8 +1007,15 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           child: Container(
             width: 52,
             height: 52,
-            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-            child: Icon(PhosphorIconsRegular.x, color: zt.textSecondary, size: 20),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              PhosphorIconsRegular.x,
+              color: zt.textSecondary,
+              size: 20,
+            ),
           ),
         ),
       ],
@@ -871,14 +1056,33 @@ class _IdentityRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              ZendAvatar(radius: 18, initials: avatarLabel, photoUrl: avatarUrl),
+              ZendAvatar(
+                radius: 18,
+                initials: avatarLabel,
+                photoUrl: avatarUrl,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
-                    Text(subtitle, style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),

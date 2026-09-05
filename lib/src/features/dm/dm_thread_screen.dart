@@ -1001,8 +1001,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 decoration: BoxDecoration(
                   color: zt.bgSecondary,
                   shape: BoxShape.circle,
+                  // Border only, no drop shadow — the outline is enough to
+                  // lift this off the thread.
                   border: Border.all(color: zt.border),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
                 ),
                 child: Icon(PhosphorIconsRegular.caretDown, size: 18, color: zt.textSecondary),
               ),

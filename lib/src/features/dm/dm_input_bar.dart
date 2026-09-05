@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,10 +34,12 @@ class DmInputBar extends StatefulWidget {
   final ValueChanged<VibeSendResult>? onSendVibe;
   final OnRequestPayment? onRequestPayment;
   final OnPayRecipient? onPayRecipient;
+
   /// Draft text to restore into the composer when this room is (re)opened —
   /// e.g. from [DmService.getDraft], so a message typed but not sent
   /// survives navigating away from and back to the thread.
   final String initialDraft;
+
   /// Called on every change so the caller can persist the current draft
   /// (see [DmService.setDraft]) — cleared automatically on send.
   final ValueChanged<String>? onDraftChanged;
@@ -237,7 +237,10 @@ class _DmInputBarState extends State<DmInputBar>
     _sendingVibe = true;
     // Strong satisfying thud when Vibe is sent
     HapticFeedback.heavyImpact();
-    Future.delayed(const Duration(milliseconds: 60), HapticFeedback.mediumImpact);
+    Future.delayed(
+      const Duration(milliseconds: 60),
+      HapticFeedback.mediumImpact,
+    );
     final result = VibeSendResult(
       stickerId: _selectedSticker!.id,
       stickerEmoji: _selectedSticker!.emoji,
@@ -266,14 +269,19 @@ class _DmInputBarState extends State<DmInputBar>
     setState(() {
       if (key == '⌫') {
         if (_vibeCustomInput.isNotEmpty) {
-          _vibeCustomInput = _vibeCustomInput.substring(0, _vibeCustomInput.length - 1);
+          _vibeCustomInput = _vibeCustomInput.substring(
+            0,
+            _vibeCustomInput.length - 1,
+          );
         }
       } else if (key == '.') {
         if (!_vibeCustomInput.contains('.')) _vibeCustomInput += '.';
       } else {
         // Max 4 chars before decimal, 2 after
         final parts = _vibeCustomInput.split('.');
-        if (parts.length == 1 && parts[0].isNotEmpty && parts[0] == '5') return; // cap at 5
+        if (parts.length == 1 && parts[0].isNotEmpty && parts[0] == '5') {
+          return; // cap at 5
+        }
         if (parts.length == 2 && parts[1].length >= 2) return;
         _vibeCustomInput += key;
       }
@@ -299,142 +307,166 @@ class _DmInputBarState extends State<DmInputBar>
       });
     }
 
-    final bottomPad = _panelOpen ? 0.0 : (viewInsets > 0 ? 0.0 : viewPadding * 0.5);
+    final bottomPad = _panelOpen
+        ? 0.0
+        : (viewInsets > 0 ? 0.0 : viewPadding * 0.5);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Premium input row ─────────────────────────────────────────────────
-        ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + bottomPad),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.78),
-                border: Border(top: BorderSide(color: zt.border.withValues(alpha: 0.35), width: 0.5)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // ── Bare + icon — no background circle ─────────────────
-                  GestureDetector(
-                    onTap: _togglePanel,
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: 36, height: 44,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                        child: Icon(
-                          _panelOpen ? PhosphorIconsRegular.xCircle : PhosphorIconsRegular.plusSquare,
-                          key: ValueKey(_panelOpen),
-                          size: 22,
-                          color: _panelOpen ? zt.accent : zt.textSecondary,
-                        ),
-                      ),
+        // ── Input row ─────────────────────────────────────────────────────────
+        // Flat and opaque: no backdrop blur, no translucency. The bar is a
+        // plain surface separated from the thread by a single hairline rule.
+        Container(
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + bottomPad),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(top: BorderSide(color: zt.border, width: 0.5)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // ── Bare + icon — no background circle ─────────────────
+              GestureDetector(
+                onTap: _togglePanel,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 36,
+                  height: 44,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: Icon(
+                      _panelOpen
+                          ? PhosphorIconsRegular.xCircle
+                          : PhosphorIconsRegular.plusSquare,
+                      key: ValueKey(_panelOpen),
+                      size: 22,
+                      color: _panelOpen ? zt.accent : zt.textSecondary,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                ),
+              ),
+              const SizedBox(width: 6),
 
-                  // ── Floating frosted pill — stretches end-to-end ────────
-                  Expanded(
-                    child: ClipRRect(
+              // ── Input pill — stretches end-to-end ──────────────────
+              // Flat fill, no top bevel highlight. The white 0.5px top
+              // border was there to fake a lit edge; nothing else in the
+              // app does that now.
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minHeight: 44,
+                      maxHeight: 136,
+                    ),
+                    decoration: BoxDecoration(
+                      color: zt.bgSecondary,
                       borderRadius: BorderRadius.circular(22),
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 44, maxHeight: 136),
-                        decoration: BoxDecoration(
-                          color: zt.bgSecondary,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border(
-                            top: BorderSide(
-                              color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.6),
-                              width: 0.5,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Text field fills the pill
+                        Expanded(
+                          child: Padding(
+                            // Right padding was previously just 4px — far
+                            // less than the 14px on the left, which left
+                            // typed text crowding right up against the
+                            // send/mic button with almost no breathing
+                            // room. 10px gives a more even gap while the
+                            // button's own margin still handles the rest
+                            // of the visual separation.
+                            padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
+                            child: TextField(
+                              controller: _ctrl,
+                              focusNode: _focusNode,
+                              onChanged: _onChanged,
+                              onSubmitted: (_) => _send(),
+                              maxLines: 5,
+                              minLines: 1,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 15,
+                                color: zt.textPrimary,
+                                height: 1.35,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Message',
+                                hintStyle: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 15,
+                                  color: zt.textSecondary.withValues(
+                                    alpha: 0.55,
+                                  ),
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
                           ),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            // Text field fills the pill
-                            Expanded(
-                              child: Padding(
-                                // Right padding was previously just 4px — far
-                                // less than the 14px on the left, which left
-                                // typed text crowding right up against the
-                                // send/mic button with almost no breathing
-                                // room. 10px gives a more even gap while the
-                                // button's own margin still handles the rest
-                                // of the visual separation.
-                                padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
-                                child: TextField(
-                                  controller: _ctrl,
-                                  focusNode: _focusNode,
-                                  onChanged: _onChanged,
-                                  onSubmitted: (_) => _send(),
-                                  maxLines: 5,
-                                  minLines: 1,
-                                  style: TextStyle(
-                                    fontFamily: 'Geist',
-                                    fontSize: 15,
-                                    color: zt.textPrimary,
-                                    height: 1.35,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Message',
-                                    hintStyle: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontSize: 15,
-                                      color: zt.textSecondary.withValues(alpha: 0.55),
-                                    ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ),
+                        // Dynamic send / mic button — inside the pill
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          transitionBuilder: (child, anim) => ScaleTransition(
+                            scale: Tween<double>(begin: 0.7, end: 1.0).animate(
+                              CurvedAnimation(
+                                parent: anim,
+                                curve: Curves.elasticOut,
                               ),
                             ),
-                            // Dynamic send / mic button — inside the pill
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              transitionBuilder: (child, anim) => ScaleTransition(
-                                scale: Tween<double>(begin: 0.7, end: 1.0).animate(
-                                  CurvedAnimation(parent: anim, curve: Curves.elasticOut),
-                                ),
-                                child: FadeTransition(opacity: anim, child: child),
-                              ),
-                              child: _hasText
-                                  ? GestureDetector(
-                                      key: const ValueKey('send'),
-                                      onTap: _send,
-                                      child: Container(
-                                        width: 32, height: 32,
-                                        margin: const EdgeInsets.only(right: 6, bottom: 6),
-                                        decoration: BoxDecoration(color: zt.accent, shape: BoxShape.circle),
-                                        child: const Icon(PhosphorIconsRegular.paperPlaneTilt, size: 16, color: Colors.white),
-                                      ),
-                                    )
-                                  : GestureDetector(
-                                      key: const ValueKey('mic'),
-                                      onTap: () {},
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 10, bottom: 11),
-                                        child: Icon(
-                                          PhosphorIconsRegular.microphone,
-                                          size: 20,
-                                          color: zt.textSecondary.withValues(alpha: 0.6),
-                                        ),
+                            child: FadeTransition(opacity: anim, child: child),
+                          ),
+                          child: _hasText
+                              ? GestureDetector(
+                                  key: const ValueKey('send'),
+                                  onTap: _send,
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    margin: const EdgeInsets.only(
+                                      right: 6,
+                                      bottom: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: zt.accent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      PhosphorIconsRegular.paperPlaneTilt,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : GestureDetector(
+                                  key: const ValueKey('mic'),
+                                  onTap: () {},
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: 10,
+                                      bottom: 11,
+                                    ),
+                                    child: Icon(
+                                      PhosphorIconsRegular.microphone,
+                                      size: 20,
+                                      color: zt.textSecondary.withValues(
+                                        alpha: 0.6,
                                       ),
                                     ),
-                            ),
-                          ],
+                                  ),
+                                ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
         // ── Action / Vibe panel ───────────────────────────────────────────────
@@ -452,14 +484,14 @@ class _DmInputBarState extends State<DmInputBar>
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 140),
                   // Plain fade — no slide between Vibe creation steps.
-                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                  layoutBuilder: (currentChild, previousChildren) => Stack(
-                    children: [
-                      ...previousChildren,
-                      ?currentChild,
-                    ],
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  layoutBuilder: (currentChild, previousChildren) =>
+                      Stack(children: [...previousChildren, ?currentChild]),
+                  child: KeyedSubtree(
+                    key: ValueKey(_mode),
+                    child: _buildPanelContent(zt),
                   ),
-                  child: KeyedSubtree(key: ValueKey(_mode), child: _buildPanelContent(zt)),
                 ),
               ),
             ),
@@ -496,7 +528,10 @@ class _DmInputBarState extends State<DmInputBar>
                 icon: PhosphorIconsRegular.arrowSquareDown,
                 label: 'Request',
                 zt: zt,
-                onTap: () { _closePanel(); widget.onRequestPayment?.call(); },
+                onTap: () {
+                  _closePanel();
+                  widget.onRequestPayment?.call();
+                },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
@@ -508,7 +543,10 @@ class _DmInputBarState extends State<DmInputBar>
                 icon: PhosphorIconsRegular.currencyDollar,
                 label: 'Zend',
                 zt: zt,
-                onTap: () { _closePanel(); widget.onPayRecipient?.call(); },
+                onTap: () {
+                  _closePanel();
+                  widget.onPayRecipient?.call();
+                },
               ),
               const SizedBox(width: 10),
               _MonoActionTile(
@@ -543,13 +581,31 @@ class _DmInputBarState extends State<DmInputBar>
             children: [
               GestureDetector(
                 onTap: () => _setMode(_PanelMode.actions),
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textSecondary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Set amount',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary))),
-              Text('\$0.01 – \$5',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.6))),
+              Expanded(
+                child: Text(
+                  'Set amount',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: zt.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                '\$0.01 – \$5',
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 10,
+                  color: zt.textSecondary.withValues(alpha: 0.6),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -558,8 +614,13 @@ class _DmInputBarState extends State<DmInputBar>
             // ── Haptic dial — swipe vertically to change amount ──
             Column(
               children: [
-                Text('Swipe up or down to adjust',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.5))),
+                Text(
+                  'Swipe up or down to adjust',
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 10,
+                    color: zt.textSecondary.withValues(alpha: 0.5),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -572,7 +633,9 @@ class _DmInputBarState extends State<DmInputBar>
                     final oldNotch = (_vibeAmount * 4).round();
                     final newNotch = (newAmount * 4).round();
                     if (oldNotch != newNotch) HapticFeedback.selectionClick();
-                    setState(() => _vibeAmount = (newAmount * 100).round() / 100.0);
+                    setState(
+                      () => _vibeAmount = (newAmount * 100).round() / 100.0,
+                    );
                   },
                   child: Container(
                     width: double.infinity,
@@ -580,7 +643,11 @@ class _DmInputBarState extends State<DmInputBar>
                     child: Column(
                       children: [
                         // Up chevron
-                        Icon(PhosphorIconsRegular.caretUp, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(
+                          PhosphorIconsRegular.caretUp,
+                          size: 16,
+                          color: zt.textSecondary.withValues(alpha: 0.3),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           displayAmount,
@@ -588,13 +655,19 @@ class _DmInputBarState extends State<DmInputBar>
                             fontFamily: 'Geist',
                             fontWeight: FontWeight.w700,
                             fontSize: 52,
-                            color: isOverLimit ? ZendColors.destructive : zt.textPrimary,
+                            color: isOverLimit
+                                ? ZendColors.destructive
+                                : zt.textPrimary,
                             height: 1.0,
                           ),
                         ),
                         const SizedBox(height: 4),
                         // Down chevron
-                        Icon(PhosphorIconsRegular.caretDown, size: 16, color: zt.textSecondary.withValues(alpha: 0.3)),
+                        Icon(
+                          PhosphorIconsRegular.caretDown,
+                          size: 16,
+                          color: zt.textSecondary.withValues(alpha: 0.3),
+                        ),
                       ],
                     ),
                   ),
@@ -602,28 +675,49 @@ class _DmInputBarState extends State<DmInputBar>
                 // Quick preset pills
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [0.50, 1.00, 2.00, 5.00].map((v) => GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _vibeAmount = v);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _vibeAmount == v ? zt.textPrimary.withValues(alpha: 0.1) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                        border: Border.all(
-                          color: _vibeAmount == v ? zt.textPrimary.withValues(alpha: 0.3) : zt.border.withValues(alpha: 0.4),
-                          width: 0.8,
+                  children: [0.50, 1.00, 2.00, 5.00]
+                      .map(
+                        (v) => GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            setState(() => _vibeAmount = v);
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _vibeAmount == v
+                                  ? zt.textPrimary.withValues(alpha: 0.1)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
+                              border: Border.all(
+                                color: _vibeAmount == v
+                                    ? zt.textPrimary.withValues(alpha: 0.3)
+                                    : zt.border.withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              '\$${v.toStringAsFixed(2)}',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 11,
+                                color: _vibeAmount == v
+                                    ? zt.textPrimary
+                                    : zt.textSecondary,
+                                fontWeight: _vibeAmount == v
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        '\$${v.toStringAsFixed(2)}',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: _vibeAmount == v ? zt.textPrimary : zt.textSecondary, fontWeight: _vibeAmount == v ? FontWeight.w700 : FontWeight.normal),
-                      ),
-                    ),
-                  )).toList(),
+                      )
+                      .toList(),
                 ),
               ],
             ),
@@ -632,14 +726,31 @@ class _DmInputBarState extends State<DmInputBar>
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() { _vibeCustomMode = true; _vibeCustomInput = ''; }),
-                    child: Text('Custom',
+                    onTap: () => setState(() {
+                      _vibeCustomMode = true;
+                      _vibeCustomInput = '';
+                    }),
+                    child: Text(
+                      'Custom',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary, fontWeight: FontWeight.w500)),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: _primaryBtn(zt, 'Pick sticker →', zt.textPrimary, _confirmVibeAmount)),
+                Expanded(
+                  child: _primaryBtn(
+                    zt,
+                    'Pick sticker →',
+                    zt.textPrimary,
+                    _confirmVibeAmount,
+                  ),
+                ),
               ],
             ),
           ] else ...[
@@ -655,22 +766,52 @@ class _DmInputBarState extends State<DmInputBar>
               ),
             ),
             if (isOverLimit)
-              Text('Max \$5.00', style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: ZendColors.destructive)),
+              Text(
+                'Max \$5.00',
+                style: const TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 11,
+                  color: ZendColors.destructive,
+                ),
+              ),
             const SizedBox(height: 8),
             _keypad(zt),
             const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() { _vibeCustomMode = false; _vibeCustomInput = ''; }),
-                  child: Text('← Dial', textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      _vibeCustomMode = false;
+                      _vibeCustomInput = '';
+                    }),
+                    child: Text(
+                      '← Dial',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: _primaryBtn(zt, 'Pick sticker →', zt.textPrimary,
-                !isOverLimit && _resolvedAmount >= 0.01 ? () { _vibeAmount = _resolvedAmount; _confirmVibeAmount(); } : null)),
-            ]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _primaryBtn(
+                    zt,
+                    'Pick sticker →',
+                    zt.textPrimary,
+                    !isOverLimit && _resolvedAmount >= 0.01
+                        ? () {
+                            _vibeAmount = _resolvedAmount;
+                            _confirmVibeAmount();
+                          }
+                        : null,
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -685,43 +826,92 @@ class _DmInputBarState extends State<DmInputBar>
         children: [
           Row(
             children: [
-              GestureDetector(onTap: () => _setMode(_PanelMode.vibeAmount),
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20)),
+              GestureDetector(
+                onTap: () => _setMode(_PanelMode.vibeAmount),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textSecondary,
+                  size: 20,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Pick a sticker', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
-              Text('\$${_vibeAmount.toStringAsFixed(2)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w700)),
+              Expanded(
+                child: Text(
+                  'Pick a sticker',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: zt.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                '\$${_vibeAmount.toStringAsFixed(2)}',
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 13,
+                  color: zt.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           if (_stickersLoading)
-            const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+            const Expanded(
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
           else
             Expanded(
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, mainAxisSpacing: 8, crossAxisSpacing: 8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                ),
                 itemCount: _stickers.length,
                 itemBuilder: (ctx, i) {
                   final s = _stickers[i];
                   final sel = _selectedSticker?.id == s.id;
                   return GestureDetector(
-                    onTap: () { HapticFeedback.selectionClick(); setState(() => _selectedSticker = s); },
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedSticker = s);
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       decoration: BoxDecoration(
-                        color: sel ? const Color(0xFFFF6B9D).withValues(alpha: 0.15) : zt.bgPrimary,
+                        color: sel
+                            ? const Color(0xFFFF6B9D).withValues(alpha: 0.15)
+                            : zt.bgPrimary,
                         borderRadius: BorderRadius.circular(ZendRadii.lg),
-                        border: Border.all(color: sel ? const Color(0xFFFF6B9D) : zt.border.withValues(alpha: 0.4), width: sel ? 2 : 1),
+                        border: Border.all(
+                          color: sel
+                              ? const Color(0xFFFF6B9D)
+                              : zt.border.withValues(alpha: 0.4),
+                          width: sel ? 2 : 1,
+                        ),
                       ),
-                      child: Center(child: Text(s.emoji, style: TextStyle(fontSize: sel ? 24 : 20))),
+                      child: Center(
+                        child: Text(
+                          s.emoji,
+                          style: TextStyle(fontSize: sel ? 24 : 20),
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
             ),
           const SizedBox(height: 8),
-          _primaryBtn(zt, 'Preview', const Color(0xFFFF6B9D), _selectedSticker != null ? _confirmVibeSticker : null),
+          _primaryBtn(
+            zt,
+            'Preview',
+            const Color(0xFFFF6B9D),
+            _selectedSticker != null ? _confirmVibeSticker : null,
+          ),
         ],
       ),
     );
@@ -735,27 +925,61 @@ class _DmInputBarState extends State<DmInputBar>
         children: [
           Row(
             children: [
-              GestureDetector(onTap: () => _setMode(_PanelMode.vibeSticker),
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20)),
+              GestureDetector(
+                onTap: () => _setMode(_PanelMode.vibeSticker),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textSecondary,
+                  size: 20,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Ready to send', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary))),
+              Expanded(
+                child: Text(
+                  'Ready to send',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: zt.textPrimary,
+                  ),
+                ),
+              ),
             ],
           ),
           const Spacer(),
-          Text(_selectedSticker?.emoji ?? '✨', style: const TextStyle(fontSize: 64)),
+          Text(
+            _selectedSticker?.emoji ?? '✨',
+            style: const TextStyle(fontSize: 64),
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: const Color(0xFFFF6B9D).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(ZendRadii.pill),
-              border: Border.all(color: const Color(0xFFFF6B9D).withValues(alpha: 0.3)),
+              border: Border.all(
+                color: const Color(0xFFFF6B9D).withValues(alpha: 0.3),
+              ),
             ),
-            child: Text('\$${_vibeAmount.toStringAsFixed(2)} hidden ✨',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0xFFFF6B9D), fontWeight: FontWeight.w600)),
+            child: Text(
+              '\$${_vibeAmount.toStringAsFixed(2)} hidden ✨',
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 13,
+                color: Color(0xFFFF6B9D),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
-          Text('Recipient taps to reveal', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+          Text(
+            'Recipient taps to reveal',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              color: zt.textSecondary,
+            ),
+          ),
           const Spacer(),
           SizedBox(
             width: double.infinity,
@@ -765,14 +989,29 @@ class _DmInputBarState extends State<DmInputBar>
                 backgroundColor: const Color(0xFFFF6B9D),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(_selectedSticker?.emoji ?? '✨', style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
-                const Text('Send Vibe', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
-              ]),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _selectedSticker?.emoji ?? '✨',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Send Vibe',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -783,11 +1022,22 @@ class _DmInputBarState extends State<DmInputBar>
   // ── Shared widgets ──────────────────────────────────────────────────────────
 
   Widget _handle(ZendTheme zt) => Center(
-    child: Container(width: 36, height: 4,
-      decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill))),
+    child: Container(
+      width: 36,
+      height: 4,
+      decoration: BoxDecoration(
+        color: zt.border,
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
+      ),
+    ),
   );
 
-  Widget _primaryBtn(ZendTheme zt, String label, Color color, VoidCallback? onTap) => SizedBox(
+  Widget _primaryBtn(
+    ZendTheme zt,
+    String label,
+    Color color,
+    VoidCallback? onTap,
+  ) => SizedBox(
     width: double.infinity,
     child: ElevatedButton(
       onPressed: onTap,
@@ -795,15 +1045,24 @@ class _DmInputBarState extends State<DmInputBar>
         backgroundColor: onTap != null ? zt.textPrimary : zt.border,
         foregroundColor: onTap != null ? zt.bgPrimary : zt.textSecondary,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ZendRadii.pill),
+        ),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
-      child: Text(label, style: const TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontFamily: 'Geist',
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     ),
   );
 
   Widget _keypad(ZendTheme zt) {
-    const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫'];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
     return GridView.count(
       crossAxisCount: 3,
       shrinkWrap: true,
@@ -811,13 +1070,29 @@ class _DmInputBarState extends State<DmInputBar>
       childAspectRatio: 3.0,
       mainAxisSpacing: 4,
       crossAxisSpacing: 4,
-      children: keys.map((k) => GestureDetector(
-        onTap: () => _onKeypadTap(k),
-        child: Container(
-          decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.md)),
-          child: Center(child: Text(k, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18, color: k == '⌫' ? zt.accent : zt.textPrimary, fontWeight: FontWeight.w600))),
-        ),
-      )).toList(),
+      children: keys
+          .map(
+            (k) => GestureDetector(
+              onTap: () => _onKeypadTap(k),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: zt.bgPrimary,
+                  borderRadius: BorderRadius.circular(ZendRadii.md),
+                ),
+                child: Center(
+                  child: Text(
+                    k,
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 18,
+                      color: k == '⌫' ? zt.accent : zt.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -848,7 +1123,10 @@ class _MonoActionTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: zt.bgPrimary,
             borderRadius: BorderRadius.circular(ZendRadii.xl),
-            border: Border.all(color: zt.border.withValues(alpha: 0.5), width: 0.8),
+            border: Border.all(
+              color: zt.border.withValues(alpha: 0.5),
+              width: 0.8,
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

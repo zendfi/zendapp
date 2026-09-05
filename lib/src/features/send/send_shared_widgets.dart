@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Shared PIN entry stage widget, extracted from SendFlowSheet for reuse
@@ -43,7 +44,11 @@ class SendPinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -87,7 +92,9 @@ class SendPinStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 13,
-              color: pinError != null ? ZendColors.destructive : zt.textSecondary,
+              color: pinError != null
+                  ? ZendColors.destructive
+                  : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -135,19 +142,18 @@ class SendPinDots extends StatelessWidget {
 
 /// 3×4 PIN keypad widget.
 class SendPinKeypad extends StatelessWidget {
-  const SendPinKeypad({super.key, required this.onTap, required this.keyHeight});
+  const SendPinKeypad({
+    super.key,
+    required this.onTap,
+    required this.keyHeight,
+  });
 
   final ValueChanged<String> onTap;
   final double keyHeight;
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -331,7 +337,11 @@ class _SendSuccessStageState extends State<SendSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(
+                  PhosphorIconsRegular.checkCircle,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -382,10 +392,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: 'Done',
-                onPressed: widget.onDone,
-              ),
+              child: PrimaryButton(label: 'Done', onPressed: widget.onDone),
             ),
           ],
         ),
@@ -423,7 +430,11 @@ class SendErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.xCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             // Spec §60-61: specific, human, recoverable — not decorative
@@ -450,18 +461,12 @@ class SendErrorStage extends StatelessWidget {
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: 'Retry',
-                onPressed: onRetry,
-              ),
+              child: PrimaryButton(label: 'Retry', onPressed: onRetry),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: OutlineActionButton(
-                label: 'Cancel',
-                onPressed: onCancel,
-              ),
+              child: OutlineActionButton(label: 'Cancel', onPressed: onCancel),
             ),
           ],
         ),
@@ -514,6 +519,214 @@ class SendUncertainStage extends StatelessWidget {
                 color: zt.textSecondary,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Visibility pill ──────────────────────────────────────────────────────────
+
+/// Compact control for who may see a payment in Activity.
+///
+/// Deliberately a single tappable summary rather than three inline options: the
+/// default is right for most payments, so the common path stays readable at a
+/// glance and skippable, with the choice one tap away for the minority who want it.
+///
+/// Shared between the entry sheet's confirm state and the full send sheet so both
+/// offer the same three choices with identical wording — a privacy control that
+/// says different things in different places is worse than one that is missing.
+class VisibilityPill extends StatelessWidget {
+  const VisibilityPill({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final TransferVisibility value;
+  final ValueChanged<TransferVisibility> onChanged;
+
+  static IconData _iconFor(TransferVisibility value) => switch (value) {
+    TransferVisibility.private => PhosphorIconsRegular.lockSimple,
+    TransferVisibility.publicWithoutAmount => PhosphorIconsRegular.usersThree,
+    TransferVisibility.publicWithAmount => PhosphorIconsRegular.globeSimple,
+  };
+
+  static String _labelFor(TransferVisibility value) => switch (value) {
+    TransferVisibility.private => 'Private',
+    TransferVisibility.publicWithoutAmount => 'Shared, no amount',
+    TransferVisibility.publicWithAmount => 'Shared',
+  };
+
+  /// Phrased as "not shared" rather than "only you". Visibility resolves
+  /// most-open-wins across both parties, so the recipient can still surface an edge
+  /// the sender kept private — promising secrecy would be a guarantee the model
+  /// does not make.
+  static String _subtitleFor(TransferVisibility value) => switch (value) {
+    TransferVisibility.private => 'Not shared with your mutuals',
+    TransferVisibility.publicWithoutAmount =>
+      'Mutuals see the payment, not the amount',
+    TransferVisibility.publicWithAmount =>
+      'Mutuals see the payment and the amount',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Semantics(
+      button: true,
+      label: 'Payment visibility: ${_labelFor(value)}. Tap to change.',
+      child: GestureDetector(
+        onTap: () => _showOptions(context),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: zt.bgElevated,
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+            border: Border.all(color: zt.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_iconFor(value), size: 13, color: zt.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                _labelFor(value),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                PhosphorIconsRegular.caretUpDown,
+                size: 12,
+                color: zt.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showOptions(BuildContext context) async {
+    final zt = ZendTheme.of(context);
+    final picked = await showModalBottomSheet<TransferVisibility>(
+      context: context,
+      backgroundColor: zt.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: Text(
+                'Who can see this?',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Applies to this payment only.',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ),
+            for (final option in TransferVisibility.values)
+              _VisibilityOptionRow(
+                icon: _iconFor(option),
+                title: _labelFor(option),
+                subtitle: _subtitleFor(option),
+                selected: option == value,
+                onTap: () => Navigator.of(sheetContext).pop(option),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked != value) onChanged(picked);
+  }
+}
+
+class _VisibilityOptionRow extends StatelessWidget {
+  const _VisibilityOptionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? zt.accent : zt.textSecondary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(
+                PhosphorIconsRegular.checkCircle,
+                size: 18,
+                color: zt.accent,
+              ),
           ],
         ),
       ),

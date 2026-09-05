@@ -934,14 +934,17 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                // Centred, not top-aligned: at radius 26 the avatar is taller
+                // than the headline + timestamp beside it, so start-alignment
+                // would pin the text to the avatar's top edge and leave a gap
+                // under it. Matches the chat tile.
                 children: [
                   ZendAvatar(
-                    radius: 18,
+                    radius: 26,
                     photoUrl: avatarUrl,
                     initials: avatarInitial,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
