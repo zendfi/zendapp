@@ -7,6 +7,7 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/api_exceptions.dart' show ApiException;
 import '../../models/recent_contact.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import '../send/send_flow_sheet.dart';
@@ -203,15 +204,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
     if (emailRegex.hasMatch(raw)) {
-      // Non-Zend recipient by email — spec §15: same identity-first
-      // treatment, just without a Zend username at the end of it.
-      setState(() {
-        _email = raw;
-        _displayName = raw.split('@').first;
-        _zendtag = null;
-        _avatarUrl = null;
-      });
-      _goToStage(_EntryStage.amount);
+      await _resolveEmailIdentity(raw);
       return;
     }
 
@@ -238,6 +231,65 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _identityError =
             "We couldn't find anyone with that identity. Check the username or email and try again.";
       });
+    }
+  }
+
+  /// Resolves an email address, preferring an existing Zend account over an
+  /// email intent.
+  ///
+  /// An email is not evidence that someone is *not* on Zend. A zkLogin account is
+  /// created with its email as a **placeholder zendtag**, so a user who has never
+  /// picked a username is reachable only by the address they signed up with.
+  /// Treating every email as an outsider sent a claim link to people who already
+  /// had a working, sometimes funded, wallet — and routed a direct transfer through
+  /// escrow for no reason.
+  ///
+  /// The full send sheet already did this lookup; only this sheet skipped it, which
+  /// is why the two disagreed.
+  Future<void> _resolveEmailIdentity(String email) async {
+    setState(() => _searching = true);
+    final model = ZendScope.of(context);
+
+    try {
+      final resolved = await model.zendtagService.resolveByEmail(email);
+      if (!mounted) return;
+      setState(() {
+        _zendtag = resolved.zendtag;
+        // A placeholder zendtag *is* an email, and "@someone@gmail.com" reads as a
+        // mistake — so only prefix a tag that is actually a username.
+        _displayName = resolved.displayName.trim().isNotEmpty
+            ? resolved.displayName
+            : (resolved.zendtag.contains('@')
+                  ? resolved.zendtag
+                  : '@${resolved.zendtag}');
+        _avatarUrl = resolved.avatarUrl;
+        // Cleared deliberately: `_commitZend` branches to the email-intent flow on
+        // a non-null `_email`, and this recipient is a normal Zend send.
+        _email = null;
+        _searching = false;
+      });
+      _goToStage(_EntryStage.amount);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.errorCode != 'EMAIL_NOT_FOUND') {
+        // A lookup that failed for any other reason must not silently downgrade a
+        // Zend user to a claim link. Surface it so the send can be retried.
+        setState(() {
+          _searching = false;
+          _identityError =
+              "We couldn't check that email just now. Please try again.";
+        });
+        return;
+      }
+      // Genuinely not on Zend — the email-intent flow is correct here.
+      setState(() {
+        _email = email;
+        _displayName = email.split('@').first;
+        _zendtag = null;
+        _avatarUrl = null;
+        _searching = false;
+      });
+      _goToStage(_EntryStage.amount);
     }
   }
 
