@@ -146,10 +146,18 @@ class TransferService {
       final converted = await binding.signer.makeFundsSpendable();
       if (!converted) rethrow;
 
+      // A fresh key, deliberately. The backend caches the *failed* prepare
+      // response against its idempotency key for 90 seconds, so retrying under the
+      // original key replays the pre-deposit rejection without ever reaching the
+      // rail — the funds move, and the transfer still fails with a stale error.
+      //
+      // Safe because prepare only builds an unsigned transaction and moves nothing.
+      // Submit keeps its own key in a separate namespace, so double-send protection
+      // is unaffected by this.
       return binding.client.prepareTransfer(
         recipientZendtag: recipientZendtag,
         amountUsdc: amountUsdc,
-        idempotencyKey: idempotencyKey,
+        idempotencyKey: const Uuid().v4(),
       );
     }
   }
