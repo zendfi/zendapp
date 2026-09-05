@@ -170,6 +170,10 @@ class TransferService {
     String? pin,
     Uint8List? keypairBytes,
     String? note,
+
+    /// Who may see this transfer in Activity. Null inherits the sender's profile
+    /// default rather than forcing a choice.
+    TransferVisibility? visibility,
   }) async {
     // Resolved before validating authorization, because whether a local secret is
     // even required depends on the rail: a zkLogin account signs with an
@@ -220,6 +224,7 @@ class TransferService {
       amountUsdc: amountUsdc,
       signedTransfer: signedTransfer,
       note: note,
+      visibility: visibility,
     );
     return TransferResponse(
       transferId: submission.transferId,

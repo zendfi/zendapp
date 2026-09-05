@@ -8,9 +8,11 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_error_modal.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/api_exceptions.dart' show ApiException, PinDecryptionException, RequestTimeoutException;
+import '../../models/api_exceptions.dart'
+    show ApiException, PinDecryptionException, RequestTimeoutException;
 import '../../models/email_intent.dart';
 import '../../models/recent_contact.dart';
+import '../../services/payment_rail_models.dart' show TransferVisibility;
 import '../../services/payment_rails.dart' show RailUnavailableException;
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
@@ -102,6 +104,18 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   final _noteController = TextEditingController();
 
+  /// Who may see this payment in Activity.
+  ///
+  /// Held here rather than in the recipient stage so it survives the stage
+  /// transitions between composing and paying, and so `_executeTransfer` can read it
+  /// without threading it back up through a callback.
+  ///
+  /// Defaults to private, matching the backend's own default for a user who has
+  /// never chosen. Sent explicitly on every payment rather than omitted, so what the
+  /// control displays is always what is applied — an inherited default the user
+  /// cannot see would make this control lie whenever the two disagreed.
+  TransferVisibility _visibility = TransferVisibility.private;
+
   String _pinDigits = '';
   int _pinAttempts = 0;
   String? _pinError;
@@ -116,16 +130,16 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticOut,
-    ));
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
 
     if (widget.prefilledRecipient != null) {
       _recipientZendtag = widget.prefilledRecipient;
@@ -161,7 +175,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       case SendStage.preparing:
         return 0.45;
       case SendStage.recipient:
-        return 1.0;   // full app height
+        return 1.0; // full app height
       case SendStage.pin:
         return 0.70;
       case SendStage.processing:
@@ -186,8 +200,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     return '\$${widget.amount.toStringAsFixed(2)}';
   }
 
-  String get _amountFormattedExact =>
-      '\$${widget.amount.toStringAsFixed(2)}';
+  String get _amountFormattedExact => '\$${widget.amount.toStringAsFixed(2)}';
 
   void _goTo(SendStage stage) {
     setState(() => _stage = stage);
@@ -291,13 +304,18 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       final cache = WalletSessionCache.instance;
       if (cache.hasKeypair) {
         // We're in the PIN stage because policy required it — verify PIN
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
-            _showTerminalError('Too many incorrect PIN attempts. Please unlock again.');
+            _showTerminalError(
+              'Too many incorrect PIN attempts. Please unlock again.',
+            );
           } else {
             _shakeController.forward(from: 0);
             setState(() {
@@ -349,6 +367,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           pin: pin,
           keypairBytes: keypairBytes,
           note: note,
+          visibility: _visibility,
         );
       } on ApiException catch (e) {
         // The backend refuses large transfers from a PIN-less account until
@@ -364,6 +383,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           pin: pin,
           keypairBytes: keypairBytes,
           note: note,
+          visibility: _visibility,
         );
       }
 
@@ -440,10 +460,14 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       final found = model.recentTransactions.any((tx) {
         final entry = tx.entry;
         if (entry == null) return false;
-        final matchesRecipient = entry.recipientZendtag.toLowerCase() == _recipientZendtag?.toLowerCase();
+        final matchesRecipient =
+            entry.recipientZendtag.toLowerCase() ==
+            _recipientZendtag?.toLowerCase();
         final entryAmount = double.tryParse(entry.amountUsdc) ?? -1;
         final matchesAmount = (entryAmount - widget.amount).abs() < 0.005;
-        final isRecent = DateTime.now().difference(entry.createdAt) < const Duration(minutes: 5);
+        final isRecent =
+            DateTime.now().difference(entry.createdAt) <
+            const Duration(minutes: 5);
         return matchesRecipient && matchesAmount && isRecent;
       });
 
@@ -452,7 +476,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           recipientZendtag: _recipientZendtag!,
           recipientDisplayName: _recipientDisplayName ?? '?',
           amount: widget.amount,
-          note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+          note: _noteController.text.trim().isEmpty
+              ? null
+              : _noteController.text.trim(),
         );
         unawaited(model.fetchBalance());
         if (!mounted) return;
@@ -469,7 +495,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     // honest: we don't actually know it failed, only that we couldn't
     // confirm it succeeded, so the retry path (re-checking) is safe
     // rather than presenting a false "failed".
-    _showTransferError("We still can't confirm this went through. Check Activity before sending again.");
+    _showTransferError(
+      "We still can't confirm this went through. Check Activity before sending again.",
+    );
   }
 
   void _onEmailIntentSelected(String email) {
@@ -487,7 +515,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     if (!needsPin && cache.hasKeypair) {
       // Session signing — skip PIN
       _goTo(SendStage.emailIntentPin);
-      await _executeEmailIntent(email: email, pin: null, keypairBytes: cache.keypair);
+      await _executeEmailIntent(
+        email: email,
+        pin: null,
+        keypairBytes: cache.keypair,
+      );
     } else {
       _goTo(SendStage.emailIntent);
     }
@@ -505,13 +537,18 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       // Verify PIN against session cache if available
       final cache = WalletSessionCache.instance;
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
-            _showTerminalError('Too many incorrect PIN attempts. Please unlock again.');
+            _showTerminalError(
+              'Too many incorrect PIN attempts. Please unlock again.',
+            );
           } else {
             _shakeController.forward(from: 0);
             setState(() {
@@ -522,7 +559,11 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           }
           return;
         }
-        await _executeEmailIntent(email: email, pin: null, keypairBytes: cache.keypair);
+        await _executeEmailIntent(
+          email: email,
+          pin: null,
+          keypairBytes: cache.keypair,
+        );
       } else {
         await _executeEmailIntent(email: email, pin: pin, keypairBytes: null);
       }
@@ -617,42 +658,42 @@ class _SendFlowSheetState extends State<SendFlowSheet>
     return PopScope(
       canPop: _stage != SendStage.processing && _stage != SendStage.uncertain,
       child: AnimatedContainer(
-          duration: _sheetResize,
-          curve: Curves.easeOutCubic,
-          height: screenHeight * _sheetHeightFraction,
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(ZendRadii.xxl),
-            ),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 14),
-              const ZendSheetHandle(),
-              const SizedBox(height: 8),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: _stageTransition,
-                  reverseDuration: const Duration(milliseconds: 140),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0, 0.04),
-                      end: Offset.zero,
-                    ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: RepaintBoundary(child: _buildStageContent()),
-                ),
-              ),
-            ],
+        duration: _sheetResize,
+        curve: Curves.easeOutCubic,
+        height: screenHeight * _sheetHeightFraction,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
           ),
         ),
+        child: Column(
+          children: [
+            const SizedBox(height: 14),
+            const ZendSheetHandle(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: _stageTransition,
+                reverseDuration: const Duration(milliseconds: 140),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final slide = Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(position: slide, child: child),
+                  );
+                },
+                child: RepaintBoundary(child: _buildStageContent()),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -672,6 +713,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           amount: widget.amount,
           amountFormatted: _amountFormatted,
           noteController: _noteController,
+          visibility: _visibility,
+          onVisibilityChanged: (next) => setState(() => _visibility = next),
           prefilledRecipient: widget.prefilledRecipient,
           onConfirm: _onRecipientConfirmed,
           onEmailIntentSelected: _onEmailIntentSelected,
@@ -706,7 +749,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           key: const ValueKey('success'),
           amountFormattedExact: _amountFormattedExact,
           recipientZendtag: _recipientZendtag ?? '',
-          note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+          note: _noteController.text.trim().isEmpty
+              ? null
+              : _noteController.text.trim(),
           onDone: _dismiss,
         );
       case SendStage.emailIntent:
@@ -782,6 +827,8 @@ class _RecipientStage extends StatefulWidget {
     required this.amount,
     required this.amountFormatted,
     required this.noteController,
+    required this.visibility,
+    required this.onVisibilityChanged,
     required this.onConfirm,
     required this.onEmailIntentSelected,
     this.prefilledRecipient,
@@ -790,6 +837,8 @@ class _RecipientStage extends StatefulWidget {
   final double amount;
   final String amountFormatted;
   final TextEditingController noteController;
+  final TransferVisibility visibility;
+  final ValueChanged<TransferVisibility> onVisibilityChanged;
   final String? prefilledRecipient;
   final void Function(String tag, String displayName) onConfirm;
   final void Function(String email) onEmailIntentSelected;
@@ -808,6 +857,7 @@ class _RecipientStageState extends State<_RecipientStage> {
   String? _resolveError;
   String? _resolvedDisplayName;
   String? _resolvedAvatarUrl;
+
   /// When an email resolves to a registered user, this holds their actual
   /// zendtag so the send routes correctly (not the raw email input).
   String? _resolvedZendtag;
@@ -1001,7 +1051,42 @@ class _RecipientStageState extends State<_RecipientStage> {
                       color: zt.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 20),
+
+                  // ── Note, directly beneath the amount ────────────────
+                  //
+                  // Sits here rather than in a labelled field row further down so
+                  // the composed payment reads the way its receipt will: amount,
+                  // then what it was for. Borderless and unlabelled because the
+                  // placeholder already says what it is, and a "Note" label beside
+                  // an empty box is one more thing to read for no added meaning.
+                  const SizedBox(height: 2),
+                  TextField(
+                    controller: widget.noteController,
+                    focusNode: _forFocus,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _forFocus.unfocus(),
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'What for?',
+                      hintStyle: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        color: zt.textSecondary,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                    ),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
 
                   // ── To field ─────────────────────────────────────────
                   _FieldRow(
@@ -1041,14 +1126,18 @@ class _RecipientStageState extends State<_RecipientStage> {
                           maxHeight: 24,
                         ),
                         suffixIcon: _resolving
-                            ? ZendLoader(size: 16, strokeWidth: 1.5, color: zt.textSecondary)
+                            ? ZendLoader(
+                                size: 16,
+                                strokeWidth: 1.5,
+                                color: zt.textSecondary,
+                              )
                             : _resolvedDisplayName != null
-                                ? Icon(
-                                    PhosphorIconsRegular.checkCircle,
-                                    size: 16,
-                                    color: zt.accentBright,
-                                  )
-                                : null,
+                            ? Icon(
+                                PhosphorIconsRegular.checkCircle,
+                                size: 16,
+                                color: zt.accentBright,
+                              )
+                            : null,
                       ),
                       style: TextStyle(
                         fontFamily: 'Geist',
@@ -1074,7 +1163,10 @@ class _RecipientStageState extends State<_RecipientStage> {
                           ],
                           Text(
                             _resolvedDisplayName!,
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accentBright),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.accentBright,
+                            ),
                           ),
                         ],
                       ),
@@ -1084,40 +1176,13 @@ class _RecipientStageState extends State<_RecipientStage> {
                       padding: const EdgeInsets.only(left: 48, top: 4),
                       child: Text(
                         _resolveError!,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 12,
+                          color: ZendColors.destructive,
+                        ),
                       ),
                     ),
                   ],
-
-                  const SizedBox(height: 4),
-                  Divider(color: zt.border, height: 1),
-                  const SizedBox(height: 4),
-
-                  // ── For field ─────────────────────────────────────────
-                  _FieldRow(
-                    label: 'Note',
-                    child: TextField(
-                      controller: widget.noteController,
-                      focusNode: _forFocus,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _forFocus.unfocus(),
-                      decoration: InputDecoration(
-                        hintText: 'optional',
-                        hintStyle: TextStyle(color: zt.textSecondary),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        filled: false,
-                      ),
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 15,
-                        color: zt.textPrimary,
-                      ),
-                    ),
-                  ),
 
                   const SizedBox(height: 4),
                   Divider(color: zt.border, height: 1),
@@ -1134,16 +1199,27 @@ class _RecipientStageState extends State<_RecipientStage> {
                         children: [
                           Text(
                             "You don't have enough available cash.",
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: ZendColors.destructive),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: ZendColors.destructive,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Available · \$${model.spendableBalance.toStringAsFixed(2)}',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
                           ),
                           Text(
                             "You're trying to send · ${widget.amountFormatted}",
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -1162,17 +1238,17 @@ class _RecipientStageState extends State<_RecipientStage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...recentContacts.map((contact) => _ContactTile(
-                          contact: contact,
-                          onTap: () => _selectContact(contact),
-                        )),
+                    ...recentContacts.map(
+                      (contact) => _ContactTile(
+                        contact: contact,
+                        onTap: () => _selectContact(contact),
+                      ),
+                    ),
                   ],
 
                   // ── Device contacts on Zend ────────────────────────────
                   if (!keyboardOpen)
-                    _ZendContactsSection(
-                      onSelectContact: _selectContact,
-                    ),
+                    _ZendContactsSection(onSelectContact: _selectContact),
                 ],
               ),
             ),
@@ -1183,38 +1259,248 @@ class _RecipientStageState extends State<_RecipientStage> {
             left: 20,
             right: 20,
             bottom: (keyboardOpen ? keyboardHeight : 0) + 16,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.15),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Visibility sits immediately above the button and right-aligned:
+                // close enough to read as part of the same decision, small enough
+                // not to compete with it. Most payments are private and the default
+                // is correct, so this stays a quiet affordance rather than a step.
+                _VisibilityPill(
+                  value: widget.visibility,
+                  onChanged: widget.onVisibilityChanged,
+                ),
+                const SizedBox(height: 10),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.15),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: _showEmailOption
+                        ? PrimaryButton(
+                            key: const ValueKey('email_intent'),
+                            label: 'Send via email →',
+                            onPressed: widget.amount > 0 && !_resolving
+                                ? _onPay
+                                : null,
+                          )
+                        : PrimaryButton(
+                            key: const ValueKey('normal_pay'),
+                            label: 'Pay ${widget.amountFormatted}',
+                            onPressed: _canPay ? _onPay : null,
+                          ),
                   ),
                 ),
-                child: _showEmailOption
-                    ? PrimaryButton(
-                        key: const ValueKey('email_intent'),
-                        label: 'Send via email →',
-                        onPressed: widget.amount > 0 && !_resolving
-                            ? _onPay
-                            : null,
-                      )
-                    : PrimaryButton(
-                        key: const ValueKey('normal_pay'),
-                        label: 'Pay ${widget.amountFormatted}',
-                        onPressed: _canPay ? _onPay : null,
-                      ),
-              ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Visibility pill ──────────────────────────────────────────────────────────
+
+/// Compact control for who may see a payment in Activity.
+///
+/// Deliberately a single tappable summary rather than three inline options: the
+/// default is right for most payments, so the common path should be readable at a
+/// glance and skippable, with the choice one tap away for the minority who want it.
+class _VisibilityPill extends StatelessWidget {
+  const _VisibilityPill({required this.value, required this.onChanged});
+
+  final TransferVisibility value;
+  final ValueChanged<TransferVisibility> onChanged;
+
+  static IconData _iconFor(TransferVisibility value) => switch (value) {
+    TransferVisibility.private => PhosphorIconsRegular.lockSimple,
+    TransferVisibility.publicWithoutAmount => PhosphorIconsRegular.usersThree,
+    TransferVisibility.publicWithAmount => PhosphorIconsRegular.globeSimple,
+  };
+
+  static String _labelFor(TransferVisibility value) => switch (value) {
+    TransferVisibility.private => 'Private',
+    TransferVisibility.publicWithoutAmount => 'Shared, no amount',
+    TransferVisibility.publicWithAmount => 'Shared',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Semantics(
+      button: true,
+      label: 'Payment visibility: ${_labelFor(value)}. Tap to change.',
+      child: GestureDetector(
+        onTap: () => _showOptions(context),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: zt.bgElevated,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: zt.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_iconFor(value), size: 13, color: zt.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                _labelFor(value),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                PhosphorIconsRegular.caretUpDown,
+                size: 12,
+                color: zt.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showOptions(BuildContext context) async {
+    final zt = ZendTheme.of(context);
+    final picked = await showModalBottomSheet<TransferVisibility>(
+      context: context,
+      backgroundColor: zt.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: Text(
+                'Who can see this?',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ),
+            // Phrased as "not shared" rather than "only you". Visibility resolves
+            // most-open-wins across both parties, so the recipient can still share
+            // an edge the sender kept private — promising secrecy here would be a
+            // guarantee the model does not make.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Applies to this payment only.',
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 13,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ),
+            for (final option in TransferVisibility.values)
+              _VisibilityOptionRow(
+                icon: _iconFor(option),
+                title: _labelFor(option),
+                subtitle: switch (option) {
+                  TransferVisibility.private => 'Not shared with your mutuals',
+                  TransferVisibility.publicWithoutAmount =>
+                    'Mutuals see the payment, not the amount',
+                  TransferVisibility.publicWithAmount =>
+                    'Mutuals see the payment and the amount',
+                },
+                selected: option == value,
+                onTap: () => Navigator.of(sheetContext).pop(option),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked != value) onChanged(picked);
+  }
+}
+
+class _VisibilityOptionRow extends StatelessWidget {
+  const _VisibilityOptionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? zt.accent : zt.textSecondary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(
+                PhosphorIconsRegular.checkCircle,
+                size: 18,
+                color: zt.accent,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1240,7 +1526,10 @@ class _FieldRow extends StatelessWidget {
             width: 36,
             child: Text(
               label,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -1264,7 +1553,8 @@ class _ContactTile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final handle = '@${contact.tag}';
     // Show name if it's different from just the handle (i.e. a real display name exists)
-    final hasRealName = contact.name.isNotEmpty &&
+    final hasRealName =
+        contact.name.isNotEmpty &&
         contact.name != handle &&
         contact.name != contact.tag;
 
@@ -1298,7 +1588,10 @@ class _ContactTile extends StatelessWidget {
                     ),
                   Text(
                     handle,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: hasRealName ? zt.textSecondary : zt.textPrimary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 12,
+                      color: hasRealName ? zt.textSecondary : zt.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -1365,7 +1658,11 @@ class _EmailIntentStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -1374,7 +1671,11 @@ class _EmailIntentStage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             maskedEmail,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: zt.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1394,7 +1695,10 @@ class _EmailIntentStage extends StatelessWidget {
               child: Text(
                 'Insufficient balance · \$${model.spendableBalance.toStringAsFixed(2)} available',
                 textAlign: TextAlign.center,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendColors.destructive),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 12,
+                  color: ZendColors.destructive,
+                ),
               ),
             ),
           SizedBox(height: compact ? 16 : 24),
@@ -1422,10 +1726,7 @@ class _EmailIntentStage extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            SendPinKeypad(
-              onTap: onKey,
-              keyHeight: compact ? 56 : 64,
-            ),
+            SendPinKeypad(onTap: onKey, keyHeight: compact ? 56 : 64),
             SizedBox(height: compact ? 4 : 12),
           ] else ...[
             const Spacer(),
@@ -1520,7 +1821,11 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(
+                  PhosphorIconsRegular.checkCircle,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -1547,16 +1852,16 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
               const SizedBox(height: 4),
               Text(
                 'Expires in $daysRemaining day${daysRemaining == 1 ? '' : 's'}',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
               ),
             ],
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: 'Done',
-                onPressed: widget.onDone,
-              ),
+              child: PrimaryButton(label: 'Done', onPressed: widget.onDone),
             ),
           ],
         ),
@@ -1637,7 +1942,11 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 ),
                 const Spacer(),
                 if (svc.loading)
-                  ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
+                  ZendLoader(
+                    size: 12,
+                    strokeWidth: 1.5,
+                    color: zt.textSecondary,
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -1654,10 +1963,12 @@ class _ZendContactsSectionState extends State<_ZendContactsSection> {
                 ),
               )
             else ...[
-              ...shown.map((c) => _ContactTile(
-                    contact: c,
-                    onTap: () => widget.onSelectContact(c),
-                  )),
+              ...shown.map(
+                (c) => _ContactTile(
+                  contact: c,
+                  onTap: () => widget.onSelectContact(c),
+                ),
+              ),
               if (contacts.length > 3)
                 GestureDetector(
                   onTap: () => setState(() => _expanded = !_expanded),

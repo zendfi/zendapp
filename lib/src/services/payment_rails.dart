@@ -85,6 +85,10 @@ abstract interface class RailClient {
     required double amountUsdc,
     required SignedRailTransfer signedTransfer,
     String? note,
+
+    /// Sender's Activity visibility choice for this transfer. Null inherits their
+    /// profile default.
+    TransferVisibility? visibility,
   });
 
   Future<RailHistory> getTransferHistory({String? cursor, int? limit});
@@ -265,6 +269,11 @@ class LegacySolanaRailClient implements RailClient {
     required double amountUsdc,
     required SignedRailTransfer signedTransfer,
     String? note,
+    // Accepted and dropped: the legacy endpoint has no visibility field. Dropping
+    // it means the edge inherits the sender's profile default, which is `private`
+    // — so a share request degrades to "not shared" rather than over-sharing. That
+    // is the safe direction to fail, and this path exists only as a rollback.
+    TransferVisibility? visibility,
   }) async {
     final transaction = _signedSolanaTransaction(signedTransfer);
     final legacy = await _apiClient.submitTransfer(
@@ -356,6 +365,7 @@ class SolanaV2RailClient implements RailClient {
     required double amountUsdc,
     required SignedRailTransfer signedTransfer,
     String? note,
+    TransferVisibility? visibility,
   }) {
     return _apiClient.submitP2pTransfer(
       rail: rail,
@@ -366,6 +376,7 @@ class SolanaV2RailClient implements RailClient {
       asset: PaymentAsset.usdc,
       envelope: signedTransfer.envelope,
       idempotencyKey: signedTransfer.idempotencyKey,
+      visibility: visibility,
     );
   }
 
@@ -447,6 +458,7 @@ class CapabilityGatedSolanaRailClient implements RailClient {
     required double amountUsdc,
     required SignedRailTransfer signedTransfer,
     String? note,
+    TransferVisibility? visibility,
   }) async {
     final client = _preparedClients[signedTransfer.idempotencyKey];
     if (client == null) {
@@ -458,6 +470,7 @@ class CapabilityGatedSolanaRailClient implements RailClient {
       amountUsdc: amountUsdc,
       signedTransfer: signedTransfer,
       note: note,
+      visibility: visibility,
     );
     _preparedClients.remove(signedTransfer.idempotencyKey);
     return result;
@@ -718,6 +731,7 @@ class SuiV2RailClient implements RailClient {
     required double amountUsdc,
     required SignedRailTransfer signedTransfer,
     String? note,
+    TransferVisibility? visibility,
   }) {
     return _apiClient.submitP2pTransfer(
       rail: rail,
@@ -728,6 +742,7 @@ class SuiV2RailClient implements RailClient {
       asset: PaymentAsset.usdc,
       envelope: signedTransfer.envelope,
       idempotencyKey: signedTransfer.idempotencyKey,
+      visibility: visibility,
     );
   }
 

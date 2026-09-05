@@ -21,6 +21,36 @@ extension PaymentAssetWireName on PaymentAsset {
   String get wireName => name;
 }
 
+/// Who may see a transfer in the Activity feed, chosen per send.
+///
+/// Scoped to one transfer — picking a value here never changes the sender's stored
+/// default. Omitting it entirely inherits that default.
+///
+/// [private] means "I am not sharing this", **not** "this cannot be seen".
+/// Visibility resolves most-open-wins across both parties, so the recipient can
+/// still surface an edge the sender kept private. Copy shown to users should not
+/// promise secrecy this cannot deliver.
+enum TransferVisibility {
+  /// Visible only to the two parties.
+  private,
+
+  /// Visible to mutuals, amount withheld.
+  publicWithoutAmount,
+
+  /// Visible to mutuals, amount included.
+  publicWithAmount,
+}
+
+extension TransferVisibilityWireName on TransferVisibility {
+  /// The backend's `visibility_preset` values. Named for the Activity model rather
+  /// than the UI, so these deliberately do not match the Dart identifiers.
+  String get wireName => switch (this) {
+    TransferVisibility.private => 'private',
+    TransferVisibility.publicWithoutAmount => 'share_activity_amount_hidden',
+    TransferVisibility.publicWithAmount => 'share_activity_full',
+  };
+}
+
 class RailEnvelope {
   final String type;
   final int version;

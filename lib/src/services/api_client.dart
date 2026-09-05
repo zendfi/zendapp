@@ -843,6 +843,11 @@ class ApiClient {
     required PaymentAsset asset,
     required RailEnvelope envelope,
     required String idempotencyKey,
+
+    /// Sender's Activity visibility choice. Omitted from the body entirely when
+    /// null, which the backend reads as "inherit my profile default" — distinct
+    /// from an explicit `private`.
+    TransferVisibility? visibility,
   }) async {
     try {
       final response = await _dio.post(
@@ -855,6 +860,7 @@ class ApiClient {
           'note': note,
           'asset': asset.wireName,
           'envelope': envelope.toJson(),
+          if (visibility != null) 'visibility_preset': visibility.wireName,
         },
         options: Options(
           headers: {'Idempotency-Key': idempotencyKey},
