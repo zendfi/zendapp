@@ -1747,6 +1747,10 @@ class ZendAppModel extends ChangeNotifier {
       unawaited(_snapshots.clearForUser(departingUserId));
     }
 
+    // Cached reaction counts carry a per-viewer `reactedByMe` flag, so they
+    // must not survive into another account's session.
+    activityDataService.clearReactionCache();
+
     // ── Balance ──
     balance = 0.0;
     spendableBalance = 0.0;

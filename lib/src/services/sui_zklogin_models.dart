@@ -95,6 +95,46 @@ class SuiZkLoginIdentity {
   }
 }
 
+/// An unsigned transaction that moves a wallet's coin-object holdings into its own
+/// address balance, making them spendable on the gasless rail.
+class SuiDepositPreparation {
+  const SuiDepositPreparation({
+    required this.transactionDataBcs,
+    required this.coinObjects,
+    required this.depositableBaseUnits,
+  });
+
+  /// Base64 BCS `TransactionData`, signed exactly like a prepared transfer.
+  final String transactionDataBcs;
+
+  /// How many coin objects this deposit consumes. Useful for wording: "1 deposit"
+  /// reads differently from "consolidating 14 deposits".
+  final int coinObjects;
+
+  /// Total being made spendable, in base units, as a string.
+  ///
+  /// A string for the same reason every other amount on this boundary is: money
+  /// must not pass through JSON float representation.
+  final String depositableBaseUnits;
+
+  factory SuiDepositPreparation.fromJson(Map<String, dynamic> json) {
+    final envelope = json['envelope'] as Map<String, dynamic>?;
+    final payload = envelope?['payload'] as Map<String, dynamic>?;
+    final bcs = payload?['transaction_data_bcs'] as String?;
+    if (bcs == null || bcs.isEmpty) {
+      throw StateError(
+        'The deposit could not be prepared: no transaction was returned',
+      );
+    }
+    return SuiDepositPreparation(
+      transactionDataBcs: bcs,
+      coinObjects: (payload?['coin_objects'] as num?)?.toInt() ?? 0,
+      depositableBaseUnits:
+          payload?['depositable_base_units'] as String? ?? '0',
+    );
+  }
+}
+
 /// A zero-knowledge proof, cached for the lifetime of a session.
 ///
 /// Reusable for any number of transactions until the network epoch passes

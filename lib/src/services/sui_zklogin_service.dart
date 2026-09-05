@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
+import 'payment_rail_models.dart' show PaymentNetwork, PaymentRail;
 import 'sui_oauth_provider.dart' show SuiOAuthPrompt;
 import 'sui_salt_custody_service.dart';
 import 'sui_salt_shares.dart';
@@ -504,6 +505,45 @@ class SuiZkLoginService {
         'Please sign in again.',
       );
     }
+  }
+
+  /// Makes coin-object funds spendable by depositing them into this wallet's own
+  /// address balance.
+  ///
+  /// Returns the transaction digest.
+  ///
+  /// Throws when there is nothing to deposit (`SUI_NO_COIN_OBJECTS`), which is the
+  /// normal state for a wallet funded entirely through Zend. That is acceptable for a
+  /// user-initiated action, where the caller can say so plainly. Anything calling
+  /// this automatically should check the coin-object balance first rather than
+  /// treating an exception as control flow.
+  ///
+  /// Deliberately not modelled as a transfer, and not gated on a step-up. A step-up
+  /// protects sending value to someone else; here sender and recipient are the same
+  /// address, there is no amount to choose, and the worst outcome of an unwanted call
+  /// is that the user's own funds become spendable.
+  ///
+  /// The transaction is fee-paying rather than gasless, because consuming coin
+  /// objects writes to them. Gas currently comes from the user's own SUI; sponsoring
+  /// it is the production answer and changes only who supplies the gas object.
+  Future<String> depositCoinObjectsToAddressBalance({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+  }) async {
+    final prepared = await _api.prepareSuiAddressBalanceDeposit(
+      rail: rail,
+      network: network,
+    );
+
+    final signature = await signPreparedTransaction(
+      transactionDataBcsBase64: prepared.transactionDataBcs,
+    );
+    return _api.submitSuiAddressBalanceDeposit(
+      rail: rail,
+      network: network,
+      transactionDataBcs: prepared.transactionDataBcs,
+      signature: signature,
+    );
   }
 
   /// Satisfies the backend's step-up requirement for a high-value transfer.

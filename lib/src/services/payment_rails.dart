@@ -52,6 +52,19 @@ abstract interface class TransactionSigner {
     required double amountUsdc,
     required SigningAuthorization authorization,
   });
+
+  /// Moves funds into the form this rail can actually spend, when they are not
+  /// already in it. Returns whether anything was done.
+  ///
+  /// Exists because Sui holds value in two places — `Coin<T>` objects and a
+  /// per-address accumulator — and gasless transfers can only draw on the
+  /// accumulator. Funds arriving from outside Zend land as coin objects: counted in
+  /// the balance, unspendable until deposited.
+  ///
+  /// On the interface rather than hidden inside the Sui signer so the send flow can
+  /// recover from a wrong-form balance without knowing which rail it is on, or that
+  /// address balances exist at all.
+  Future<bool> makeFundsSpendable();
 }
 
 /// Network operations for one explicitly selected payment rail.
@@ -107,6 +120,11 @@ class SolanaTransactionSigner implements TransactionSigner {
 
   @override
   PaymentNetwork get network => PaymentNetwork.mainnet;
+
+  /// Nothing to do: an SPL token account balance is spendable the moment it
+  /// arrives. Solana has no second storage form to convert from.
+  @override
+  Future<bool> makeFundsSpendable() async => false;
 
   @override
   Future<SignedRailTransfer> signPreparedTransfer({
@@ -639,6 +657,15 @@ class SuiTransactionSigner implements TransactionSigner {
       ),
       idempotencyKey: prepared.idempotencyKey,
     );
+  }
+
+  @override
+  Future<bool> makeFundsSpendable() async {
+    await _zkLogin.depositCoinObjectsToAddressBalance(
+      rail: rail,
+      network: _network,
+    );
+    return true;
   }
 }
 

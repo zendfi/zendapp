@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../core/zend_selector.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -49,6 +50,12 @@ class _DmListScreenState extends State<DmListScreen> {
   List<_ChatListItem> _items = const [];
   List<_ChatListItem> _displayItems = const [];
 
+  // Inputs as of the last merge, so a no-op notify can skip it entirely —
+  // see [_rebuildItems].
+  List<Pool>? _lastSourcePools;
+  List<DmThread>? _lastSourceThreads;
+  Set<String>? _lastUnreadPoolIds;
+
   @override
   void initState() {
     super.initState();
@@ -92,11 +99,34 @@ class _DmListScreenState extends State<DmListScreen> {
   /// an inactive pool lands in the list, never its row appearance.
   void _rebuildItems() {
     final model = ZendScope.read(context);
+    final pools = model.pools;
+    final unreadPools = model.poolsWithNewMessages;
+
+    // Skip the merge+sort when none of its three inputs changed. Without this
+    // it ran on every notifyListeners(), allocating a wrapper per row and
+    // re-sorting, to produce a list identical to the one already on screen.
+    //
+    // `_threads` and `model.pools` are always *replaced* rather than mutated,
+    // so identity is a sound signal for them. `poolsWithNewMessages` is a Set
+    // that IS mutated in place (`.add(poolId)` on an incoming FCM message), so
+    // identity says nothing about it and its contents have to be compared —
+    // cheap, since it only holds pools with unread messages right now.
+    final poolsUnchanged = identical(pools, _lastSourcePools);
+    final threadsUnchanged = identical(_threads, _lastSourceThreads);
+    final unreadUnchanged = _lastUnreadPoolIds != null &&
+        _lastUnreadPoolIds!.length == unreadPools.length &&
+        _lastUnreadPoolIds!.containsAll(unreadPools);
+    if (poolsUnchanged && threadsUnchanged && unreadUnchanged) return;
+
+    _lastSourcePools = pools;
+    _lastSourceThreads = _threads;
+    _lastUnreadPoolIds = Set<String>.of(unreadPools);
+
     _items = <_ChatListItem>[
       ..._threads.map(_ChatListItem.fromThread),
-      ...model.pools.map((p) => _ChatListItem.fromPool(
+      ...pools.map((p) => _ChatListItem.fromPool(
             p,
-            hasNewMessage: model.poolsWithNewMessages.contains(p.id),
+            hasNewMessage: unreadPools.contains(p.id),
           )),
     ]..sort((a, b) => b.sortTime.compareTo(a.sortTime));
     _applySearch();
@@ -376,20 +406,41 @@ class _DmListScreenState extends State<DmListScreen> {
                               : const _EmptyState()
                           : RefreshIndicator(
                               onRefresh: () => Future.wait([_loadThreads(), model.fetchPools()]),
-                              child: ListView.builder(
+                              // Selected on the merged list's identity, which
+                              // [_rebuildItems] now keeps stable across notifies
+                              // that don't touch chats — so a balance refresh
+                              // or an activity event no longer rebuilds every
+                              // visible chat row.
+                              child: ZendSelector<List<_ChatListItem>>(
+                                selector: (_) => _displayItems,
+                                builder: (context, items, _) => ListView.builder(
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                                itemCount: displayItems.length,
+                                itemCount: items.length,
                                 itemBuilder: (context, i) {
-                                  final item = displayItems[i];
-                                  return item.thread != null
-                                      ? _DmThreadTile(thread: item.thread!, onTap: () => _openThread(item.thread!))
-                                      : _PoolThreadTile(
-                                          pool: item.pool!,
-                                          hasNewMessage: item.hasNewMessage,
-                                          onTap: () => _openPool(item.pool!),
-                                        );
+                                  final item = items[i];
+                                  // Boundaried per row: preview decryption
+                                  // resolves one thread at a time and each
+                                  // resolution setStates this screen, so
+                                  // without this every arriving preview
+                                  // repaints the whole visible list rather
+                                  // than its own row.
+                                  return RepaintBoundary(
+                                    child: item.thread != null
+                                        ? _DmThreadTile(
+                                            key: ValueKey('dm-${item.thread!.roomId}'),
+                                            thread: item.thread!,
+                                            onTap: () => _openThread(item.thread!),
+                                          )
+                                        : _PoolThreadTile(
+                                            key: ValueKey('pool-${item.pool!.id}'),
+                                            pool: item.pool!,
+                                            hasNewMessage: item.hasNewMessage,
+                                            onTap: () => _openPool(item.pool!),
+                                          ),
+                                  );
                                 },
+                              ),
                               ),
                             ),
             ),
@@ -464,7 +515,7 @@ class _NewChatFab extends StatelessWidget {
 }
 
 class _DmThreadTile extends StatelessWidget {
-  const _DmThreadTile({required this.thread, required this.onTap});
+  const _DmThreadTile({super.key, required this.thread, required this.onTap});
   final DmThread thread;
   final VoidCallback onTap;
 
@@ -589,7 +640,12 @@ class _DmThreadTile extends StatelessWidget {
 /// it reads as "another conversation," not a separate financial-app
 /// section bolted onto the chat list.
 class _PoolThreadTile extends StatelessWidget {
-  const _PoolThreadTile({required this.pool, required this.hasNewMessage, required this.onTap});
+  const _PoolThreadTile({
+    super.key,
+    required this.pool,
+    required this.hasNewMessage,
+    required this.onTap,
+  });
 
   final Pool pool;
   final bool hasNewMessage;

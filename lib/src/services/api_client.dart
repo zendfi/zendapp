@@ -736,6 +736,71 @@ class ApiClient {
     }
   }
 
+  /// Prepares the transaction that makes coin-object funds spendable.
+  ///
+  /// Sui holds value either in `Coin<T>` objects or in a per-address accumulator,
+  /// and our gasless transfers can only withdraw from the accumulator. Funds
+  /// arriving from an exchange, an external wallet, or a CCTP mint land as coin
+  /// objects: visible in the balance, but unspendable until deposited.
+  ///
+  /// Not a transfer. Sender and recipient are the same address, no value moves, and
+  /// nothing is written to transfer history — hence the `wallet/` path rather than
+  /// `transfers/`.
+  Future<SuiDepositPreparation> prepareSuiAddressBalanceDeposit({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v2/p2p/wallet/deposit/prepare',
+        data: {'rail': rail.wireName, 'network': network.wireName},
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return SuiDepositPreparation.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Submits the signed deposit and returns the transaction digest.
+  Future<String> submitSuiAddressBalanceDeposit({
+    required PaymentRail rail,
+    required PaymentNetwork network,
+    required String transactionDataBcs,
+    required String signature,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v2/p2p/wallet/deposit/submit',
+        data: {
+          'rail': rail.wireName,
+          'network': network.wireName,
+          'envelope': {
+            'type': 'sui_signed_transaction',
+            'version': 1,
+            // `kind` and `version` are repeated inside the payload for the same
+            // reason as a transfer: the outer pair satisfies the shared envelope
+            // check, and the Sui rail deserializes this payload separately and
+            // requires its own `kind`.
+            'payload': {
+              'kind': 'sui_signed_transaction',
+              'version': 1,
+              'transaction_data_bcs': transactionDataBcs,
+              'signatures': [signature],
+            },
+          },
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return (response.data as Map<String, dynamic>)['transaction_id']
+          as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<PreparedRailTransfer> prepareP2pTransfer({
     required PaymentRail rail,
     required PaymentNetwork network,

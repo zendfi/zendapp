@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:uuid/uuid.dart';
 
+import '../models/api_exceptions.dart';
 import '../models/api_models.dart';
 import 'api_client.dart';
 import 'payment_rails.dart';
@@ -105,6 +106,54 @@ class TransferService {
     return (client: binding.client, signer: binding.signer);
   }
 
+  /// Rail error meaning "the funds exist but are in a form this rail cannot spend".
+  ///
+  /// On Sui, value lives either in `Coin<T>` objects or in a per-address accumulator,
+  /// and gasless transfers can only draw on the accumulator. Anything arriving from
+  /// outside Zend — an exchange withdrawal, an external wallet, a CCTP mint — lands as
+  /// coin objects, which count towards the balance but cannot be sent.
+  static const _fundsInWrongFormCode = 'SUI_ADDRESS_BALANCE_INSUFFICIENT';
+
+  /// Prepares the transfer, converting funds into spendable form first if the rail
+  /// says they are not.
+  ///
+  /// Handled here rather than surfaced as a separate user action, because "your money
+  /// is in the wrong internal representation" is not something a payments app should
+  /// ask a user to understand. They tap send once; two transactions may happen.
+  ///
+  /// This costs no extra authentication: the zkLogin proof is cached for the session,
+  /// so the deposit reuses it and there is no second Google round-trip.
+  ///
+  /// Retried exactly once. A second identical failure means something other than the
+  /// fund form is wrong — most likely that the deposit has not been indexed yet — and
+  /// looping on it would turn a visible error into a hang. The message from the rail
+  /// already names both the spendable and the parked amounts, so it is worth showing.
+  Future<PreparedRailTransfer> _prepareMakingFundsSpendableIfNeeded({
+    required ({RailClient client, TransactionSigner signer}) binding,
+    required String recipientZendtag,
+    required double amountUsdc,
+    required String idempotencyKey,
+  }) async {
+    try {
+      return await binding.client.prepareTransfer(
+        recipientZendtag: recipientZendtag,
+        amountUsdc: amountUsdc,
+        idempotencyKey: idempotencyKey,
+      );
+    } on ApiException catch (error) {
+      if (error.errorCode != _fundsInWrongFormCode) rethrow;
+
+      final converted = await binding.signer.makeFundsSpendable();
+      if (!converted) rethrow;
+
+      return binding.client.prepareTransfer(
+        recipientZendtag: recipientZendtag,
+        amountUsdc: amountUsdc,
+        idempotencyKey: idempotencyKey,
+      );
+    }
+  }
+
   /// Sends a USDC transfer to [recipientZendtag]. The return type remains the
   /// legacy UI DTO while all rail-facing data stays neutral and opaque.
   Future<TransferResponse> sendTransfer({
@@ -137,7 +186,8 @@ class TransferService {
     // One key identifies this logical send and is reused for prepare, submit,
     // and any adapter-level retries of either request.
     final idempotencyKey = const Uuid().v4();
-    final prepared = await binding.client.prepareTransfer(
+    final prepared = await _prepareMakingFundsSpendableIfNeeded(
+      binding: binding,
       recipientZendtag: recipientZendtag,
       amountUsdc: amountUsdc,
       idempotencyKey: idempotencyKey,

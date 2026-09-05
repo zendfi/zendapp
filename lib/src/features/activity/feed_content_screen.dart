@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
+import '../../core/zend_selector.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -78,6 +81,16 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   List<ActivityEdge> _sortedEdges = const [];
   List<ActivityEdge> _visibleEdges = const [];
 
+  // The viewer's own initial and avatar, resolved here and handed to every
+  // card. Previously each card read these from the app model itself, which
+  // subscribed every visible card to it — see [_FeedActivityCard]'s doc.
+  String _selfInitial = 'Y';
+  String? _selfAvatarUrl;
+
+  /// The model's edge list as of the last recompute, compared by identity to
+  /// skip redundant work — see [_rebuildSortedEdges].
+  List<ActivityEdge>? _lastSourceEdges;
+
   @override
   void initState() {
     super.initState();
@@ -112,7 +125,33 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   /// already been decided server-side before this list arrives.
   void _rebuildSortedEdges() {
     final model = ZendScope.of(context);
-    _sortedEdges = List<ActivityEdge>.of(model.threadedActivityEdges)
+    final source = model.threadedActivityEdges;
+
+    final nextSelfInitial = model.currentZendtag?.isNotEmpty == true
+        ? model.currentZendtag![0].toUpperCase()
+        : (model.currentDisplayName?.isNotEmpty == true
+              ? model.currentDisplayName![0].toUpperCase()
+              : 'Y');
+    final nextSelfAvatarUrl = model.currentAvatarUrl;
+    final viewerChanged =
+        nextSelfInitial != _selfInitial || nextSelfAvatarUrl != _selfAvatarUrl;
+
+    // Bail out when nothing this screen renders has actually changed.
+    //
+    // This runs on every notifyListeners(), and without the guard it re-sorted
+    // the entire edge list and allocated a fresh one every time — which also
+    // defeats the ZendSelector around the card list below, since a brand-new
+    // list instance always compares unequal. ZendAppModel assigns a *new* list
+    // whenever activity data changes (`threadedActivityEdges = response.edges`
+    // / `[...existing, ...new]`) and never mutates it in place, so identity is
+    // a sound change signal here.
+    if (identical(source, _lastSourceEdges) && !viewerChanged) return;
+
+    _lastSourceEdges = source;
+    _selfInitial = nextSelfInitial;
+    _selfAvatarUrl = nextSelfAvatarUrl;
+
+    _sortedEdges = List<ActivityEdge>.of(source)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _applyFilter();
   }
@@ -125,7 +164,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       return;
     }
     _visibleEdges = _sortedEdges.where((e) {
-      final label = e.isDirectParticipant ? e.counterparty.displayLabel.toLowerCase() : '';
+      final label = e.isDirectParticipant
+          ? e.counterparty.displayLabel.toLowerCase()
+          : '';
       final sender = (e.senderZendtag ?? '').toLowerCase();
       final recipient = (e.recipientZendtag ?? '').toLowerCase();
       final note = (e.note ?? '').toLowerCase();
@@ -137,13 +178,17 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   }
 
   void _onScroll() {
-    final offset = _listScrollController.hasClients ? _listScrollController.offset : 0.0;
+    final offset = _listScrollController.hasClients
+        ? _listScrollController.offset
+        : 0.0;
     final shouldCollapse = offset > _morphThreshold;
     if (shouldCollapse != _collapsed) {
       // Collapsing while the field is focused/has text would rip focus
       // away and orphan the query — expand back out instead so the user
       // never loses an in-progress search just by scrolling.
-      if (shouldCollapse && (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) return;
+      if (shouldCollapse && (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) {
+        return;
+      }
       setState(() => _collapsed = shouldCollapse);
     }
   }
@@ -161,30 +206,52 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   void _expandSearch() {
     if (!_collapsed) return;
     setState(() => _collapsed = false);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _searchFocus.requestFocus(),
+    );
   }
 
   Future<void> _openDm(ActivityCounterparty counterparty) async {
     final model = ZendScope.of(context);
     final zendtag = counterparty.displayLabel.replaceFirst('@', '');
     final cached = model.dmService.cachedThreads
-        .where((t) => t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase())
+        .where(
+          (t) => t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase(),
+        )
         .firstOrNull;
     if (cached != null) {
-      pushZendSlide(context, DmThreadScreen(roomId: cached.roomId, counterparty: cached.counterparty));
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          roomId: cached.roomId,
+          counterparty: cached.counterparty,
+        ),
+      );
       return;
     }
     try {
       final result = await model.dmService.getOrCreateRoom(counterparty.id);
-      if (!context.mounted) return;
-      pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
-        roomId: result.roomId,
-        counterparty: result.counterparty,
-      ));
+      // `mounted` on the State, which is what actually governs whether
+      // `context` is still usable here. (Was an `// ignore:` comment that
+      // dart format displaced onto an inner argument, where it silently
+      // stopped suppressing anything.)
+      if (!mounted) return;
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          roomId: result.roomId,
+          counterparty: result.counterparty,
+        ),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't open this chat — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -208,31 +275,45 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       final counterparty = edge.counterparty;
       chatTarget = counterparty;
       if (isVibe) {
-        headline = isOutgoing ? 'You sent a Vibe ✨ to ${counterparty.displayLabel}' : '✨ Vibe from ${counterparty.displayLabel}';
+        headline = isOutgoing
+            ? 'You sent a Vibe ✨ to ${counterparty.displayLabel}'
+            : '✨ Vibe from ${counterparty.displayLabel}';
       } else if (isPoolContrib) {
-        headline = isOutgoing ? 'You contributed to ${counterparty.displayLabel}' : '${counterparty.displayLabel} contributed';
+        headline = isOutgoing
+            ? 'You contributed to ${counterparty.displayLabel}'
+            : '${counterparty.displayLabel} contributed';
       } else {
         final verb = feedVerbFor(edge);
-        headline = isOutgoing ? 'You $verb ${counterparty.displayLabel}' : '${counterparty.displayLabel} $verb you';
+        headline = isOutgoing
+            ? 'You $verb ${counterparty.displayLabel}'
+            : '${counterparty.displayLabel} $verb you';
       }
       final selfInitial = model.currentZendtag?.isNotEmpty == true
           ? model.currentZendtag![0].toUpperCase()
-          : (model.currentDisplayName?.isNotEmpty == true ? model.currentDisplayName![0].toUpperCase() : 'Y');
+          : (model.currentDisplayName?.isNotEmpty == true
+                ? model.currentDisplayName![0].toUpperCase()
+                : 'Y');
       avatarInitial = isOutgoing ? selfInitial : counterparty.initialLetter;
       avatarUrl = isOutgoing ? model.currentAvatarUrl : counterparty.avatarUrl;
     } else {
       // External (public-to-Mutual) edge — neither party is the viewer.
       final senderTag = edge.senderZendtag;
       final recipientTag = edge.recipientZendtag;
-      final senderLabel = senderTag != null && senderTag.isNotEmpty ? '@$senderTag' : 'Someone';
-      final recipientLabel = recipientTag != null && recipientTag.isNotEmpty ? '@$recipientTag' : 'someone';
+      final senderLabel = senderTag != null && senderTag.isNotEmpty
+          ? '@$senderTag'
+          : 'Someone';
+      final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
+          ? '@$recipientTag'
+          : 'someone';
       final verb = feedVerbFor(edge);
       headline = isVibe
           ? '$senderLabel sent a Vibe ✨ to $recipientLabel'
           : isPoolContrib
-              ? '$senderLabel contributed to a pool'
-              : '$senderLabel $verb $recipientLabel';
-      avatarInitial = senderTag?.isNotEmpty == true ? senderTag![0].toUpperCase() : '?';
+          ? '$senderLabel contributed to a pool'
+          : '$senderLabel $verb $recipientLabel';
+      avatarInitial = senderTag?.isNotEmpty == true
+          ? senderTag![0].toUpperCase()
+          : '?';
       avatarUrl = edge.senderAvatarUrl;
       // No single "the other person" to chat with on an external edge
       // (spec §21's chat shortcut only makes sense between the viewer and
@@ -256,7 +337,12 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
+        const SnackBar(
+          content: Text(
+            'Details for this activity are not available',
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
+        ),
       );
       return;
     }
@@ -279,7 +365,8 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     final edges = _visibleEdges;
 
     final isLoading = model.threadedActivityLoading && allEdges.isEmpty;
-    final isNewUser = !isLoading && allEdges.isEmpty && model.spendableBalance == 0;
+    final isNewUser =
+        !isLoading && allEdges.isEmpty && model.spendableBalance == 0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -304,7 +391,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                 child: _collapsed
                     ? _CollapsedSearchAndBalance(
                         key: const ValueKey('collapsed'),
-                        balanceLabel: model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                        balanceLabel: model.balanceHidden
+                            ? '•••'
+                            : _formatBalance(model.spendableBalance),
                         onOpenWallet: widget.onOpenWallet,
                         onTapSearch: _expandSearch,
                       )
@@ -314,7 +403,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         focusNode: _searchFocus,
                         hasQuery: _searchQuery.isNotEmpty,
                         onClear: () => _searchController.clear(),
-                        balanceLabel: model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                        balanceLabel: model.balanceHidden
+                            ? '•••'
+                            : _formatBalance(model.spendableBalance),
                         onOpenWallet: widget.onOpenWallet,
                       ),
               ),
@@ -327,26 +418,51 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                 child: isLoading
                     ? const ActivityFeedSkeleton()
                     : isNewUser
-                        ? _buildNewUserState(zt)
-                        : edges.isEmpty
-                            ? _buildEmptyOrNoMatch(zt)
-                            : ListView.builder(
-                                controller: _listScrollController,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                                itemCount: edges.length,
-                                itemBuilder: (context, i) {
-                                  final edge = edges[i];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _FeedActivityCard(
-                                      key: ValueKey(edge.edgeId),
-                                      edge: edge,
-                                      onTap: () => _openActivity(edge),
-                                    ),
-                                  );
-                                },
+                    ? _buildNewUserState(zt)
+                    : edges.isEmpty
+                    ? _buildEmptyOrNoMatch(zt)
+                    // The card list is the expensive part of this
+                    // screen, and it depends on exactly one thing:
+                    // which edges are visible. Selecting on the list's
+                    // identity means an unrelated notify (a balance
+                    // refresh, an incoming DM, the transfer poll) no
+                    // longer rebuilds every visible card to produce
+                    // the same output. `_applyFilter` assigns a new
+                    // list only when the data or the query actually
+                    // changed, which is what makes identity the right
+                    // signal here.
+                    : ZendSelector<List<ActivityEdge>>(
+                        selector: (_) => _visibleEdges,
+                        builder: (context, visible, _) => ListView.builder(
+                          controller: _listScrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          itemCount: visible.length,
+                          itemBuilder: (context, i) {
+                            final edge = visible[i];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              // Each card owns an async reaction fetch
+                              // that repaints it independently of its
+                              // neighbours, so a boundary here stops one
+                              // card's count arriving from repainting the
+                              // whole visible list.
+                              child: RepaintBoundary(
+                                child: _FeedActivityCard(
+                                  key: ValueKey(edge.edgeId),
+                                  edge: edge,
+                                  // Passed down rather than read from the
+                                  // model inside the card — see
+                                  // _FeedActivityCard's doc.
+                                  selfInitial: _selfInitial,
+                                  selfAvatarUrl: _selfAvatarUrl,
+                                  onTap: () => _openActivity(edge),
+                                ),
                               ),
+                            );
+                          },
+                        ),
+                      ),
               ),
             ),
             // Network failure — existing content stays, no full-screen
@@ -357,7 +473,11 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                 child: Text(
                   "Couldn't refresh Activities. Try again.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
                 ),
               ),
           ],
@@ -377,16 +497,28 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             Text(
               'Nothing here yet.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Zend someone to get things started.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 20),
-            PrimaryButton(label: 'Zend', onPressed: () => showZendEntrySheet(context)),
+            PrimaryButton(
+              label: 'Zend',
+              onPressed: () => showZendEntrySheet(context),
+            ),
           ],
         ),
       ),
@@ -409,7 +541,11 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
           child: Center(
             child: Text(
               'No matches for "$_searchQuery"',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
             ),
           ),
         ),
@@ -448,15 +584,31 @@ class _ExpandedSearchBar extends StatelessWidget {
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textPrimary,
+            ),
             decoration: InputDecoration(
               hintText: 'Search activity',
-              hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
-              prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+              hintStyle: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary.withValues(alpha: 0.7),
+              ),
+              prefixIcon: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 18,
+                color: zt.textSecondary,
+              ),
               suffixIcon: hasQuery
                   ? GestureDetector(
                       onTap: onClear,
-                      child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                      child: Icon(
+                        PhosphorIconsRegular.xCircle,
+                        size: 18,
+                        color: zt.textSecondary,
+                      ),
                     )
                   : null,
               filled: true,
@@ -477,7 +629,12 @@ class _ExpandedSearchBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Text(
               balanceLabel,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 19, fontWeight: FontWeight.w600, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 19,
+                fontWeight: FontWeight.w600,
+                color: zt.textSecondary,
+              ),
             ),
           ),
         ),
@@ -511,9 +668,16 @@ class _CollapsedSearchAndBalance extends StatelessWidget {
           child: Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
-            child: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+            child: Icon(
+              PhosphorIconsRegular.magnifyingGlass,
+              size: 18,
+              color: zt.textSecondary,
+            ),
           ),
         ),
         const Spacer(),
@@ -522,10 +686,18 @@ class _CollapsedSearchAndBalance extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+            ),
             child: Text(
               balanceLabel,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
             ),
           ),
         ),
@@ -540,10 +712,31 @@ class _CollapsedSearchAndBalance extends StatelessWidget {
 /// `edge.amountHidden` exactly as the server computed it, no client-side
 /// re-deciding), and a reaction count. No privacy badge — per spec §6.4,
 /// the pronoun ("You" vs a name) already communicates who this is between.
+/// ── Deliberately has no ZendScope dependency ────────────────────────────
+/// This card used to call `ZendScope.of(context)` in its own `build`, purely
+/// to read three scalars about the viewer. Because each card is its own
+/// element, that registered a dependency on the whole app model *per card* —
+/// so every `notifyListeners()` (an SSE transfer fans out into several)
+/// dirtied every card on screen, to render values that hadn't changed.
+///
+/// The viewer's initials and avatar are now resolved once by the parent and
+/// passed in, which makes this card a pure function of its inputs.
 class _FeedActivityCard extends StatefulWidget {
-  const _FeedActivityCard({super.key, required this.edge, required this.onTap});
+  const _FeedActivityCard({
+    super.key,
+    required this.edge,
+    required this.selfInitial,
+    required this.selfAvatarUrl,
+    required this.onTap,
+  });
 
   final ActivityEdge edge;
+
+  /// The viewer's own initial and avatar, for the outgoing case where the
+  /// card shows *them* rather than the counterparty.
+  final String selfInitial;
+  final String? selfAvatarUrl;
+
   final VoidCallback onTap;
 
   @override
@@ -564,16 +757,33 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     }
   }
 
+  /// Cards that fly past during a fast scroll are built and disposed within a
+  /// few frames. Waiting this long before asking the network means they cost
+  /// nothing at all — only cards the user actually comes to rest on fetch.
+  static const _fetchSettleDelay = Duration(milliseconds: 300);
+
   @override
   void initState() {
     super.initState();
-    _loadReactions();
+    unawaited(_loadReactions());
   }
 
   Future<void> _loadReactions() async {
-    final model = ZendScope.of(context);
+    // `read`, not `of`: this runs from initState, where registering an
+    // inherited-widget dependency is illegal (it throws in debug and quietly
+    // subscribes this card to the whole app model in release).
+    final model = ZendScope.read(context);
+
+    await Future<void>.delayed(_fetchSettleDelay);
+    if (!mounted) return; // scrolled past — never worth a request
+
     try {
-      final reactions = await model.activityDataService.getEdgeReactions(_edgeKindStr, widget.edge.edgeId);
+      // Shared, deduped and short-lived TTL cache, so scrolling back over a
+      // card the user already saw costs nothing. See ActivityDataService.
+      final reactions = await model.activityDataService.getEdgeReactions(
+        _edgeKindStr,
+        widget.edge.edgeId,
+      );
       if (mounted) setState(() => _reactions = reactions);
     } catch (_) {
       // Non-fatal — card renders without a reaction count.
@@ -592,7 +802,6 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final model = ZendScope.of(context);
     final edge = widget.edge;
     final isDirect = edge.isDirectParticipant;
     final isOutgoing = edge.isOutgoing;
@@ -608,11 +817,10 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
 
     if (isDirect) {
       final counterparty = edge.counterparty;
-      final selfInitial = model.currentZendtag?.isNotEmpty == true
-          ? model.currentZendtag![0].toUpperCase()
-          : (model.currentDisplayName?.isNotEmpty == true ? model.currentDisplayName![0].toUpperCase() : 'Y');
-      avatarInitial = isOutgoing ? selfInitial : counterparty.initialLetter;
-      avatarUrl = isOutgoing ? model.currentAvatarUrl : counterparty.avatarUrl;
+      avatarInitial = isOutgoing
+          ? widget.selfInitial
+          : counterparty.initialLetter;
+      avatarUrl = isOutgoing ? widget.selfAvatarUrl : counterparty.avatarUrl;
 
       final verb = feedVerbFor(edge);
       final subject = counterparty.displayLabel;
@@ -620,23 +828,38 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         text: TextSpan(
-          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14.5,
+            color: zt.textPrimary,
+          ),
           children: isVibe
               ? [
-                  TextSpan(text: isOutgoing ? 'You sent a Vibe ✨ to ' : '✨ Vibe from '),
-                  TextSpan(text: subject, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(
+                    text: isOutgoing ? 'You sent a Vibe ✨ to ' : '✨ Vibe from ',
+                  ),
+                  TextSpan(
+                    text: subject,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ]
               : isPoolContrib
-                  ? [
-                      TextSpan(text: isOutgoing ? 'You contributed to ' : ''),
-                      TextSpan(text: subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(text: isOutgoing ? '' : ' contributed to a pool'),
-                    ]
-                  : [
-                      TextSpan(text: isOutgoing ? 'You $verb ' : ''),
-                      TextSpan(text: subject, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(text: isOutgoing ? '' : ' $verb you'),
-                    ],
+              ? [
+                  TextSpan(text: isOutgoing ? 'You contributed to ' : ''),
+                  TextSpan(
+                    text: subject,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: isOutgoing ? '' : ' contributed to a pool'),
+                ]
+              : [
+                  TextSpan(text: isOutgoing ? 'You $verb ' : ''),
+                  TextSpan(
+                    text: subject,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: isOutgoing ? '' : ' $verb you'),
+                ],
         ),
       );
     } else {
@@ -644,32 +867,57 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
       // signals this is someone else's shared activity (spec §6.4).
       final senderTag = edge.senderZendtag;
       final recipientTag = edge.recipientZendtag;
-      final senderLabel = senderTag != null && senderTag.isNotEmpty ? '@$senderTag' : 'Someone';
-      final recipientLabel = recipientTag != null && recipientTag.isNotEmpty ? '@$recipientTag' : 'someone';
-      avatarInitial = senderTag?.isNotEmpty == true ? senderTag![0].toUpperCase() : '?';
+      final senderLabel = senderTag != null && senderTag.isNotEmpty
+          ? '@$senderTag'
+          : 'Someone';
+      final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
+          ? '@$recipientTag'
+          : 'someone';
+      avatarInitial = senderTag?.isNotEmpty == true
+          ? senderTag![0].toUpperCase()
+          : '?';
       avatarUrl = edge.senderAvatarUrl;
       final verb = feedVerbFor(edge);
       headline = RichText(
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         text: TextSpan(
-          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14.5,
+            color: zt.textPrimary,
+          ),
           children: isVibe
               ? [
-                  TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(
+                    text: senderLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   const TextSpan(text: ' sent a Vibe ✨ to '),
-                  TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(
+                    text: recipientLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ]
               : isPoolContrib
-                  ? [
-                      TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const TextSpan(text: ' contributed to a pool'),
-                    ]
-                  : [
-                      TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(text: ' $verb '),
-                      TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ],
+              ? [
+                  TextSpan(
+                    text: senderLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const TextSpan(text: ' contributed to a pool'),
+                ]
+              : [
+                  TextSpan(
+                    text: senderLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: ' $verb '),
+                  TextSpan(
+                    text: recipientLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
         ),
       );
     }
@@ -688,7 +936,11 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ZendAvatar(radius: 18, photoUrl: avatarUrl, initials: avatarInitial),
+                  ZendAvatar(
+                    radius: 18,
+                    photoUrl: avatarUrl,
+                    initials: avatarInitial,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -698,7 +950,10 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                         const SizedBox(height: 2),
                         Text(
                           _relativeTime(edge.createdAt),
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 10.5,
+                            color: zt.textSecondary.withValues(alpha: 0.8),
+                          ),
                         ),
                       ],
                     ),
@@ -707,7 +962,12 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     const SizedBox(width: 8),
                     Text(
                       amountLabel,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ],
                 ],
@@ -718,22 +978,35 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   edge.note!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 14, height: 1.3, color: zt.textPrimary.withValues(alpha: 0.88)),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    height: 1.3,
+                    color: zt.textPrimary.withValues(alpha: 0.88),
+                  ),
                 ),
               ],
               const SizedBox(height: 10),
               Row(
                 children: [
                   Icon(
-                    totalReactions > 0 ? PhosphorIconsFill.heart : PhosphorIconsRegular.heart,
+                    totalReactions > 0
+                        ? PhosphorIconsFill.heart
+                        : PhosphorIconsRegular.heart,
                     size: 15,
-                    color: totalReactions > 0 ? zt.accent : zt.textSecondary.withValues(alpha: 0.6),
+                    color: totalReactions > 0
+                        ? zt.accent
+                        : zt.textSecondary.withValues(alpha: 0.6),
                   ),
                   if (totalReactions > 0) ...[
                     const SizedBox(width: 4),
                     Text(
                       '$totalReactions',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary, fontWeight: FontWeight.w600),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ],
