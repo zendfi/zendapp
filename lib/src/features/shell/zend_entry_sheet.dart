@@ -908,12 +908,19 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: _confirmingZend
-                ? Align(
+                ? Padding(
                     key: const ValueKey('visibility'),
-                    alignment: Alignment.centerRight,
-                    child: VisibilityPill(
-                      value: _visibility,
-                      onChanged: (next) => setState(() => _visibility = next),
+                    // Lifted off the button. The note field this replaces was
+                    // full-width and taller, so without the gap the pill sat
+                    // almost against the send button and read as attached to it
+                    // rather than as a separate choice.
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: VisibilityPill(
+                        value: _visibility,
+                        onChanged: (next) => setState(() => _visibility = next),
+                      ),
                     ),
                   )
                 : Container(

@@ -581,7 +581,7 @@ class VisibilityPill extends StatelessWidget {
         onTap: () => _showOptions(context),
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: zt.bgElevated,
             borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -590,20 +590,28 @@ class VisibilityPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(_iconFor(value), size: 13, color: zt.textSecondary),
-              const SizedBox(width: 6),
+              // Primary text rather than secondary, and weighted: this is a
+              // decision about who sees a payment, sitting one tap from an
+              // irreversible action. Muted grey read as a passive caption, which
+              // meant people scrolled past it without registering there was a
+              // choice to make.
+              Icon(_iconFor(value), size: 16, color: zt.textPrimary),
+              const SizedBox(width: 8),
               Text(
                 _labelFor(value),
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontSize: 12,
-                  color: zt.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: zt.textPrimary,
                 ),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
+              // The caret stays secondary — it signals tappability without
+              // competing with the label for attention.
               Icon(
                 PhosphorIconsRegular.caretUpDown,
-                size: 12,
+                size: 14,
                 color: zt.textSecondary,
               ),
             ],
