@@ -90,6 +90,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   // focused. Focus is requested explicitly, once, per stage.
   final _searchFocus = FocusNode();
   final _amountFocus = FocusNode();
+
+  /// A *complete* address, not a fragment. Only a full address is worth an exact
+  /// lookup, and only a full address is safe to look up — see [_search].
+  static final RegExp _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   Timer? _debounce;
   String _query = '';
   bool _searching = false;
@@ -188,9 +193,32 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     try {
       final model = ZendScope.of(context);
       final results = await model.walletService.apiClient.searchUsers(q);
+
+      // Substring search cannot find a zkLogin user who never chose a username.
+      // `search_users` excludes placeholder handles on purpose, because a
+      // substring query over them would enumerate email addresses — a real
+      // privacy protection, not an oversight.
+      //
+      // The consequence is that these users are invisible to search while being
+      // perfectly reachable by the address they signed up with. So a *complete*
+      // address gets an exact lookup as well. Exact match carries no enumeration
+      // risk: it requires already knowing the whole address.
+      //
+      // Done here rather than only on submit, because a result the user cannot
+      // see is a result that does not exist to them.
+      final resolved = _emailRegex.hasMatch(q)
+          ? await _lookupExactEmail(model, q)
+          : null;
       if (!mounted || _query != q) return;
       setState(() {
-        _results = results;
+        _results = [
+          if (resolved != null) resolved,
+          // Guard against listing the same account twice when search did find it.
+          ...results.where(
+            (user) =>
+                resolved == null || user['zendtag'] != resolved['zendtag'],
+          ),
+        ];
         _searching = false;
       });
     } catch (_) {
@@ -198,12 +226,31 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     }
   }
 
+  /// Exact-email lookup, shaped like a search row so it can be listed alongside
+  /// them. Null when no Zend account holds this address.
+  Future<Map<String, dynamic>?> _lookupExactEmail(
+    ZendAppModel model,
+    String email,
+  ) async {
+    try {
+      final resolved = await model.zendtagService.resolveByEmail(email);
+      return {
+        'zendtag': resolved.zendtag,
+        'display_name': resolved.displayName,
+        'avatar_url': resolved.avatarUrl,
+      };
+    } catch (_) {
+      // Not on Zend, or the lookup failed. Either way the substring results stand
+      // on their own, and `_submitRaw` still offers the email-intent path.
+      return null;
+    }
+  }
+
   Future<void> _submitRaw() async {
     final raw = _query;
     if (raw.isEmpty) return;
 
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    if (emailRegex.hasMatch(raw)) {
+    if (_emailRegex.hasMatch(raw)) {
       await _resolveEmailIdentity(raw);
       return;
     }
