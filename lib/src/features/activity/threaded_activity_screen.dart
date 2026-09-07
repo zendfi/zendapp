@@ -94,7 +94,9 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     });
     _loadMutePreference();
     _filterController.addListener(() {
-      setState(() => _filterQuery = _filterController.text.toLowerCase().trim());
+      setState(
+        () => _filterQuery = _filterController.text.toLowerCase().trim(),
+      );
     });
   }
 
@@ -113,7 +115,9 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
         _filterFocus.unfocus();
       } else {
         // Give the field a frame to mount before requesting focus.
-        WidgetsBinding.instance.addPostFrameCallback((_) => _filterFocus.requestFocus());
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _filterFocus.requestFocus(),
+        );
       }
     });
   }
@@ -139,9 +143,13 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 const SizedBox(height: 8),
                 Center(
                   child: Container(
-                    width: 36, height: 4,
+                    width: 36,
+                    height: 4,
                     margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                    decoration: BoxDecoration(
+                      color: zt.border,
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    ),
                   ),
                 ),
                 _OverflowItem(
@@ -154,7 +162,12 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   },
                 ),
                 if (widget.onOpenGraphView != null) ...[
-                  Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
+                  Divider(
+                    color: zt.border,
+                    height: 1,
+                    indent: 56,
+                    endIndent: 16,
+                  ),
                   _OverflowItem(
                     icon: PhosphorIconsRegular.usersFour,
                     label: 'Your mutuals',
@@ -177,9 +190,15 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 ),
                 Divider(color: zt.border, height: 1, indent: 56, endIndent: 16),
                 _OverflowItem(
-                  icon: _notificationsMuted ? PhosphorIconsRegular.bellSlash : PhosphorIconsRegular.bell,
-                  label: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
-                  subtitle: _notificationsMuted ? 'Activity alerts are off' : 'Activity alerts are on',
+                  icon: _notificationsMuted
+                      ? PhosphorIconsRegular.bellSlash
+                      : PhosphorIconsRegular.bell,
+                  label: _notificationsMuted
+                      ? 'Unmute notifications'
+                      : 'Mute notifications',
+                  subtitle: _notificationsMuted
+                      ? 'Activity alerts are off'
+                      : 'Activity alerts are on',
                   onTap: () {
                     Navigator.pop(ctx);
                     _toggleNotificationMute();
@@ -198,7 +217,11 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     final service = ZendScope.read(context).notificationPreferencesService;
     await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.activity));
+      setState(
+        () => _notificationsMuted = service.isMuted(
+          NotificationCategoryKind.activity,
+        ),
+      );
     }
   }
 
@@ -222,7 +245,13 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
       _openPoolContributorSheet(thread.counterparty.id);
       return;
     }
-    pushZendSlide(context, ThreadDetailScreen(counterparty: thread.counterparty, edges: thread.edges));
+    pushZendSlide(
+      context,
+      ThreadDetailScreen(
+        counterparty: thread.counterparty,
+        edges: thread.edges,
+      ),
+    );
   }
 
   void _openPoolContributorSheet(String poolId) {
@@ -300,8 +329,12 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
     final pendingIntents = model.pendingEmailIntents
         .where((i) => i.isPending && _intentIsRenderable(i))
         .toList();
-    final pendingInbound = model.inboundPaymentRequests.where((r) => r.isPending).toList();
-    final pendingOutbound = model.outboundPaymentRequests.where((r) => r.amountUsdc > 0).toList();
+    final pendingInbound = model.inboundPaymentRequests
+        .where((r) => r.isPending)
+        .toList();
+    final pendingOutbound = model.outboundPaymentRequests
+        .where((r) => r.amountUsdc > 0)
+        .toList();
 
     // Requests (pending email intents + inbound + outbound payment requests)
     // are not Activity_Edges (per design.md's tap-through table), so they
@@ -351,9 +384,14 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       onTap: widget.onOpenWallet,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
+                        ),
                         child: Text(
-                          model.balanceHidden ? '•••' : _formatBalance(model.spendableBalance),
+                          model.balanceHidden
+                              ? '•••'
+                              : _formatBalance(model.spendableBalance),
                           style: TextStyle(
                             fontFamily: 'Geist',
                             fontSize: 19,
@@ -367,7 +405,9 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? PhosphorIconsRegular.magnifyingGlassMinus : PhosphorIconsRegular.magnifyingGlass,
+                      _filterActive
+                          ? PhosphorIconsRegular.magnifyingGlassMinus
+                          : PhosphorIconsRegular.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter activity',
@@ -375,7 +415,10 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                   // ── Overflow menu (niche actions) ──
                   IconButton(
                     onPressed: () => _showOverflowMenu(context),
-                    icon: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary),
+                    icon: Icon(
+                      PhosphorIconsRegular.dotsThreeVertical,
+                      color: zt.textSecondary,
+                    ),
                     tooltip: 'More',
                   ),
                 ],
@@ -392,20 +435,39 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Filter by person or note…',
-                          hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                          hintStyle: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            color: zt.textSecondary,
+                          ),
+                          prefixIcon: Icon(
+                            PhosphorIconsRegular.magnifyingGlass,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(
+                                    PhosphorIconsRegular.xCircle,
+                                    size: 18,
+                                    color: zt.textSecondary,
+                                  ),
                                 )
                               : null,
                           filled: true,
                           fillColor: zt.bgSecondary,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(ZendRadii.pill),
                             borderSide: BorderSide.none,
@@ -423,52 +485,54 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                 child: isLoading
                     ? const ActivityFeedSkeleton()
                     : feedItems.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              SizedBox(
-                                height: 200,
-                                child: Center(
-                                  child: Text(
-                                    _filterQuery.isNotEmpty
-                                        ? 'No matches for "$_filterQuery"'
-                                        : 'No activity yet',
-                                    style: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontSize: 14,
-                                      color: zt.textSecondary,
-                                    ),
-                                  ),
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Text(
+                                _filterQuery.isNotEmpty
+                                    ? 'No matches for "$_filterQuery"'
+                                    : 'No activity yet',
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textSecondary,
                                 ),
                               ),
-                            ],
-                          )
-                        : ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: feedItems.length,
-                            itemBuilder: (context, i) {
-                              final item = feedItems[i];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: switch (item) {
-                                  _ThreadFeedItem(thread: final thread) => thread.counterparty.isPool
-                                      ? _PoolThreadTile(
-                                          thread: thread,
-                                          onTap: () => _openThread(thread),
-                                        )
-                                      : _UserThreadTile(
-                                          thread: thread,
-                                          onTap: () => _openThread(thread),
-                                        ),
-                                  _RequestsFeedItem(group: final group) => _RequestsThreadTile(
-                                      group: group,
-                                      onTap: () => _openRequestsThread(group),
-                                    ),
-                                },
-                              );
-                            },
+                            ),
                           ),
+                        ],
+                      )
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        itemCount: feedItems.length,
+                        itemBuilder: (context, i) {
+                          final item = feedItems[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: switch (item) {
+                              _ThreadFeedItem(thread: final thread) =>
+                                thread.counterparty.isPool
+                                    ? _PoolThreadTile(
+                                        thread: thread,
+                                        onTap: () => _openThread(thread),
+                                      )
+                                    : _UserThreadTile(
+                                        thread: thread,
+                                        onTap: () => _openThread(thread),
+                                      ),
+                              _RequestsFeedItem(group: final group) =>
+                                _RequestsThreadTile(
+                                  group: group,
+                                  onTap: () => _openRequestsThread(group),
+                                ),
+                            },
+                          );
+                        },
+                      ),
               ),
             ),
             if (model.lastThreadedActivityError != null)
@@ -489,7 +553,6 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
       ),
     );
   }
-
 }
 
 // ── Requests grouping (folds pending intents/inbound/outbound requests into
@@ -510,7 +573,8 @@ class _RequestsGroup {
   final List<PaymentRequestItem> inbound;
   final List<PaymentRequestItem> outbound;
 
-  bool get isNotEmpty => intents.isNotEmpty || inbound.isNotEmpty || outbound.isNotEmpty;
+  bool get isNotEmpty =>
+      intents.isNotEmpty || inbound.isNotEmpty || outbound.isNotEmpty;
 
   int get totalCount => intents.length + inbound.length + outbound.length;
 
@@ -520,7 +584,9 @@ class _RequestsGroup {
       ...inbound.map((r) => r.createdAt),
       ...outbound.map((r) => r.createdAt),
     ];
-    return dates.isEmpty ? DateTime.fromMillisecondsSinceEpoch(0) : dates.reduce((a, b) => a.isAfter(b) ? a : b);
+    return dates.isEmpty
+        ? DateTime.fromMillisecondsSinceEpoch(0)
+        : dates.reduce((a, b) => a.isAfter(b) ? a : b);
   }
 }
 
@@ -576,7 +642,11 @@ class _RequestsThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: ZendColors.destructive.withValues(alpha: 0.12),
-                child: Icon(PhosphorIconsRegular.receipt, color: ZendColors.destructive, size: 20),
+                child: Icon(
+                  PhosphorIconsRegular.receipt,
+                  color: ZendColors.destructive,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -585,23 +655,41 @@ class _RequestsThreadTile extends StatelessWidget {
                   children: [
                     Text(
                       'Requests',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       'Money asks between you and others',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         if (owedToYou > 0)
-                          _CountPill(count: owedToYou, label: 'owed to you', color: ZendColors.positive),
-                        if (owedToYou > 0 && youOwe > 0) const SizedBox(width: 6),
+                          _CountPill(
+                            count: owedToYou,
+                            label: 'owed to you',
+                            color: ZendColors.positive,
+                          ),
+                        if (owedToYou > 0 && youOwe > 0)
+                          const SizedBox(width: 6),
                         if (youOwe > 0)
-                          _CountPill(count: youOwe, label: 'pending', color: zt.textSecondary),
+                          _CountPill(
+                            count: youOwe,
+                            label: 'pending',
+                            color: zt.textSecondary,
+                          ),
                       ],
                     ),
                   ],
@@ -618,7 +706,11 @@ class _RequestsThreadTile extends StatelessWidget {
 }
 
 class _CountPill extends StatelessWidget {
-  const _CountPill({required this.count, required this.label, required this.color});
+  const _CountPill({
+    required this.count,
+    required this.label,
+    required this.color,
+  });
   final int count;
   final String label;
   final Color color;
@@ -633,7 +725,11 @@ class _CountPill extends StatelessWidget {
       ),
       child: Text(
         '$count $label',
-        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: color, fontWeight: FontWeight.w600),
+        style: ZendTextStyles.tabularNumeric.copyWith(
+          fontSize: 10.5,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -665,7 +761,9 @@ class _RequestsThreadSheet extends StatelessWidget {
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),
       ),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         child: Column(
@@ -677,17 +775,28 @@ class _RequestsThreadSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
             ),
             Text(
               'Requests',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               '${group.totalCount} total',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 12,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 16),
             Flexible(
@@ -721,7 +830,9 @@ class _RequestsThreadSheet extends StatelessWidget {
                   for (final intent in group.intents)
                     _PendingRowTile(
                       zt: zt,
-                      avatarLabel: intent.recipientHint.isNotEmpty ? intent.recipientHint[0].toUpperCase() : '?',
+                      avatarLabel: intent.recipientHint.isNotEmpty
+                          ? intent.recipientHint[0].toUpperCase()
+                          : '?',
                       title: intent.recipientHint,
                       subtitle: 'Pending claim',
                       amount: '-${intent.amountFormatted}',
@@ -792,7 +903,11 @@ class _PendingRowTile extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -852,7 +967,8 @@ class _UserThreadTile extends StatelessWidget {
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: zt.border,
@@ -862,12 +978,17 @@ class _UserThreadTile extends StatelessWidget {
               ),
               ListTile(
                 leading: Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: zt.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(PhosphorIconsRegular.chatCircleText, size: 18, color: zt.accent),
+                  child: Icon(
+                    PhosphorIconsRegular.chatCircleText,
+                    size: 18,
+                    color: zt.accent,
+                  ),
                 ),
                 title: Text(
                   'Message @${counterparty.displayLabel}',
@@ -893,12 +1014,17 @@ class _UserThreadTile extends StatelessWidget {
               ),
               ListTile(
                 leading: Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: zt.bgPrimary,
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
-                  child: Icon(PhosphorIconsRegular.arrowsLeftRight, size: 18, color: zt.textSecondary),
+                  child: Icon(
+                    PhosphorIconsRegular.arrowsLeftRight,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
                 ),
                 title: Text(
                   'View activity',
@@ -921,20 +1047,28 @@ class _UserThreadTile extends StatelessWidget {
     );
   }
 
-  Future<void> _openDm(BuildContext context, ActivityCounterparty counterparty) async {
+  Future<void> _openDm(
+    BuildContext context,
+    ActivityCounterparty counterparty,
+  ) async {
     final model = ZendScope.of(context);
     final zendtag = counterparty.displayLabel.replaceFirst('@', '');
 
     // Prefer cached thread matching by zendtag
     final cached = model.dmService.cachedThreads
-        .where((t) => t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase())
+        .where(
+          (t) => t.counterparty.zendtag.toLowerCase() == zendtag.toLowerCase(),
+        )
         .firstOrNull;
 
     if (cached != null) {
-      pushZendSlide(context, DmThreadScreen(
-        roomId: cached.roomId,
-        counterparty: cached.counterparty,
-      ));
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          roomId: cached.roomId,
+          counterparty: cached.counterparty,
+        ),
+      );
       return;
     }
 
@@ -943,10 +1077,14 @@ class _UserThreadTile extends StatelessWidget {
     try {
       final result = await model.dmService.getOrCreateRoom(counterparty.id);
       if (!context.mounted) return;
-      pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
-        roomId: result.roomId,
-        counterparty: result.counterparty,
-      ));
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          // ignore: use_build_context_synchronously
+          roomId: result.roomId,
+          counterparty: result.counterparty,
+        ),
+      );
     } catch (_) {
       // Previously this silently switched to the DM tab with no thread
       // opened and no explanation — someone tapping a name just landed on
@@ -954,7 +1092,12 @@ class _UserThreadTile extends StatelessWidget {
       // failed instead of routing them somewhere unexplained.
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't open this chat — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't open this chat — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -966,11 +1109,12 @@ class _UserThreadTile extends StatelessWidget {
     final counterparty = thread.counterparty;
     final mostRecent = thread.mostRecentEdge;
     final isOutgoing = mostRecent.isOutgoing;
-    final amountLabel = mostRecent.amountHidden ? 'Hidden' : '\$${mostRecent.amountUsdc ?? '0'}';
+    final signedAmount = mostRecent.signedAmountLabel;
 
     // Vibe transfers and pool contributions get their own distinct headline
     final isVibe = isVibeEdge(mostRecent);
-    final isPoolContrib = mostRecent.edgeKind == ActivityEdgeKind.poolContribution;
+    final isPoolContrib =
+        mostRecent.edgeKind == ActivityEdgeKind.poolContribution;
 
     // Venmo-style feed sentence with word variety
     final verb = feedVerbFor(mostRecent);
@@ -1008,11 +1152,22 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14.5,
+                            color: zt.textPrimary,
+                          ),
                           children: [
-                            if (isOutgoing) const TextSpan(text: 'You sent a Vibe ✨ to '),
-                            if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
-                            TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if (isOutgoing)
+                              const TextSpan(text: 'You sent a Vibe ✨ to '),
+                            if (!isOutgoing)
+                              const TextSpan(text: '✨ Vibe from '),
+                            TextSpan(
+                              text: subjectSpan,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -1021,12 +1176,30 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14.5,
+                            color: zt.textPrimary,
+                          ),
                           children: [
-                            if (isOutgoing) const TextSpan(text: 'You chipped into '),
-                            if (!isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            if (!isOutgoing) const TextSpan(text: ' chipped into a pool'),
-                            if (isOutgoing) TextSpan(text: subjectSpan, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if (isOutgoing)
+                              const TextSpan(text: 'You chipped into '),
+                            if (!isOutgoing)
+                              TextSpan(
+                                text: subjectSpan,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            if (!isOutgoing)
+                              const TextSpan(text: ' chipped into a pool'),
+                            if (isOutgoing)
+                              TextSpan(
+                                text: subjectSpan,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                           ],
                         ),
                       )
@@ -1035,14 +1208,22 @@ class _UserThreadTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         text: TextSpan(
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14.5,
+                            color: zt.textPrimary,
+                          ),
                           children: [
-                            if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
+                            if (actionSpan.isNotEmpty)
+                              TextSpan(text: actionSpan),
                             TextSpan(
                               text: subjectSpan,
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                            if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
+                            if (trailingSpan.isNotEmpty)
+                              TextSpan(text: trailingSpan),
                           ],
                         ),
                       ),
@@ -1054,7 +1235,11 @@ class _UserThreadTile extends StatelessWidget {
                         mostRecent.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 13,
+                          color: zt.textPrimary.withValues(alpha: 0.85),
+                        ),
                       ),
                     ],
                     const SizedBox(height: 6),
@@ -1062,21 +1247,33 @@ class _UserThreadTile extends StatelessWidget {
                       children: [
                         Text(
                           _relativeTime(mostRecent.createdAt),
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary.withValues(alpha: 0.8)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 11,
+                            color: zt.textSecondary.withValues(alpha: 0.8),
+                          ),
                         ),
                         if (thread.edges.length > 1) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: zt.accent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(ZendRadii.pill),
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
                             ),
                             child: Text(
                               thread.countIsExact
                                   ? '${thread.edges.length}x together'
                                   : '${thread.edges.length}+ together',
-                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 10.5,
+                                color: zt.accent,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -1086,18 +1283,30 @@ class _UserThreadTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Amount pill — hidden for Vibes (amount is revealed via the
-              // tap-to-reveal mechanic in DM, not shown in the feed tile)
-              if (!isVibe)
+              // Amount pill — omitted for Vibes (revealed via tap-to-reveal in DM,
+              // not in the feed tile) and whenever the amount is withheld, rather
+              // than rendering a "+Hidden" chip that signs an undisclosed figure.
+              if (!isVibe && signedAmount != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
+                    color: isOutgoing
+                        ? zt.border.withValues(alpha: 0.5)
+                        : ZendColors.positive.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                   ),
                   child: Text(
-                    '${isOutgoing ? '-' : '+'}$amountLabel',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12.5, fontWeight: FontWeight.w700, color: isOutgoing ? zt.textSecondary : ZendColors.positive),
+                    signedAmount,
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: isOutgoing
+                          ? zt.textSecondary
+                          : ZendColors.positive,
+                    ),
                   ),
                 ),
             ],
@@ -1151,7 +1360,11 @@ class _PoolThreadTile extends StatelessWidget {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: zt.accent.withValues(alpha: 0.15),
-                child: Icon(PhosphorIconsRegular.usersThree, color: zt.accent, size: 20),
+                child: Icon(
+                  PhosphorIconsRegular.usersThree,
+                  color: zt.accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1162,10 +1375,17 @@ class _PoolThreadTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14.5, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14.5,
+                          color: zt.textPrimary,
+                        ),
                         children: [
                           const TextSpan(text: 'You contributed to '),
-                          TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: label,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ],
                       ),
                     ),
@@ -1176,13 +1396,19 @@ class _PoolThreadTile extends StatelessWidget {
                           : '${thread.edges.length} contributions · \$${thread.runningTotal.toStringAsFixed(2)} total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: zt.accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -1191,13 +1417,20 @@ class _PoolThreadTile extends StatelessWidget {
                             thread.countIsExact
                                 ? '${thread.edges.length} chip-in${thread.edges.length == 1 ? '' : 's'}'
                                 : '${thread.edges.length}+ chip-ins',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.accent, fontWeight: FontWeight.w600),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 10.5,
+                              color: zt.accent,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'tap for progress',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 10.5,
+                            color: zt.textSecondary.withValues(alpha: 0.8),
+                          ),
                         ),
                       ],
                     ),
@@ -1206,14 +1439,21 @@ class _PoolThreadTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: zt.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
                   '\$${thread.runningTotal.toStringAsFixed(2)}',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12.5, fontWeight: FontWeight.w700, color: zt.accent),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: zt.accent,
+                  ),
                 ),
               ),
             ],
@@ -1246,7 +1486,9 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
   Future<void> _load() async {
     try {
       final model = ZendScope.of(context);
-      final response = await model.activityDataService.getPoolContributors(widget.poolId);
+      final response = await model.activityDataService.getPoolContributors(
+        widget.poolId,
+      );
       if (mounted) setState(() => _response = response);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -1266,7 +1508,9 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),
       ),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         child: Column(
@@ -1295,7 +1539,10 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                 child: ZendErrorState(
                   title: 'Could not load contributors',
                   onRetry: () {
-                    setState(() { _error = null; _loading = true; });
+                    setState(() {
+                      _error = null;
+                      _loading = true;
+                    });
                     _load();
                   },
                 ),
@@ -1359,11 +1606,19 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                     child: Text(
                       switch (contributor.entry) {
                         PoolContributorUser(zendtag: final tag) =>
-                          tag != null && tag.isNotEmpty ? '@$tag' : 'A contributor',
-                        PoolContributorExternalAnonymized(aggregateCount: final count) =>
+                          tag != null && tag.isNotEmpty
+                              ? '@$tag'
+                              : 'A contributor',
+                        PoolContributorExternalAnonymized(
+                          aggregateCount: final count,
+                        ) =>
                           '$count external contributor${count == 1 ? '' : 's'}',
                       },
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1372,7 +1627,10 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                       PoolContributorUser(amountHidden: true) => 'Hidden',
                       _ => '\$${contributor.totalUsdc.toStringAsFixed(2)}',
                     },
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 13,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -1425,11 +1683,20 @@ class _OverflowItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),

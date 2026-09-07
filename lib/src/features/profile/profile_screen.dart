@@ -14,6 +14,7 @@ import 'account_information_screen.dart';
 import 'contact_support_screen.dart';
 import 'settings_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// You — ZEND BETA spec §29-30 (LOCKED): "You is deliberately boring.
 /// That's a compliment." Avatar + @tag, then exactly three rows —
@@ -49,7 +50,9 @@ class ProfileScreen extends StatelessWidget {
     final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
         ? model.currentDisplayName!
         : (model.username.isNotEmpty ? model.username : 'Zend User');
-    final zendtag = model.username.isNotEmpty ? '@${model.username}' : '';
+    final zendtag = model.username.isNotEmpty
+        ? handleLabel(model.username)
+        : '';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -64,7 +67,10 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                      icon: Icon(
+                        PhosphorIconsRegular.caretLeft,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -77,34 +83,53 @@ class ProfileScreen extends StatelessWidget {
                   // ── Identity: avatar + @tag (spec §29 wireframe) ──
                   Center(
                     child: GestureDetector(
-                      onTap: () => pushZendSlide(context, const AccountInformationScreen()),
+                      onTap: () => pushZendSlide(
+                        context,
+                        const AccountInformationScreen(),
+                      ),
                       child: Column(
                         children: [
                           _AvatarUploadButton(displayName: displayName),
                           const SizedBox(height: 12),
                           Text(
                             zendtag.isNotEmpty ? zendtag : displayName,
-                            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: zt.textPrimary,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Divider(color: zt.border, height: 1, indent: 20, endIndent: 20),
+                  Divider(
+                    color: zt.border,
+                    height: 1,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _TileGroup(tiles: [
-                      _Tile(
-                        label: 'Settings',
-                        onTap: () => pushZendSlide(context, const SettingsScreen()),
-                      ),
-                      _Tile(
-                        label: 'Help',
-                        onTap: () => pushZendSlide(context, const ContactSupportScreen()),
-                      ),
-                    ]),
+                    child: _TileGroup(
+                      tiles: [
+                        _Tile(
+                          label: 'Settings',
+                          onTap: () =>
+                              pushZendSlide(context, const SettingsScreen()),
+                        ),
+                        _Tile(
+                          label: 'Help',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const ContactSupportScreen(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const Spacer(),
                   Padding(
@@ -142,7 +167,8 @@ class _TileGroup extends StatelessWidget {
           children: [
             for (var i = 0; i < tiles.length; i++) ...[
               tiles[i],
-              if (i < tiles.length - 1) Divider(height: 1, thickness: 1, color: zt.border, indent: 16),
+              if (i < tiles.length - 1)
+                Divider(height: 1, thickness: 1, color: zt.border, indent: 16),
             ],
           ],
         ),
@@ -154,7 +180,11 @@ class _TileGroup extends StatelessWidget {
 // ── Standard nav tile — spec §29's "Settings →" / "Help →" / "Log out →" ──
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.label, required this.onTap, this.destructive = false});
+  const _Tile({
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
 
   final String label;
   final VoidCallback onTap;
@@ -165,7 +195,9 @@ class _Tile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final color = destructive ? ZendColors.destructive : zt.textPrimary;
     return Material(
-      color: destructive ? ZendColors.destructive.withValues(alpha: 0.08) : Colors.transparent,
+      color: destructive
+          ? ZendColors.destructive.withValues(alpha: 0.08)
+          : Colors.transparent,
       borderRadius: destructive ? BorderRadius.circular(ZendRadii.xl) : null,
       child: InkWell(
         onTap: onTap,
@@ -175,9 +207,21 @@ class _Tile extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: color)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: color,
+                  ),
+                ),
               ),
-              Icon(PhosphorIconsRegular.caretRight, size: 16, color: destructive ? color : zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 16,
+                color: destructive ? color : zt.textSecondary,
+              ),
             ],
           ),
         ),
@@ -235,7 +279,12 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               ),
               Text(
                 'Profile photo',
-                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 18, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: zt.textPrimary,
+                ),
               ),
               const SizedBox(height: 12),
               _PickerRow(
@@ -282,7 +331,9 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
       return;
     }
 
-    final source = choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final source = choice == 'camera'
+        ? ImageSource.camera
+        : ImageSource.gallery;
     final picked = await ImagePicker().pickImage(
       source: source,
       maxWidth: 1024,
@@ -294,14 +345,16 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     setState(() => _uploading = true);
     try {
       final oldUrl = model.currentAvatarUrl;
-      final url = await model.walletService.apiClient.uploadAvatar(File(picked.path));
+      final url = await model.walletService.apiClient.uploadAvatar(
+        File(picked.path),
+      );
       if (oldUrl != null) await CachedNetworkImage.evictFromCache(oldUrl);
       model.setAvatarUrl(url);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload photo')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to upload photo')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -318,13 +371,24 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
           ZendAvatar(
             radius: 32,
             photoUrl: model.currentAvatarUrl,
-            initials: widget.displayName.isNotEmpty ? widget.displayName[0].toUpperCase() : null,
+            initials: widget.displayName.isNotEmpty
+                ? widget.displayName[0].toUpperCase()
+                : null,
           ),
           if (_uploading)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(color: Color(0x66000000), shape: BoxShape.circle),
-                child: const Center(child: ZendLoader(size: 18, strokeWidth: 2, color: Colors.white)),
+                decoration: const BoxDecoration(
+                  color: Color(0x66000000),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: ZendLoader(
+                    size: 18,
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             )
           else
@@ -334,8 +398,15 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
               child: Container(
                 width: 18,
                 height: 18,
-                decoration: BoxDecoration(color: ZendColors.accentBright, shape: BoxShape.circle),
-                child: const Icon(PhosphorIconsRegular.pencilSimple, size: 10, color: Colors.white),
+                decoration: BoxDecoration(
+                  color: ZendColors.accentBright,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  PhosphorIconsRegular.pencilSimple,
+                  size: 10,
+                  color: Colors.white,
+                ),
               ),
             ),
         ],
@@ -374,7 +445,15 @@ class _PickerRow extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 14),
-              Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: color)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),
@@ -410,17 +489,30 @@ Future<void> _confirmLogout(BuildContext context) async {
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
             ),
             Text(
               'Log out?',
-              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w700,
+                fontSize: 22,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               "You'll need to sign in again to access your account.",
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.4),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             PrimaryButton(
@@ -432,7 +524,10 @@ Future<void> _confirmLogout(BuildContext context) async {
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               style: TextButton.styleFrom(foregroundColor: zt.textSecondary),
-              child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist', fontSize: 15)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontFamily: 'Geist', fontSize: 15),
+              ),
             ),
             const SizedBox(height: 4),
           ],
@@ -458,5 +553,9 @@ Future<void> _confirmLogout(BuildContext context) async {
     model.resetState();
   }
   if (!context.mounted) return;
-  pushAndRemoveUntilZendSlide(context, const WelcomeScreen(), rootNavigator: true);
+  pushAndRemoveUntilZendSlide(
+    context,
+    const WelcomeScreen(),
+    rootNavigator: true,
+  );
 }

@@ -44,6 +44,7 @@ import '../models/savings_models.dart';
 import '../models/streak_info.dart';
 import '../services/dm_service.dart';
 import '../services/e2ee_service.dart';
+import '../models/handle_label.dart';
 
 const Map<String, String> _localeGreetings = {
   'yo': 'Ẹ káàbọ̀',
@@ -271,7 +272,10 @@ class ZendAppModel extends ChangeNotifier {
     }
 
     if (threadedActivityEdges.isEmpty) {
-      final cached = await _snapshots.getMap(userId, SnapshotCache.keyFeedPage1);
+      final cached = await _snapshots.getMap(
+        userId,
+        SnapshotCache.keyFeedPage1,
+      );
       final rawEdges = cached?['edges'];
       if (rawEdges is List && threadedActivityEdges.isEmpty) {
         try {
@@ -309,10 +313,7 @@ class ZendAppModel extends ChangeNotifier {
       return Future<void>.value();
     }
     return _snapshots.put(userId, SnapshotCache.keyFeedPage1, {
-      'edges': threadedActivityEdges
-          .take(50)
-          .map((e) => e.toJson())
-          .toList(),
+      'edges': threadedActivityEdges.take(50).map((e) => e.toJson()).toList(),
     });
   }
 
@@ -1400,7 +1401,7 @@ class ZendAppModel extends ChangeNotifier {
         // meaningful because the sender never knew the recipient's zendtag.
         final displayName = (isSent && entry.emailRecipientHint != null)
             ? entry.emailRecipientHint!
-            : '@$counterparty';
+            : handleLabel(counterparty);
 
         return ZendTransaction(
           name: displayName,
@@ -1683,7 +1684,7 @@ class ZendAppModel extends ChangeNotifier {
     recentTransactions.insert(
       0,
       ZendTransaction(
-        name: '@$recipientZendtag',
+        name: handleLabel(recipientZendtag),
         note: note ?? 'Sent from ZendApp',
         amount: '-\$${amount.toStringAsFixed(2)}',
         time: 'Just now',
@@ -1983,7 +1984,7 @@ class ZendAppModel extends ChangeNotifier {
           ? counterpartyDisplayName.trim()
           : (cached.name.isNotEmpty &&
                 cached.name != tag &&
-                cached.name != '@$tag')
+                cached.name != handleLabel(tag))
           ? cached.name
           : '';
 

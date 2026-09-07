@@ -13,10 +13,13 @@ import '../models/dm_thread.dart';
 import '../models/notification_destination.dart';
 import 'zend_routes.dart';
 import 'zend_shell_controller.dart';
+import '../models/handle_label.dart';
 
 extension _NullableFirst<T> on Iterable<T> {
   T? firstWhereOrNull(bool Function(T) test) {
-    for (final e in this) { if (test(e)) return e; }
+    for (final e in this) {
+      if (test(e)) return e;
+    }
     return null;
   }
 }
@@ -84,7 +87,11 @@ class NotificationNavigator {
           return;
         }
         if (!context.mounted) return;
-        pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
+        pushZendSlide(
+          context,
+          PoolDetailScreen(pool: pool),
+          rootNavigator: true,
+        );
 
       // ── Pool chat ────────────────────────────────────────────────────────────
       // PoolDetailScreen IS the group chat now (spec §31-34's Chat-primary
@@ -98,7 +105,11 @@ class NotificationNavigator {
           return;
         }
         if (!context.mounted) return;
-        pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
+        pushZendSlide(
+          context,
+          PoolDetailScreen(pool: pool),
+          rootNavigator: true,
+        );
 
       // ── Home / Money tab ─────────────────────────────────────────────────────
       case NotifHomeFeed():
@@ -117,15 +128,19 @@ class NotificationNavigator {
         await Future<void>.delayed(const Duration(milliseconds: 350));
         if (!context.mounted) return;
         // Try to find the counterparty from the loaded thread list
-        final thread = model.dmService.cachedThreads
-            .firstWhere((t) => t.roomId == roomId, orElse: () =>
-                DmThread(
-                  roomId: roomId,
-                  counterparty: const DmCounterparty(
-                    userId: '', zendtag: '', displayName: 'Message'),
-                  unreadCount: 0,
-                  lastMessageAt: DateTime.now(),
-                ));
+        final thread = model.dmService.cachedThreads.firstWhere(
+          (t) => t.roomId == roomId,
+          orElse: () => DmThread(
+            roomId: roomId,
+            counterparty: const DmCounterparty(
+              userId: '',
+              zendtag: '',
+              displayName: 'Message',
+            ),
+            unreadCount: 0,
+            lastMessageAt: DateTime.now(),
+          ),
+        );
         if (!context.mounted) return;
         pushZendSlide(
           context,
@@ -141,16 +156,21 @@ class NotificationNavigator {
     ZendAppModel model,
   ) {
     final isOutgoing = edge.isOutgoing;
-    final verb = 'paid'; // neutral fallback — full feedVerbFor is in activity_grouping
+    final verb =
+        'paid'; // neutral fallback — full feedVerbFor is in activity_grouping
     final counterpartyLabel = isOutgoing
-        ? (edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone')
-        : (edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'someone');
+        ? (edge.recipientZendtag != null
+              ? handleLabel(edge.recipientZendtag)
+              : 'someone')
+        : (edge.senderZendtag != null
+              ? handleLabel(edge.senderZendtag)
+              : 'someone');
     final headline = edge.direction == 'external'
-        ? '${edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone'} $verb '
-            '${edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone'}'
+        ? '${edge.senderZendtag != null ? handleLabel(edge.senderZendtag) : 'Someone'} $verb '
+              '${edge.recipientZendtag != null ? handleLabel(edge.recipientZendtag) : 'someone'}'
         : isOutgoing
-            ? 'You $verb $counterpartyLabel'
-            : '$counterpartyLabel $verb you';
+        ? 'You $verb $counterpartyLabel'
+        : '$counterpartyLabel $verb you';
 
     showActivityCommentSheet(
       context,
@@ -159,11 +179,11 @@ class NotificationNavigator {
       avatarUrl: isOutgoing ? model.currentAvatarUrl : edge.senderAvatarUrl,
       avatarInitial: isOutgoing
           ? (model.currentZendtag?.isNotEmpty == true
-              ? model.currentZendtag![0].toUpperCase()
-              : 'Y')
+                ? model.currentZendtag![0].toUpperCase()
+                : 'Y')
           : (edge.senderZendtag?.isNotEmpty == true
-              ? edge.senderZendtag![0].toUpperCase()
-              : '?'),
+                ? edge.senderZendtag![0].toUpperCase()
+                : '?'),
       onViewReceipt: () => Navigator.of(context).pop(),
     );
   }

@@ -790,7 +790,9 @@ class RailRouter {
   Future<P2pCapabilities?> _capabilities() async {
     final cached = _cached;
     final at = _cachedAt;
-    if (cached != null && at != null && DateTime.now().difference(at) < _cacheTtl) {
+    if (cached != null &&
+        at != null &&
+        DateTime.now().difference(at) < _cacheTtl) {
       return cached;
     }
     try {

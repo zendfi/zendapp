@@ -301,7 +301,9 @@ class SuiZkLoginService {
     try {
       await _proofFor(_requireSession());
     } catch (error) {
-      debugPrint('[SuiZkLogin] proof pre-warm failed, will fetch on send: $error');
+      debugPrint(
+        '[SuiZkLogin] proof pre-warm failed, will fetch on send: $error',
+      );
     }
   }
 

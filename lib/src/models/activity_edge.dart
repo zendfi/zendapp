@@ -8,11 +8,9 @@
 /// `src/activity_data_service.rs` for the authoritative server-side shape.
 library;
 
-enum ActivityEdgeKind {
-  zendTransfer,
-  poolContribution,
-  requestFulfillment,
-}
+import 'handle_label.dart';
+
+enum ActivityEdgeKind { zendTransfer, poolContribution, requestFulfillment }
 
 ActivityEdgeKind _edgeKindFromString(String raw) {
   switch (raw) {
@@ -41,13 +39,12 @@ String _edgeKindToString(ActivityEdgeKind kind) {
   }
 }
 
-enum VisibilityTier {
-  private,
-  sharedNetwork,
-}
+enum VisibilityTier { private, sharedNetwork }
 
 VisibilityTier _tierFromString(String raw) {
-  return raw == 'shared_network' ? VisibilityTier.sharedNetwork : VisibilityTier.private;
+  return raw == 'shared_network'
+      ? VisibilityTier.sharedNetwork
+      : VisibilityTier.private;
 }
 
 String _tierToString(VisibilityTier tier) {
@@ -79,7 +76,7 @@ class ActivityCounterparty {
   /// resort (a legacy response missing both) falls back to a short id
   /// fragment. Never renders a bare full UUID.
   String get displayLabel {
-    if (zendtag != null && zendtag!.isNotEmpty) return '@$zendtag';
+    if (zendtag != null && zendtag!.isNotEmpty) return handleLabel(zendtag);
     if (displayName != null && displayName!.isNotEmpty) return displayName!;
     if (poolName != null && poolName!.isNotEmpty) return poolName!;
     return id.length > 6 ? id.substring(0, 6) : id;
@@ -92,10 +89,10 @@ class ActivityCounterparty {
     final source = zendtag?.isNotEmpty == true
         ? zendtag!
         : displayName?.isNotEmpty == true
-            ? displayName!
-            : poolName?.isNotEmpty == true
-                ? poolName!
-                : id;
+        ? displayName!
+        : poolName?.isNotEmpty == true
+        ? poolName!
+        : id;
     return source.isNotEmpty ? source[0].toUpperCase() : '?';
   }
 
@@ -175,12 +172,23 @@ class ActivityEdge {
 
   bool get isOutgoing => direction == 'outgoing';
 
+  /// Signed amount for display, or **null when the amount is withheld**.
+  ///
+  /// Null rather than a placeholder string on purpose. Call sites used to build
+  /// `'${isOutgoing ? '-' : '+'}$amountLabel'` over an `amountLabel` that was the
+  /// literal `'Hidden'` when withheld, rendering "+Hidden" — a signed direction on
+  /// a quantity that was never disclosed. Returning null forces each site to decide
+  /// whether to show the chip at all, which is the real question.
+  String? get signedAmountLabel =>
+      amountHidden ? null : '${isOutgoing ? '-' : '+'}\$${amountUsdc ?? '0'}';
+
   factory ActivityEdge.fromJson(Map<String, dynamic> json) {
     return ActivityEdge(
       edgeId: json['edge_id'] as String,
       edgeKind: _edgeKindFromString(json['edge_kind'] as String),
-      counterparty:
-          ActivityCounterparty.fromJson(json['counterparty'] as Map<String, dynamic>),
+      counterparty: ActivityCounterparty.fromJson(
+        json['counterparty'] as Map<String, dynamic>,
+      ),
       amountUsdc: json['amount_usdc'] as String?,
       amountHidden: json['amount_hidden'] as bool? ?? false,
       direction: json['direction'] as String,
@@ -211,14 +219,17 @@ class ActivityEdge {
       'is_direct_participant': isDirectParticipant,
       if (note != null) 'note': note,
       'created_at': createdAt.toIso8601String(),
-      if (transactionSignature != null) 'transaction_signature': transactionSignature,
+      if (transactionSignature != null)
+        'transaction_signature': transactionSignature,
       if (status != null) 'status': status,
       if (senderZendtag != null) 'sender_zendtag': senderZendtag,
       if (senderDisplayName != null) 'sender_display_name': senderDisplayName,
       if (senderAvatarUrl != null) 'sender_avatar_url': senderAvatarUrl,
       if (recipientZendtag != null) 'recipient_zendtag': recipientZendtag,
-      if (recipientDisplayName != null) 'recipient_display_name': recipientDisplayName,
-      if (recipientAvatarUrl != null) 'recipient_avatar_url': recipientAvatarUrl,
+      if (recipientDisplayName != null)
+        'recipient_display_name': recipientDisplayName,
+      if (recipientAvatarUrl != null)
+        'recipient_avatar_url': recipientAvatarUrl,
     };
   }
 }
@@ -349,11 +360,7 @@ class PoolContributorExternalAnonymized extends PoolContributorEntry {
   });
 }
 
-enum PoolVisibilityState {
-  private,
-  sharedNetwork,
-  pendingVisibilityChange,
-}
+enum PoolVisibilityState { private, sharedNetwork, pendingVisibilityChange }
 
 PoolVisibilityState _poolVisibilityStateFromString(String raw) {
   switch (raw) {
@@ -387,7 +394,9 @@ class PoolContributorsResponse {
       poolId: json['pool_id'] as String,
       gatheredAmountUsdc: json['gathered_amount_usdc'] as String,
       targetAmountUsdc: json['target_amount_usdc'] as String,
-      visibilityState: _poolVisibilityStateFromString(json['visibility_state'] as String),
+      visibilityState: _poolVisibilityStateFromString(
+        json['visibility_state'] as String,
+      ),
       contributors: (json['contributors'] as List<dynamic>? ?? [])
           .map((c) => PoolContributorEntry.fromJson(c as Map<String, dynamic>))
           .toList(),

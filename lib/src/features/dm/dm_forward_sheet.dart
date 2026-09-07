@@ -7,6 +7,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_thread.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// Shows a bottom sheet listing the user's DM threads so they can pick who
 /// to forward a message to. Returns the chosen [DmCounterparty] and
@@ -50,8 +51,15 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
       // fresh fetch if the cache is empty (e.g. forwarding from a cold
       // deep-link straight into a thread).
       final cached = model.dmService.cachedThreads;
-      final threads = cached.isNotEmpty ? cached : await model.dmService.listThreads();
-      if (mounted) setState(() { _threads = threads; _loading = false; });
+      final threads = cached.isNotEmpty
+          ? cached
+          : await model.dmService.listThreads();
+      if (mounted) {
+        setState(() {
+          _threads = threads;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -76,7 +84,9 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
       builder: (context, scrollController) => Container(
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: Column(
           children: [
@@ -90,12 +100,21 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
                   Expanded(
                     child: Text(
                       'Forward to',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(PhosphorIconsRegular.xCircle, color: zt.textSecondary, size: 24),
+                    child: Icon(
+                      PhosphorIconsRegular.xCircle,
+                      color: zt.textSecondary,
+                      size: 24,
+                    ),
                   ),
                 ],
               ),
@@ -104,16 +123,35 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
-                onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                onChanged: (v) =>
+                    setState(() => _query = v.toLowerCase().trim()),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textPrimary,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search chats',
-                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
-                  prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                  hintStyle: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textSecondary.withValues(alpha: 0.7),
+                  ),
+                  prefixIcon: Icon(
+                    PhosphorIconsRegular.magnifyingGlass,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
                   filled: true,
                   fillColor: zt.bgSecondary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
@@ -122,33 +160,55 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
               child: _loading
                   ? const CompactThreadListSkeleton()
                   : filtered.isEmpty
-                      ? Center(
-                          child: Text(
-                            _query.isEmpty ? 'No chats yet' : 'No chats matching "$_query"',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                          itemCount: filtered.length,
-                          itemBuilder: (_, i) {
-                            final thread = filtered[i];
-                            final cp = thread.counterparty;
-                            return ListTile(
-                              onTap: () => Navigator.of(context).pop((roomId: thread.roomId, counterparty: cp)),
-                              leading: ZendAvatar(radius: 20, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
-                              title: Text(
-                                cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
-                              ),
-                              subtitle: Text(
-                                '@${cp.zendtag}',
-                                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
-                              ),
-                            );
-                          },
+                  ? Center(
+                      child: Text(
+                        _query.isEmpty
+                            ? 'No chats yet'
+                            : 'No chats matching "$_query"',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
                         ),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) {
+                        final thread = filtered[i];
+                        final cp = thread.counterparty;
+                        return ListTile(
+                          onTap: () => Navigator.of(
+                            context,
+                          ).pop((roomId: thread.roomId, counterparty: cp)),
+                          leading: ZendAvatar(
+                            radius: 20,
+                            photoUrl: cp.avatarUrl,
+                            initials: cp.initialLetter,
+                          ),
+                          title: Text(
+                            cp.displayName.trim().isEmpty
+                                ? handleLabel(cp.zendtag)
+                                : cp.displayName,
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: zt.textPrimary,
+                            ),
+                          ),
+                          subtitle: Text(
+                            handleLabel(cp.zendtag),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

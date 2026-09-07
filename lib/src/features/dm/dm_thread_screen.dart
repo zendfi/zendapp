@@ -28,13 +28,16 @@ import 'dm_message_action_overlay.dart';
 import 'dm_forward_sheet.dart';
 import 'dm_message_info_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// State of the E2EE key exchange for the currently open room.
 enum _E2eeStatus {
   /// Key exchange (publish mine, fetch theirs) is in flight.
   resolving,
+
   /// Counterparty pubkey is available — messages are encrypted.
   ready,
+
   /// Key exchange finished but the counterparty has no pubkey on file
   /// (old app version, or never unlocked since E2EE shipped). Messages
   /// send as plaintext by necessity, and the UI marks them as such.
@@ -64,7 +67,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _loading = true;
   bool _loadError = false;
   bool _theyAreTyping = false;
-  bool _theyAreRecording = false;  // "recording audio..." indicator
+  bool _theyAreRecording = false; // "recording audio..." indicator
   // WS connection banner state — mirrors mission_room.dart's pattern.
   // Previously the DM thread never surfaced any of this even though
   // PoolWebSocketService (which DmWebSocketService wraps) already exposes
@@ -76,12 +79,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   bool _hasConnectedOnce = false;
   bool _showReconnecting = false;
   // Counterparty presence
-  bool? _counterpartyOnline;        // null = unknown, true = online, false = offline
-  DateTime? _counterpartyLastSeen;  // null = hidden by privacy setting
+  bool? _counterpartyOnline; // null = unknown, true = online, false = offline
+  DateTime? _counterpartyLastSeen; // null = hidden by privacy setting
   // E2EE
-  String? _counterpartyPubkey;      // counterparty's Ed25519 pubkey (base58)
+  String? _counterpartyPubkey; // counterparty's Ed25519 pubkey (base58)
   _E2eeStatus _e2eeStatus = _E2eeStatus.resolving;
   bool get _e2eeReady => _e2eeStatus == _E2eeStatus.ready;
+
   /// Completes once key exchange has settled (ready OR confirmed unavailable —
   /// never left pending). [_onSend]/[_onSendWithReply] await this (with a
   /// bound) before encrypting, so the very first messages in a new chat wait
@@ -99,8 +103,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   // unlike most chat apps' "N new messages ↓" badge. Reset to 0 whenever
   // the user scrolls back near the bottom or taps the button.
   int _unseenWhileScrolledUp = 0;
-  bool _showTimestamps = false;      // revealed by left-edge swipe
-  DmMessage? _replyingTo;           // the message being replied to
+  bool _showTimestamps = false; // revealed by left-edge swipe
+  DmMessage? _replyingTo; // the message being replied to
 
   // Tracks clientIds for which we have already received the WS echo frame
   // (our own message echoed back by the server). This is recorded
@@ -162,7 +166,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       setState(() {
         _counterpartyPubkey = pubkey;
-        _e2eeStatus = pubkey != null ? _E2eeStatus.ready : _E2eeStatus.unavailable;
+        _e2eeStatus = pubkey != null
+            ? _E2eeStatus.ready
+            : _E2eeStatus.unavailable;
       });
       // _loadMessages() may have already finished (or the room may have been
       // seeded from cache in initState) before the counterparty key arrived —
@@ -250,9 +256,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 // has no clientId that matches anything we generated,
                 // producing a visible duplicate bubble until the thread was
                 // closed and reopened.
-                _messages.removeWhere((m) =>
-                    (m.clientId != null && m.clientId == msg.clientId) ||
-                    (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
+                _messages.removeWhere(
+                  (m) =>
+                      (m.clientId != null && m.clientId == msg.clientId) ||
+                      (m.id.isNotEmpty &&
+                          !m.id.startsWith('local-') &&
+                          m.id == msg.id),
+                );
                 _messages.insert(0, msg);
                 _markMessagesStructureChanged();
                 // Cleanup: echo fully processed, remove from tracking set.
@@ -264,9 +274,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               // Remove any optimistic version of this message — see the
               // comment in the branch above for why both clientId and id
               // are checked.
-              _messages.removeWhere((m) =>
-                  (m.clientId != null && m.clientId == msg.clientId) ||
-                  (m.id.isNotEmpty && !m.id.startsWith('local-') && m.id == msg.id));
+              _messages.removeWhere(
+                (m) =>
+                    (m.clientId != null && m.clientId == msg.clientId) ||
+                    (m.id.isNotEmpty &&
+                        !m.id.startsWith('local-') &&
+                        m.id == msg.id),
+              );
               _messages.insert(0, msg);
               _markMessagesStructureChanged();
               // Cleanup: echo fully processed, remove from tracking set.
@@ -283,8 +297,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             setState(() => _theyAreTyping = isTyping);
             if (isTyping) {
               _typingClearTimer?.cancel();
-              _typingClearTimer =
-                  Timer(const Duration(seconds: 4), () {
+              _typingClearTimer = Timer(const Duration(seconds: 4), () {
                 if (mounted) setState(() => _theyAreTyping = false);
               });
             }
@@ -293,8 +306,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           final clientId = frame.data['client_id'] as String?;
           if (clientId != null) {
             setState(() {
-              final idx =
-                  _messages.indexWhere((m) => m.clientId == clientId);
+              final idx = _messages.indexWhere((m) => m.clientId == clientId);
               if (idx != -1) {
                 _messages[idx].localStatus = DmLocalStatus.delivered;
               }
@@ -309,7 +321,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               final idx = _messages.indexWhere((m) => m.id == messageId);
               if (idx != -1) {
                 final isMe = reactorUserId == model.currentUserId;
-                final existing = _messages[idx].reactions.indexWhere((r) => r.emoji == emoji);
+                final existing = _messages[idx].reactions.indexWhere(
+                  (r) => r.emoji == emoji,
+                );
                 final updated = List<DmReaction>.from(_messages[idx].reactions);
                 if (existing != -1) {
                   // Only increment if the reactor is not the current user
@@ -320,7 +334,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     );
                   }
                 } else {
-                  updated.add(DmReaction(emoji: emoji, count: 1, reactedByMe: isMe));
+                  updated.add(
+                    DmReaction(emoji: emoji, count: 1, reactedByMe: isMe),
+                  );
                 }
                 _messages[idx].reactions = updated;
               }
@@ -355,7 +371,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           // Ignore our own read receipts echoed back — only the
           // counterparty reading our messages should flip our sent bubbles
           // to "read".
-          if (readerUserId != null && readerUserId != model.currentUserId && lastReadId != null) {
+          if (readerUserId != null &&
+              readerUserId != model.currentUserId &&
+              lastReadId != null) {
             final readIdx = _messages.indexWhere((m) => m.id == lastReadId);
             if (readIdx != -1) {
               setState(() {
@@ -396,8 +414,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               setState(() {
                 _counterpartyOnline = online;
                 final lastSeenStr = frame.data['last_seen_at'] as String?;
-                if (lastSeenStr != null && lastSeenStr != 'hidden' && lastSeenStr != 'never') {
-                  _counterpartyLastSeen = DateTime.tryParse(lastSeenStr)?.toLocal();
+                if (lastSeenStr != null &&
+                    lastSeenStr != 'hidden' &&
+                    lastSeenStr != 'never') {
+                  _counterpartyLastSeen = DateTime.tryParse(
+                    lastSeenStr,
+                  )?.toLocal();
                 } else {
                   _counterpartyLastSeen = null;
                 }
@@ -426,7 +448,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void _onConnectionStateChanged() {
     if (!mounted) return;
     final state = _ws.connectionState.value;
-    final shouldShow = _hasConnectedOnce &&
+    final shouldShow =
+        _hasConnectedOnce &&
         (state == WsConnectionState.reconnecting ||
             state == WsConnectionState.disconnected);
     if (shouldShow != _showReconnecting) {
@@ -453,12 +476,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // there's nothing older worth fetching — stop here instead of hitting
     // the server for a page that will be filtered down to nothing.
     final clearedBefore = model.dmService.getClearedBefore(widget.roomId);
-    if (more && clearedBefore != null && _messages.isNotEmpty &&
+    if (more &&
+        clearedBefore != null &&
+        _messages.isNotEmpty &&
         !_messages.last.createdAt.isAfter(clearedBefore)) {
       return;
     }
     // Only show the full-screen spinner if we have nothing to display yet
-    if (!more) setState(() { _loading = _messages.isEmpty; _loadError = false; });
+    if (!more) {
+      setState(() {
+        _loading = _messages.isEmpty;
+        _loadError = false;
+      });
+    }
     if (more) setState(() => _loadingMore = true);
 
     try {
@@ -476,13 +506,17 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       final clearedBefore = model.dmService.getClearedBefore(widget.roomId);
       final fetched = clearedBefore == null
           ? result.messages
-          : result.messages.where((m) => m.createdAt.isAfter(clearedBefore)).toList();
+          : result.messages
+                .where((m) => m.createdAt.isAfter(clearedBefore))
+                .toList();
       setState(() {
         if (more) {
           _messages.addAll(fetched);
         } else {
           // Merge: keep any optimistic messages (local-only) and replace the rest
-          final localOnly = _messages.where((m) => m.id.startsWith('local-')).toList();
+          final localOnly = _messages
+              .where((m) => m.id.startsWith('local-'))
+              .toList();
           _messages
             ..clear()
             ..addAll(fetched)
@@ -492,7 +526,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         // Once we've fetched a page that reaches back to (or past) the
         // clear boundary, there's nothing older left to show — stop
         // paginating even if the server still has more/an older cursor.
-        _nextCursor = (clearedBefore != null && fetched.length < result.messages.length)
+        _nextCursor =
+            (clearedBefore != null && fetched.length < result.messages.length)
             ? null
             : result.nextCursor;
         _loading = false;
@@ -530,7 +565,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       // the actual latest real message — and the failure was previously
       // swallowed by markRead's own catch, so this could go unnoticed
       // indefinitely.
-      final latestReal = _messages.where((m) => !m.id.startsWith('local-')).firstOrNull;
+      final latestReal = _messages
+          .where((m) => !m.id.startsWith('local-'))
+          .firstOrNull;
       if (latestReal != null) {
         model.dmService.markRead(widget.roomId, latestReal.id);
       }
@@ -557,7 +594,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void _onItemPositionsChanged() {
     final positions = _itemPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
-    final maxIndex = positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+    final maxIndex = positions
+        .map((p) => p.index)
+        .reduce((a, b) => a > b ? a : b);
     final totalCount = _lastBuiltItemCount;
 
     // Load more when near the end of the built list (reversed list, end = oldest)
@@ -566,7 +605,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
 
     // Show scroll-to-bottom button once index 0 (newest) is no longer visible.
-    final minIndex = positions.map((p) => p.index).reduce((a, b) => a < b ? a : b);
+    final minIndex = positions
+        .map((p) => p.index)
+        .reduce((a, b) => a < b ? a : b);
     final shouldShow = minIndex > 0;
     if (shouldShow != _showScrollToBottom) {
       setState(() {
@@ -606,9 +647,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // _awaitE2eeResolution) before encrypting, so the first message(s) of a
     // brand-new chat don't race the exchange and get sent as plaintext just
     // because the counterparty's pubkey hadn't arrived yet.
-    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((wireContent) {
+    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((
+      wireContent,
+    ) {
       if (mounted) {
-        setState(() => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix));
+        setState(
+          () => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix),
+        );
       } else {
         optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix);
       }
@@ -623,29 +668,34 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         // async decrypt is still in progress), skip the HTTP fallback to
         // avoid sending a duplicate that the server treats as a new message.
         if (_wsEchoReceived.contains(clientId)) return;
-        final idx =
-            _messages.indexWhere((m) => m.clientId == clientId);
-        if (idx != -1 &&
-            _messages[idx].localStatus == DmLocalStatus.sending) {
-          model.dmService.sendMessage(widget.roomId, wireContent, clientId).then((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) {
-                  _messages[i].localStatus = DmLocalStatus.delivered;
+        final idx = _messages.indexWhere((m) => m.clientId == clientId);
+        if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
+          model.dmService
+              .sendMessage(widget.roomId, wireContent, clientId)
+              .then((_) {
+                if (mounted) {
+                  setState(() {
+                    final i = _messages.indexWhere(
+                      (m) => m.clientId == clientId,
+                    );
+                    if (i != -1) {
+                      _messages[i].localStatus = DmLocalStatus.delivered;
+                    }
+                  });
+                }
+              })
+              .catchError((_) {
+                if (mounted) {
+                  setState(() {
+                    final i = _messages.indexWhere(
+                      (m) => m.clientId == clientId,
+                    );
+                    if (i != -1) {
+                      _messages[i].localStatus = DmLocalStatus.failed;
+                    }
+                  });
                 }
               });
-            }
-          }).catchError((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) {
-                  _messages[i].localStatus = DmLocalStatus.failed;
-                }
-              });
-            }
-          });
         }
       });
     });
@@ -672,13 +722,16 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // generic label — otherwise every quoted payment reads as "💸 Payment"
     // regardless of amount.
     final quoteContent = switch (quotedMsg.type) {
-      DmMessageType.payment => '💸 \$${(double.tryParse(quotedMsg.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
-      DmMessageType.vibe => '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
-      DmMessageType.paymentRequest => '💬 Payment request · \$${(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.payment =>
+        '💸 \$${(double.tryParse(quotedMsg.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.vibe =>
+        '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.paymentRequest =>
+        '💬 Payment request · \$${(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
       // Use displayContent, not content — if the quoted message hasn't
       // finished decrypting yet, content still holds the raw `e2ee:` blob
       // and we must never let that leak into the reply-quote metadata.
-      _                            => quotedMsg.displayContent ?? '',
+      _ => quotedMsg.displayContent ?? '',
     };
     // Use the real server ID, not a local-* id (optimistic messages don't have a stable ID yet)
     final replyToId = quotedMsg.id.startsWith('local-') ? null : quotedMsg.id;
@@ -704,9 +757,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       _markMessagesStructureChanged();
     });
 
-    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((wireContent) {
+    _awaitE2eeResolution().then((_) => _encryptForSend(text)).then((
+      wireContent,
+    ) {
       if (mounted) {
-        setState(() => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix));
+        setState(
+          () => optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix),
+        );
       } else {
         optimistic.isEncrypted = wireContent.startsWith(kE2eePrefix);
       }
@@ -728,26 +785,39 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (_wsEchoReceived.contains(clientId)) return;
         final idx = _messages.indexWhere((m) => m.clientId == clientId);
         if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
-          model.dmService.sendMessage(
-            widget.roomId, wireContent, clientId,
-            replyToContent: quoteContent,
-            replyToSenderZendtag: quotedMsg.senderZendtag,
-            replyToMessageId: replyToId,
-          ).then((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+          model.dmService
+              .sendMessage(
+                widget.roomId,
+                wireContent,
+                clientId,
+                replyToContent: quoteContent,
+                replyToSenderZendtag: quotedMsg.senderZendtag,
+                replyToMessageId: replyToId,
+              )
+              .then((_) {
+                if (mounted) {
+                  setState(() {
+                    final i = _messages.indexWhere(
+                      (m) => m.clientId == clientId,
+                    );
+                    if (i != -1) {
+                      _messages[i].localStatus = DmLocalStatus.delivered;
+                    }
+                  });
+                }
+              })
+              .catchError((_) {
+                if (mounted) {
+                  setState(() {
+                    final i = _messages.indexWhere(
+                      (m) => m.clientId == clientId,
+                    );
+                    if (i != -1) {
+                      _messages[i].localStatus = DmLocalStatus.failed;
+                    }
+                  });
+                }
               });
-            }
-          }).catchError((_) {
-            if (mounted) {
-              setState(() {
-                final i = _messages.indexWhere((m) => m.clientId == clientId);
-                if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
-              });
-            }
-          });
         }
       });
     });
@@ -763,11 +833,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       );
     }
     if (_theyAreTyping) {
-      return _PresenceLabel(
-        text: 'typing…',
-        color: zt.accent,
-        dot: true,
-      );
+      return _PresenceLabel(text: 'typing…', color: zt.accent, dot: true);
     }
     if (_counterpartyOnline == true) {
       return _PresenceLabel(
@@ -784,24 +850,35 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       );
     }
     // Fallback: show zendtag + streak
-    return Builder(builder: (ctx) {
-      final model = ZendScope.of(ctx);
-      final streak = model.activeStreaks[cp.userId];
-      return Row(
-        children: [
-          Text('@${cp.zendtag}',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-          if (streak != null && streak.isActive)
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                '🔥 ${streak.streakWeeks}w',
-                style: const TextStyle(fontSize: 11, decoration: TextDecoration.none, decorationColor: Colors.transparent),
+    return Builder(
+      builder: (ctx) {
+        final model = ZendScope.of(ctx);
+        final streak = model.activeStreaks[cp.userId];
+        return Row(
+          children: [
+            Text(
+              handleLabel(cp.zendtag),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: zt.textSecondary,
               ),
             ),
-        ],
-      );
-    });
+            if (streak != null && streak.isActive)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Text(
+                  '🔥 ${streak.streakWeeks}w',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    decoration: TextDecoration.none,
+                    decorationColor: Colors.transparent,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   // ── E2EE helpers ────────────────────────────────────────────────────────────
@@ -887,9 +964,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
     // Fallback: content+sender match for messages sent before ID tracking
     if (replyContent != null) {
-      return _messages.indexWhere((m) =>
-          m.content == replyContent &&
-          (replySender == null || m.senderZendtag == replySender));
+      return _messages.indexWhere(
+        (m) =>
+            m.content == replyContent &&
+            (replySender == null || m.senderZendtag == replySender),
+      );
     }
     return -1;
   }
@@ -927,7 +1006,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Original message not found', style: TextStyle(fontFamily: 'Geist')),
+              content: Text(
+                'Original message not found',
+                style: TextStyle(fontFamily: 'Geist'),
+              ),
               duration: Duration(seconds: 2),
             ),
           );
@@ -997,7 +1079,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: zt.bgSecondary,
                   shape: BoxShape.circle,
@@ -1005,7 +1088,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   // lift this off the thread.
                   border: Border.all(color: zt.border),
                 ),
-                child: Icon(PhosphorIconsRegular.caretDown, size: 18, color: zt.textSecondary),
+                child: Icon(
+                  PhosphorIconsRegular.caretDown,
+                  size: 18,
+                  color: zt.textSecondary,
+                ),
               ),
               // "N new" badge — only shown once we know something actually
               // arrived below, not just because the user happens to be
@@ -1015,17 +1102,31 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   top: -4,
                   right: -4,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
                     constraints: const BoxConstraints(minWidth: 18),
                     decoration: BoxDecoration(
                       color: zt.accent,
                       borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
                     ),
                     child: Text(
-                      _unseenWhileScrolledUp > 9 ? '9+' : '$_unseenWhileScrolledUp',
+                      _unseenWhileScrolledUp > 9
+                          ? '9+'
+                          : '$_unseenWhileScrolledUp',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Geist', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3),
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ),
@@ -1078,7 +1179,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Copied to clipboard', style: TextStyle(fontFamily: 'Geist')),
+        content: Text(
+          'Copied to clipboard',
+          style: TextStyle(fontFamily: 'Geist'),
+        ),
         duration: Duration(seconds: 2),
       ),
     );
@@ -1109,7 +1213,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Forwarded to @${target.counterparty.zendtag}', style: const TextStyle(fontFamily: 'Geist')),
+          content: Text(
+            'Forwarded to @${target.counterparty.zendtag}',
+            style: const TextStyle(fontFamily: 'Geist'),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -1117,7 +1224,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't forward message", style: TextStyle(fontFamily: 'Geist')),
+          content: Text(
+            "Couldn't forward message",
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1139,7 +1249,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: zt.bgElevated,
-        title: const Text('Delete message?', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Delete message?',
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
+        ),
         content: const Text(
           'This message will be deleted for everyone in this chat.',
           style: TextStyle(fontFamily: 'Geist'),
@@ -1151,7 +1264,13 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Geist', color: ZendColors.destructive)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                color: ZendColors.destructive,
+              ),
+            ),
           ),
         ],
       ),
@@ -1171,7 +1290,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       setState(() => _messages[idx].isDeleted = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Couldn't delete message", style: TextStyle(fontFamily: 'Geist')),
+          content: Text(
+            "Couldn't delete message",
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1217,7 +1339,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (msgIdx == -1) return;
     final model = ZendScope.of(context);
     final targetMsg = _messages[msgIdx];
-    final alreadyReacted = targetMsg.reactions.any((r) => r.emoji == emoji && r.reactedByMe);
+    final alreadyReacted = targetMsg.reactions.any(
+      (r) => r.emoji == emoji && r.reactedByMe,
+    );
 
     HapticFeedback.selectionClick();
     if (alreadyReacted) {
@@ -1232,19 +1356,36 @@ class _DmThreadScreenState extends State<DmThreadScreen>
             .toList();
         _messages[msgIdx].reactions = updated;
       });
-      unawaited(model.dmService.removeMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
+      unawaited(
+        model.dmService.removeMessageReaction(
+          widget.roomId,
+          messageId: targetMsg.id,
+          emoji: emoji,
+        ),
+      );
     } else {
       setState(() {
-        final existing = targetMsg.reactions.indexWhere((r) => r.emoji == emoji);
+        final existing = targetMsg.reactions.indexWhere(
+          (r) => r.emoji == emoji,
+        );
         final updated = List<DmReaction>.from(targetMsg.reactions);
         if (existing != -1) {
-          updated[existing] = updated[existing].copyWith(count: updated[existing].count + 1, reactedByMe: true);
+          updated[existing] = updated[existing].copyWith(
+            count: updated[existing].count + 1,
+            reactedByMe: true,
+          );
         } else {
           updated.add(DmReaction(emoji: emoji, count: 1, reactedByMe: true));
         }
         _messages[msgIdx].reactions = updated;
       });
-      unawaited(model.dmService.sendMessageReaction(widget.roomId, messageId: targetMsg.id, emoji: emoji));
+      unawaited(
+        model.dmService.sendMessageReaction(
+          widget.roomId,
+          messageId: targetMsg.id,
+          emoji: emoji,
+        ),
+      );
     }
   }
 
@@ -1276,132 +1417,232 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       isDismissible: true,
       enableDrag: true,
       builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setModalState) {
-          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.92),
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 14),
-                Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)))),
-                const SizedBox(height: 16),
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Request from', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-                          Text('@${widget.counterparty.zendtag}', style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary)),
-                        ],
-                      ),
-                    ],
-                  ),
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.92,
+              ),
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
                 ),
-                const SizedBox(height: 20),
-                // Amount display — large like QR sheet
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () {},
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: zt.border,
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        ZendAvatar(
+                          radius: 18,
+                          photoUrl: widget.counterparty.avatarUrl,
+                          initials: widget.counterparty.initialLetter,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('\$', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textSecondary)),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: TextField(
-                                controller: amountCtrl,
-                                autofocus: true,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textPrimary, height: 1),
-                                decoration: InputDecoration(
-                                  hintText: '0',
-                                  hintStyle: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 48, color: zt.textSecondary.withValues(alpha: 0.4)),
-                                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
-                                ),
-                                onChanged: (_) => setModalState(() => errorMsg = null),
+                            Text(
+                              'Request from',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 11,
+                                color: zt.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              handleLabel(widget.counterparty.zendtag),
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: zt.textPrimary,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      if (errorMsg != null)
-                        Text(errorMsg!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Note field
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TextField(
-                    controller: noteCtrl,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'Add a note…',
-                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.5)),
-                      filled: true, fillColor: zt.bgPrimary,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ],
                     ),
                   ),
-                ),
-                // Confirm button — always visible above the keyboard.
-                // When the keyboard is up, we push the button up by the
-                // keyboard height (bottomInset). When it's down, we use
-                // the device's bottom safe-area inset + a comfortable 20px
-                // margin so the button never sits flush with the home bar.
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    12,
-                    20,
-                    bottomInset > 0
-                        ? bottomInset + 8
-                        : MediaQuery.of(ctx).viewPadding.bottom + 20,
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final parsed = double.tryParse(amountCtrl.text.trim());
-                        if (parsed == null || parsed < 0.01) {
-                          setModalState(() => errorMsg = 'Enter a valid amount');
-                          return;
-                        }
-                        Navigator.pop(ctx);
-                        _sendPaymentRequest(parsed, noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text('Send request', style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 20),
+                  // Amount display — large like QR sheet
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () {},
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '\$',
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 32,
+                                  color: zt.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: TextField(
+                                  controller: amountCtrl,
+                                  autofocus: true,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 48,
+                                    color: zt.textPrimary,
+                                    height: 1,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: '0',
+                                    hintStyle: TextStyle(
+                                      fontFamily: 'Geist',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 48,
+                                      color: zt.textSecondary.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  onChanged: (_) =>
+                                      setModalState(() => errorMsg = null),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (errorMsg != null)
+                          Text(
+                            errorMsg!,
+                            style: const TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: ZendColors.destructive,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        });
+                  const SizedBox(height: 12),
+                  // Note field
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      controller: noteCtrl,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Add a note…',
+                        hintStyle: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary.withValues(alpha: 0.5),
+                        ),
+                        filled: true,
+                        fillColor: zt.bgPrimary,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Confirm button — always visible above the keyboard.
+                  // When the keyboard is up, we push the button up by the
+                  // keyboard height (bottomInset). When it's down, we use
+                  // the device's bottom safe-area inset + a comfortable 20px
+                  // margin so the button never sits flush with the home bar.
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      12,
+                      20,
+                      bottomInset > 0
+                          ? bottomInset + 8
+                          : MediaQuery.of(ctx).viewPadding.bottom + 20,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final parsed = double.tryParse(
+                            amountCtrl.text.trim(),
+                          );
+                          if (parsed == null || parsed < 0.01) {
+                            setModalState(
+                              () => errorMsg = 'Enter a valid amount',
+                            );
+                            return;
+                          }
+                          Navigator.pop(ctx);
+                          _sendPaymentRequest(
+                            parsed,
+                            noteCtrl.text.trim().isEmpty
+                                ? null
+                                : noteCtrl.text.trim(),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text(
+                          'Send request',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
       },
     ).then((_) {
       amountCtrl.dispose();
@@ -1438,27 +1679,30 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     HapticFeedback.lightImpact();
 
     // Send to server
-    model.dmService.sendPaymentRequest(
-      widget.roomId,
-      amountUsdc: amount,
-      requesterZendtag: myZendtag,
-      note: note,
-      clientId: clientId,
-    ).then((_) {
-      if (mounted) {
-        setState(() {
-          final i = _messages.indexWhere((m) => m.clientId == clientId);
-          if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+    model.dmService
+        .sendPaymentRequest(
+          widget.roomId,
+          amountUsdc: amount,
+          requesterZendtag: myZendtag,
+          note: note,
+          clientId: clientId,
+        )
+        .then((_) {
+          if (mounted) {
+            setState(() {
+              final i = _messages.indexWhere((m) => m.clientId == clientId);
+              if (i != -1) _messages[i].localStatus = DmLocalStatus.delivered;
+            });
+          }
+        })
+        .catchError((_) {
+          if (mounted) {
+            setState(() {
+              final i = _messages.indexWhere((m) => m.clientId == clientId);
+              if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
+            });
+          }
         });
-      }
-    }).catchError((_) {
-      if (mounted) {
-        setState(() {
-          final i = _messages.indexWhere((m) => m.clientId == clientId);
-          if (i != -1) _messages[i].localStatus = DmLocalStatus.failed;
-        });
-      }
-    });
   }
 
   void _onPayRequest(DmPaymentRequestData rd) {
@@ -1466,10 +1710,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final amount = double.tryParse(rd.amountUsdc) ?? 0.0;
     showQrPaymentSheet(
       context,
-      intent: QrPaymentIntent(
-        zendtag: rd.requesterZendtag,
-        amountUsdc: amount,
-      ),
+      intent: QrPaymentIntent(zendtag: rd.requesterZendtag, amountUsdc: amount),
     );
   }
 
@@ -1500,14 +1741,27 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: color, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _handleMenuAction(BuildContext context, ZendTheme zt, DmCounterparty cp, _ChatMenuAction action) {
+  void _handleMenuAction(
+    BuildContext context,
+    ZendTheme zt,
+    DmCounterparty cp,
+    _ChatMenuAction action,
+  ) {
     switch (action) {
       case _ChatMenuAction.viewContact:
         pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
@@ -1528,11 +1782,23 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         });
         ZendScope.of(context).dmService.clearRoomCache(widget.roomId);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Chat cleared', style: TextStyle(fontFamily: 'Geist')), backgroundColor: zt.bgSecondary),
+          SnackBar(
+            content: const Text(
+              'Chat cleared',
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+            backgroundColor: zt.bgSecondary,
+          ),
         );
       case _ChatMenuAction.block:
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('Block feature coming soon', style: TextStyle(fontFamily: 'Geist')), backgroundColor: zt.bgSecondary),
+          SnackBar(
+            content: const Text(
+              'Block feature coming soon',
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+            backgroundColor: zt.bgSecondary,
+          ),
         );
     }
   }
@@ -1621,7 +1887,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
       // Step B: sign the USDC transfer transaction locally
       final blockhash = prepareData['blockhash'] as String;
-      final recipientAddress = prepareData['recipient_wallet_address'] as String;
+      final recipientAddress =
+          prepareData['recipient_wallet_address'] as String;
       final feePayerAddress = prepareData['fee_payer'] as String;
       final senderAta = prepareData['sender_ata'] as String?;
       final recipientAta = prepareData['recipient_ata'] as String?;
@@ -1646,7 +1913,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         senderAtaOverride: senderAta,
         recipientAtaOverride: recipientAta,
       );
-      for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+      for (var i = 0; i < keypair.length; i++) {
+        keypair[i] = 0;
+      }
 
       // Step C: submit the signed transaction
       await model.dmService.submitVibe(
@@ -1702,7 +1971,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _wsSub?.cancel();
     _ws.connectionState.removeListener(_onConnectionStateChanged);
     _ws.dispose();
-    _itemPositionsListener.itemPositions.removeListener(_onItemPositionsChanged);
+    _itemPositionsListener.itemPositions.removeListener(
+      _onItemPositionsChanged,
+    );
     _typingClearTimer?.cancel();
     _recordingClearTimer?.cancel();
     super.dispose();
@@ -1719,7 +1990,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   /// Whether the message at [index] is the FIRST (topmost) in its sender run.
   /// In the reversed list, the message before (index - 1) is newer.
   bool _isFirstInGroup(int index) {
-    if (index == 0) return true; // newest message = always starts a group visually
+    // newest message = always starts a group visually
+    if (index == 0) return true;
     final current = _messages[index];
     final newer = _messages[index - 1];
     if (current.senderUserId != newer.senderUserId) return true;
@@ -1785,7 +2057,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     DateTime? lastDay;
 
     for (final msg in chronological) {
-      final day = DateTime(msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+      final day = DateTime(
+        msg.createdAt.year,
+        msg.createdAt.month,
+        msg.createdAt.day,
+      );
       if (lastDay == null || day != lastDay) {
         items.add(_DmSeparatorItem(date: day));
         lastDay = day;
@@ -1820,312 +2096,448 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         _handleBackPressed();
       },
       child: Scaffold(
-      // Distinct chat-canvas colour (not the app-wide scaffold background) —
-      // gives bubbles a surface to visibly sit on top of, matching the
-      // WhatsApp/iMessage "canvas vs. bubble" depth.
-      backgroundColor: zt.chatBg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── AppBar ────────────────────────────────────────────────────
-            Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _handleBackPressed,
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 26),
-                  ),
-                  GestureDetector(
-                    onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
-                    child: ZendAvatar(
-                      radius: 20,
-                      photoUrl: cp.avatarUrl,
-                      initials: cp.initialLetter,
-                      isOnline: _counterpartyOnline,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
-                                  style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (_e2eeReady) ...[
-                                const SizedBox(width: 5),
-                                Icon(PhosphorIconsRegular.lockSimple, size: 13, color: ZendColors.positive),
-                              ],
-                            ],
-                          ),
-                          // ── Presence / status row ─────────────────────
-                          _buildPresenceSubtitle(zt, cp),
-                        ],
+        // Distinct chat-canvas colour (not the app-wide scaffold background) —
+        // gives bubbles a surface to visibly sit on top of, matching the
+        // WhatsApp/iMessage "canvas vs. bubble" depth.
+        backgroundColor: zt.chatBg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ── AppBar ────────────────────────────────────────────────────
+              Container(
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: _handleBackPressed,
+                      icon: Icon(
+                        PhosphorIconsRegular.caretLeft,
+                        color: zt.textPrimary,
+                        size: 26,
                       ),
                     ),
-                  ),
-                  // ── Overflow menu ─────────────────────────────────────
-                  PopupMenuButton<_ChatMenuAction>(
-                    icon: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary, size: 24),
-                    color: zt.bgSecondary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xl)),
-                    elevation: 1,
-                    shadowColor: Colors.black.withValues(alpha: 0.08),
-                    popUpAnimationStyle: AnimationStyle.noAnimation,
-                    onSelected: (action) => _handleMenuAction(context, zt, cp, action),
-                    itemBuilder: (ctx) => [
-                      _popupItem(ctx, zt, _ChatMenuAction.viewContact, PhosphorIconsRegular.user, 'View contact'),
-                      _popupItem(ctx, zt, _ChatMenuAction.searchInChat, PhosphorIconsRegular.magnifyingGlass, 'Search in chat', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.disappearing, PhosphorIconsRegular.clock, 'Disappearing messages', disabled: true),
-                      _popupItem(ctx, zt, _ChatMenuAction.clearChat, PhosphorIconsRegular.trash, 'Clear chat'),
-                      const PopupMenuDivider(),
-                      _popupItem(ctx, zt, _ChatMenuAction.block, PhosphorIconsRegular.prohibit, 'Block @${cp.zendtag}', isDestructive: true),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: zt.border),
-
-            // ── Reconnecting banner ──
-            if (_showReconnecting)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                color: zt.bgSecondary,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 12, height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5, color: zt.textSecondary),
+                    GestureDetector(
+                      onTap: () => pushZendSlide(
+                        context,
+                        UserProfileScreen(zendtag: cp.zendtag),
+                      ),
+                      child: ZendAvatar(
+                        radius: 20,
+                        photoUrl: cp.avatarUrl,
+                        initials: cp.initialLetter,
+                        isOnline: _counterpartyOnline,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Text('Reconnecting...', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => pushZendSlide(
+                          context,
+                          UserProfileScreen(zendtag: cp.zendtag),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    cp.displayName.trim().isEmpty
+                                        ? handleLabel(cp.zendtag)
+                                        : cp.displayName,
+                                    style: TextStyle(
+                                      fontFamily: 'Geist',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: zt.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (_e2eeReady) ...[
+                                  const SizedBox(width: 5),
+                                  Icon(
+                                    PhosphorIconsRegular.lockSimple,
+                                    size: 13,
+                                    color: ZendColors.positive,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            // ── Presence / status row ─────────────────────
+                            _buildPresenceSubtitle(zt, cp),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // ── Overflow menu ─────────────────────────────────────
+                    PopupMenuButton<_ChatMenuAction>(
+                      icon: Icon(
+                        PhosphorIconsRegular.dotsThreeVertical,
+                        color: zt.textSecondary,
+                        size: 24,
+                      ),
+                      color: zt.bgSecondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ZendRadii.xl),
+                      ),
+                      elevation: 1,
+                      shadowColor: Colors.black.withValues(alpha: 0.08),
+                      popUpAnimationStyle: AnimationStyle.noAnimation,
+                      onSelected: (action) =>
+                          _handleMenuAction(context, zt, cp, action),
+                      itemBuilder: (ctx) => [
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.viewContact,
+                          PhosphorIconsRegular.user,
+                          'View contact',
+                        ),
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.searchInChat,
+                          PhosphorIconsRegular.magnifyingGlass,
+                          'Search in chat',
+                          disabled: true,
+                        ),
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.disappearing,
+                          PhosphorIconsRegular.clock,
+                          'Disappearing messages',
+                          disabled: true,
+                        ),
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.clearChat,
+                          PhosphorIconsRegular.trash,
+                          'Clear chat',
+                        ),
+                        const PopupMenuDivider(),
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.block,
+                          PhosphorIconsRegular.prohibit,
+                          'Block @${cp.zendtag}',
+                          isDestructive: true,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
+              Divider(height: 1, color: zt.border),
 
-            // ── Could not connect banner — shown once the WS has given up
-            // retrying automatically (5 consecutive failures). Tapping it
-            // resets the failure counter and reconnects.
-            if (!_showReconnecting && _ws.connectionState.value == WsConnectionState.disconnected && _hasConnectedOnce)
-              GestureDetector(
-                onTap: () => _ws.resetAndReconnect(),
-                child: Container(
+              // ── Reconnecting banner ──
+              if (_showReconnecting)
+                Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  color: ZendColors.destructive.withValues(alpha: 0.1),
-                  child: Text(
-                    'Could not connect. Tap to retry.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textPrimary),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  color: zt.bgSecondary,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Reconnecting...',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
 
-            // ── Messages + scroll-to-bottom ───────────────────────────────
-            Expanded(
-              child: GestureDetector(
-                // Swipe left from right edge → reveal timestamps (iMessage style)
-                onHorizontalDragUpdate: (details) {
-                  if (details.delta.dx < -3) {
-                    if (!_showTimestamps) setState(() => _showTimestamps = true);
+              // ── Could not connect banner — shown once the WS has given up
+              // retrying automatically (5 consecutive failures). Tapping it
+              // resets the failure counter and reconnects.
+              if (!_showReconnecting &&
+                  _ws.connectionState.value == WsConnectionState.disconnected &&
+                  _hasConnectedOnce)
+                GestureDetector(
+                  onTap: () => _ws.resetAndReconnect(),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    color: ZendColors.destructive.withValues(alpha: 0.1),
+                    child: Text(
+                      'Could not connect. Tap to retry.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // ── Messages + scroll-to-bottom ───────────────────────────────
+              Expanded(
+                child: GestureDetector(
+                  // Swipe left from right edge → reveal timestamps (iMessage style)
+                  onHorizontalDragUpdate: (details) {
+                    if (details.delta.dx < -3 && !_showTimestamps) {
+                      setState(() => _showTimestamps = true);
+                    }
+                  },
+                  onHorizontalDragEnd: (_) {
+                    if (_showTimestamps) {
+                      setState(() => _showTimestamps = false);
+                    }
+                  },
+                  onHorizontalDragCancel: () {
+                    if (_showTimestamps) {
+                      setState(() => _showTimestamps = false);
+                    }
+                  },
+                  child: Stack(
+                    children: [
+                      _loading
+                          ? const DmThreadSkeleton()
+                          : _loadError
+                          ? ZendErrorState(
+                              title: "Couldn't load this conversation",
+                              onRetry: () => _loadMessages(),
+                            )
+                          : Builder(
+                              builder: (ctx) {
+                                final displayList = _buildDisplayList();
+                                final typingOffset = _theyAreTyping ? 1 : 0;
+                                final moreOffset = _loadingMore ? 1 : 0;
+                                final totalCount =
+                                    displayList.length +
+                                    typingOffset +
+                                    moreOffset;
+                                _lastBuiltItemCount = totalCount;
+
+                                return ScrollablePositionedList.builder(
+                                  itemScrollController: _itemScrollController,
+                                  itemPositionsListener: _itemPositionsListener,
+                                  reverse: true,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    8,
+                                    4,
+                                    8,
+                                    4,
+                                  ),
+                                  itemCount: totalCount,
+                                  itemBuilder: (ctx, i) {
+                                    // "Load more" spinner at the very end (oldest)
+                                    if (_loadingMore &&
+                                        i ==
+                                            displayList.length + typingOffset) {
+                                      return const Padding(
+                                        padding: EdgeInsets.all(8),
+                                        child: Center(
+                                          child: ZendLoader(size: 18),
+                                        ),
+                                      );
+                                    }
+                                    // Typing indicator at the very start (newest)
+                                    if (_theyAreTyping && i == 0) {
+                                      return _TypingIndicator(
+                                        avatarUrl: cp.avatarUrl,
+                                        initial: cp.initialLetter,
+                                      );
+                                    }
+                                    final listIdx = i - typingOffset;
+                                    final item = displayList[listIdx];
+
+                                    // Date separator
+                                    if (item is _DmSeparatorItem) {
+                                      return _DateSeparator(date: item.date);
+                                    }
+
+                                    final msgItem = item as _DmMessageItem;
+                                    final msg = msgItem.message;
+
+                                    // Map back to _messages index for grouping helpers
+                                    final msgIdx = _messages.indexWhere(
+                                      (m) =>
+                                          m.id == msg.id ||
+                                          (m.clientId != null &&
+                                              m.clientId == msg.clientId),
+                                    );
+
+                                    final isMe =
+                                        msg.senderUserId == model.currentUserId;
+                                    final isCont = msgIdx >= 0
+                                        ? _isContinuation(msgIdx)
+                                        : false;
+                                    final isFirst = msgIdx >= 0
+                                        ? _isFirstInGroup(msgIdx)
+                                        : true;
+                                    final isLast = msgIdx >= 0
+                                        ? _isLastInGroup(msgIdx)
+                                        : true;
+                                    final isGroupEnd = !isMe && isFirst;
+                                    final isFlashing = _flashingMsgId == msg.id;
+
+                                    Widget bubbleRow = Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        // Avatar slot — only shown on group-end for incoming.
+                                        // Fixed 26×26 so the circle never stretches to an oval.
+                                        if (!isMe)
+                                          SizedBox(
+                                            width: 32,
+                                            height: 26,
+                                            child: isGroupEnd
+                                                ? Align(
+                                                    alignment:
+                                                        Alignment.bottomCenter,
+                                                    child: ZendAvatar(
+                                                      radius: 13,
+                                                      photoUrl: cp.avatarUrl,
+                                                      initials:
+                                                          cp.initialLetter,
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                        Expanded(
+                                          child: DmMessageBubble(
+                                            message: msg,
+                                            isMe: isMe,
+                                            isContinuation: isCont,
+                                            isFirst: isFirst,
+                                            isLast: isLast,
+                                            showTimestamp: _showTimestamps,
+                                            onReply: (m) =>
+                                                setState(() => _replyingTo = m),
+                                            onReplyTap: (m) =>
+                                                _scrollToReplyOrigin(m),
+                                            onRetry:
+                                                msg.localStatus ==
+                                                    DmLocalStatus.failed
+                                                ? (msg.type ==
+                                                          DmMessageType.vibe
+                                                      ? () => _retryVibe(
+                                                          msg.clientId ?? '',
+                                                        )
+                                                      : () => _onRetry(
+                                                          msg.clientId ?? '',
+                                                        ))
+                                                : null,
+                                            onPayRequest: _onPayRequest,
+                                            onLongPress: _showMessageActions,
+                                            onReactionTap: _onToggleReaction,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+
+                                    // When this message carries reactions, the floating
+                                    // badge (drawn inside DmMessageBubble via a
+                                    // Positioned widget with a negative bottom offset,
+                                    // so it doesn't affect the Row's own height / the
+                                    // avatar's cross-axis-end alignment above) needs
+                                    // somewhere below the bubble to actually sit in.
+                                    // Grouped messages normally sit almost flush
+                                    // together (1-5px gap), which isn't enough room —
+                                    // without this spacer the badge bleeds onto the
+                                    // next message's bubble. Adding the extra gap
+                                    // HERE (as a sibling below the Row, not inside it)
+                                    // reserves that space without dragging the avatar
+                                    // down with it.
+                                    Widget itemContent =
+                                        msg.reactions.isNotEmpty
+                                        ? Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              bubbleRow,
+                                              const SizedBox(height: 14),
+                                            ],
+                                          )
+                                        : bubbleRow;
+
+                                    // Flash highlight — AnimatedContainer tint that
+                                    // fades in and out when tapping a reply to jump
+                                    // back to the original message.
+                                    return _FlashHighlight(
+                                      key: ValueKey(msg.id),
+                                      isFlashing: isFlashing,
+                                      child: itemContent,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                      // ── Scroll-to-bottom button ─────────────────────────────
+                      _buildScrollToBottomButton(zt),
+                    ],
+                  ), // close Stack
+                ), // close GestureDetector child
+              ), // close Expanded
+              // Reply strip - shown when user swipes right on a message
+              if (_replyingTo != null)
+                _ReplyStrip(
+                  message: _replyingTo!,
+                  currentUserId: model.currentUserId ?? '',
+                  onCancel: () => setState(() => _replyingTo = null),
+                ),
+
+              // "Securing chat…" strip — shown only while the E2EE key exchange
+              // for this room is still in flight. Messages sent during this
+              // window still wait for resolution (see _awaitE2eeResolution),
+              // this is purely informational so the user isn't left guessing
+              // why the lock icon in the AppBar hasn't appeared yet.
+              if (_e2eeStatus == _E2eeStatus.resolving)
+                _SecuringChatStrip(zt: zt),
+
+              // ── Input ─────────────────────────────────────────────────────
+              DmInputBar(
+                onSend: (text) {
+                  if (_replyingTo != null) {
+                    final quoted = _replyingTo!;
+                    setState(() => _replyingTo = null);
+                    // Send with structured reply context — not a text prefix.
+                    // The optimistic message carries replyToContent/replyToSenderZendtag
+                    // so the bubble renders a proper quote block immediately.
+                    _onSendWithReply(text, quoted);
+                  } else {
+                    _onSend(text);
                   }
                 },
-                onHorizontalDragEnd: (_) {
-                  if (_showTimestamps) setState(() => _showTimestamps = false);
-                },
-                onHorizontalDragCancel: () {
-                  if (_showTimestamps) setState(() => _showTimestamps = false);
-                },
-                child: Stack(
-                children: [
-                  _loading
-                      ? const DmThreadSkeleton()
-                      : _loadError
-                      ? ZendErrorState(
-                          title: "Couldn't load this conversation",
-                          onRetry: () => _loadMessages(),
-                        )
-                      : Builder(builder: (ctx) {
-                          final displayList = _buildDisplayList();
-                          final typingOffset = _theyAreTyping ? 1 : 0;
-                          final moreOffset  = _loadingMore ? 1 : 0;
-                          final totalCount  = displayList.length + typingOffset + moreOffset;
-                          _lastBuiltItemCount = totalCount;
-
-                          return ScrollablePositionedList.builder(
-                          itemScrollController: _itemScrollController,
-                          itemPositionsListener: _itemPositionsListener,
-                          reverse: true,
-                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                          itemCount: totalCount,
-                          itemBuilder: (ctx, i) {
-                            // "Load more" spinner at the very end (oldest)
-                            if (_loadingMore && i == displayList.length + typingOffset) {
-                              return const Padding(
-                                padding: EdgeInsets.all(8),
-                                child: Center(child: ZendLoader(size: 18)),
-                              );
-                            }
-                            // Typing indicator at the very start (newest)
-                            if (_theyAreTyping && i == 0) {
-                              return _TypingIndicator(avatarUrl: cp.avatarUrl, initial: cp.initialLetter);
-                            }
-                            final listIdx = i - typingOffset;
-                            final item = displayList[listIdx];
-
-                            // Date separator
-                            if (item is _DmSeparatorItem) {
-                              return _DateSeparator(date: item.date);
-                            }
-
-                            final msgItem = item as _DmMessageItem;
-                            final msg = msgItem.message;
-
-                            // Map back to _messages index for grouping helpers
-                            final msgIdx = _messages.indexWhere((m) => m.id == msg.id || (m.clientId != null && m.clientId == msg.clientId));
-
-                            final isMe = msg.senderUserId == model.currentUserId;
-                            final isCont = msgIdx >= 0 ? _isContinuation(msgIdx) : false;
-                            final isFirst = msgIdx >= 0 ? _isFirstInGroup(msgIdx) : true;
-                            final isLast  = msgIdx >= 0 ? _isLastInGroup(msgIdx) : true;
-                            final isGroupEnd = !isMe && isFirst;
-                            final isFlashing = _flashingMsgId == msg.id;
-
-                            Widget bubbleRow = Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                // Avatar slot — only shown on group-end for incoming.
-                                // Fixed 26×26 so the circle never stretches to an oval.
-                                if (!isMe) SizedBox(
-                                  width: 32,
-                                  height: 26,
-                                  child: isGroupEnd
-                                      ? Align(
-                                          alignment: Alignment.bottomCenter,
-                                          child: ZendAvatar(radius: 13, photoUrl: cp.avatarUrl, initials: cp.initialLetter),
-                                        )
-                                      : null,
-                                ),
-                                Expanded(
-                                  child: DmMessageBubble(
-                                    message: msg,
-                                    isMe: isMe,
-                                    isContinuation: isCont,
-                                    isFirst: isFirst,
-                                    isLast: isLast,
-                                    showTimestamp: _showTimestamps,
-                                    onReply: (m) => setState(() => _replyingTo = m),
-                                    onReplyTap: (m) => _scrollToReplyOrigin(m),
-                                    onRetry: msg.localStatus == DmLocalStatus.failed
-                                        ? (msg.type == DmMessageType.vibe
-                                            ? () => _retryVibe(msg.clientId ?? '')
-                                            : () => _onRetry(msg.clientId ?? ''))
-                                        : null,
-                                    onPayRequest: _onPayRequest,
-                                    onLongPress: _showMessageActions,
-                                    onReactionTap: _onToggleReaction,
-                                  ),
-                                ),
-                              ],
-                            );
-
-                            // When this message carries reactions, the floating
-                            // badge (drawn inside DmMessageBubble via a
-                            // Positioned widget with a negative bottom offset,
-                            // so it doesn't affect the Row's own height / the
-                            // avatar's cross-axis-end alignment above) needs
-                            // somewhere below the bubble to actually sit in.
-                            // Grouped messages normally sit almost flush
-                            // together (1-5px gap), which isn't enough room —
-                            // without this spacer the badge bleeds onto the
-                            // next message's bubble. Adding the extra gap
-                            // HERE (as a sibling below the Row, not inside it)
-                            // reserves that space without dragging the avatar
-                            // down with it.
-                            Widget itemContent = msg.reactions.isNotEmpty
-                                ? Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      bubbleRow,
-                                      const SizedBox(height: 14),
-                                    ],
-                                  )
-                                : bubbleRow;
-
-                            // Flash highlight — AnimatedContainer tint that
-                            // fades in and out when tapping a reply to jump
-                            // back to the original message.
-                            return _FlashHighlight(
-                              key: ValueKey(msg.id),
-                              isFlashing: isFlashing,
-                              child: itemContent,
-                            );
-                          },
-                        );
-                        }),
-                  // ── Scroll-to-bottom button ─────────────────────────────
-                  _buildScrollToBottomButton(zt),
-                ],
-              ),  // close Stack
-              ),  // close GestureDetector child
-            ),  // close Expanded
-
-            // Reply strip - shown when user swipes right on a message
-            if (_replyingTo != null)
-              _ReplyStrip(
-                message: _replyingTo!,
-                currentUserId: model.currentUserId ?? '',
-                onCancel: () => setState(() => _replyingTo = null),
+                onTyping: (v) => _ws.sendTyping(v),
+                roomId: widget.roomId,
+                onSendVibe: _onSendVibe,
+                onRequestPayment: _onRequestPayment,
+                onPayRecipient: _onPayRecipient,
+                initialDraft: model.dmService.getDraft(widget.roomId),
+                onDraftChanged: (text) =>
+                    model.dmService.setDraft(widget.roomId, text),
               ),
-
-            // "Securing chat…" strip — shown only while the E2EE key exchange
-            // for this room is still in flight. Messages sent during this
-            // window still wait for resolution (see _awaitE2eeResolution),
-            // this is purely informational so the user isn't left guessing
-            // why the lock icon in the AppBar hasn't appeared yet.
-            if (_e2eeStatus == _E2eeStatus.resolving)
-              _SecuringChatStrip(zt: zt),
-
-            // ── Input ─────────────────────────────────────────────────────
-            DmInputBar(
-              onSend: (text) {
-                if (_replyingTo != null) {
-                  final quoted = _replyingTo!;
-                  setState(() => _replyingTo = null);
-                  // Send with structured reply context — not a text prefix.
-                  // The optimistic message carries replyToContent/replyToSenderZendtag
-                  // so the bubble renders a proper quote block immediately.
-                  _onSendWithReply(text, quoted);
-                } else {
-                  _onSend(text);
-                }
-              },
-              onTyping: (v) => _ws.sendTyping(v),
-              roomId: widget.roomId,
-              onSendVibe: _onSendVibe,
-              onRequestPayment: _onRequestPayment,
-              onPayRecipient: _onPayRecipient,
-              initialDraft: model.dmService.getDraft(widget.roomId),
-              onDraftChanged: (text) => model.dmService.setDraft(widget.roomId, text),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -2169,8 +2581,12 @@ class _SecuringChatStrip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 12, height: 12,
-            child: CircularProgressIndicator(strokeWidth: 1.6, color: zt.textSecondary),
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.6,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(width: 8),
           Text(
@@ -2191,7 +2607,11 @@ class _SecuringChatStrip extends StatelessWidget {
 // ── Presence label ────────────────────────────────────────────────────────────
 
 class _PresenceLabel extends StatelessWidget {
-  const _PresenceLabel({required this.text, required this.color, required this.dot});
+  const _PresenceLabel({
+    required this.text,
+    required this.color,
+    required this.dot,
+  });
   final String text;
   final Color color;
   final bool dot;
@@ -2203,7 +2623,8 @@ class _PresenceLabel extends StatelessWidget {
       children: [
         if (dot) ...[
           Container(
-            width: 6, height: 6,
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
@@ -2224,7 +2645,13 @@ class _PresenceLabel extends StatelessWidget {
 
 // ── Chat menu ─────────────────────────────────────────────────────────────────
 
-enum _ChatMenuAction { viewContact, searchInChat, disappearing, clearChat, block }
+enum _ChatMenuAction {
+  viewContact,
+  searchInChat,
+  disappearing,
+  clearChat,
+  block,
+}
 
 // ── Display list item types ───────────────────────────────────────────────────
 
@@ -2262,17 +2689,17 @@ class _ReplyStrip extends StatelessWidget {
     // show the actual amount rather than a bare generic label.
     final (IconData typeIcon, String preview) = switch (message.type) {
       DmMessageType.payment => (
-          PhosphorIconsRegular.arrowsLeftRight,
-          '💸 \$${(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
-        ),
+        PhosphorIconsRegular.arrowsLeftRight,
+        '💸 \$${(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      ),
       DmMessageType.vibe => (
-          PhosphorIconsRegular.star,
-          '${message.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
-        ),
+        PhosphorIconsRegular.star,
+        '${message.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      ),
       DmMessageType.paymentRequest => (
-          PhosphorIconsRegular.receipt,
-          '💬 Payment request · \$${(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
-        ),
+        PhosphorIconsRegular.receipt,
+        '💬 Payment request · \$${(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      ),
       _ => (PhosphorIconsRegular.chatCircle, message.displayContent ?? ''),
     };
     final previewShort = preview.length > 60
@@ -2310,13 +2737,21 @@ class _ReplyStrip extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(PhosphorIconsRegular.arrowBendUpLeft, size: 11, color: zt.accent),
+                        Icon(
+                          PhosphorIconsRegular.arrowBendUpLeft,
+                          size: 11,
+                          color: zt.accent,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           isMe
                               ? 'Replying to yourself'
                               : 'Replying to @${message.senderZendtag ?? '…'}',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 11,
+                            color: zt.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -2352,7 +2787,11 @@ class _ReplyStrip extends StatelessWidget {
               // Cancel button
               IconButton(
                 onPressed: onCancel,
-                icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                icon: Icon(
+                  PhosphorIconsRegular.xCircle,
+                  size: 18,
+                  color: zt.textSecondary,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
@@ -2395,17 +2834,18 @@ class _FlashHighlightState extends State<_FlashHighlight>
     );
     _opacity = TweenSequence([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 30,
       ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 30),
       TweenSequenceItem(
-        tween: ConstantTween(1.0),
-        weight: 30,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 40,
       ),
     ]).animate(_ctrl);
@@ -2430,7 +2870,9 @@ class _FlashHighlightState extends State<_FlashHighlight>
     return AnimatedBuilder(
       animation: _opacity,
       builder: (ctx, child) => ColoredBox(
-        color: ZendTheme.of(ctx).accent.withValues(alpha: _opacity.value * 0.18),
+        color: ZendTheme.of(
+          ctx,
+        ).accent.withValues(alpha: _opacity.value * 0.18),
         child: child,
       ),
       child: widget.child,
@@ -2455,8 +2897,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
   }
 
   @override
@@ -2473,9 +2916,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       child: Row(
         children: [
           ZendAvatar(
-              radius: 14,
-              photoUrl: widget.avatarUrl,
-              initials: widget.initial),
+            radius: 14,
+            photoUrl: widget.avatarUrl,
+            initials: widget.initial,
+          ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2495,13 +2939,16 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
                     final offset = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
-                    final scale = 0.6 + 0.4 * (offset < 0.5 ? offset * 2 : (1 - offset) * 2);
+                    final scale =
+                        0.6 +
+                        0.4 * (offset < 0.5 ? offset * 2 : (1 - offset) * 2);
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Transform.scale(
                         scale: scale,
                         child: Container(
-                          width: 7, height: 7,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             color: zt.textSecondary,
                             shape: BoxShape.circle,
@@ -2538,7 +2985,20 @@ class _DateSeparator extends StatelessWidget {
     final d = DateTime(date.year, date.month, date.day);
     if (d == today) return 'Today';
     if (d == yesterday) return 'Yesterday';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     if (date.year == now.year) return '${months[date.month - 1]} ${date.day}';
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -2552,7 +3012,9 @@ class _DateSeparator extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            color: zt.isDark ? zt.bgElevated : Colors.black.withValues(alpha: 0.06),
+            color: zt.isDark
+                ? zt.bgElevated
+                : Colors.black.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(ZendRadii.pill),
           ),
           child: Text(
@@ -2561,7 +3023,9 @@ class _DateSeparator extends StatelessWidget {
               fontFamily: 'Geist',
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),
+              color: zt.isDark
+                  ? zt.textSecondary
+                  : zt.textPrimary.withValues(alpha: 0.75),
             ),
           ),
         ),

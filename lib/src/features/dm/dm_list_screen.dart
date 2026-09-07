@@ -19,6 +19,7 @@ import '../pools/pool_detail_screen.dart';
 import 'dm_thread_screen.dart';
 import 'new_chat_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 class DmListScreen extends StatefulWidget {
   const DmListScreen({super.key});
@@ -113,7 +114,8 @@ class _DmListScreenState extends State<DmListScreen> {
     // cheap, since it only holds pools with unread messages right now.
     final poolsUnchanged = identical(pools, _lastSourcePools);
     final threadsUnchanged = identical(_threads, _lastSourceThreads);
-    final unreadUnchanged = _lastUnreadPoolIds != null &&
+    final unreadUnchanged =
+        _lastUnreadPoolIds != null &&
         _lastUnreadPoolIds!.length == unreadPools.length &&
         _lastUnreadPoolIds!.containsAll(unreadPools);
     if (poolsUnchanged && threadsUnchanged && unreadUnchanged) return;
@@ -124,10 +126,12 @@ class _DmListScreenState extends State<DmListScreen> {
 
     _items = <_ChatListItem>[
       ..._threads.map(_ChatListItem.fromThread),
-      ...pools.map((p) => _ChatListItem.fromPool(
-            p,
-            hasNewMessage: unreadPools.contains(p.id),
-          )),
+      ...pools.map(
+        (p) => _ChatListItem.fromPool(
+          p,
+          hasNewMessage: unreadPools.contains(p.id),
+        ),
+      ),
     ]..sort((a, b) => b.sortTime.compareTo(a.sortTime));
     _applySearch();
   }
@@ -142,7 +146,11 @@ class _DmListScreenState extends State<DmListScreen> {
     final service = ZendScope.read(context).notificationPreferencesService;
     await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.chat));
+      setState(
+        () => _notificationsMuted = service.isMuted(
+          NotificationCategoryKind.chat,
+        ),
+      );
     }
   }
 
@@ -165,7 +173,9 @@ class _DmListScreenState extends State<DmListScreen> {
       _loadError = false;
     });
     final model = ZendScope.of(context);
-    if (model.pools.isEmpty && !model.poolsLoading) unawaited(model.fetchPools());
+    if (model.pools.isEmpty && !model.poolsLoading) {
+      unawaited(model.fetchPools());
+    }
     try {
       final threads = await model.dmService.listThreads();
       if (mounted) {
@@ -237,7 +247,10 @@ class _DmListScreenState extends State<DmListScreen> {
   /// underlying pubkey/room-key caches in [E2eeService] mean repeat calls
   /// (pull-to-refresh, returning from a thread) are network-free after the
   /// first successful resolution per counterparty.
-  Future<void> _decryptPreviews(ZendAppModel model, List<DmThread> threads) async {
+  Future<void> _decryptPreviews(
+    ZendAppModel model,
+    List<DmThread> threads,
+  ) async {
     final keypair = WalletSessionCache.instance.keypair;
     if (keypair == null) return; // wallet locked — retried on the next load
     final seed = keypair.length >= 32 ? keypair.sublist(0, 32) : keypair;
@@ -249,7 +262,8 @@ class _DmListScreenState extends State<DmListScreen> {
 
       final tail = threads.skip(_kPriorityBatchSize).toList();
       for (var i = 0; i < tail.length; i += _kTailBatchSize) {
-        if (!mounted) return; // screen left — no point continuing in the background
+        // screen left — no point continuing in the background
+        if (!mounted) return;
         final chunk = tail.skip(i).take(_kTailBatchSize);
         await Future.wait(
           chunk.map((thread) => _decryptThreadPreview(model, thread, seed)),
@@ -283,7 +297,8 @@ class _DmListScreenState extends State<DmListScreen> {
         counterpartyPubkeyB58: pubkey,
         roomId: thread.roomId,
       );
-      if (decrypted == null) return; // decryption failed — leave the fallback text
+      // decryption failed — leave the fallback text
+      if (decrypted == null) return;
       lastMsg.content = decrypted;
       lastMsg.isEncrypted = true;
       // _ChatListItem holds the thread by reference, so the row picks the new
@@ -305,7 +320,10 @@ class _DmListScreenState extends State<DmListScreen> {
   }
 
   void _openPool(Pool pool) {
-    pushZendSlide(context, PoolDetailScreen(pool: pool)).then((_) => _loadThreads());
+    pushZendSlide(
+      context,
+      PoolDetailScreen(pool: pool),
+    ).then((_) => _loadThreads());
   }
 
   @override
@@ -348,7 +366,9 @@ class _DmListScreenState extends State<DmListScreen> {
                       color: _notificationsMuted ? zt.accent : zt.textSecondary,
                       size: 24,
                     ),
-                    tooltip: _notificationsMuted ? 'Unmute chat notifications' : 'Mute chat notifications',
+                    tooltip: _notificationsMuted
+                        ? 'Unmute chat notifications'
+                        : 'Mute chat notifications',
                   ),
                 ],
               ),
@@ -364,20 +384,39 @@ class _DmListScreenState extends State<DmListScreen> {
               child: TextField(
                 controller: _searchController,
                 focusNode: _searchFocus,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textPrimary,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search chats',
-                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary.withValues(alpha: 0.7)),
-                  prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                  hintStyle: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textSecondary.withValues(alpha: 0.7),
+                  ),
+                  prefixIcon: Icon(
+                    PhosphorIconsRegular.magnifyingGlass,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? GestureDetector(
                           onTap: () => _searchController.clear(),
-                          child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                          child: Icon(
+                            PhosphorIconsRegular.xCircle,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
                         )
                       : null,
                   filled: true,
                   fillColor: zt.bgSecondary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                     borderSide: BorderSide.none,
@@ -391,58 +430,65 @@ class _DmListScreenState extends State<DmListScreen> {
               child: _loading
                   ? const DmListSkeleton()
                   : _loadError
-                      ? ZendErrorState(
-                          title: "Couldn't load your chats",
-                          onRetry: _loadThreads,
-                        )
-                      : displayItems.isEmpty
-                          ? _searchQuery.isNotEmpty
-                              ? Center(
-                                  child: Text(
-                                    'No chats matching "$_searchQuery"',
-                                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                                  ),
-                                )
-                              : const _EmptyState()
-                          : RefreshIndicator(
-                              onRefresh: () => Future.wait([_loadThreads(), model.fetchPools()]),
-                              // Selected on the merged list's identity, which
-                              // [_rebuildItems] now keeps stable across notifies
-                              // that don't touch chats — so a balance refresh
-                              // or an activity event no longer rebuilds every
-                              // visible chat row.
-                              child: ZendSelector<List<_ChatListItem>>(
-                                selector: (_) => _displayItems,
-                                builder: (context, items, _) => ListView.builder(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                                itemCount: items.length,
-                                itemBuilder: (context, i) {
-                                  final item = items[i];
-                                  // Boundaried per row: preview decryption
-                                  // resolves one thread at a time and each
-                                  // resolution setStates this screen, so
-                                  // without this every arriving preview
-                                  // repaints the whole visible list rather
-                                  // than its own row.
-                                  return RepaintBoundary(
-                                    child: item.thread != null
-                                        ? _DmThreadTile(
-                                            key: ValueKey('dm-${item.thread!.roomId}'),
-                                            thread: item.thread!,
-                                            onTap: () => _openThread(item.thread!),
-                                          )
-                                        : _PoolThreadTile(
-                                            key: ValueKey('pool-${item.pool!.id}'),
-                                            pool: item.pool!,
-                                            hasNewMessage: item.hasNewMessage,
-                                            onTap: () => _openPool(item.pool!),
-                                          ),
-                                  );
-                                },
-                              ),
+                  ? ZendErrorState(
+                      title: "Couldn't load your chats",
+                      onRetry: _loadThreads,
+                    )
+                  : displayItems.isEmpty
+                  ? _searchQuery.isNotEmpty
+                        ? Center(
+                            child: Text(
+                              'No chats matching "$_searchQuery"',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 14,
+                                color: zt.textSecondary,
                               ),
                             ),
+                          )
+                        : const _EmptyState()
+                  : RefreshIndicator(
+                      onRefresh: () =>
+                          Future.wait([_loadThreads(), model.fetchPools()]),
+                      // Selected on the merged list's identity, which
+                      // [_rebuildItems] now keeps stable across notifies
+                      // that don't touch chats — so a balance refresh
+                      // or an activity event no longer rebuilds every
+                      // visible chat row.
+                      child: ZendSelector<List<_ChatListItem>>(
+                        selector: (_) => _displayItems,
+                        builder: (context, items, _) => ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          itemCount: items.length,
+                          itemBuilder: (context, i) {
+                            final item = items[i];
+                            // Boundaried per row: preview decryption
+                            // resolves one thread at a time and each
+                            // resolution setStates this screen, so
+                            // without this every arriving preview
+                            // repaints the whole visible list rather
+                            // than its own row.
+                            return RepaintBoundary(
+                              child: item.thread != null
+                                  ? _DmThreadTile(
+                                      key: ValueKey(
+                                        'dm-${item.thread!.roomId}',
+                                      ),
+                                      thread: item.thread!,
+                                      onTap: () => _openThread(item.thread!),
+                                    )
+                                  : _PoolThreadTile(
+                                      key: ValueKey('pool-${item.pool!.id}'),
+                                      pool: item.pool!,
+                                      hasNewMessage: item.hasNewMessage,
+                                      onTap: () => _openPool(item.pool!),
+                                    ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -503,11 +549,19 @@ class _NewChatFab extends StatelessWidget {
           color: ZendColors.bgDeep,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4)),
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
           ],
         ),
         child: const Center(
-          child: Icon(PhosphorIconsRegular.plus, color: ZendColors.accentPop, size: 26),
+          child: Icon(
+            PhosphorIconsRegular.plus,
+            color: ZendColors.accentPop,
+            size: 26,
+          ),
         ),
       ),
     );
@@ -544,16 +598,18 @@ class _DmThreadTile extends StatelessWidget {
           child: Row(
             children: [
               // Avatar with presence badge
-              Builder(builder: (ctx) {
-                final dmService = ZendScope.of(ctx).dmService;
-                final isOnline = dmService.presenceCache[cp.userId];
-                return ZendAvatar(
-                  radius: 26,
-                  photoUrl: cp.avatarUrl,
-                  initials: cp.initialLetter,
-                  isOnline: isOnline,
-                );
-              }),
+              Builder(
+                builder: (ctx) {
+                  final dmService = ZendScope.of(ctx).dmService;
+                  final isOnline = dmService.presenceCache[cp.userId];
+                  return ZendAvatar(
+                    radius: 26,
+                    photoUrl: cp.avatarUrl,
+                    initials: cp.initialLetter,
+                    isOnline: isOnline,
+                  );
+                },
+              ),
               const SizedBox(width: 14),
               // Content
               Expanded(
@@ -564,11 +620,15 @@ class _DmThreadTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            cp.displayName.trim().isEmpty ? '@${cp.zendtag}' : cp.displayName,
+                            cp.displayName.trim().isEmpty
+                                ? handleLabel(cp.zendtag)
+                                : cp.displayName,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 16,
-                              fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
                               color: zt.textPrimary,
                             ),
                             maxLines: 1,
@@ -578,7 +638,12 @@ class _DmThreadTile extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           _relativeTime(thread.lastMessageAt),
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: hasUnread ? zt.accent : zt.textSecondary.withValues(alpha: 0.7)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 12,
+                            color: hasUnread
+                                ? zt.accent
+                                : zt.textSecondary.withValues(alpha: 0.7),
+                          ),
                         ),
                       ],
                     ),
@@ -593,8 +658,12 @@ class _DmThreadTile extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 14,
-                              color: hasUnread ? zt.textPrimary : zt.textSecondary,
-                              fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+                              color: hasUnread
+                                  ? zt.textPrimary
+                                  : zt.textSecondary,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -603,8 +672,14 @@ class _DmThreadTile extends StatelessWidget {
                         if (hasUnread) ...[
                           const SizedBox(width: 8),
                           Container(
-                            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             // Without this, a single-digit count (e.g. "1")
                             // doesn't naturally fill the 20px minWidth, and
                             // with no alignment set the digit sits off-center
@@ -613,11 +688,19 @@ class _DmThreadTile extends StatelessWidget {
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: zt.accent,
-                              borderRadius: BorderRadius.circular(ZendRadii.pill),
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
                             ),
                             child: Text(
-                              thread.unreadCount > 99 ? '99+' : '${thread.unreadCount}',
-                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                              thread.unreadCount > 99
+                                  ? '99+'
+                                  : '${thread.unreadCount}',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -677,7 +760,11 @@ class _PoolThreadTile extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: Icon(PhosphorIconsRegular.usersThree, size: 22, color: zt.textSecondary),
+                    child: Icon(
+                      PhosphorIconsRegular.usersThree,
+                      size: 22,
+                      color: zt.textSecondary,
+                    ),
                   ),
                   if (hasNewMessage)
                     Positioned(
@@ -704,12 +791,22 @@ class _PoolThreadTile extends StatelessWidget {
                       pool.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: hasNewMessage ? FontWeight.w700 : FontWeight.w600, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 16,
+                        fontWeight: hasNewMessage
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -732,16 +829,29 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(PhosphorIconsRegular.chatCircleText, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
+          Icon(
+            PhosphorIconsRegular.chatCircleText,
+            size: 48,
+            color: zt.textSecondary.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 12),
           Text(
             'No chats yet',
-            style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Send a payment or tap a profile to start',
-            style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary.withValues(alpha: 0.7)),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 13,
+              color: zt.textSecondary.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),

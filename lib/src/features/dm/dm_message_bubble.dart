@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
+import '../../models/handle_label.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 //
@@ -796,7 +797,8 @@ class _ReplyHeader extends StatelessWidget {
     final tag = senderZendtag ?? '';
 
     // Sent: "You replied to @{zendtag}", Received: "@{zendtag} replied to you"
-    final label = isMe ? 'You replied to @$tag' : '@$tag replied to you';
+    final handle = handleLabel(tag);
+    final label = isMe ? 'You replied to $handle' : '$handle replied to you';
 
     return Padding(
       padding: const EdgeInsets.only(left: 4, right: 4),

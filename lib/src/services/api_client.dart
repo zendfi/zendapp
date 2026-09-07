@@ -652,6 +652,7 @@ class ApiClient {
     required String idToken,
     required String extendedEphemeralPublicKey,
     required String jwtRandomness,
+
     /// Reconstructed salt as a decimal string. Required for sharded custody,
     /// where the backend holds one share and cannot rebuild it; ignored for the
     /// other strategies, where the stored value stays authoritative.

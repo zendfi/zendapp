@@ -57,7 +57,6 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     super.dispose();
   }
 
-
   void _subscribeToSse() {
     final model = ZendScope.of(context);
     _sseSub = model.sseService.events.listen((event) {
@@ -68,7 +67,9 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
       if (direction != 'received') return;
 
       final amountStr = event.data['amount_usdc'] as String?;
-      final receivedAmount = amountStr != null ? double.tryParse(amountStr) : null;
+      final receivedAmount = amountStr != null
+          ? double.tryParse(amountStr)
+          : null;
       if (receivedAmount == null) return;
 
       if ((receivedAmount - widget.amountUsdc).abs() > 0.005) return;
@@ -92,7 +93,9 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
       if (!mounted) return;
 
       final requestLinkId = response['request_link_id'] as String?;
-      if (requestLinkId == null) throw Exception('No request_link_id in response');
+      if (requestLinkId == null) {
+        throw Exception('No request_link_id in response');
+      }
 
       final url = 'https://zdfi.me/@${widget.username}/$requestLinkId';
 
@@ -202,11 +205,7 @@ class _GeneratingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ZendLoader(
-            size: 32,
-            strokeWidth: 2,
-            color: ZendColors.accentPop,
-          ),
+          ZendLoader(size: 32, strokeWidth: 2, color: ZendColors.accentPop),
           const SizedBox(height: 20),
           const Text(
             'Getting ready…',
@@ -251,7 +250,10 @@ class _ShowingView extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(PhosphorIconsRegular.xCircle, color: Color(0x99E8F4EC)),
+                icon: const Icon(
+                  PhosphorIconsRegular.xCircle,
+                  color: Color(0x99E8F4EC),
+                ),
                 onPressed: onDismiss,
               ),
             ],
@@ -283,62 +285,62 @@ class _ShowingView extends StatelessWidget {
         ],
         const SizedBox(height: 28),
 
-            // ── QR code (timed) ──────────────────────────────────────────
-            // Dark branded QR with logo overlay. The circular ring sits
-            // outside the QR frame; the QR itself fills the inner area.
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 260,
-                  height: 260,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 2.5,
-                    backgroundColor: const Color(0x1AE8F4EC),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0x4052B788),
+        // ── QR code (timed) ──────────────────────────────────────────
+        // Dark branded QR with logo overlay. The circular ring sits
+        // outside the QR frame; the QR itself fills the inner area.
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 260,
+              height: 260,
+              child: CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 2.5,
+                backgroundColor: const Color(0x1AE8F4EC),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0x4052B788),
+                ),
+              ),
+            ),
+            // Branded QR with logo inside
+            SizedBox(
+              width: 228,
+              height: 228,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  QrImageView(
+                    data: qrUrl,
+                    version: QrVersions.auto,
+                    size: 228,
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    backgroundColor: ZendColors.bgDeep,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: Color(0xFF52B787),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: Color(0xFFE8F4EC),
                     ),
                   ),
-                ),
-                // Branded QR with logo inside
-                SizedBox(
-                  width: 228,
-                  height: 228,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      QrImageView(
-                        data: qrUrl,
-                        version: QrVersions.auto,
-                        size: 228,
-                        errorCorrectionLevel: QrErrorCorrectLevel.H,
-                        backgroundColor: ZendColors.bgDeep,
-                        eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.circle,
-                          color: Color(0xFF52B787),
-                        ),
-                        dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.circle,
-                          color: Color(0xFFE8F4EC),
-                        ),
-                      ),
-                      // Center logo badge
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                          color: ZendColors.bgDeep,
-                          shape: BoxShape.circle,
-                        ),
-                        padding: const EdgeInsets.all(9),
-                        child: Image.asset('assets/logo/zend-mark.png'),
-                      ),
-                    ],
+                  // Center logo badge
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: const BoxDecoration(
+                      color: ZendColors.bgDeep,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(9),
+                    child: Image.asset('assets/logo/zend-mark.png'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+          ],
+        ),
 
         const SizedBox(height: 24),
 
@@ -436,7 +438,10 @@ class _ReceivedViewState extends State<_ReceivedView>
             const SizedBox(height: 8),
             Text(
               widget.amountFormatted,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: Color(0x99E8F4EC)),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 20,
+                color: Color(0x99E8F4EC),
+              ),
             ),
             if (widget.note != null && widget.note!.isNotEmpty) ...[
               const SizedBox(height: 4),

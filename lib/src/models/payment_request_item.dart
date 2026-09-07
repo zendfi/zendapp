@@ -1,3 +1,5 @@
+import 'handle_label.dart';
+
 /// Represents a payment request in the activity feed.
 /// Used for both inbound (sent *to* the current user) and outbound
 /// (sent *by* the current user to another Zend user).
@@ -48,16 +50,20 @@ class PaymentRequestItem {
   /// Human-readable counterparty label shown in the activity tile.
   String get counterpartyLabel {
     if (isInbound) {
-      return requesterZendtag != null ? '@$requesterZendtag' : 'Someone';
+      return requesterZendtag != null
+          ? handleLabel(requesterZendtag)
+          : 'Someone';
     }
-    if (recipientZendtag != null) return '@$recipientZendtag';
+    if (recipientZendtag != null) return handleLabel(recipientZendtag);
     if (recipientEmail != null) return recipientEmail!;
     return 'Link';
   }
 
   /// Avatar initials for the activity tile.
   String get avatarInitial {
-    final label = isInbound ? (requesterZendtag ?? '') : (recipientZendtag ?? recipientEmail ?? '');
+    final label = isInbound
+        ? (requesterZendtag ?? '')
+        : (recipientZendtag ?? recipientEmail ?? '');
     return label.isNotEmpty ? label[0].toUpperCase() : '?';
   }
 
@@ -75,7 +81,9 @@ class PaymentRequestItem {
       linkUrl: json['link_url'] as String? ?? '',
       amountUsdc: (json['amount_usdc'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'pending',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       isInbound: false,
       description: json['description'] as String?,
       expiresAt: json['expires_at'] != null
@@ -93,7 +101,9 @@ class PaymentRequestItem {
       linkUrl: json['link_url'] as String? ?? '',
       amountUsdc: (json['amount_usdc'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'pending',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       isInbound: true,
       description: json['description'] as String?,
       expiresAt: json['expires_at'] != null

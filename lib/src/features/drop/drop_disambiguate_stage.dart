@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
+import '../../models/handle_label.dart';
 
 /// Shown when 2+ confirmed receivers are within 8 dBm of each other and the
 /// scanner cannot safely auto-select. The user picks the correct recipient.
@@ -197,7 +198,7 @@ class _CandidateTile extends StatelessWidget {
 
   String get _displayName {
     final dn = receiver.preview?.displayName ?? '';
-    return dn.isNotEmpty ? dn : '@$_zendtag';
+    return dn.isNotEmpty ? dn : handleLabel(_zendtag);
   }
 
   @override
@@ -243,8 +244,11 @@ class _CandidateTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '@$_zendtag',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                    handleLabel(_zendtag),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -257,14 +261,21 @@ class _CandidateTile extends StatelessWidget {
                 if (isClosest)
                   Container(
                     margin: const EdgeInsets.only(bottom: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: ZendColors.accentBright.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       'CLOSEST',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: ZendColors.accentBright, letterSpacing: 0.6),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 9,
+                        color: ZendColors.accentBright,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
                 _SignalBars(bars: bars, activeColor: ZendColors.accentBright),
@@ -299,9 +310,7 @@ class _SignalBars extends StatelessWidget {
             width: 4,
             height: height,
             decoration: BoxDecoration(
-              color: filled
-                  ? activeColor
-                  : activeColor.withValues(alpha: 0.2),
+              color: filled ? activeColor : activeColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),

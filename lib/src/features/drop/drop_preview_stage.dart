@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
+import '../../models/handle_label.dart';
 
 class DropPreviewStage extends StatefulWidget {
   const DropPreviewStage({
@@ -48,7 +49,7 @@ class _DropPreviewStageState extends State<DropPreviewStage>
   String get _displayName {
     return widget.receiver.preview?.displayName.isNotEmpty == true
         ? widget.receiver.preview!.displayName
-        : '@${widget.receiver.preview?.zendtag ?? '?'}';
+        : handleLabel(widget.receiver.preview?.zendtag ?? '?');
   }
 
   @override
@@ -96,7 +97,7 @@ class _DropPreviewStageState extends State<DropPreviewStage>
         const SizedBox(height: 16),
         // Zendtag
         Text(
-          '@${widget.receiver.preview?.zendtag ?? '?'}',
+          handleLabel(widget.receiver.preview?.zendtag ?? '?'),
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 18,
@@ -107,7 +108,10 @@ class _DropPreviewStageState extends State<DropPreviewStage>
         const SizedBox(height: 6),
         Text(
           widget.isConfirmed ? 'Verified nearby' : 'Verifying identity…',
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: widget.isConfirmed ? zt.accentBright : zt.textSecondary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 12,
+            color: widget.isConfirmed ? zt.accentBright : zt.textSecondary,
+          ),
         ),
         const SizedBox(height: 40),
       ],

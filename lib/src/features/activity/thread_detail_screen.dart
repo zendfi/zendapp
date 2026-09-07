@@ -14,7 +14,20 @@ import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-const _kReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
+const _kReactionEmojis = [
+  '🔥',
+  '💰',
+  '🙏',
+  '👑',
+  '😭',
+  '⚡',
+  '🎯',
+  '💸',
+  '🎉',
+  '👀',
+  '✅',
+  '🚀',
+];
 
 /// A Twitter/X-feed-style view of every Activity_Edge between the viewer
 /// and one Counterparty — the destination of tapping a User thread on
@@ -27,7 +40,11 @@ const _kReactionEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯',
 /// authorized by the same Activity_Data_Service query that populated the
 /// thread list this screen was opened from.
 class ThreadDetailScreen extends StatefulWidget {
-  const ThreadDetailScreen({super.key, required this.counterparty, required this.edges});
+  const ThreadDetailScreen({
+    super.key,
+    required this.counterparty,
+    required this.edges,
+  });
 
   final ActivityCounterparty counterparty;
   final List<ActivityEdge> edges;
@@ -44,7 +61,8 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _edges = List.of(widget.edges)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _edges = List.of(widget.edges)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     for (final edge in _edges) {
       _loadReactions(edge);
     }
@@ -53,7 +71,10 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   Future<void> _loadReactions(ActivityEdge edge) async {
     final model = ZendScope.of(context);
     try {
-      final reactions = await model.activityDataService.getEdgeReactions(_edgeKindStr(edge.edgeKind), edge.edgeId);
+      final reactions = await model.activityDataService.getEdgeReactions(
+        _edgeKindStr(edge.edgeKind),
+        edge.edgeId,
+      );
       if (mounted) setState(() => _reactionsByEdgeId[edge.edgeId] = reactions);
     } catch (_) {
       // Non-fatal — the feed post just renders with no reaction row.
@@ -87,15 +108,25 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
           if (newCount <= 0) {
             updated.removeAt(idx);
           } else {
-            updated[idx] = EdgeReactionCount(emoji: emoji, count: newCount, reactedByMe: false);
+            updated[idx] = EdgeReactionCount(
+              emoji: emoji,
+              count: newCount,
+              reactedByMe: false,
+            );
           }
         }
       } else {
         final idx = updated.indexWhere((r) => r.emoji == emoji);
         if (idx != -1) {
-          updated[idx] = EdgeReactionCount(emoji: emoji, count: updated[idx].count + 1, reactedByMe: true);
+          updated[idx] = EdgeReactionCount(
+            emoji: emoji,
+            count: updated[idx].count + 1,
+            reactedByMe: true,
+          );
         } else {
-          updated.add(EdgeReactionCount(emoji: emoji, count: 1, reactedByMe: true));
+          updated.add(
+            EdgeReactionCount(emoji: emoji, count: 1, reactedByMe: true),
+          );
         }
       }
       _reactionsByEdgeId[edge.edgeId] = updated;
@@ -103,9 +134,17 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
 
     try {
       if (alreadyReacted) {
-        await model.activityDataService.removeEdgeReaction(_edgeKindStr(edge.edgeKind), edge.edgeId, emoji);
+        await model.activityDataService.removeEdgeReaction(
+          _edgeKindStr(edge.edgeKind),
+          edge.edgeId,
+          emoji,
+        );
       } else {
-        await model.activityDataService.addEdgeReaction(_edgeKindStr(edge.edgeKind), edge.edgeId, emoji);
+        await model.activityDataService.addEdgeReaction(
+          _edgeKindStr(edge.edgeKind),
+          edge.edgeId,
+          emoji,
+        );
       }
     } catch (_) {
       // Revert on failure by refetching the authoritative state.
@@ -131,7 +170,10 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
         return Container(
           margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+          decoration: BoxDecoration(
+            color: zt.bgSecondary,
+            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,12 +183,20 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                   width: 36,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                  decoration: BoxDecoration(
+                    color: zt.border,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
               ),
               Text(
                 'React to this',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -186,7 +236,9 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
           edgeKind: edge.edgeKind,
           counterparty: edge.counterparty,
           amountUsdc: edge.amountUsdc,
-          amountHidden: preset == 'share_activity_amount_hidden' ? true : edge.amountHidden,
+          amountHidden: preset == 'share_activity_amount_hidden'
+              ? true
+              : edge.amountHidden,
           direction: edge.direction,
           effectiveTier: VisibilityTier.sharedNetwork,
           isDirectParticipant: edge.isDirectParticipant,
@@ -210,7 +262,9 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
 
         // Also update the model's edge list so re-entering this thread
         // (via _openThread) sees the updated tier rather than the stale one.
-        final modelIdx = model.threadedActivityEdges.indexWhere((e) => e.edgeId == edge.edgeId);
+        final modelIdx = model.threadedActivityEdges.indexWhere(
+          (e) => e.edgeId == edge.edgeId,
+        );
         if (modelIdx != -1) {
           model.threadedActivityEdges[modelIdx] = updatedEdge;
         }
@@ -229,7 +283,12 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not make this public — try again', style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              'Could not make this public — try again',
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     } finally {
@@ -339,14 +398,18 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     final selfAvatarUrl = model.currentAvatarUrl;
     final selfInitial = model.currentZendtag?.isNotEmpty == true
         ? model.currentZendtag![0].toUpperCase()
-        : (model.currentDisplayName?.isNotEmpty == true ? model.currentDisplayName![0].toUpperCase() : 'Y');
+        : (model.currentDisplayName?.isNotEmpty == true
+              ? model.currentDisplayName![0].toUpperCase()
+              : 'Y');
 
     showActivityCommentSheet(
       context,
       edge: edge,
       headline: headline,
       avatarUrl: isOutgoing ? selfAvatarUrl : widget.counterparty.avatarUrl,
-      avatarInitial: isOutgoing ? selfInitial : widget.counterparty.initialLetter,
+      avatarInitial: isOutgoing
+          ? selfInitial
+          : widget.counterparty.initialLetter,
       onViewReceipt: () => _openReceipt(edge),
     );
   }
@@ -356,7 +419,12 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
+        const SnackBar(
+          content: Text(
+            'Details for this activity are not available',
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
+        ),
       );
       return;
     }
@@ -385,7 +453,10 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   GestureDetector(
                     onTap: () => pushZendSlide(
@@ -396,7 +467,11 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                         knownAvatarUrl: widget.counterparty.avatarUrl,
                       ),
                     ),
-                    child: ZendAvatar(radius: 18, photoUrl: widget.counterparty.avatarUrl, initials: widget.counterparty.initialLetter),
+                    child: ZendAvatar(
+                      radius: 18,
+                      photoUrl: widget.counterparty.avatarUrl,
+                      initials: widget.counterparty.initialLetter,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -406,18 +481,31 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                       children: [
                         Text(
                           widget.counterparty.displayLabel,
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: zt.textPrimary,
+                          ),
                         ),
-                        Builder(builder: (ctx) {
-                          final streak = ZendScope.of(ctx).activeStreaks[widget.counterparty.id];
-                          final activityLabel = '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together';
-                          return Text(
-                            streak != null && streak.isActive
-                                ? '🔥 ${streak.streakWeeks}w streak · $activityLabel'
-                                : activityLabel,
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
-                          );
-                        }),
+                        Builder(
+                          builder: (ctx) {
+                            final streak = ZendScope.of(
+                              ctx,
+                            ).activeStreaks[widget.counterparty.id];
+                            final activityLabel =
+                                '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together';
+                            return Text(
+                              streak != null && streak.isActive
+                                  ? '🔥 ${streak.streakWeeks}w streak · $activityLabel'
+                                  : activityLabel,
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 11,
+                                color: zt.textSecondary,
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -425,14 +513,24 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                   IconButton(
                     onPressed: () async {
                       final model = ZendScope.of(context);
-                      final result = await model.dmService.getOrCreateRoom(widget.counterparty.id);
+                      final result = await model.dmService.getOrCreateRoom(
+                        widget.counterparty.id,
+                      );
                       if (!context.mounted) return;
-                      pushZendSlide(context, DmThreadScreen( // ignore: use_build_context_synchronously
-                        roomId: result.roomId,
-                        counterparty: result.counterparty,
-                      ));
+                      pushZendSlide(
+                        context,
+                        DmThreadScreen(
+                          // ignore: use_build_context_synchronously
+                          roomId: result.roomId,
+                          counterparty: result.counterparty,
+                        ),
+                      );
                     },
-                    icon: Icon(PhosphorIconsRegular.chatCircleText, color: zt.textSecondary, size: 22),
+                    icon: Icon(
+                      PhosphorIconsRegular.chatCircleText,
+                      color: zt.textSecondary,
+                      size: 22,
+                    ),
                     tooltip: 'Open chat',
                   ),
                 ],
@@ -454,7 +552,9 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
                     onTap: () => _openActivity(edge),
                     onReactionTap: (emoji) => _toggleReaction(edge, emoji),
                     onAddReaction: () => _showReactionPicker(edge),
-                    onMakePublic: edge.isDirectParticipant && edge.effectiveTier == VisibilityTier.private
+                    onMakePublic:
+                        edge.isDirectParticipant &&
+                            edge.effectiveTier == VisibilityTier.private
                         ? () => _showMakePublicSheet(edge)
                         : null,
                   );
@@ -472,7 +572,11 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
 /// highlights when it's the viewer's current reaction, and does a small
 /// press-scale animation for a bit of tactile feedback.
 class _ReactionPickerChip extends StatefulWidget {
-  const _ReactionPickerChip({required this.emoji, required this.selected, required this.onTap});
+  const _ReactionPickerChip({
+    required this.emoji,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String emoji;
   final bool selected;
@@ -501,9 +605,16 @@ class _ReactionPickerChipState extends State<_ReactionPickerChip> {
           height: 52,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: widget.selected ? zt.accent.withValues(alpha: 0.18) : zt.bgPrimary,
+            color: widget.selected
+                ? zt.accent.withValues(alpha: 0.18)
+                : zt.bgPrimary,
             borderRadius: BorderRadius.circular(ZendRadii.lg),
-            border: widget.selected ? Border.all(color: zt.accent.withValues(alpha: 0.6), width: 1.5) : null,
+            border: widget.selected
+                ? Border.all(
+                    color: zt.accent.withValues(alpha: 0.6),
+                    width: 1.5,
+                  )
+                : null,
           ),
           child: Text(widget.emoji, style: const TextStyle(fontSize: 26)),
         ),
@@ -547,7 +658,6 @@ class _FeedPost extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final isOutgoing = edge.isOutgoing;
-    final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
     final isVibe = isVibeEdge(edge);
     final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
     final verb = feedVerbFor(edge);
@@ -556,7 +666,9 @@ class _FeedPost extends StatelessWidget {
     final selfAvatarUrl = model.currentAvatarUrl;
     final selfInitial = model.currentZendtag?.isNotEmpty == true
         ? model.currentZendtag![0].toUpperCase()
-        : (model.currentDisplayName?.isNotEmpty == true ? model.currentDisplayName![0].toUpperCase() : 'Y');
+        : (model.currentDisplayName?.isNotEmpty == true
+              ? model.currentDisplayName![0].toUpperCase()
+              : 'Y');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -576,8 +688,12 @@ class _FeedPost extends StatelessWidget {
                   children: [
                     ZendAvatar(
                       radius: 18,
-                      photoUrl: isOutgoing ? selfAvatarUrl : counterparty.avatarUrl,
-                      initials: isOutgoing ? selfInitial : counterparty.initialLetter,
+                      photoUrl: isOutgoing
+                          ? selfAvatarUrl
+                          : counterparty.avatarUrl,
+                      initials: isOutgoing
+                          ? selfInitial
+                          : counterparty.initialLetter,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -589,57 +705,103 @@ class _FeedPost extends StatelessWidget {
                           if (isVibe)
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textPrimary,
+                                ),
                                 children: [
-                                  if (isOutgoing) const TextSpan(text: '✨ Vibe sent to '),
-                                  if (!isOutgoing) const TextSpan(text: '✨ Vibe from '),
-                                  TextSpan(text: counterparty.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  if (isOutgoing)
+                                    const TextSpan(text: '✨ Vibe sent to '),
+                                  if (!isOutgoing)
+                                    const TextSpan(text: '✨ Vibe from '),
+                                  TextSpan(
+                                    text: counterparty.displayLabel,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ],
                               ),
                             )
                           else if (isPoolContrib)
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textPrimary,
+                                ),
                                 children: [
-                                  if (isOutgoing) const TextSpan(text: 'You contributed to '),
-                                  TextSpan(text: counterparty.displayLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  if (!isOutgoing) const TextSpan(text: ' contributed'),
+                                  if (isOutgoing)
+                                    const TextSpan(text: 'You contributed to '),
+                                  TextSpan(
+                                    text: counterparty.displayLabel,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (!isOutgoing)
+                                    const TextSpan(text: ' contributed'),
                                 ],
                               ),
                             )
                           else
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textPrimary,
+                                ),
                                 children: [
-                                  if (actionSpan.isNotEmpty) TextSpan(text: actionSpan),
+                                  if (actionSpan.isNotEmpty)
+                                    TextSpan(text: actionSpan),
                                   TextSpan(
                                     text: counterparty.displayLabel,
-                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                  if (trailingSpan.isNotEmpty) TextSpan(text: trailingSpan),
+                                  if (trailingSpan.isNotEmpty)
+                                    TextSpan(text: trailingSpan),
                                 ],
                               ),
                             ),
                           Text(
                             _relativeTime(edge.createdAt),
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 10.5,
+                              color: zt.textSecondary.withValues(alpha: 0.8),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    // Amount pill — hidden for Vibes (reveal is in DM bubble)
-                    if (!isVibe)
+                    // Amount pill — omitted for Vibes (reveal is in the DM bubble)
+                    // and whenever the amount is withheld, rather than rendering a
+                    // "+Hidden" chip that signs a quantity nobody disclosed.
+                    if (!isVibe && edge.signedAmountLabel != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
-                          color: isOutgoing ? zt.border.withValues(alpha: 0.5) : ZendColors.positive.withValues(alpha: 0.12),
+                          color: isOutgoing
+                              ? zt.border.withValues(alpha: 0.5)
+                              : ZendColors.positive.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(ZendRadii.pill),
                         ),
                         child: Text(
-                          '${isOutgoing ? '-' : '+'}$amountLabel',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: isOutgoing ? zt.textSecondary : ZendColors.positive),
+                          edge.signedAmountLabel!,
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isOutgoing
+                                ? zt.textSecondary
+                                : ZendColors.positive,
+                          ),
                         ),
                       ),
                   ],
@@ -649,7 +811,12 @@ class _FeedPost extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     edge.note!,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, height: 1.35, color: zt.textPrimary.withValues(alpha: 0.9)),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      height: 1.35,
+                      color: zt.textPrimary.withValues(alpha: 0.9),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -664,20 +831,40 @@ class _FeedPost extends StatelessWidget {
                             GestureDetector(
                               onTap: () => onReactionTap(r.emoji),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: r.reactedByMe ? zt.accent.withValues(alpha: 0.18) : zt.bgPrimary,
-                                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                                  border: r.reactedByMe ? Border.all(color: zt.accent.withValues(alpha: 0.5)) : null,
+                                  color: r.reactedByMe
+                                      ? zt.accent.withValues(alpha: 0.18)
+                                      : zt.bgPrimary,
+                                  borderRadius: BorderRadius.circular(
+                                    ZendRadii.pill,
+                                  ),
+                                  border: r.reactedByMe
+                                      ? Border.all(
+                                          color: zt.accent.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(r.emoji, style: const TextStyle(fontSize: 13)),
+                                    Text(
+                                      r.emoji,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${r.count}',
-                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                                      style: ZendTextStyles.tabularNumeric
+                                          .copyWith(
+                                            fontSize: 11,
+                                            color: zt.textSecondary,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -686,9 +873,21 @@ class _FeedPost extends StatelessWidget {
                           GestureDetector(
                             onTap: onAddReaction,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: zt.bgPrimary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                              child: Icon(PhosphorIconsRegular.smiley, size: 15, color: zt.textSecondary),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: zt.bgPrimary,
+                                borderRadius: BorderRadius.circular(
+                                  ZendRadii.pill,
+                                ),
+                              ),
+                              child: Icon(
+                                PhosphorIconsRegular.smiley,
+                                size: 15,
+                                color: zt.textSecondary,
+                              ),
                             ),
                           ),
                         ],
@@ -697,23 +896,40 @@ class _FeedPost extends StatelessWidget {
                     if (onMakePublic != null)
                       TextButton(
                         onPressed: isMakingPublic ? null : onMakePublic,
-                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
                         child: isMakingPublic
-                            ? ZendLoader(size: 14, strokeWidth: 2, color: zt.accent)
+                            ? ZendLoader(
+                                size: 14,
+                                strokeWidth: 2,
+                                color: zt.accent,
+                              )
                             : Text(
                                 'Make public',
-                                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  fontSize: 11,
+                                  color: zt.accent,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                       )
                     else if (edge.effectiveTier == VisibilityTier.sharedNetwork)
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(PhosphorIconsRegular.shareNetwork, size: 12, color: zt.textSecondary.withValues(alpha: 0.7)),
+                          Icon(
+                            PhosphorIconsRegular.shareNetwork,
+                            size: 12,
+                            color: zt.textSecondary.withValues(alpha: 0.7),
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             'Public',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.7)),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 10.5,
+                              color: zt.textSecondary.withValues(alpha: 0.7),
+                            ),
                           ),
                         ],
                       ),
@@ -727,7 +943,6 @@ class _FeedPost extends StatelessWidget {
     );
   }
 }
-
 
 /// A tappable option row used in the "Share this activity" bottom sheet.
 /// Styled to match the reaction picker sheet and the rest of the activity screen.

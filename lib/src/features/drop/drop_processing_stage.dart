@@ -3,6 +3,7 @@ import '../../design/zend_avatar.dart';
 import '../../models/drop_models.dart';
 import 'drop_glow_effect.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/handle_label.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -110,9 +111,12 @@ class _DropProcessingStageState extends State<DropProcessingStage>
                 left: 0,
                 right: 0,
                 child: Text(
-                  '@$_receiverZendtag',
+                  handleLabel(_receiverZendtag),
                   textAlign: TextAlign.center,
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0x55FFFFFF)),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 13,
+                    color: Color(0x55FFFFFF),
+                  ),
                 ),
               ),
             ],

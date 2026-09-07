@@ -70,7 +70,9 @@ class PoolSoundService {
       if (!_initialized) await init();
       await _contributionPool?.start(volume: 0.7);
     } catch (e) {
-      if (kDebugMode) debugPrint('PoolSoundService.playContributionChime failed: $e');
+      if (kDebugMode) {
+        debugPrint('PoolSoundService.playContributionChime failed: $e');
+      }
     }
   }
 
@@ -80,7 +82,9 @@ class PoolSoundService {
       if (!_initialized) await init();
       await _messagePool?.start(volume: 0.5);
     } catch (e) {
-      if (kDebugMode) debugPrint('PoolSoundService.playMessageNotification failed: $e');
+      if (kDebugMode) {
+        debugPrint('PoolSoundService.playMessageNotification failed: $e');
+      }
     }
   }
 }

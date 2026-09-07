@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// The branded Zend! QR card — a printable, shareable payment card.
 ///
@@ -49,8 +50,9 @@ class ZendQrCardState extends State<ZendQrCard> {
 
   Future<Uint8List> _captureCard() async {
     await Future<void>.delayed(Duration.zero);
-    final boundary = _repaintKey.currentContext?.findRenderObject()
-        as RenderRepaintBoundary?;
+    final boundary =
+        _repaintKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
     if (boundary == null) throw Exception('Could not find card render object');
     final image = await boundary.toImage(pixelRatio: 3.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -77,9 +79,11 @@ class ZendQrCardState extends State<ZendQrCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('permission')
-                ? 'Storage permission required to save card'
-                : 'Failed to save card — please try again'),
+            content: Text(
+              e.toString().contains('permission')
+                  ? 'Storage permission required to save card'
+                  : 'Failed to save card — please try again',
+            ),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
@@ -159,10 +163,7 @@ class ZendQrCardState extends State<ZendQrCard> {
 // ── Card face ──────────────────────────────────────────────────────────────
 
 class _CardFace extends StatelessWidget {
-  const _CardFace({
-    required this.username,
-    required this.paymentUrl,
-  });
+  const _CardFace({required this.username, required this.paymentUrl});
 
   final String username;
   final String paymentUrl;
@@ -195,10 +196,7 @@ class _CardFace extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Wordmark
-            Image.asset(
-              'assets/logo/zend-mark.png',
-              height: 32,
-            ),
+            Image.asset('assets/logo/zend-mark.png', height: 32),
             const SizedBox(height: 28),
 
             // Branded QR with center logo overlay
@@ -241,13 +239,17 @@ class _CardFace extends StatelessWidget {
             // URL
             Text(
               'zdfi.me/@$username',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: _textMuted, letterSpacing: 0.2),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 13,
+                color: _textMuted,
+                letterSpacing: 0.2,
+              ),
             ),
             const SizedBox(height: 6),
 
             // @username
             Text(
-              '@$username',
+              handleLabel(username),
               style: const TextStyle(
                 fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
@@ -307,11 +309,7 @@ class _CardButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (loading)
-              ZendLoader(
-                size: 16,
-                strokeWidth: 1.5,
-                color: Color(0x99E8F4EC),
-              )
+              ZendLoader(size: 16, strokeWidth: 1.5, color: Color(0x99E8F4EC))
             else
               Icon(icon, size: 16, color: const Color(0x99E8F4EC)),
             const SizedBox(width: 6),

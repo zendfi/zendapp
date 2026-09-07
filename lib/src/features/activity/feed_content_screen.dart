@@ -186,7 +186,8 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       // Collapsing while the field is focused/has text would rip focus
       // away and orphan the query — expand back out instead so the user
       // never loses an in-progress search just by scrolling.
-      if (shouldCollapse && (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) {
+      if (shouldCollapse &&
+          (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) {
         return;
       }
       setState(() => _collapsed = shouldCollapse);

@@ -12,10 +12,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Full-screen confirmation — used when navigating to a standalone screen.
 class RequestConfirmationScreen extends StatelessWidget {
-  const RequestConfirmationScreen({
-    super.key,
-    required this.paymentRequest,
-  });
+  const RequestConfirmationScreen({super.key, required this.paymentRequest});
 
   final PaymentRequest paymentRequest;
 
@@ -34,10 +31,7 @@ class RequestConfirmationScreen extends StatelessWidget {
 /// Embeddable confirmation content — used when morphing the request drawer
 /// sheet in-place after successful creation.
 class RequestConfirmationContent extends StatefulWidget {
-  const RequestConfirmationContent({
-    super.key,
-    required this.paymentRequest,
-  });
+  const RequestConfirmationContent({super.key, required this.paymentRequest});
 
   final PaymentRequest paymentRequest;
 
@@ -49,8 +43,9 @@ class RequestConfirmationContent extends StatefulWidget {
 class _RequestConfirmationContentState
     extends State<RequestConfirmationContent> {
   void _copyLink() {
-    Clipboard.setData(ClipboardData(text: widget.paymentRequest.link))
-        .then((_) {
+    Clipboard.setData(ClipboardData(text: widget.paymentRequest.link)).then((
+      _,
+    ) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -93,9 +88,11 @@ class _RequestConfirmationContentState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('permission')
-                ? 'Storage permission required to save QR'
-                : 'Failed to save QR — please try again'),
+            content: Text(
+              e.toString().contains('permission')
+                  ? 'Storage permission required to save QR'
+                  : 'Failed to save QR — please try again',
+            ),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
@@ -119,8 +116,11 @@ class _RequestConfirmationContentState
             CircleAvatar(
               radius: 48,
               backgroundColor: ZendColors.positive.withValues(alpha: 0.12),
-              child: const Icon(PhosphorIconsRegular.checkCircle,
-                  size: 48, color: ZendColors.positive),
+              child: const Icon(
+                PhosphorIconsRegular.checkCircle,
+                size: 48,
+                color: ZendColors.positive,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -128,8 +128,8 @@ class _RequestConfirmationContentState
               widget.paymentRequest.recipientZendtag != null
                   ? 'Request sent to @${widget.paymentRequest.recipientZendtag}!'
                   : widget.paymentRequest.recipientEmail != null
-                      ? 'Request emailed!'
-                      : 'Link created!',
+                  ? 'Request emailed!'
+                  : 'Link created!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',
@@ -165,7 +165,10 @@ class _RequestConfirmationContentState
             Text(
               widget.paymentRequest.link,
               textAlign: TextAlign.center,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 6),
 
@@ -238,14 +241,16 @@ class _RequestConfirmationContentState
                   foregroundColor: zt.textPrimary,
                   side: BorderSide(color: zt.border),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
                 ),
                 child: const Text(
                   'Share',
                   style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600),
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),

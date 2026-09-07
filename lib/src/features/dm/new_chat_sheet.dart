@@ -12,6 +12,7 @@ import '../../models/recent_contact.dart';
 import '../pools/create_pool_drawer.dart';
 import 'dm_thread_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// New Chat/Pool entry point — reached from the Chats tab's floating
 /// action button. Search/select a contact or mutual to start a DM, or
@@ -84,17 +85,31 @@ class _NewChatSheetState extends State<NewChatSheet> {
     }
   }
 
-  Future<void> _startChat({required String userId, required String displayName}) async {
+  Future<void> _startChat({
+    required String userId,
+    required String displayName,
+  }) async {
     final model = ZendScope.of(context);
     try {
       final result = await model.dmService.getOrCreateRoom(userId);
       if (!mounted) return;
       Navigator.of(context).pop();
-      pushZendSlide(context, DmThreadScreen(roomId: result.roomId, counterparty: result.counterparty));
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          roomId: result.roomId,
+          counterparty: result.counterparty,
+        ),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't start that chat — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't start that chat — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -110,11 +125,19 @@ class _NewChatSheetState extends State<NewChatSheet> {
     try {
       final profile = await model.walletService.apiClient.getUserProfile(tag);
       if (!mounted) return;
-      await _startChat(userId: profile.userId, displayName: profile.displayName);
+      await _startChat(
+        userId: profile.userId,
+        displayName: profile.displayName,
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't start that chat — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't start that chat — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -137,7 +160,10 @@ class _NewChatSheetState extends State<NewChatSheet> {
     // keyboard, not the raw screen height — the inner list uses Expanded,
     // so it needs a bounded height, but that bound has to shrink when the
     // keyboard appears or the bottom of the list ends up underneath it.
-    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92).clamp(240.0, double.infinity);
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92).clamp(
+      240.0,
+      double.infinity,
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardInset),
@@ -145,7 +171,9 @@ class _NewChatSheetState extends State<NewChatSheet> {
         height: sheetHeight,
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -155,45 +183,71 @@ class _NewChatSheetState extends State<NewChatSheet> {
               const SizedBox(height: 12),
               const Center(child: ZendSheetHandle()),
               const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'New chat',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w700, color: zt.textPrimary),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: false,
-                  onChanged: _onQueryChanged,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Search username or email',
-                    hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                    prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 20, color: zt.textSecondary),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onQueryChanged('');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'New chat',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: zt.textPrimary,
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: false,
+                    onChanged: _onQueryChanged,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      color: zt.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search username or email',
+                      hintStyle: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textSecondary,
+                      ),
+                      prefixIcon: Icon(
+                        PhosphorIconsRegular.magnifyingGlass,
+                        size: 20,
+                        color: zt.textSecondary,
+                      ),
+                      suffixIcon: _query.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                PhosphorIconsRegular.xCircle,
+                                size: 18,
+                                color: zt.textSecondary,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onQueryChanged('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
-                child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model.recentContacts),
+                child: isSearching
+                    ? _buildSearchResults(zt)
+                    : _buildDefault(zt, model.recentContacts),
               ),
             ],
           ),
@@ -211,7 +265,11 @@ class _NewChatSheetState extends State<NewChatSheet> {
         child: Text(
           "We couldn't find anyone with that identity.",
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14,
+            color: zt.textSecondary,
+          ),
         ),
       );
     }
@@ -224,10 +282,12 @@ class _NewChatSheetState extends State<NewChatSheet> {
         // returns zendtag/display_name/avatar_url) — resolve by tag, same
         // as the Recent-contact path below.
         final tag = u['zendtag'] as String? ?? '';
-        final name = (u['display_name'] as String?)?.trim().isNotEmpty == true ? u['display_name'] as String : tag;
+        final name = (u['display_name'] as String?)?.trim().isNotEmpty == true
+            ? u['display_name'] as String
+            : tag;
         return _PersonRow(
           displayName: name,
-          subtitle: '@$tag',
+          subtitle: handleLabel(tag),
           avatarUrl: u['avatar_url'] as String?,
           avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
           onTap: tag.isEmpty ? null : () => _startChatByTag(tag),
@@ -255,14 +315,26 @@ class _NewChatSheetState extends State<NewChatSheet> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: zt.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
                     alignment: Alignment.center,
-                    child: Icon(PhosphorIconsRegular.usersThree, size: 20, color: zt.accent),
+                    child: Icon(
+                      PhosphorIconsRegular.usersThree,
+                      size: 20,
+                      color: zt.accent,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     'Create pool',
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -277,7 +349,11 @@ class _NewChatSheetState extends State<NewChatSheet> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
               'Search for someone to start a chat.',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
             ),
           )
         else ...[
@@ -285,13 +361,18 @@ class _NewChatSheetState extends State<NewChatSheet> {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               'Recent',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: zt.textSecondary,
+              ),
             ),
           ),
           for (final c in recent)
             _PersonRow(
               displayName: c.name.isNotEmpty ? c.name : c.tag,
-              subtitle: '@${c.tag}',
+              subtitle: handleLabel(c.tag),
               avatarUrl: c.avatarUrl,
               avatarLabel: c.avatarLabel,
               onTap: c.tag.isEmpty ? null : () => _startChatByTag(c.tag),
@@ -329,14 +410,33 @@ class _PersonRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              ZendAvatar(radius: 20, initials: avatarLabel, photoUrl: avatarUrl),
+              ZendAvatar(
+                radius: 20,
+                initials: avatarLabel,
+                photoUrl: avatarUrl,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
-                    Text(subtitle, style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),

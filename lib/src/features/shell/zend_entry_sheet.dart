@@ -212,7 +212,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       if (!mounted || _query != q) return;
       setState(() {
         _results = [
-          if (resolved != null) resolved,
+          ?resolved,
           // Guard against listing the same account twice when search did find it.
           ...results.where(
             (user) =>
