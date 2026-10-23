@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:gal/gal.dart';
+import '../../services/image_saver.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -68,7 +68,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
     setState(() => _saving = true);
     try {
       final bytes = await _captureQr();
-      await Gal.putImageBytes(bytes);
+      await saveImageBytes(bytes);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

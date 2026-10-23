@@ -10,6 +10,11 @@ enum SseEventType {
   transferUpdate,
   transferFailed,
   balanceUpdate,
+  /// Money arrived from outside Zend — a crypto deposit or a fiat pay-in.
+  /// Emitted alongside [balanceUpdate], which still drives the balance
+  /// refresh; this one carries the amount and provenance the arrival banner
+  /// needs. See `SseEvent::FundsAdded` on the backend.
+  fundsAdded,
   heartbeat,
   refreshRequired,
   // ── Pool v2 events ──
@@ -48,6 +53,7 @@ class SseEvent {
       'transfer_update' => SseEventType.transferUpdate,
       'transfer_failed' => SseEventType.transferFailed,
       'balance_update' => SseEventType.balanceUpdate,
+      'funds_added' => SseEventType.fundsAdded,
       'heartbeat' => SseEventType.heartbeat,
       'refresh_required' => SseEventType.refreshRequired,
       'pool_contribution' => SseEventType.poolContribution,

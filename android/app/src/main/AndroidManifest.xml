@@ -6,44 +6,43 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!--
+        RECORD_AUDIO removed for V1. The `record` package is commented out of
+        pubspec.yaml (AGP 8 incompatible) and no microphone API is called
+        anywhere in lib/, so this permission requested mic access for a
+        capability the binary does not contain. Restore alongside
+        ZendFeatures.dmVoiceNotes when a compatible recorder lands.
+    -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
-    <!-- BLE permissions for Zend Drop proximity transfers -->
     <!--
-        Android 11 and below (API ≤ 30) require the legacy BLUETOOTH and BLUETOOTH_ADMIN
-        permissions to use BLE scanning and advertising. The new Android 12+ permissions
-        (BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT) are ignored on older OS.
-        Both sets must be declared so the app works on all Android versions.
-    -->
+        Zend Drop is gated off for V1 (see ZendFeatures.drop). With the gate
+        closed, DropDiscoverabilityService.init() is never called, so
+        _isDiscoverable stays false and pause() early-returns; every remaining
+        call site is inside an `if (ZendFeatures.drop)`. No BLE API is
+        reachable, which means the permissions below were being requested for
+        a feature no user can open.
 
-    <!-- Legacy BLE permissions — required on Android ≤ 11 (API ≤ 30) -->
-    <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
+        That is not just dead weight on the Data Safety form. ACCESS_FINE_LOCATION
+        and FOREGROUND_SERVICE_CONNECTED_DEVICE each trigger their own Play
+        Console declaration requiring written justification and a demo video,
+        and reviewers reject justifications they cannot reproduce in the build.
 
-    <!-- Modern BLE permissions — required on Android 12+ (API ≥ 31) -->
-    <!-- BLUETOOTH_SCAN: neverForLocation required for Play Store compliance when BLE is not used for location -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation"
-        tools:targetApi="s" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+        Restore all of the following, plus the .DropAdvertiserService <service>
+        declaration below, when ZendFeatures.drop is flipped back on:
 
-    <!-- Location: required for BLE scanning on Android ≤ 11 -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-    <!-- BLE hardware declaration — required=false so the app installs on devices without BLE -->
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
-    <!-- Foreground service permission (required on Android 9+) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- connectedDevice foreground service type (required on Android 14+) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-    <!-- WakeLock to keep BLE stack alive while Drop is advertising -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+          BLUETOOTH            (maxSdkVersion=30)
+          BLUETOOTH_ADMIN      (maxSdkVersion=30)
+          BLUETOOTH_SCAN       (usesPermissionFlags=neverForLocation, tools:targetApi="s")
+          BLUETOOTH_ADVERTISE
+          BLUETOOTH_CONNECT
+          ACCESS_FINE_LOCATION      — BLE scanning on Android <= 11
+          ACCESS_COARSE_LOCATION    — BLE scanning on Android <= 11
+          FOREGROUND_SERVICE
+          FOREGROUND_SERVICE_CONNECTED_DEVICE
+          WAKE_LOCK                 — keeps the BLE stack alive while advertising
+          -->
     <!-- Post notifications — required on Android 13+ (API 33+) for system notification bar alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Contacts access — used to find which contacts are registered on Zend -->
@@ -127,11 +126,18 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Zend Drop: foreground service for continuous BLE advertising on Android -->
-        <service
-            android:name=".DropAdvertiserService"
-            android:foregroundServiceType="connectedDevice"
-            android:exported="false" />
+        <!--
+            Zend Drop foreground service, removed for V1 along with the BLE
+            permissions above (see ZendFeatures.drop). Declaring a
+            connectedDevice foreground service obliges us to justify it in the
+            Play Console; the Kotlin class is still in the tree, so restoring
+            this is just un-commenting:
+
+            <service
+                android:name=".DropAdvertiserService"
+                android:foregroundServiceType="connectedDevice"
+                android:exported="false" />
+        -->
     </application>
     <queries>
         <intent>

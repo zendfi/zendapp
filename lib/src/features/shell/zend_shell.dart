@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../models/add_cash_models.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
@@ -11,6 +13,7 @@ import '../../navigation/notification_navigator.dart';
 import '../../services/pending_deep_link_service.dart';
 import '../../services/pending_notification_service.dart';
 import '../../design/zend_primitives.dart';
+import '../../design/zend_web_frame.dart';
 import '../request/request_qr_sheet.dart';
 import '../send/qr_payment_sheet.dart';
 import '../send/send_flow_sheet.dart';
@@ -47,6 +50,8 @@ class _ZendShellState extends State<ZendShell> {
   String? _lastReactionBannerKey;
   Timer? _commentBannerTimer;
   String? _lastCommentBannerKey;
+  Timer? _fundsBannerTimer;
+  String? _lastFundsBannerKey;
   // DM banner
   Map<String, dynamic>? _pendingDmBanner;
   Timer? _dmBannerTimer;
@@ -67,7 +72,7 @@ class _ZendShellState extends State<ZendShell> {
     // actual visible content stayed on Home/Send/DM.
     ZendShellController.activate((index) {
       if (mounted) _setTab(index);
-    });
+    }, initialTab: _tabIndex);
     // Consume any pending deep link that was stored before the user
     // completed device unlock (PIN screen).
     // Also consume any pending notification tap destination — this covers the
@@ -108,6 +113,7 @@ class _ZendShellState extends State<ZendShell> {
     setState(() {
       _tabIndex = index;
     });
+    ZendShellController.reportTab(index);
     // Jump instantly — no slide animation for tab-bar taps.
     // Slide animation only fires when the user physically swipes the PageView.
     _pageController.jumpToPage(index);
@@ -238,6 +244,7 @@ class _ZendShellState extends State<ZendShell> {
     // (tab index, which is local state) and leave banner/badge reads to
     // sub-widgets that have their own element nodes.
     final model = ZendScope.of(context);
+    final webDesktop = ZendWebLayout.isDesktop(context);
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
     final pendingComment = model.pendingActivityComment;
@@ -297,6 +304,25 @@ class _ZendShellState extends State<ZendShell> {
       _lastReactionBannerKey = null;
     }
 
+    final pendingFunds = model.pendingFundsArrived;
+    if (pendingFunds != null) {
+      // Keyed on the arrival itself, so a second deposit replays the
+      // slide-in rather than silently mutating the first one's figures.
+      final key = '${pendingFunds.source}:${pendingFunds.amountUsdc}'
+          ':${pendingFunds.originAmount ?? ''}';
+      if (key != _lastFundsBannerKey) {
+        _lastFundsBannerKey = key;
+        _fundsBannerTimer?.cancel();
+        // Longer than a reaction or comment — this is money, and the user may
+        // have put the phone down waiting for it to land.
+        _fundsBannerTimer = Timer(const Duration(seconds: 10), () {
+          if (mounted) model.clearPendingFundsArrived();
+        });
+      }
+    } else {
+      _lastFundsBannerKey = null;
+    }
+
     if (pendingComment != null) {
       final key =
           '${pendingComment.edgeKind}:${pendingComment.edgeId}:${pendingComment.body}';
@@ -347,6 +373,7 @@ class _ZendShellState extends State<ZendShell> {
               onPageChanged: (i) {
                 if (i != _tabIndex) {
                   setState(() => _tabIndex = i);
+                  ZendShellController.reportTab(i);
                   if (i == 0) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) ZendScope.of(context).markActivityRead();
@@ -386,8 +413,11 @@ class _ZendShellState extends State<ZendShell> {
                   // feedback on something the user did a moment ago, which
                   // outranks incoming notifications for their attention.
                   final transferStatus = model.transferStatus.status;
+                  final funds = model.pendingFundsArrived;
                   const bannerSlot = 78.0;
-                  final requestTop = transferStatus != null ? bannerSlot : 0.0;
+                  final fundsTop = transferStatus != null ? bannerSlot : 0.0;
+                  final requestTop =
+                      fundsTop + (funds != null ? bannerSlot : 0.0);
                   final reactionTop =
                       requestTop + (pending != null ? bannerSlot : 0.0);
                   final commentTop =
@@ -421,6 +451,24 @@ class _ZendShellState extends State<ZendShell> {
                               transferStatus,
                             ),
                             onDismiss: model.transferStatus.dismiss,
+                          ),
+                        ),
+                      // Money arrived from outside Zend — the only
+                      // confirmation the Add Cash flow gives. Sits directly
+                      // below the user's own send/request status.
+                      if (funds != null)
+                        Positioned(
+                          top: fundsTop,
+                          left: 0,
+                          right: 0,
+                          child: _FundsArrivedBanner(
+                            key: ValueKey(_lastFundsBannerKey),
+                            notification: funds,
+                            onTap: () {
+                              model.clearPendingFundsArrived();
+                              unawaited(_openWallet(context));
+                            },
+                            onDismiss: model.clearPendingFundsArrived,
                           ),
                         ),
                       // In-app payment request banner
@@ -527,15 +575,21 @@ class _ZendShellState extends State<ZendShell> {
       // only. Not present on Chats (Zend is reachable contextually from
       // inside a conversation instead — spec §27) or You (not an action
       // screen — spec §29's "this is me, manage me").
-      floatingActionButton: (_tabIndex == 0 || _tabIndex == 1)
+      // In web desktop mode the sidebar outside the app column (ZendWebFrame)
+      // carries the tabs and the Zend action, so the in-column copies are
+      // dropped rather than shown twice.
+      floatingActionButton:
+          (!webDesktop && (_tabIndex == 0 || _tabIndex == 1))
           ? _ZendFab(onTap: () => showZendEntrySheet(context))
           : null,
-      bottomNavigationBar: ZendBottomBar(
-        currentIndex: _tabIndex,
-        onChanged: _setTab,
-        feedBadgeCount: model.activityUnreadCount,
-        chatsBadgeCount: model.dmUnreadTotal,
-      ),
+      bottomNavigationBar: webDesktop
+          ? null
+          : ZendBottomBar(
+              currentIndex: _tabIndex,
+              onChanged: _setTab,
+              feedBadgeCount: model.activityUnreadCount,
+              chatsBadgeCount: model.dmUnreadTotal,
+            ),
     );
   }
 }
@@ -1512,9 +1566,149 @@ class _TransferStatusBannerState extends State<_TransferStatusBanner>
   }
 }
 
+// ── Funds-arrived banner ─────────────────────────────────────────────────────
+//
+// The payoff of the Add Cash flow. That flow deliberately ends on a plain
+// "Done" with no "I've sent it" step — asking someone to report money we can
+// already see is theatre — which makes this banner the only confirmation the
+// user gets that their deposit or bank transfer landed.
+//
+// Driven by the `funds_added` SSE event, which arrives alongside
+// `balance_update`. The latter refreshes the figure; this names what came in.
+
+class _FundsArrivedBanner extends StatefulWidget {
+  const _FundsArrivedBanner({
+    super.key,
+    required this.notification,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  final FundsArrivedNotification notification;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_FundsArrivedBanner> createState() => _FundsArrivedBannerState();
+}
+
+class _FundsArrivedBannerState extends State<_FundsArrivedBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+    // Money arriving is worth feeling, not just seeing.
+    HapticFeedback.mediumImpact();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.notification;
+    // When the deposit came in another currency, lead with what the user
+    // actually sent ("₦50,000 arrived") and follow with what they got, since
+    // that's the number they're checking against their bank app.
+    final origin = n.originLabel;
+    final title = origin != null ? '$origin arrived' : '${n.amountLabel} arrived';
+    final subtitle = origin != null
+        ? '${n.amountLabel} added · ${n.sourceLabel}'
+        : 'Added to your balance · ${n.sourceLabel}';
+
+    return SlideTransition(
+      position: _slide,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: _GlassBannerBox(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: ZendColors.positive.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        PhosphorIconsRegular.arrowDown,
+                        size: 20,
+                        color: ZendColors.positive,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFF0F0F0),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 11,
+                              color: Color(0x99F0F0F0),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: widget.onDismiss,
+                      child: const Icon(
+                        PhosphorIconsRegular.xCircle,
+                        size: 16,
+                        color: Color(0x66F0F0F0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Shared glass banner container ────────────────────────────────────────────
 //
-// All five in-app notification banners use this wrapper so they share
+// All six in-app notification banners use this wrapper so they share
 // identical frosted-glass treatment: real BackdropFilter blur, semi-opaque
 // elevated surface, and a hairline white bevel on top.
 

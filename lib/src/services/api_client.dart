@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/pools/pool.dart';
 import '../models/activity_edge.dart';
+import '../models/add_cash_models.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
 import '../models/crypto_send_models.dart';
@@ -938,10 +938,13 @@ class ApiClient {
 
   /// Upload a profile photo. Sends raw bytes with Content-Type header.
   /// Returns the CDN URL of the uploaded avatar.
-  Future<String> uploadAvatar(File imageFile) async {
+  ///
+  /// Takes bytes plus a filename rather than a `File` so it works on web, where
+  /// image_picker returns a blob URL with no filesystem path. [fileName] is only
+  /// used to pick the MIME type.
+  Future<String> uploadAvatar(Uint8List bytes, {required String fileName}) async {
     try {
-      final mimeType = _mimeTypeFromPath(imageFile.path);
-      final bytes = await imageFile.readAsBytes();
+      final mimeType = _mimeTypeFromPath(fileName);
       final response = await _dio.post(
         '/api/zend/user/avatar',
         data: bytes,
@@ -1140,14 +1143,30 @@ class ApiClient {
     }
   }
 
+  /// Confirms an NGN bank-send order.
+  ///
+  /// Two mutually exclusive shapes, keyed by the rail the prepare step resolved:
+  /// the Solana rail co-signs a `partiallySignedTx`; the Sui rail submits a signed
+  /// `sui_signed_transaction` [envelope]. Exactly one must be supplied.
   Future<Map<String, dynamic>> confirmBankSend({
     required String orderId,
-    required String partiallySignedTx,
+    String? partiallySignedTx,
+    RailEnvelope? envelope,
   }) async {
+    assert(
+      (partiallySignedTx == null) != (envelope == null),
+      'confirmBankSend requires exactly one of partiallySignedTx or envelope',
+    );
     try {
+      final data = <String, dynamic>{'order_id': orderId};
+      if (envelope != null) {
+        data['envelope'] = envelope.toJson();
+      } else {
+        data['partially_signed_tx'] = partiallySignedTx;
+      }
       final response = await _dio.post(
         '/api/zend/bank-send/ngn/confirm',
-        data: {'order_id': orderId, 'partially_signed_tx': partiallySignedTx},
+        data: data,
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return response.data as Map<String, dynamic>;
@@ -1240,6 +1259,80 @@ class ApiClient {
       throw e.error ?? e;
     }
   }
+
+  // ── Add Cash (funding a balance from outside Zend) ───────────────────────
+  //
+  // These three sit on the *public*, zendtag-keyed routes rather than the
+  // authenticated `/api/zend/...` namespace, because that's where the
+  // backend put them — they were built for the zdfi.me payer-facing page.
+  // Calling them from the app with the user's own handle works, with two
+  // consequences worth knowing:
+  //
+  //   1. A user whose handle is still an email placeholder can't use them,
+  //      since both resolve `WHERE zendtag = $1`. Callers must gate on
+  //      `ZendAppModel.zendtagIsPlaceholder` and prompt for a handle first.
+  //   2. There's no auth context, so no per-user rate limiting applies.
+  //
+  // Thin authenticated wrappers keyed on the session's user_id would fix
+  // both; until those exist, this is the honest shape.
+
+  /// Lists the chains a balance can be funded from.
+  /// Public and unauthenticated — no handle needed.
+  Future<List<DepositChain>> getDepositChains() async {
+    try {
+      final resp = await _dio.get('/api/v1/public/chains');
+      return (resp.data as List)
+          .cast<Map<String, dynamic>>()
+          .map(DepositChain.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// The address to send [chainId] funds to in order to credit [zendtag].
+  ///
+  /// For stablecoin chains this is a static per-user address, created on
+  /// first request and reused thereafter. For others it resolves to the
+  /// user's own wallet address.
+  Future<DepositAddress> getDepositAddress({
+    required String zendtag,
+    required int chainId,
+  }) async {
+    try {
+      final resp = await _dio.get(
+        '/api/v1/public/zend/$zendtag/crypto-deposit-address',
+        queryParameters: {'chain_id': chainId},
+      );
+      return DepositAddress.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Requests NGN bank transfer instructions for funding [zendtag] with
+  /// [amountUsd] of value.
+  ///
+  /// Each call provisions a provider order, so don't call it speculatively —
+  /// only once the user has committed to an amount.
+  Future<NgnPayinInstructions> prepareNgnPayin({
+    required String zendtag,
+    required double amountUsd,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        '/api/v1/public/zend/$zendtag/ngn-payin/prepare',
+        data: {'amount_usd': amountUsd},
+      );
+      return NgnPayinInstructions.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  // Pay-in order history is already covered by [getPayinOrders] above — it
+  // was wired before this flow existed, which is why deposits could appear in
+  // history while nothing told the user how to make one.
 
   // ── Activity Relationship Graph (Phase 2/3) ─────────────────────────────────
   // These calls sit alongside getTransferHistory() but are consumed

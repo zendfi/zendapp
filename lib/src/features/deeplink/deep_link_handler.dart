@@ -29,6 +29,16 @@ class DeepLinkHandler {
   static const _channel = MethodChannel('com.zendfi.zendapp/deep_links');
 
   static Future<void> init() async {
+    // On web the "deep link" is simply the URL the page was opened at, e.g.
+    // app.usezend.app/@john_o/abc123. There is no native channel; reuse the
+    // zdfi.me parser by rewriting the host.
+    if (kIsWeb) {
+      final base = Uri.base;
+      if (base.pathSegments.isNotEmpty) {
+        _initialLink = _parse(base.replace(host: 'zdfi.me').toString());
+      }
+      return;
+    }
     // Listen for links while app is running
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onDeepLink') {

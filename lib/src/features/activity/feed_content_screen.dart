@@ -367,7 +367,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
 
     final isLoading = model.threadedActivityLoading && allEdges.isEmpty;
     final isNewUser =
-        !isLoading && allEdges.isEmpty && model.spendableBalance == 0;
+        !isLoading && allEdges.isEmpty && model.sendableBalance == 0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -394,7 +394,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         key: const ValueKey('collapsed'),
                         balanceLabel: model.balanceHidden
                             ? '•••'
-                            : _formatBalance(model.spendableBalance),
+                            : _formatBalance(model.sendableBalance),
                         onOpenWallet: widget.onOpenWallet,
                         onTapSearch: _expandSearch,
                       )
@@ -406,7 +406,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         onClear: () => _searchController.clear(),
                         balanceLabel: model.balanceHidden
                             ? '•••'
-                            : _formatBalance(model.spendableBalance),
+                            : _formatBalance(model.sendableBalance),
                         onOpenWallet: widget.onOpenWallet,
                       ),
               ),

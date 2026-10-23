@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
+import 'src/services/web_idle_guard.dart';
+import 'src/design/zend_web_frame.dart';
+import 'src/core/zend_features.dart';
 import 'src/core/zend_state.dart';
 import 'src/design/zend_theme.dart';
 import 'src/design/zend_tokens.dart';
@@ -46,6 +50,7 @@ final _navigatorKey = GlobalKey<NavigatorState>();
 
 class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   late ThemeMode _themeMode;
+  late final WebIdleGuard _webIdleGuard = WebIdleGuard(widget.model);
   StreamSubscription<DeepLinkPayload>? _deepLinkSub;
   StreamSubscription<Map<String, dynamic>>? _dropConfirmedSub;
   // Track when the app went to background so we know if SSE likely died.
@@ -64,6 +69,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         ? (widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light)
         : ThemeMode.system;
     widget.model.addListener(_onModelChanged);
+    _webIdleGuard.start();
     // Listen for app-lock state changes so we can consume a pending deep link
     // the moment the user unlocks the app.
     widget.model.appLockService.addListener(_onLockStateChanged);
@@ -72,7 +78,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     _deepLinkSub = DeepLinkHandler.stream.listen(_handleDeepLink);
 
     // Fire receiver haptics + balance notification when a Drop lands
-    _dropConfirmedSub = widget.model.dropConfirmedEvents.listen(_onDropConfirmed);
+    _dropConfirmedSub = widget.model.dropConfirmedEvents.listen(
+      _onDropConfirmed,
+    );
 
     // Register authentication hook to dispatch pending notification destinations
     // that were parked before auth completed (covers device OS-lock path).
@@ -83,10 +91,16 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         if (!mounted) return;
         final ctx = _navigatorKey.currentContext;
         if (ctx == null || widget.model.appLockService.isLocked) {
-          PendingNotificationService.store(pendingDest); // still locked at app level
+          PendingNotificationService.store(
+            pendingDest,
+          ); // still locked at app level
           return;
         }
-        NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+        NotificationNavigator.dispatch(
+          ctx,
+          pendingDest,
+          widget.model,
+        ); // ignore: use_build_context_synchronously
       });
     };
 
@@ -121,20 +135,32 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           if (!mounted) return;
           final ctx = _navigatorKey.currentContext;
           if (ctx == null) return;
-          if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
-            PendingNotificationService.store(pendingDest); // park until unlocked
+          if (!widget.model.isAuthenticated ||
+              widget.model.appLockService.isLocked) {
+            PendingNotificationService.store(
+              pendingDest,
+            ); // park until unlocked
             return;
           }
-          NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+          NotificationNavigator.dispatch(
+            ctx,
+            pendingDest,
+            widget.model,
+          ); // ignore: use_build_context_synchronously
         });
       }
 
       if (PendingDeepLinkService.hasPending) {
         final ctx = _navigatorKey.currentContext;
-        if (ctx != null && widget.model.isAuthenticated && !widget.model.appLockService.isLocked) {
+        if (ctx != null &&
+            widget.model.isAuthenticated &&
+            !widget.model.appLockService.isLocked) {
           final pendingIntent = PendingDeepLinkService.consume();
           if (pendingIntent != null) {
-            showQrPaymentSheet(ctx, intent: pendingIntent); // ignore: use_build_context_synchronously
+            showQrPaymentSheet(
+              ctx,
+              intent: pendingIntent,
+            ); // ignore: use_build_context_synchronously
           }
         }
       }
@@ -174,6 +200,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     _deepLinkSub?.cancel();
     _dropConfirmedSub?.cancel();
     widget.model.removeListener(_onModelChanged);
+    _webIdleGuard.dispose();
     widget.model.appLockService.removeListener(_onLockStateChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -184,6 +211,15 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   /// Sender: already handled by the Drop sheet's _executeTransfer success path.
   /// Receiver: fires haptics + shows a "catch" bottom sheet so they feel the money land.
   void _onDropConfirmed(Map<String, dynamic> data) {
+    // Drop is gated off for launch — see [ZendFeatures.drop]. The money has
+    // genuinely arrived if this fires, so the event is deliberately *not*
+    // swallowed silently: balance and history still refresh through the
+    // normal `dropConfirmed` handling in ZendAppModel, and the transfer
+    // shows up in Feed like any other. Only the celebratory Drop-specific
+    // receiver sheet is suppressed, because it names a feature the user has
+    // no way to see or use.
+    if (!ZendFeatures.drop) return;
+
     final role = data['role'] as String?;
     if (role != 'receiver') return;
 
@@ -263,7 +299,11 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         if (!mounted) return;
         final ctx = _navigatorKey.currentContext;
         if (ctx == null) return;
-        NotificationNavigator.dispatch(ctx, pendingDest, widget.model); // ignore: use_build_context_synchronously
+        NotificationNavigator.dispatch(
+          ctx,
+          pendingDest,
+          widget.model,
+        ); // ignore: use_build_context_synchronously
       });
     }
   }
@@ -289,11 +329,23 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _handlePoolDeepLink(BuildContext context, String shortCode) async {
+  Future<void> _handlePoolDeepLink(
+    BuildContext context,
+    String shortCode,
+  ) async {
+    // Pools are gated off for launch — see [ZendFeatures.pools]. A
+    // `zdfi.me/pool/<code>` link can still be shared and opened, so ignore it
+    // rather than dropping the user into a surface that has no other entry
+    // point (and no way back to a pool list).
+    if (!ZendFeatures.pools) return;
     try {
-      final pool = await widget.model.walletService.apiClient.getPoolByShortCode(shortCode);
+      final pool = await widget.model.walletService.apiClient
+          .getPoolByShortCode(shortCode);
       if (!mounted) return;
-      pushZendSlide(context, PoolDetailScreen(pool: pool)); // ignore: use_build_context_synchronously
+      pushZendSlide(
+        context,
+        PoolDetailScreen(pool: pool),
+      ); // ignore: use_build_context_synchronously
     } catch (_) {
       // Pool not found or network error — silently fail.
     }
@@ -302,7 +354,8 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   void _handleDeepLink(DeepLinkPayload payload) {
     // "Pay with Zend" CLI device pairing — zdfi.me/cli-auth/{code}.
     if (payload.isCliPairing) {
-      if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
         return;
       }
       final context = _navigatorKey.currentContext;
@@ -313,7 +366,8 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
 
     // Pool discovery deep link — zdfi.me/pool/{short_code}
     if (payload.isPoolLink) {
-      if (!widget.model.isAuthenticated || widget.model.appLockService.isLocked) {
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
         return;
       }
       final context = _navigatorKey.currentContext;
@@ -332,10 +386,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         !widget.model.appLockService.isLocked) {
       final context = _navigatorKey.currentContext;
       if (context != null) {
-        pushZendSlide(
-          context,
-          UserProfileScreen(zendtag: payload.zendtag),
-        );
+        pushZendSlide(context, UserProfileScreen(zendtag: payload.zendtag));
         return;
       }
     }
@@ -369,7 +420,10 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   /// the request's `source` field (Requirement 4.1) — open/fixed-amount
   /// intents with no `requestLinkId` are always peer-to-peer and go
   /// straight to [QrPaymentSheet] without any fetch.
-  Future<void> _dispatchPaymentIntent(BuildContext context, QrPaymentIntent intent) async {
+  Future<void> _dispatchPaymentIntent(
+    BuildContext context,
+    QrPaymentIntent intent,
+  ) async {
     if (intent.requestLinkId == null) {
       showQrPaymentSheet(context, intent: intent);
       return;
@@ -426,21 +480,25 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       unawaited(model.pushNotificationService.clearBadge());
 
       if (model.isAuthenticated) {
-        unawaited(model.dropDiscoverabilityService.onAppForeground());
+        if (ZendFeatures.drop) {
+          unawaited(model.dropDiscoverabilityService.onAppForeground());
+        }
 
         final bgDuration = _pausedAt != null
             ? DateTime.now().difference(_pausedAt!)
             : Duration.zero; // null means we were never actually paused
 
         // Lock if backgrounded for 2+ minutes — brief switches don't lock.
-        if (bgDuration.inSeconds >= 120 && model.appLockService.pinIsAvailable) {
+        if (bgDuration.inSeconds >= 120 &&
+            model.appLockService.pinIsAvailable) {
           model.appLockService.lock();
         }
 
         // Same rule for accounts with no PIN, which the line above cannot cover
         // because it is gated on pinIsAvailable. These re-lock through the
         // biometric gate instead of the PIN overlay.
-        if (bgDuration.inSeconds >= 120 && !model.appLockService.pinIsAvailable) {
+        if (bgDuration.inSeconds >= 120 &&
+            !model.appLockService.pinIsAvailable) {
           unawaited(_maybeShowBiometricGate(model));
         }
 
@@ -495,14 +553,18 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           }
           final ctx = _navigatorKey.currentContext;
           if (ctx != null) {
-            NotificationNavigator.dispatch(ctx, pendingDest, model); // ignore: use_build_context_synchronously
+            NotificationNavigator.dispatch(
+              ctx,
+              pendingDest,
+              model,
+            ); // ignore: use_build_context_synchronously
           }
         });
       }
     } else if (state == AppLifecycleState.paused ||
-               state == AppLifecycleState.detached) {
+        state == AppLifecycleState.detached) {
       _pausedAt = DateTime.now();
-      model.dropDiscoverabilityService.onAppBackground();
+      if (ZendFeatures.drop) model.dropDiscoverabilityService.onAppBackground();
       if (state == AppLifecycleState.detached) {
         model.stopRealTimeUpdates();
       }
@@ -547,37 +609,48 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           }
           return locale;
         },
-        builder: (context, child) {
-          // Width-relative text scaling: derive a text scale factor from the
-          // device's screen width relative to a 375dp reference (iPhone SE /
-          // standard design frame). This replaces the old OS text-scale clamp
-          // approach. Instead of reacting to the OS accessibility slider, we
-          // Tie text size to the physical width of the device so that text,
-          // spacing, and containers stay proportional across different screen
-          // sizes -- fixing the "looks great on some devices, bulky or
-          // cramped on others" inconsistency. The width-relative factor is
-          // multiplied by the user's OS accessibility text scale preference
-          // (dampened by the width factor) so that accessibility settings are
-          // honoured rather than silently discarded. The combined result is
-          // clamped to 0.85x-1.35x to protect layouts from extremes.
-          final screenWidth = MediaQuery.sizeOf(context).width;
-          final widthScale = screenWidth / 375.0;
-          final osScale = MediaQuery.textScalerOf(context).scale(1.0);
-          final combined = (widthScale * osScale).clamp(0.85, 1.35);
-          final scaler = TextScaler.linear(combined);
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: scaler),
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (_) =>
-                  widget.model.appLockService.recordActivity(),
-              child: AppLockOverlay(
-                lockService: widget.model.appLockService,
-                child: LoadingOverlay(child: child ?? const SizedBox()),
-              ),
-            ),
-          );
-        },
+        // ZendWebFrame is a pass-through off web. On web it hosts the app in
+        // a phone-width column (plus a desktop sidebar on wide screens) and
+        // rewrites MediaQuery to the column's size, so the text scaling below
+        // computes from the column, not the monitor.
+        builder: (context, child) => ZendWebFrame(
+          navigatorKey: _navigatorKey,
+          child: Builder(
+            builder: (context) {
+              // Width-relative text scaling: derive a text scale factor from the
+              // device's screen width relative to a 375dp reference (iPhone SE /
+              // standard design frame). This replaces the old OS text-scale clamp
+              // approach. Instead of reacting to the OS accessibility slider, we
+              // Tie text size to the physical width of the device so that text,
+              // spacing, and containers stay proportional across different screen
+              // sizes -- fixing the "looks great on some devices, bulky or
+              // cramped on others" inconsistency. The width-relative factor is
+              // multiplied by the user's OS accessibility text scale preference
+              // (dampened by the width factor) so that accessibility settings are
+              // honoured rather than silently discarded. The combined result is
+              // clamped to 0.85x-1.35x to protect layouts from extremes.
+              final screenWidth = MediaQuery.sizeOf(context).width;
+              final widthScale = screenWidth / 375.0;
+              final osScale = MediaQuery.textScalerOf(context).scale(1.0);
+              final combined = (widthScale * osScale).clamp(0.85, 1.35);
+              final scaler = TextScaler.linear(combined);
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: scaler),
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: (_) {
+                    widget.model.appLockService.recordActivity();
+                    _webIdleGuard.recordActivity();
+                  },
+                  child: AppLockOverlay(
+                    lockService: widget.model.appLockService,
+                    child: LoadingOverlay(child: child ?? const SizedBox()),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -593,8 +666,7 @@ class _SplashWithSessionRestore extends StatefulWidget {
       _SplashWithSessionRestoreState();
 }
 
-class _SplashWithSessionRestoreState
-    extends State<_SplashWithSessionRestore> {
+class _SplashWithSessionRestoreState extends State<_SplashWithSessionRestore> {
   @override
   void initState() {
     super.initState();
@@ -631,7 +703,9 @@ class _SplashWithSessionRestoreState
       // straight on WelcomeScreen instead of replaying it.
       final showIntro = await LanguageIntroScreen.shouldShow();
       if (!mounted) return;
-      _finishSplashAndNavigate(showIntro ? const LanguageIntroScreen() : const WelcomeScreen());
+      _finishSplashAndNavigate(
+        showIntro ? const LanguageIntroScreen() : const WelcomeScreen(),
+      );
       return;
     }
 
@@ -726,7 +800,9 @@ class _SplashWithSessionRestoreState
   /// beat — so the native splash is the only splash the user ever sees;
   /// there's no separate Dart SplashScreen widget to hand off to first.
   void _finishSplashAndNavigate(Widget page) {
-    FlutterNativeSplash.remove();
+    // No native splash on web (pubspec: flutter_native_splash web: false);
+    // remove() throws there because removeSplashFromWeb() was never generated.
+    if (!kIsWeb) FlutterNativeSplash.remove();
     pushReplacementZendSlide(context, page);
   }
 

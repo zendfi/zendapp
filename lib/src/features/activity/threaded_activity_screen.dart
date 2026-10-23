@@ -391,7 +391,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                         child: Text(
                           model.balanceHidden
                               ? '•••'
-                              : _formatBalance(model.spendableBalance),
+                              : _formatBalance(model.sendableBalance),
                           style: TextStyle(
                             fontFamily: 'Geist',
                             fontSize: 19,

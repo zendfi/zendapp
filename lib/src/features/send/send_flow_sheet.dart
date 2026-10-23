@@ -998,12 +998,15 @@ class _RecipientStageState extends State<_RecipientStage> {
         _resolveError == null &&
         !_resolving &&
         widget.amount > 0 &&
-        widget.amount <= model.spendableBalance;
+        // `sendableBalance`, not `spendableBalance`: funds awaiting a deposit are
+        // converted automatically by the send flow, so gating on the spendable
+        // figure alone would disable the send that unparks them.
+        widget.amount <= model.sendableBalance;
   }
 
   bool get _insufficientBalance {
     final model = ZendScope.of(context);
-    return widget.amount > 0 && widget.amount > model.spendableBalance;
+    return widget.amount > 0 && widget.amount > model.sendableBalance;
   }
 
   void _onPay() {
@@ -1208,7 +1211,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Available · \$${model.spendableBalance.toStringAsFixed(2)}',
+                            'Available · \$${model.sendableBalance.toStringAsFixed(2)}',
                             style: ZendTextStyles.tabularNumeric.copyWith(
                               fontSize: 12,
                               color: zt.textSecondary,
@@ -1451,7 +1454,7 @@ class _EmailIntentStage extends StatelessWidget {
     final model = ZendScope.of(context);
     final zt = ZendTheme.of(context);
     final compact = MediaQuery.of(context).size.height < 760;
-    final insufficientBalance = amount > model.spendableBalance;
+    final insufficientBalance = amount > model.sendableBalance;
     final maskedEmail = _mask(email);
 
     return Padding(
@@ -1498,7 +1501,7 @@ class _EmailIntentStage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 4),
               child: Text(
-                'Insufficient balance · \$${model.spendableBalance.toStringAsFixed(2)} available',
+                'Insufficient balance · \$${model.sendableBalance.toStringAsFixed(2)} available',
                 textAlign: TextAlign.center,
                 style: ZendTextStyles.tabularNumeric.copyWith(
                   fontSize: 12,

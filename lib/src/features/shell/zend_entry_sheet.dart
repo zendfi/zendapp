@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -1041,19 +1042,29 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        GestureDetector(
-          onTap: _showVibesComingSoon,
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              shape: BoxShape.circle,
+        // Gated off twice over: Vibes as a whole are off for launch
+        // ([ZendFeatures.vibes]), and this particular button was never wired
+        // to the real vibe flow even when they worked — it only ever opened
+        // a "coming soon" dialog ([ZendFeatures.vibesFromEntrySheet]).
+        if (ZendFeatures.vibes && ZendFeatures.vibesFromEntrySheet) ...[
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: _showVibesComingSoon,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                PhosphorIconsRegular.gift,
+                color: zt.accent,
+                size: 22,
+              ),
             ),
-            child: Icon(PhosphorIconsRegular.gift, color: zt.accent, size: 22),
           ),
-        ),
+        ],
       ],
     );
   }

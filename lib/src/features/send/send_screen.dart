@@ -363,7 +363,7 @@ class _SendScreenState extends State<SendScreen>
                                 children: [
                                   Expanded(
                                     child: _DropHoldButton(
-                                      enabled: _usdAmount > 0 && _usdAmount <= ZendScope.of(context).spendableBalance,
+                                      enabled: _usdAmount > 0 && _usdAmount <= ZendScope.of(context).sendableBalance,
                                       onActivated: () => showDropSheet(context, amount: _usdAmount),
                                     ),
                                   ),

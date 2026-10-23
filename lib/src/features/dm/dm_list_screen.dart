@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../core/zend_features.dart';
 import '../../core/zend_selector.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
@@ -100,8 +101,12 @@ class _DmListScreenState extends State<DmListScreen> {
   /// an inactive pool lands in the list, never its row appearance.
   void _rebuildItems() {
     final model = ZendScope.read(context);
-    final pools = model.pools;
-    final unreadPools = model.poolsWithNewMessages;
+    // Pools are gated off for launch — see [ZendFeatures.pools]. Reading
+    // empty collections rather than branching keeps the identity-guard and
+    // merge logic below on one code path.
+    final pools = ZendFeatures.pools ? model.pools : const <Pool>[];
+    final unreadPools =
+        ZendFeatures.pools ? model.poolsWithNewMessages : const <String>{};
 
     // Skip the merge+sort when none of its three inputs changed. Without this
     // it ran on every notifyListeners(), allocating a wrapper per row and
@@ -173,7 +178,7 @@ class _DmListScreenState extends State<DmListScreen> {
       _loadError = false;
     });
     final model = ZendScope.of(context);
-    if (model.pools.isEmpty && !model.poolsLoading) {
+    if (ZendFeatures.pools && model.pools.isEmpty && !model.poolsLoading) {
       unawaited(model.fetchPools());
     }
     try {
@@ -448,8 +453,10 @@ class _DmListScreenState extends State<DmListScreen> {
                           )
                         : const _EmptyState()
                   : RefreshIndicator(
-                      onRefresh: () =>
-                          Future.wait([_loadThreads(), model.fetchPools()]),
+                      onRefresh: () => Future.wait([
+                        _loadThreads(),
+                        if (ZendFeatures.pools) model.fetchPools(),
+                      ]),
                       // Selected on the merged list's identity, which
                       // [_rebuildItems] now keeps stable across notifies
                       // that don't touch chats — so a balance refresh

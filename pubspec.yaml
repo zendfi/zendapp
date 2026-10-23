@@ -118,6 +118,9 @@ dependencies:
 
   # Save images to device gallery (iOS + Android)
   gal: ^2.3.0
+  # Direct dep (already transitive) for the web-only image download in
+  # services/image_saver_web.dart.
+  web: 1.1.1
 
   # NFC tag reading and writing
   nfc_manager: ^3.3.0
@@ -311,3 +314,8 @@ flutter_native_splash:
   android: true
   ios: true
   web: false
+
+dependency_overrides:
+  # Wasm-compatible, sessionStorage-scoped web storage. See the package docs.
+  flutter_secure_storage_web:
+    path: packages/flutter_secure_storage_web

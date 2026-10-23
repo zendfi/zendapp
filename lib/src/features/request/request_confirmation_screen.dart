@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gal/gal.dart';
+import '../../services/image_saver.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart'; // Share.share()
 
@@ -74,7 +74,7 @@ class _RequestConfirmationContentState
       );
       final imageData = await painter.toImageData(512);
       if (imageData == null) throw Exception('Failed to generate QR image');
-      await Gal.putImageBytes(imageData.buffer.asUint8List());
+      await saveImageBytes(imageData.buffer.asUint8List());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

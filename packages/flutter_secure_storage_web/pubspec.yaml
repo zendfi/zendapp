@@ -1,0 +1,26 @@
+name: flutter_secure_storage_web
+description: >-
+  Zend's drop-in replacement for the upstream flutter_secure_storage_web
+  (1.2.1). Wasm-compatible (package:web, no dart:html) and scoped to
+  sessionStorage. Wired in via dependency_overrides in zendapp/pubspec.yaml.
+version: 1.2.1+zend
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  flutter_secure_storage_platform_interface: ^1.1.1
+  web: ^1.1.0
+
+flutter:
+  plugin:
+    platforms:
+      web:
+        pluginClass: FlutterSecureStorageWeb
+        fileName: flutter_secure_storage_web.dart

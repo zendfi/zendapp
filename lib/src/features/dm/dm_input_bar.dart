@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import '../vibes/vibe_picker_sheet.dart';
@@ -443,7 +444,13 @@ class _DmInputBarState extends State<DmInputBar>
                                     ),
                                   ),
                                 )
-                              : GestureDetector(
+                              // Voice notes are gated off for launch — see
+                              // [ZendFeatures.dmVoiceNotes]. The mic was
+                              // rendered at 60% opacity with an empty onTap,
+                              // so it gave no feedback at all and read as
+                              // broken rather than unavailable.
+                              : ZendFeatures.dmVoiceNotes
+                              ? GestureDetector(
                                   key: const ValueKey('mic'),
                                   onTap: () {},
                                   child: Padding(
@@ -459,6 +466,10 @@ class _DmInputBarState extends State<DmInputBar>
                                       ),
                                     ),
                                   ),
+                                )
+                              : const SizedBox(
+                                  key: ValueKey('mic-hidden'),
+                                  width: 10,
                                 ),
                         ),
                       ],
@@ -548,14 +559,19 @@ class _DmInputBarState extends State<DmInputBar>
                   widget.onPayRecipient?.call();
                 },
               ),
-              const SizedBox(width: 10),
-              _MonoActionTile(
-                icon: PhosphorIconsRegular.gift,
-                label: 'Vibe',
-                zt: zt,
-                onTap: _enterVibeFlow,
-                accentColor: zt.accent,
-              ),
+              // Vibes are gated off for launch — see [ZendFeatures.vibes].
+              // This path *was* working end-to-end; it's off for consistency
+              // with the rest of the app, not because it's broken.
+              if (ZendFeatures.vibes) ...[
+                const SizedBox(width: 10),
+                _MonoActionTile(
+                  icon: PhosphorIconsRegular.gift,
+                  label: 'Vibe',
+                  zt: zt,
+                  onTap: _enterVibeFlow,
+                  accentColor: zt.accent,
+                ),
+              ],
             ],
           ),
         ],

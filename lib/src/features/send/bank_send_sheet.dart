@@ -8,12 +8,22 @@ import '../../design/zend_country_flag.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../services/payment_rail_models.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 part 'bank_send_stages.dart';
+
+/// Network the NGN Sui bank-send path operates on. This must match the ramp
+/// backend's Sui network, which settles Paj offramp deposits in **mainnet** USDC.
+///
+/// NOTE: the app-wide P2P `suiNetwork` in main.dart is currently
+/// `PaymentNetwork.testnet`. Bank-send pins mainnet here independently so the
+/// coin-object deposit step runs on the same network the ramp transfer was built
+/// for. Keep these in sync when the P2P rail is promoted to mainnet.
+const PaymentNetwork _suiBankSendNetwork = PaymentNetwork.mainnet;
 
 Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
   return showModalBottomSheet<void>(
@@ -105,6 +115,12 @@ class _BankSendSheetState extends State<BankSendSheet>
   String? _depositAddress;
   String? _blockhash;
   String? _feePayer;
+  // Blockchain rail the backend resolved for this order: 'solana' or 'sui'.
+  // Drives whether we co-sign a Solana SPL tx (PIN/keypair) or sign the Sui
+  // gasless envelope via zkLogin. Null until prepare returns.
+  String? _signRail;
+  // Sui rail only: the unsigned gasless-transfer envelope the client must sign.
+  RailEnvelope? _prepareEnvelope;
   double? _fiatAmount;
   double? _confirmedAmountUsdc; // amount_usdc returned by prepare (may be rounded up for PAJ)
 
@@ -263,12 +279,31 @@ class _BankSendSheetState extends State<BankSendSheet>
         final accountNumber = _selectedSavedAccount != null
             ? (_selectedSavedAccount!['paj_account_number'] as String? ?? _accountController.text.trim())
             : _accountController.text.trim();
-        result = await model.walletService.apiClient.prepareNgnBankSend(
-          amountUsdc: widget.amount,
-          bankId: bankId,
-          accountNumber: accountNumber,
-          savedAccountId: _selectedSavedAccount?['id'] as String?,
-        );
+        final savedAccountId = _selectedSavedAccount?['id'] as String?;
+
+        Future<Map<String, dynamic>> runPrepare() =>
+            model.walletService.apiClient.prepareNgnBankSend(
+              amountUsdc: widget.amount,
+              bankId: bankId,
+              accountNumber: accountNumber,
+              savedAccountId: savedAccountId,
+            );
+
+        try {
+          result = await runPrepare();
+        } on ApiException catch (e) {
+          // Sui gasless rail: the USDC is held in coin objects, not the
+          // spendable address-balance accumulator the transfer draws on.
+          // Deposit it, then retry once — the same contract the P2P flow uses,
+          // kept invisible to the user (no extra auth; the zkLogin proof is
+          // cached for the session).
+          if (e.errorCode != 'SUI_ADDRESS_BALANCE_INSUFFICIENT') rethrow;
+          await model.zkLoginService.depositCoinObjectsToAddressBalance(
+            rail: PaymentRail.sui,
+            network: _suiBankSendNetwork,
+          );
+          result = await runPrepare();
+        }
       } else {
         result = await model.walletService.apiClient.prepareIntlBankSend(
           amountUsdc: widget.amount,
@@ -277,11 +312,17 @@ class _BankSendSheetState extends State<BankSendSheet>
       }
 
       if (!mounted) return;
+      final envelopeJson = result['envelope'];
       setState(() {
         _orderId = result['order_id'] as String?;
+        _signRail = result['rail'] as String?;
         _depositAddress = result['deposit_address'] as String?;
         _blockhash = result['blockhash'] as String?;
         _feePayer = result['fee_payer'] as String?;
+        // Sui rail returns a signable envelope instead of Solana tx materials.
+        _prepareEnvelope = envelopeJson is Map<String, dynamic>
+            ? RailEnvelope.fromJson(envelopeJson)
+            : null;
         _fiatAmount = (result['fiat_amount'] as num?)?.toDouble();
         _confirmedAmountUsdc = (result['amount_usdc'] as num?)?.toDouble() ?? widget.amount;
         _resolvedAccountName = result['account_name'] as String?;
@@ -313,6 +354,14 @@ class _BankSendSheetState extends State<BankSendSheet>
   }
 
   Future<void> _proceedFromConfirmation() async {
+    // Sui gasless rail signs with the in-memory zkLogin ephemeral key, so there
+    // is no PIN or stored keypair to gate on — skip the PIN policy entirely.
+    if (_signRail == 'sui') {
+      _goTo(_BankSendStage.processing);
+      await _executeSui();
+      return;
+    }
+
     final policy = SigningPolicyService();
     final cache = WalletSessionCache.instance;
     final amount = _confirmedAmountUsdc ?? widget.amount;
@@ -425,6 +474,66 @@ class _BankSendSheetState extends State<BankSendSheet>
       await _submitSignedTx(signedTx);
     } on PinDecryptionException {
       rethrow;
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = _BankSendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Something went wrong. Please try again.';
+        _stage = _BankSendStage.error;
+      });
+    }
+  }
+
+  /// Sui gasless offramp: sign the prepared transfer envelope with zkLogin and
+  /// submit it. No PIN/keypair — the ephemeral key and cached proof do the work.
+  Future<void> _executeSui() async {
+    try {
+      final model = ZendScope.of(context);
+      final envelope = _prepareEnvelope;
+      if (envelope == null) {
+        throw StateError('Missing Sui transfer envelope');
+      }
+      final transactionDataBcs =
+          envelope.payload['transaction_data_bcs'] as String?;
+      if (transactionDataBcs == null || transactionDataBcs.isEmpty) {
+        throw StateError('Sui envelope carries no transaction bytes');
+      }
+
+      // Signs blake2b256(intent || bcs) with the ephemeral key, then has the
+      // backend wrap that signature and the proof into a zkLogin authenticator.
+      final signature = await model.zkLoginService.signPreparedTransaction(
+        transactionDataBcsBase64: transactionDataBcs,
+      );
+
+      final signedEnvelope = RailEnvelope(
+        type: 'sui_signed_transaction',
+        version: 1,
+        // `kind`/`version` are repeated inside the payload on purpose: the Sui
+        // rail deserializes this payload on its own and requires an inner
+        // `kind`, while the outer pair satisfies the shared envelope check.
+        payload: {
+          'kind': 'sui_signed_transaction',
+          'version': 1,
+          'transaction_data_bcs': transactionDataBcs,
+          'signatures': [signature],
+        },
+      );
+
+      await model.walletService.apiClient.confirmBankSend(
+        orderId: _orderId!,
+        envelope: signedEnvelope,
+      );
+
+      if (!mounted) return;
+      unawaited(model.fetchBalance());
+      setState(() => _stage = _BankSendStage.success);
+      HapticFeedback.mediumImpact();
+      unawaited(SoundService.playZentSuccess());
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {

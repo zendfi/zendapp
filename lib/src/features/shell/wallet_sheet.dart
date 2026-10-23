@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
+import '../wallet/add_cash_sheet.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
@@ -138,7 +142,7 @@ class _WalletSheetState extends State<WalletSheet> {
                           GestureDetector(
                             onTap: model.toggleBalanceHidden,
                             child: Text(
-                              model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
+                              model.balanceHidden ? '••••••' : '\$${model.sendableBalance.toStringAsFixed(2)}',
                               style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
                             ),
                           ),
@@ -155,25 +159,48 @@ class _WalletSheetState extends State<WalletSheet> {
                     const SizedBox(height: 4),
 
                     // ── Savings / Cards / Add money / Withdraw rows ──
+                    // Savings is gated off for launch — see
+                    // [ZendFeatures.savings]. This row was the only UI route
+                    // into Pockets, goals and the deposit/withdraw flows.
+                    if (ZendFeatures.savings)
+                      _WalletRow(
+                        label: 'Savings',
+                        trailing: model.savingsLoading
+                            ? null
+                            : Text(
+                                '\$${model.savingsBalance.toStringAsFixed(model.savingsBalance == model.savingsBalance.roundToDouble() ? 0 : 2)}',
+                                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                              ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          pushZendSlide(context, const PocketScreen());
+                        },
+                      ),
+                    // Cards are gated off for launch — see
+                    // [ZendFeatures.cards]. There is no card issuance in the
+                    // product; the row led to a sheet whose only button
+                    // toasted "coming soon".
+                    if (ZendFeatures.cards)
+                      _WalletRow(
+                        label: 'Cards',
+                        onTap: () => _showCardsSheet(context, zt),
+                      ),
+                    // Funding the balance from outside Zend — crypto or a
+                    // naira bank transfer. Distinct from Receive below, which
+                    // is being paid *by someone else*.
                     _WalletRow(
-                      label: 'Savings',
-                      trailing: model.savingsLoading
-                          ? null
-                          : Text(
-                              '\$${model.savingsBalance.toStringAsFixed(model.savingsBalance == model.savingsBalance.roundToDouble() ? 0 : 2)}',
-                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
-                            ),
+                      label: 'Add cash',
                       onTap: () {
                         Navigator.of(context).pop();
-                        pushZendSlide(context, const PocketScreen());
+                        unawaited(showAddCashSheet(context));
                       },
                     ),
                     _WalletRow(
-                      label: 'Cards',
-                      onTap: () => _showCardsSheet(context, zt),
-                    ),
-                    _WalletRow(
-                      label: 'Add money',
+                      // Being paid by someone else — a QR and handle link to
+                      // share. Named "Add money" once, which set up an
+                      // expectation of a deposit and delivered a QR code;
+                      // real deposits now live in the Add cash row above.
+                      label: 'Receive',
                       // No dedicated bank/card deposit flow exists in the
                       // app yet — the closest existing capability to "add
                       // money" is receiving it from someone else (QR/handle

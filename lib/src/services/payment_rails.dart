@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'api_client.dart';
 import 'payment_rail_models.dart';
+import 'sui_transaction_verifier.dart';
 import 'sui_zklogin_service.dart';
 import 'wallet_service.dart';
 
@@ -229,6 +230,10 @@ class LegacySolanaRailClient implements RailClient {
       spendable: RailBalanceAmount(
         asset: PaymentAsset.usdc,
         amount: legacy.spendableBalance,
+      ),
+      awaitingDeposit: RailBalanceAmount(
+        asset: PaymentAsset.usdc,
+        amount: legacy.awaitingDeposit,
       ),
     );
   }
@@ -645,6 +650,19 @@ class SuiTransactionSigner implements TransactionSigner {
     if (transactionDataBcs == null || transactionDataBcs.isEmpty) {
       throw StateError('Sui preparation envelope carries no transaction bytes');
     }
+
+    // Read the bytes before signing them.
+    //
+    // The backend builds this transaction, so signing it unread would mean
+    // trusting it not to have changed the amount or appended a second command.
+    // Throws rather than returning a flag: there is no sensible way to continue
+    // past "these bytes do not say what the user asked for".
+    verifyGaslessUsdcTransfer(
+      transactionDataBcsBase64: transactionDataBcs,
+      expectation: SuiTransferExpectation(
+        amountBaseUnits: usdcBaseUnits(amountUsdc),
+      ),
+    );
 
     // Signs blake2b256(intent || bcs) with the ephemeral key, then has the
     // backend wrap that signature and the proof into a zkLogin authenticator.

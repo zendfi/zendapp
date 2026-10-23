@@ -1,11 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+// kIsWeb lives in foundation.dart; material.dart does not re-export it.
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
+import 'src/core/zend_features.dart';
 import 'src/core/zend_state.dart';
 import 'src/data/local/app_database.dart';
 import 'src/models/notification_destination.dart';
@@ -60,6 +63,12 @@ const kZkLoginRedirectUri = 'https://zdfi.me/auth/callback';
 const kZkLoginRedirectHost = 'zdfi.me';
 const kZkLoginRedirectPath = '/auth/callback';
 
+/// Web redirect target: `auth.html` on whatever origin is serving the app
+/// (https://app.usezend.app in production, `http://localhost:<port>` in dev).
+/// Each origin used must be registered as an Authorized redirect URI *and*
+/// an Authorized JavaScript origin on the same Google Web client.
+String get kZkLoginWebRedirectUri => '${Uri.base.origin}/auth.html';
+
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -71,7 +80,7 @@ void main() async {
   // place for the whole session-restore sequence and call
   // FlutterNativeSplash.remove() once _SplashWithSessionRestore in app.dart
   // has actually decided where to navigate. Net effect: one splash, not two.
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  if (!kIsWeb) FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Catch any Flutter framework errors and log them instead of crashing silently
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -128,8 +137,12 @@ void main() async {
     apiClient: apiClient,
     saltCustody: saltCustody,
     oauthProvider: GoogleZkLoginOAuthProvider(
+      // Same client id on web — `aud` feeds the Sui address, so changing it
+      // would give web users a different wallet. Only the redirect differs:
+      // on web, flutter_web_auth_2 opens a popup and expects the callback on
+      // our own origin (web/auth.html posts the URL back to the opener).
       clientId: kZkLoginGoogleClientId,
-      redirectUri: kZkLoginRedirectUri,
+      redirectUri: kIsWeb ? kZkLoginWebRedirectUri : kZkLoginRedirectUri,
       // 'https' selects App Link / Universal Link capture; host and path are
       // mandatory on Android in flutter_web_auth_2 5.x when the scheme is https.
       callbackUrlScheme: 'https',
@@ -232,10 +245,14 @@ void main() async {
 
   // Register pool message badge callback early — before auth — so FCM messages
   // that arrive before authentication completes still mark the pool as unread.
-  PushNotificationService.onPoolMessageReceived = (poolId) {
-    model.poolsWithNewMessages.add(poolId);
-    model.triggerRebuild();
-  };
+  // No-op while pools are gated off for launch — nothing renders the pool
+  // unread badge, and triggerRebuild() would rebuild the whole app for it.
+  if (ZendFeatures.pools) {
+    PushNotificationService.onPoolMessageReceived = (poolId) {
+      model.poolsWithNewMessages.add(poolId);
+      model.triggerRebuild();
+    };
+  }
 
   // Everything still needed before the first frame, run concurrently.
   //
@@ -268,6 +285,10 @@ void main() async {
 /// returned future is not awaited immediately an escaping error would
 /// surface as an unhandled async exception instead.
 Future<void> _initFirebase() async {
+  // Firebase exists only for push, which is mobile-only (see
+  // PushNotificationService.initialize). Skipping it on web avoids loading the
+  // Firebase JS SDK and the background-handler registration, which web lacks.
+  if (kIsWeb) return;
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -285,6 +306,7 @@ Future<void> _initFirebase() async {
 /// widget tree builds — avoiding the race between `initialize()` (post-auth) and
 /// `app.dart`'s `initState` postFrameCallback.
 Future<void> _checkInitialNotificationTap() async {
+  if (kIsWeb) return;
   try {
     final message = await FirebaseMessaging.instance.getInitialMessage();
     if (message != null) {
