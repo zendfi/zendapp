@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../features/pools/pool.dart';
 import '../models/activity_edge.dart';
+import '../models/account_deletion_models.dart';
 import '../models/add_cash_models.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
@@ -1304,18 +1305,24 @@ class ApiClient {
     }
   }
 
-  /// The address to send [chainId] funds to in order to credit [zendtag].
+  /// The address to send [chainId] funds to in order to credit the signed-in
+  /// account.
   ///
   /// For stablecoin chains this is a static per-user address, created on
   /// first request and reused thereafter. For others it resolves to the
   /// user's own wallet address.
-  Future<DepositAddress> getDepositAddress({
-    required String zendtag,
-    required int chainId,
-  }) async {
+  ///
+  /// Authenticated, and deliberately not keyed on a handle. The public
+  /// `/api/v1/public/zend/:zendtag/crypto-deposit-address` route still exists
+  /// for funding *someone else*, but it resolves the recipient with
+  /// `WHERE zendtag = $1 AND is_active`, so an account still on an
+  /// email-placeholder handle had no handle to look up and could not be
+  /// funded at all. Resolving server-side from the JWT removes that
+  /// dependency.
+  Future<DepositAddress> getDepositAddress({required int chainId}) async {
     try {
       final resp = await _dio.get(
-        '/api/v1/public/zend/$zendtag/crypto-deposit-address',
+        '/api/zend/crypto/deposit-address',
         queryParameters: {'chain_id': chainId},
       );
       return DepositAddress.fromJson(resp.data as Map<String, dynamic>);
@@ -1324,18 +1331,20 @@ class ApiClient {
     }
   }
 
-  /// Requests NGN bank transfer instructions for funding [zendtag] with
-  /// [amountUsd] of value.
+  /// Requests NGN bank transfer instructions for funding the signed-in account
+  /// with [amountUsd] of value.
   ///
   /// Each call provisions a provider order, so don't call it speculatively —
-  /// only once the user has committed to an amount.
+  /// only once the user has committed to an amount. That is also why this uses
+  /// the authenticated route: the public equivalent creates a real PAJ order
+  /// per call while the server's rate limiting is merchant-keyed, so it had no
+  /// limit covering it.
   Future<NgnPayinInstructions> prepareNgnPayin({
-    required String zendtag,
     required double amountUsd,
   }) async {
     try {
       final resp = await _dio.post(
-        '/api/v1/public/zend/$zendtag/ngn-payin/prepare',
+        '/api/zend/payin/ngn/prepare',
         data: {'amount_usd': amountUsd},
       );
       return NgnPayinInstructions.fromJson(resp.data as Map<String, dynamic>);
@@ -1347,6 +1356,39 @@ class ApiClient {
   // Pay-in order history is already covered by [getPayinOrders] above — it
   // was wired before this flow existed, which is why deposits could appear in
   // history while nothing told the user how to make one.
+
+  // ── Account deletion ────────────────────────────────────────────────────
+
+  /// Whether the account can be deleted right now, and what's blocking it.
+  ///
+  /// Deletion destroys the zkLogin salt, and for accounts on the `random`
+  /// strategy the server holds the only copy — so the server refuses while the
+  /// wallet still holds value. Asking first means the UI can say so up front
+  /// rather than presenting a delete button that fails.
+  Future<DeletionReadiness> getDeletionReadiness() async {
+    try {
+      final resp = await _dio.get('/api/zend/account/deletion-readiness');
+      return DeletionReadiness.fromJson(resp.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Deletes the account. Irreversible.
+  ///
+  /// [acknowledgePermanent] must be true; the server rejects the call
+  /// otherwise. The destructive intent travels in the payload rather than being
+  /// inferred from the route, so no accidental call can trigger it.
+  Future<void> deleteAccount() async {
+    try {
+      await _dio.post(
+        '/api/zend/account/delete',
+        data: {'acknowledge_permanent': true},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
 
   // ── Activity Relationship Graph (Phase 2/3) ─────────────────────────────────
   // These calls sit alongside getTransferHistory() but are consumed

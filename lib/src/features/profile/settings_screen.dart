@@ -12,6 +12,7 @@ import 'bridge_kyc_screen.dart';
 import 'change_pin_screen.dart';
 import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
+import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
 import '../request/payment_requests_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -141,6 +142,23 @@ class SettingsScreen extends StatelessWidget {
                         icon: PhosphorIconsRegular.identificationBadge,
                         label: 'Identity verification',
                         onTap: () => pushZendSlide(context, const BridgeKycScreen()),
+                      ),
+                    ]),
+
+                    // Google Play's User Data policy requires an app that
+                    // offers in-app account creation to also offer a readily
+                    // discoverable way to delete that account. Settings is
+                    // where users look for it; the screen itself carries the
+                    // confirmation, the balance check and the disclosure of
+                    // what has to be retained.
+                    const SizedBox(height: 24),
+                    _SectionLabel('Account deletion'),
+                    const SizedBox(height: 8),
+                    _TileGroup(tiles: [
+                      _Tile(
+                        icon: PhosphorIconsRegular.trash,
+                        label: 'Delete account',
+                        onTap: () => pushZendSlide(context, const DeleteAccountScreen()),
                       ),
                     ]),
                   ],

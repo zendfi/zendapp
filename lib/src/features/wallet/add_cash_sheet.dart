@@ -10,7 +10,6 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/add_cash_models.dart';
-import '../onboarding/zendtag_prompt_sheet.dart';
 
 /// Add Cash — funding a Zend balance from outside Zend.
 ///
@@ -32,19 +31,19 @@ import '../onboarding/zendtag_prompt_sheet.dart';
 /// *outside* the scroll view. The naira step has an OS keyboard, and that
 /// combination is the one that works — see that file's contract for the
 /// three things that break otherwise.
+/// No zendtag-placeholder guard here, unlike Receive.
+///
+/// Funding used to go through the public `WHERE zendtag = $1 AND is_active`
+/// routes, so an account still on an email-placeholder handle genuinely could
+/// not be funded and had to claim a handle first. Both rails now resolve the
+/// recipient from the JWT (`/api/zend/crypto/deposit-address` and
+/// `/api/zend/payin/ngn/prepare`), so there is nothing left to guard against —
+/// and requiring a handle purely to put money *in* was friction at the worst
+/// possible moment in the funnel.
+///
+/// Receive keeps its guard for an unrelated reason: a `zdfi.me/@handle` link
+/// would expose the email placeholder to whoever it is shared with.
 Future<void> showAddCashSheet(BuildContext context) async {
-  final model = ZendScope.of(context);
-
-  // Both funding routes resolve the account by handle (`WHERE zendtag = $1`),
-  // so an unclaimed email-placeholder handle can't be funded at all. Claim it
-  // first rather than letting the request fail with USER_NOT_FOUND — same
-  // guard the Receive screen already applies before sharing a zdfi.me link.
-  if (model.zendtagIsPlaceholder) {
-    await showZendtagPromptSheet(context);
-    if (!context.mounted || model.zendtagIsPlaceholder) return;
-  }
-  if (!context.mounted) return;
-
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -146,7 +145,6 @@ class _AddCashSheetState extends State<AddCashSheet> {
     final model = ZendScope.read(context);
     try {
       final addr = await model.walletService.apiClient.getDepositAddress(
-        zendtag: model.username,
         chainId: chain.chainId,
       );
       if (!mounted) return;
@@ -176,7 +174,6 @@ class _AddCashSheetState extends State<AddCashSheet> {
     final model = ZendScope.read(context);
     try {
       final instructions = await model.walletService.apiClient.prepareNgnPayin(
-        zendtag: model.username,
         amountUsd: amount,
       );
       if (!mounted) return;
