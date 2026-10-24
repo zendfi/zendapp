@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -1488,57 +1489,57 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       children: [
-                        GestureDetector(
-                          onTap: () {},
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '\$',
+                        // Was wrapped in a GestureDetector with an empty
+                        // onTap — purely decorative, and it swallowed taps
+                        // that should reach the amount field behind it.
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '\$',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 32,
+                                color: zt.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: TextField(
+                                controller: amountCtrl,
+                                autofocus: true,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'Geist',
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 32,
-                                  color: zt.textSecondary,
+                                  fontSize: 48,
+                                  color: zt.textPrimary,
+                                  height: 1,
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: TextField(
-                                  controller: amountCtrl,
-                                  autofocus: true,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: TextStyle(
                                     fontFamily: 'Geist',
                                     fontWeight: FontWeight.w700,
                                     fontSize: 48,
-                                    color: zt.textPrimary,
-                                    height: 1,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '0',
-                                    hintStyle: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 48,
-                                      color: zt.textSecondary.withValues(
-                                        alpha: 0.4,
-                                      ),
+                                    color: zt.textSecondary.withValues(
+                                      alpha: 0.4,
                                     ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                  onChanged: (_) =>
-                                      setModalState(() => errorMsg = null),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
+                                onChanged: (_) =>
+                                    setModalState(() => errorMsg = null),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         if (errorMsg != null)
                           Text(
@@ -2196,22 +2197,26 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           PhosphorIconsRegular.user,
                           'View contact',
                         ),
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.searchInChat,
-                          PhosphorIconsRegular.magnifyingGlass,
-                          'Search in chat',
-                          disabled: true,
-                        ),
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.disappearing,
-                          PhosphorIconsRegular.clock,
-                          'Disappearing messages',
-                          disabled: true,
-                        ),
+                        // Both of these were rendered greyed-out with no-op
+                        // handlers — see [ZendFeatures.dmChatExtras].
+                        if (ZendFeatures.dmChatExtras) ...[
+                          _popupItem(
+                            ctx,
+                            zt,
+                            _ChatMenuAction.searchInChat,
+                            PhosphorIconsRegular.magnifyingGlass,
+                            'Search in chat',
+                            disabled: true,
+                          ),
+                          _popupItem(
+                            ctx,
+                            zt,
+                            _ChatMenuAction.disappearing,
+                            PhosphorIconsRegular.clock,
+                            'Disappearing messages',
+                            disabled: true,
+                          ),
+                        ],
                         _popupItem(
                           ctx,
                           zt,
@@ -2219,15 +2224,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           PhosphorIconsRegular.trash,
                           'Clear chat',
                         ),
-                        const PopupMenuDivider(),
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.block,
-                          PhosphorIconsRegular.prohibit,
-                          'Block @${cp.zendtag}',
-                          isDestructive: true,
-                        ),
+                        // Block is gated off deliberately — see
+                        // [ZendFeatures.blockUser]. It rendered as a live
+                        // destructive action but only toasted "coming soon",
+                        // so a user could believe they'd blocked someone who
+                        // could still message them.
+                        if (ZendFeatures.blockUser) ...[
+                          const PopupMenuDivider(),
+                          _popupItem(
+                            ctx,
+                            zt,
+                            _ChatMenuAction.block,
+                            PhosphorIconsRegular.prohibit,
+                            'Block @${cp.zendtag}',
+                            isDestructive: true,
+                          ),
+                        ],
                       ],
                     ),
                   ],

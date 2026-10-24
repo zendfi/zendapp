@@ -13,9 +13,10 @@ import '../../models/activity_edge.dart';
 
 // ── Feed headline word variations (social feel — Venmo-style sentences) ─────
 
-// Five-verb symmetric set: each verb reads naturally both ways without any
-// tech/crypto baggage. "dropped" is reserved for the Drop (Bluetooth
-// proximity) feature and deliberately excluded here so it keeps its
+// Single verb, kept as a list so variants can be reintroduced without
+// touching callers. An earlier five-verb set was collapsed to just "paid":
+// the rotation read as randomness rather than personality. "dropped" stays
+// reserved for the Drop (Bluetooth proximity) feature so it keeps its
 // meaning as a distinct signal.
 const _verbs = ['paid'];
 

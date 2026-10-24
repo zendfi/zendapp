@@ -188,13 +188,24 @@ class RailBalance {
   final RailProvenance provenance;
   final String walletAddress;
   final List<RailBalanceAmount> balances;
+
+  /// What a send may draw on. Not the same as the matching entry in [balances]:
+  /// on Sui's gasless path only the address-balance accumulator is withdrawable,
+  /// so USDC parked in `Coin<T>` objects is counted in [balances] but excluded
+  /// here. Gate the send button on this.
   final RailBalanceAmount spendable;
+
+  /// The portion held back pending a deposit, or null on rails that draw no such
+  /// distinction. Non-zero means the wallet holds money that needs the deposit
+  /// step before it can move.
+  final RailBalanceAmount? awaitingDeposit;
 
   const RailBalance({
     required this.provenance,
     required this.walletAddress,
     required this.balances,
     required this.spendable,
+    this.awaitingDeposit,
   });
 
   factory RailBalance.fromJson(Map<String, dynamic> json) {
@@ -214,6 +225,14 @@ class RailBalance {
       spendable: RailBalanceAmount.fromJson(
         Map<String, dynamic>.from(json['spendable'] as Map<String, dynamic>),
       ),
+      // Optional: absent on rails that report no split, and on backends
+      // predating the field.
+      awaitingDeposit: switch (json['awaiting_deposit']) {
+        final Map<String, dynamic> entry => RailBalanceAmount.fromJson(
+          Map<String, dynamic>.from(entry),
+        ),
+        _ => null,
+      },
     );
   }
 

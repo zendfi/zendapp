@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -32,6 +33,13 @@ class AppDatabase {
   }
 
   Future<Database> _initDb() async {
+    // sqflite has no web implementation. Callers on web are SnapshotCache
+    // (swallows errors → no cache-first paint, network only) and pool chat
+    // (gated off). Failing fast here beats a MissingPluginException from
+    // path_provider deep inside the plugin.
+    if (kIsWeb) {
+      throw UnsupportedError('Local database is not available on web');
+    }
     // Use getApplicationSupportDirectory — this path survives "Clear Cache" and
     // is NOT deleted when the user taps "Clear Storage" in Android app settings.
     // (getApplicationDocumentsDirectory IS cleared by "Clear Storage".)

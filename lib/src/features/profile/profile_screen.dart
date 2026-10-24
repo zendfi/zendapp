@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -345,8 +344,10 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     setState(() => _uploading = true);
     try {
       final oldUrl = model.currentAvatarUrl;
+      // Read through XFile, not dart:io File — works on web (blob URL) too.
       final url = await model.walletService.apiClient.uploadAvatar(
-        File(picked.path),
+        await picked.readAsBytes(),
+        fileName: picked.name,
       );
       if (oldUrl != null) await CachedNetworkImage.evictFromCache(oldUrl);
       model.setAvatarUrl(url);

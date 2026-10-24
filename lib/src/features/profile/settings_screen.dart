@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -81,10 +82,14 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ]),
 
-                    const SizedBox(height: 24),
-                    _SectionLabel('Drop'),
-                    const SizedBox(height: 8),
-                    const _DropDiscoverabilityTile(),
+                    // Drop is gated off for launch — see [ZendFeatures.drop].
+                    // This toggle was the only live Drop surface in the app.
+                    if (ZendFeatures.drop) ...[
+                      const SizedBox(height: 24),
+                      _SectionLabel('Drop'),
+                      const SizedBox(height: 8),
+                      const _DropDiscoverabilityTile(),
+                    ],
 
                     const SizedBox(height: 24),
                     _SectionLabel('Privacy'),

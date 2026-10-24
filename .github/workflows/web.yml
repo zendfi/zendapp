@@ -1,0 +1,77 @@
+name: Deploy Web (app.usezend.app)
+
+# main → production (app.usezend.app). Other branches and PRs → a Vercel
+# preview URL, posted on the PR, so web changes can be checked before merge.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Flutter Web → Vercel
+    runs-on: ubuntu-latest
+    # Fork PRs don't get secrets; skip instead of failing.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      IS_PROD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.3"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # --wasm emits both builds: WasmGC browsers load main.dart.wasm + skwasm,
+      # older ones fall back to main.dart.js automatically.
+      # --no-web-resources-cdn self-hosts the renderer so the CSP can stay at
+      # script-src 'self'.
+      - name: Build web
+        run: flutter build web --wasm --release --no-web-resources-cdn
+
+      # build/web is uploaded as the deployment root, so vercel.json goes in
+      # it — minus outputDirectory, which only makes sense from the repo root.
+      - name: Add hosting config
+        run: jq 'del(.outputDirectory)' vercel.json > build/web/vercel.json
+
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: build/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ "$IS_PROD" = "true" ]; then PROD_FLAG="--prod"; else PROD_FLAG=""; fi
+          url=$(npx --yes vercel@39.1.1 deploy $PROD_FLAG --yes --token "$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `**Web preview:** ${{ steps.deploy.outputs.url }}\n\nGoogle sign-in only works on origins registered on the OAuth client, so test zkLogin on app.usezend.app after merge.`
+            });

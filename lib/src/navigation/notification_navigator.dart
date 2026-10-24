@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/zend_features.dart';
 import '../core/zend_state.dart';
 import '../features/activity/activity_comment_sheet.dart';
 import '../features/activity/public_feed_screen.dart';
@@ -77,6 +78,14 @@ class NotificationNavigator {
 
       // ── Pool detail ──────────────────────────────────────────────────────────
       case NotifPoolDetail(:final poolId):
+        // Pools are gated off for launch — see [ZendFeatures.pools]. A pool
+        // notification can still arrive from the backend (an older client, or
+        // a server-side send we don't control), so land on Feed rather than
+        // opening a screen the user has no other way to reach.
+        if (!ZendFeatures.pools) {
+          ZendShellController.instance?.switchToTab(0);
+          return;
+        }
         final pool = model.pools.firstWhereOrNull((p) => p.id == poolId);
         if (pool == null) {
           unawaited(model.fetchPools());
@@ -98,6 +107,10 @@ class NotificationNavigator {
       // restructure) — a single push lands directly in the conversation,
       // no separate mission-room sheet needed on top of it anymore.
       case NotifPoolChat(:final poolId):
+        if (!ZendFeatures.pools) {
+          ZendShellController.instance?.switchToTab(0);
+          return;
+        }
         final pool = model.pools.firstWhereOrNull((p) => p.id == poolId);
         if (pool == null) {
           unawaited(model.fetchPools());
@@ -118,6 +131,10 @@ class NotificationNavigator {
       // ── Savings ──────────────────────────────────────────────────────────────
       case NotifSavings():
         ZendShellController.instance?.switchToTab(0);
+        // Savings is gated off for launch — see [ZendFeatures.savings]. This
+        // push was the only route to SavingsScreen, so landing on Feed is
+        // the whole handler while it's off.
+        if (!ZendFeatures.savings) return;
         await Future<void>.delayed(const Duration(milliseconds: 350));
         if (!context.mounted) return;
         pushZendSlide(context, const SavingsScreen(), rootNavigator: true);

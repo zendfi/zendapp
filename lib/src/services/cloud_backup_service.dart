@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +24,11 @@ abstract class CloudBackupService {
 
   /// Factory — returns the correct implementation for the current platform.
   factory CloudBackupService() {
+    // Platform.* throws on web. Recovery packets back up a local Solana key,
+    // which zkLogin-only web accounts don't have.
+    if (kIsWeb) {
+      throw UnsupportedError('CloudBackupService is not available on web.');
+    }
     if (Platform.isAndroid) {
       return CloudBackupServiceAndroid();
     } else if (Platform.isIOS) {

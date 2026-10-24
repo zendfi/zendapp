@@ -58,6 +58,9 @@ class PushNotificationService {
       : _apiClient = apiClient;
 
   Future<void> initialize() async {
+    // Web has no local-notification implementation and FCM web push needs a
+    // service worker + VAPID key we haven't set up. Push is mobile-only.
+    if (kIsWeb) return;
     await _setupLocalNotifications();
     await _requestPermissions();
     await _registerToken();
@@ -85,6 +88,7 @@ class PushNotificationService {
   /// receiving the just-signed-out account's pushes until FCM happens to
   /// report the token as stale on some future send.
   Future<void> unregisterToken() async {
+    if (kIsWeb) return;
     final token = _registeredToken;
     if (token == null) return;
     try {
@@ -107,6 +111,7 @@ class PushNotificationService {
   /// it can sit indefinitely at a stale count even after the user has read
   /// everything (or signed out entirely).
   Future<void> clearBadge() async {
+    if (kIsWeb) return;
     final darwinImpl = _localNotifications.resolvePlatformSpecificImplementation<
         IOSFlutterLocalNotificationsPlugin>();
     // badgeNumber: 0 clears the badge; flutter_local_notifications' iOS

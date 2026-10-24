@@ -84,8 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // balance — the hero number can sit at "$0.00" indefinitely, which in
       // a wallet app is indistinguishable from a genuinely empty balance.
       setState(() {
-        _displayedBalance = model.spendableBalance;
-        _previousBalance = model.spendableBalance;
+        _displayedBalance = model.sendableBalance;
+        _previousBalance = model.sendableBalance;
       });
       if (model.balance == 0.0 && !model.balanceLoading) {
         model.fetchBalance();
@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // entirely.
     final model = _model;
     if (model == null) return;
-    final newBalance = model.spendableBalance;
+    final newBalance = model.sendableBalance;
     // Only trigger a setState if the balance actually changed — avoids rebuilding
     // on every model notify (e.g. history loading state changes).
     if (newBalance != _displayedBalance) {
@@ -409,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Text(
                                   key: const Key('zend-hero-balance-collapsed-text'),
-                                  model.balanceHidden ? '••••••' : '\$${model.spendableBalance.toStringAsFixed(2)}',
+                                  model.balanceHidden ? '••••••' : '\$${model.sendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,

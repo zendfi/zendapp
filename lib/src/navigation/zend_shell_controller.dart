@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Singleton controller that allows code outside the widget tree (e.g. app.dart)
 /// to switch the [ZendShell] tab index. [ZendShell]'s state registers itself
 /// here on init and clears on dispose.
@@ -9,11 +11,21 @@ class ZendShellController {
   /// The current active shell controller, set when ZendShell mounts.
   static ZendShellController? get instance => _instance;
 
+  /// The shell's current tab, or null while no shell is mounted (signed out,
+  /// onboarding, splash). Lets UI that lives *outside* the shell — the web
+  /// desktop sidebar in `ZendWebFrame` — mirror the selected tab and appear
+  /// only once the user is actually inside the app.
+  static final ValueNotifier<int?> currentTab = ValueNotifier<int?>(null);
+
   /// Called by [ZendShell]'s initState to register the tab-switch callback.
-  static ZendShellController activate(void Function(int) switchTab) {
+  static ZendShellController activate(
+    void Function(int) switchTab, {
+    int initialTab = 0,
+  }) {
     final ctrl = _instance ?? ZendShellController._();
     _instance = ctrl;
     ctrl._switchTab = switchTab;
+    currentTab.value = initialTab;
     return ctrl;
   }
 
@@ -21,6 +33,12 @@ class ZendShellController {
   static void deactivate() {
     _instance?._switchTab = null;
     _instance = null;
+    currentTab.value = null;
+  }
+
+  /// Called by [ZendShell] whenever its visible tab changes (tap or swipe).
+  static void reportTab(int index) {
+    if (_instance != null) currentTab.value = index;
   }
 
   void Function(int)? _switchTab;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/zend_features.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -77,12 +78,16 @@ class ContactSupportScreen extends StatelessWidget {
                           }
                         },
                       ),
-                      _ContactTile(
-                        icon: PhosphorIconsRegular.chatDots,
-                        label: 'Live chat',
-                        subtitle: 'Start a conversation',
-                        onTap: () {},
-                      ),
+                      // Live chat is gated off for launch — see
+                      // [ZendFeatures.liveChatSupport]. Email support and the
+                      // help centre below are real and remain.
+                      if (ZendFeatures.liveChatSupport)
+                        _ContactTile(
+                          icon: PhosphorIconsRegular.chatDots,
+                          label: 'Live chat',
+                          subtitle: 'Start a conversation',
+                          onTap: () {},
+                        ),
                       _ContactTile(
                         icon: PhosphorIconsRegular.clipboard,
                         label: 'Help centre',
@@ -97,11 +102,17 @@ class ContactSupportScreen extends StatelessWidget {
                       ),
                     ]),
 
-                    const SizedBox(height: 32),
-                    PrimaryButton(
-                      label: 'Start live chat',
-                      onPressed: () {},
-                    ),
+                    // The screen's primary CTA was an empty callback. With
+                    // live chat gated off there is no primary action here —
+                    // the two working routes (email, help centre) are the
+                    // tiles above.
+                    if (ZendFeatures.liveChatSupport) ...[
+                      const SizedBox(height: 32),
+                      PrimaryButton(
+                        label: 'Start live chat',
+                        onPressed: () {},
+                      ),
+                    ],
                   ],
                 ),
               ),

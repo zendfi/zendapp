@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +31,8 @@ class BiometricService {
 
   /// Returns true if the device supports and has enrolled biometrics.
   Future<bool> isAvailable() async {
+    // local_auth has no web implementation.
+    if (kIsWeb) return false;
     final canCheck = await _auth.canCheckBiometrics;
     final isDeviceSupported = await _auth.isDeviceSupported();
     return canCheck && isDeviceSupported;
@@ -95,6 +98,8 @@ class BiometricService {
 
   /// Whether the user has switched on biometric app lock.
   Future<bool> isAppLockEnabled() async {
+    // No biometric prompt exists on web, so a lock could never be satisfied.
+    if (kIsWeb) return false;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_appLockKey) ?? false;
   }

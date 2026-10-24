@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -143,6 +144,8 @@ class _NewChatSheetState extends State<NewChatSheet> {
     }
   }
 
+  /// Unreferenced while [ZendFeatures.pools] is false — kept so re-enabling
+  /// the flag is the only change needed.
   void _createPool() {
     Navigator.of(context).pop();
     showCreatePoolDrawer(context, targetAmount: 0);
@@ -302,48 +305,51 @@ class _NewChatSheetState extends State<NewChatSheet> {
       children: [
         // "Create pool" sits just before the contact list, per spec — a
         // pool starts the same way a chat does: pick people, then it
-        // becomes its own conversation.
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _createPool,
-            borderRadius: BorderRadius.circular(ZendRadii.md),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: zt.accent.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+        // becomes its own conversation. Gated off for launch; see
+        // [ZendFeatures.pools].
+        if (ZendFeatures.pools) ...[
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _createPool,
+              borderRadius: BorderRadius.circular(ZendRadii.md),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: zt.accent.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        PhosphorIconsRegular.usersThree,
+                        size: 20,
+                        color: zt.accent,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      PhosphorIconsRegular.usersThree,
-                      size: 20,
-                      color: zt.accent,
+                    const SizedBox(width: 12),
+                    Text(
+                      'Create pool',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Create pool',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: zt.textPrimary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Divider(color: zt.border, height: 1),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+          Divider(color: zt.border, height: 1),
+          const SizedBox(height: 8),
+        ],
         if (recent.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),

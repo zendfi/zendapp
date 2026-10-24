@@ -72,5 +72,9 @@ dependencies {
     // Firebase BoM — manages compatible versions across all Firebase libraries
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
     implementation("com.google.firebase:firebase-messaging")
-    implementation("com.google.firebase:firebase-analytics")
+    // firebase-analytics intentionally omitted: there is no firebase_analytics
+    // Dart package and no analytics call anywhere in lib/, so it only added
+    // weight and a data-collection disclosure obligation on the Play Data
+    // Safety form. FCM push delivery does not require it — analytics is only
+    // needed for Notifications-composer campaign metrics, which we do not use.
 }

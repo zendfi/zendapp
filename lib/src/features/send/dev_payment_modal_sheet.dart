@@ -1,6 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
+// defaultTargetPlatform lives in foundation.dart; material.dart does not
+// re-export it.
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -72,7 +75,11 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
-  String get _platform => Platform.isIOS ? 'ios' : 'android';
+  // defaultTargetPlatform rather than dart:io Platform so this also works on
+  // web (it reflects the browser's OS there). The backend only tracks
+  // 'ios' | 'android' for return redirects, so web maps onto those.
+  String get _platform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
 
   @override
   void initState() {

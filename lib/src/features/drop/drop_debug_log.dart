@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../design/zend_tokens.dart';
@@ -68,7 +68,7 @@ class DropDebugLog {
   /// Reads the persistent crash log written by MainActivity on Android.
   /// Returns null on non-Android or if the channel is unavailable.
   static Future<String?> readAndClearNativeCrashLog() async {
-    if (!Platform.isAndroid) return null;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
     try {
       const ch = MethodChannel('com.zendfi.app/drop_diagnostics');
       final log = await ch.invokeMethod<String>('readCrashLog');

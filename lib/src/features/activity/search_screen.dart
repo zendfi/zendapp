@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
@@ -111,9 +112,13 @@ class _SearchScreenState extends State<SearchScreen> {
           (r.description?.toLowerCase().contains(q) ?? false);
     }).toList();
 
-    final poolResults = q.isEmpty ? <Pool>[] : model.pools.where((p) {
-      return p.name.toLowerCase().contains(q);
-    }).toList();
+    // Pools gated off for launch — see [ZendFeatures.pools]. An empty result
+    // list keeps the section-rendering and has-results logic below unchanged.
+    final poolResults = (q.isEmpty || !ZendFeatures.pools)
+        ? <Pool>[]
+        : model.pools.where((p) {
+            return p.name.toLowerCase().contains(q);
+          }).toList();
 
     final hasLocalResults = txResults.isNotEmpty ||
         outboundReqs.isNotEmpty ||

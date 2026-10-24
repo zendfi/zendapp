@@ -46,6 +46,15 @@ class ContactsService extends ChangeNotifier {
   /// Loads and resolves contacts.  Safe to call multiple times — debounced
   /// to once per 5 minutes.  Pass [force: true] to bypass the cache.
   Future<void> loadContacts({bool force = false}) async {
+    // Browsers expose no address book. Report it like a denied permission so
+    // the contacts section hides itself instead of spinning forever.
+    if (kIsWeb) {
+      if (!_permissionDenied) {
+        _permissionDenied = true;
+        notifyListeners();
+      }
+      return;
+    }
     if (_loading) return;
     if (!force && _lastFetch != null &&
         DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5)) {

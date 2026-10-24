@@ -12,6 +12,7 @@ import '../models/api_models.dart';
 import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
 import '../models/activity_edge.dart';
+import '../models/add_cash_models.dart';
 import '../services/activity_data_service.dart';
 import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
@@ -35,6 +36,7 @@ import '../services/wallet_session_cache.dart';
 import '../services/zendtag_service.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/recovery_service.dart';
+import 'zend_features.dart';
 import '../data/local/app_database.dart';
 import '../data/local/snapshot_cache.dart';
 import '../models/payment_request_notification.dart';
@@ -267,6 +269,8 @@ class ZendAppModel extends ChangeNotifier {
       if (cached != null && balance == 0.0 && spendableBalance == 0.0) {
         balance = (cached['balance'] as num?)?.toDouble() ?? 0.0;
         spendableBalance = (cached['spendable'] as num?)?.toDouble() ?? balance;
+        awaitingDepositBalance =
+            (cached['awaiting_deposit'] as num?)?.toDouble() ?? 0.0;
         changed = true;
       }
     }
@@ -300,6 +304,7 @@ class ZendAppModel extends ChangeNotifier {
     return _snapshots.put(userId, SnapshotCache.keyBalance, {
       'balance': balance,
       'spendable': spendableBalance,
+      'awaiting_deposit': awaitingDepositBalance,
     });
   }
 
@@ -545,6 +550,16 @@ class ZendAppModel extends ChangeNotifier {
         } else {
           unawaited(fetchBalance());
         }
+      case SseEventType.fundsAdded:
+        // Arrives alongside balanceUpdate above, which already handles the
+        // refresh — this case exists purely to name the amount so the banner
+        // can say what landed rather than "your balance changed".
+        pendingFundsArrived = FundsArrivedNotification.fromJson(event.data);
+        activityUnreadCount++;
+        notifyListeners();
+        // The money is in, so Activity and the wallet's recent list should
+        // show it without the user pulling to refresh.
+        unawaited(fetchHistory());
       case SseEventType.refreshRequired:
         // Server told us we missed events — do a full refresh
         unawaited(fetchBalance());
@@ -864,6 +879,32 @@ class ZendAppModel extends ChangeNotifier {
 
   double balance = 0.0;
   double spendableBalance = 0.0;
+
+  /// USDC held but not yet spendable, awaiting a deposit into the address
+  /// balance. Always 0 on rails without that distinction; on Sui it is whatever
+  /// is parked in `Coin<T>` objects, which a gasless transfer cannot withdraw.
+  ///
+  /// Non-zero is not an error state — it means [balance] exceeds
+  /// [spendableBalance] and the gap is recoverable by depositing.
+  double awaitingDepositBalance = 0.0;
+  bool get hasFundsAwaitingDeposit => awaitingDepositBalance > 0.004;
+
+  /// What the user can actually send — and therefore the only figure send UI
+  /// should gate on.
+  ///
+  /// Includes [awaitingDepositBalance] because the send flow converts parked
+  /// funds on the user's behalf and retries
+  /// (`TransferService._prepareMakingFundsSpendableIfNeeded`), so money awaiting
+  /// a deposit is spendable from the user's point of view — it just costs a
+  /// second transaction they never see.
+  ///
+  /// Gating on [spendableBalance] instead would disable the send button for
+  /// exactly the balance that the auto-deposit exists to rescue, leaving the
+  /// funds permanently unreachable through the UI.
+  ///
+  /// Equal to [spendableBalance] on rails that report no split.
+  double get sendableBalance => spendableBalance + awaitingDepositBalance;
+
   double monthlyYield = 0.0;
   bool balanceLoading = false;
   String? lastBalanceError;
@@ -1094,6 +1135,14 @@ class ZendAppModel extends ChangeNotifier {
   /// Pending payment request notification from SSE — shown as in-app banner.
   PaymentRequestNotification? pendingPaymentRequest;
 
+  /// Money that just arrived from outside Zend — shown as an in-app banner.
+  ///
+  /// This is the *only* confirmation the user gets that a deposit or bank
+  /// transfer landed: the Add Cash flow deliberately has no "I've sent it"
+  /// step, because asking someone to report money we can already see is
+  /// theatre. See `FundsArrivedBanner` in zend_shell.dart.
+  FundsArrivedNotification? pendingFundsArrived;
+
   /// Pending Activity_Edge reaction notification from SSE — shown as an
   /// in-app banner (Threaded_Activity_View listens for this).
   ActivityReactionNotification? pendingActivityReaction;
@@ -1284,6 +1333,8 @@ class ZendAppModel extends ChangeNotifier {
       final response = await transferService.getBalance();
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
+      awaitingDepositBalance =
+          double.tryParse(response.awaitingDeposit) ?? 0.0;
       lastBalanceError = null;
       // Snapshot the confirmed figure for the next launch. Fire-and-forget:
       // SnapshotCache swallows its own failures and nothing here depends on
@@ -1650,21 +1701,32 @@ class ZendAppModel extends ChangeNotifier {
     appLockService.startTimer();
     // Initialize push notifications now that the user is authenticated
     // and we have a valid session token to register the FCM token with.
-    // Also wire pool message badge tracking.
-    PushNotificationService.onPoolMessageReceived = (poolId) {
-      poolsWithNewMessages.add(poolId);
-      notifyListeners();
-    };
+    //
+    // Pool message badge tracking is skipped while pools are gated off for
+    // launch — nothing renders the badge, and notifyListeners() here would
+    // rebuild every model-dependent widget in the app for it. (This is the
+    // second of two registrations; the other is in main.dart, registered
+    // pre-auth so FCM messages arriving before sign-in still badge.)
+    if (ZendFeatures.pools) {
+      PushNotificationService.onPoolMessageReceived = (poolId) {
+        poolsWithNewMessages.add(poolId);
+        notifyListeners();
+      };
+    }
     unawaited(pushNotificationService.initialize());
     // Fire the onAuthenticated hook so app.dart can dispatch any pending
     // notification destination that was parked before authentication.
     onAuthenticated?.call();
-    // Load pools from backend
-    unawaited(fetchPools());
-    // Load savings snapshot
-    unawaited(fetchSavingsSnapshot());
-    // Restore Drop discoverability preference (non-blocking)
-    unawaited(dropDiscoverabilityService.init());
+    // Load pools from backend — skipped while pools are gated off for
+    // launch, so we don't spend a cold-start request on data nothing renders.
+    if (ZendFeatures.pools) unawaited(fetchPools());
+    // Load savings snapshot — skipped while Savings is gated off.
+    if (ZendFeatures.savings) unawaited(fetchSavingsSnapshot());
+    // Restore Drop discoverability preference (non-blocking). Skipped while
+    // Drop is gated off — this is what would start BLE advertising, so
+    // leaving it running for a hidden feature would cost battery and keep
+    // the Bluetooth permissions in play for nothing.
+    if (ZendFeatures.drop) unawaited(dropDiscoverabilityService.init());
     // Restore persisted DM clear-chat boundaries so cleared rooms stay
     // cleared across app restarts.
     unawaited(dmService.loadClearedBoundaries());
@@ -1755,6 +1817,7 @@ class ZendAppModel extends ChangeNotifier {
     // ── Balance ──
     balance = 0.0;
     spendableBalance = 0.0;
+    awaitingDepositBalance = 0.0;
     monthlyYield = 0.0;
     balanceLoading = false;
     lastBalanceError = null;
@@ -1802,6 +1865,7 @@ class ZendAppModel extends ChangeNotifier {
     // A transfer banner naming the previous user's recipient must never
     // survive into the next session.
     _transferStatus?.dismiss();
+    pendingFundsArrived = null;
 
     // ── DMs / E2EE ──
     dmUnreadTotal = 0;
@@ -1858,6 +1922,11 @@ class ZendAppModel extends ChangeNotifier {
 
   void clearPendingActivityComment() {
     pendingActivityComment = null;
+    notifyListeners();
+  }
+
+  void clearPendingFundsArrived() {
+    pendingFundsArrived = null;
     notifyListeners();
   }
 

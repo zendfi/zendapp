@@ -249,16 +249,28 @@ class BalanceResponse {
   final String walletAddress;
   final String solBalance;
   final String usdcBalance;
-  /// Spendable balance = on-chain USDC minus the sum of pending email intent amounts.
+  /// What a send can actually draw on: on-chain USDC the rail reports as
+  /// spendable, minus the sum of pending email intent amounts.
+  ///
+  /// On Sui this is strictly less than [usdcBalance] whenever funds sit in
+  /// `Coin<T>` objects, which a gasless transfer cannot withdraw. Gate send UI
+  /// on this, never on [usdcBalance].
   /// Falls back to [usdcBalance] if the backend doesn't include the field (older API).
   final String spendableBalance;
+
+  /// The part of [usdcBalance] that needs a deposit before it can be spent.
+  /// `"0.00"` on rails without that distinction, so it is safe to read directly
+  /// and show the deposit prompt only when it parses above zero.
+  final String awaitingDeposit;
 
   BalanceResponse({
     required this.walletAddress,
     required this.solBalance,
     required this.usdcBalance,
     String? spendableBalance,
-  }) : spendableBalance = spendableBalance ?? usdcBalance;
+    String? awaitingDeposit,
+  }) : spendableBalance = spendableBalance ?? usdcBalance,
+       awaitingDeposit = awaitingDeposit ?? '0.00';
 
   factory BalanceResponse.fromJson(Map<String, dynamic> json) {
     final usdc = json['usdc_balance'] as String;
@@ -267,6 +279,7 @@ class BalanceResponse {
       solBalance: json['sol_balance'] as String,
       usdcBalance: usdc,
       spendableBalance: json['spendable_balance'] as String? ?? usdc,
+      awaitingDeposit: json['awaiting_deposit'] as String?,
     );
   }
 
@@ -276,6 +289,7 @@ class BalanceResponse {
       'sol_balance': solBalance,
       'usdc_balance': usdcBalance,
       'spendable_balance': spendableBalance,
+      'awaiting_deposit': awaitingDeposit,
     };
   }
 }
