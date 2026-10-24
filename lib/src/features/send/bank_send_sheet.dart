@@ -253,6 +253,30 @@ class _BankSendSheetState extends State<BankSendSheet>
     }
   }
 
+  /// Runs a bank-send prepare call, transparently handling the Sui gasless rail's
+  /// deposit step.
+  ///
+  /// On Sui the USDC may sit in `Coin<T>` objects rather than the spendable
+  /// address-balance accumulator the transfer draws on. When prepare reports that,
+  /// deposit the coin objects and retry once — the same contract the P2P flow
+  /// uses, kept invisible to the user (no extra auth; the zkLogin proof is cached
+  /// for the session). Non-Sui prepares never hit this and pass straight through.
+  Future<Map<String, dynamic>> _prepareWithSuiDepositRetry(
+    ZendAppModel model,
+    Future<Map<String, dynamic>> Function() runPrepare,
+  ) async {
+    try {
+      return await runPrepare();
+    } on ApiException catch (e) {
+      if (e.errorCode != 'SUI_ADDRESS_BALANCE_INSUFFICIENT') rethrow;
+      await model.zkLoginService.depositCoinObjectsToAddressBalance(
+        rail: PaymentRail.sui,
+        network: _suiBankSendNetwork,
+      );
+      return runPrepare();
+    }
+  }
+
   Future<void> _prepare() async {
     setState(() {
       _stage = _BankSendStage.resolving;
@@ -281,33 +305,22 @@ class _BankSendSheetState extends State<BankSendSheet>
             : _accountController.text.trim();
         final savedAccountId = _selectedSavedAccount?['id'] as String?;
 
-        Future<Map<String, dynamic>> runPrepare() =>
-            model.walletService.apiClient.prepareNgnBankSend(
-              amountUsdc: widget.amount,
-              bankId: bankId,
-              accountNumber: accountNumber,
-              savedAccountId: savedAccountId,
-            );
-
-        try {
-          result = await runPrepare();
-        } on ApiException catch (e) {
-          // Sui gasless rail: the USDC is held in coin objects, not the
-          // spendable address-balance accumulator the transfer draws on.
-          // Deposit it, then retry once — the same contract the P2P flow uses,
-          // kept invisible to the user (no extra auth; the zkLogin proof is
-          // cached for the session).
-          if (e.errorCode != 'SUI_ADDRESS_BALANCE_INSUFFICIENT') rethrow;
-          await model.zkLoginService.depositCoinObjectsToAddressBalance(
-            rail: PaymentRail.sui,
-            network: _suiBankSendNetwork,
-          );
-          result = await runPrepare();
-        }
+        result = await _prepareWithSuiDepositRetry(
+          model,
+          () => model.walletService.apiClient.prepareNgnBankSend(
+            amountUsdc: widget.amount,
+            bankId: bankId,
+            accountNumber: accountNumber,
+            savedAccountId: savedAccountId,
+          ),
+        );
       } else {
-        result = await model.walletService.apiClient.prepareIntlBankSend(
-          amountUsdc: widget.amount,
-          savedAccountId: _selectedSavedAccount!['id'] as String,
+        result = await _prepareWithSuiDepositRetry(
+          model,
+          () => model.walletService.apiClient.prepareIntlBankSend(
+            amountUsdc: widget.amount,
+            savedAccountId: _selectedSavedAccount!['id'] as String,
+          ),
         );
       }
 
@@ -524,10 +537,19 @@ class _BankSendSheetState extends State<BankSendSheet>
         },
       );
 
-      await model.walletService.apiClient.confirmBankSend(
-        orderId: _orderId!,
-        envelope: signedEnvelope,
-      );
+      // Route to the confirm endpoint matching the fiat rail — the Sui signing
+      // is identical, only the backend order namespace (ngn vs intl) differs.
+      if (!_rail.isIntl) {
+        await model.walletService.apiClient.confirmBankSend(
+          orderId: _orderId!,
+          envelope: signedEnvelope,
+        );
+      } else {
+        await model.walletService.apiClient.confirmIntlBankSend(
+          orderId: _orderId!,
+          envelope: signedEnvelope,
+        );
+      }
 
       if (!mounted) return;
       unawaited(model.fetchBalance());

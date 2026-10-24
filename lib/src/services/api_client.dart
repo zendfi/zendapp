@@ -1217,14 +1217,28 @@ class ApiClient {
     }
   }
 
+  /// Confirms an intl (Bridge) bank-send order. Same two-shape contract as
+  /// [confirmBankSend]: Solana co-signs `partiallySignedTx`, Sui submits a signed
+  /// `sui_signed_transaction` [envelope]. Exactly one must be supplied.
   Future<Map<String, dynamic>> confirmIntlBankSend({
     required String orderId,
-    required String partiallySignedTx,
+    String? partiallySignedTx,
+    RailEnvelope? envelope,
   }) async {
+    assert(
+      (partiallySignedTx == null) != (envelope == null),
+      'confirmIntlBankSend requires exactly one of partiallySignedTx or envelope',
+    );
     try {
+      final data = <String, dynamic>{'order_id': orderId};
+      if (envelope != null) {
+        data['envelope'] = envelope.toJson();
+      } else {
+        data['partially_signed_tx'] = partiallySignedTx;
+      }
       final response = await _dio.post(
         '/api/zend/bank-send/intl/confirm',
-        data: {'order_id': orderId, 'partially_signed_tx': partiallySignedTx},
+        data: data,
         options: Options(receiveTimeout: const Duration(seconds: 60)),
       );
       return response.data as Map<String, dynamic>;
