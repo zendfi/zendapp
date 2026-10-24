@@ -60,7 +60,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ "$IS_PROD" = "true" ]; then PROD_FLAG="--prod"; else PROD_FLAG=""; fi
-          url=$(npx --yes vercel@39.1.1 deploy $PROD_FLAG --yes --token "$VERCEL_TOKEN")
+          url=$(npx --yes vercel@65.2.0 deploy $PROD_FLAG --yes --token "$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed: $url" >> "$GITHUB_STEP_SUMMARY"
 
