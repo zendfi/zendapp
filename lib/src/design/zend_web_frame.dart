@@ -137,40 +137,41 @@ class _SignedOutPage extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final cardHeight = (media.size.height - 160).clamp(480.0, 720.0);
 
-    return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _Wordmark(),
-            const SizedBox(height: 20),
-            Container(
-              width: _cardWidth,
-              height: cardHeight,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: zt.bgPrimary,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: zt.border),
-              ),
-              child: MediaQuery(
-                data: media.copyWith(size: Size(_cardWidth, cardHeight)),
-                child: child,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => launchUrl(Uri.parse('https://usezend.app')),
-              child: Text(
-                'Get the Zend! app for your phone',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  color: zt.textSecondary,
+    // No card: the page and the onboarding share one surface, so sign-in
+    // reads as a centred desktop page rather than a phone in a box.
+    return ColoredBox(
+      color: zt.bgPrimary,
+      child: SizedBox.expand(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _Wordmark(),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: _cardWidth,
+                  height: cardHeight,
+                  child: MediaQuery(
+                    data: media.copyWith(size: Size(_cardWidth, cardHeight)),
+                    child: child,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => launchUrl(Uri.parse('https://usezend.app')),
+                  child: Text(
+                    'Get the Zend! app for your phone',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
