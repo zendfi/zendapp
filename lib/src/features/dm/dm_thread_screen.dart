@@ -30,6 +30,7 @@ import 'dm_forward_sheet.dart';
 import 'dm_message_info_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_modal.dart';
 
 /// State of the E2EE key exchange for the currently open room.
 enum _E2eeStatus {
@@ -1409,7 +1410,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     final noteCtrl = TextEditingController();
     String? errorMsg;
 
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,

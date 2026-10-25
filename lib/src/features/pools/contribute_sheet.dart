@@ -12,12 +12,10 @@ import '../../services/wallet_session_cache.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
-Future<void> showContributeSheet(
-  BuildContext context, {
-  required Pool pool,
-}) {
-  return showModalBottomSheet<void>(
+Future<void> showContributeSheet(BuildContext context, {required Pool pool}) {
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -132,8 +130,10 @@ class _ContributeSheetState extends State<ContributeSheet> {
       return;
     }
     if (!_amountValid) {
-      setState(() => _amountError =
-          'Enter an amount between \$0.01 and \$${_remainingAmount.toStringAsFixed(2)}');
+      setState(
+        () => _amountError =
+            'Enter an amount between \$0.01 and \$${_remainingAmount.toStringAsFixed(2)}',
+      );
       return;
     }
     if (!_hasSufficientBalance) {
@@ -191,7 +191,10 @@ class _ContributeSheetState extends State<ContributeSheet> {
       final cache = WalletSessionCache.instance;
 
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           setState(() {
@@ -285,14 +288,13 @@ class _ContributeSheetState extends State<ContributeSheet> {
     }
   }
 
-
   double get _heightFactor => switch (_stage) {
-        _ContributeStage.amount => 0.80,
-        _ContributeStage.pin => 0.70,
-        _ContributeStage.processing => 0.45,
-        _ContributeStage.success => 0.50,
-        _ContributeStage.error => 0.55,
-      };
+    _ContributeStage.amount => 0.80,
+    _ContributeStage.pin => 0.70,
+    _ContributeStage.processing => 0.45,
+    _ContributeStage.success => 0.50,
+    _ContributeStage.error => 0.55,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -341,49 +343,49 @@ class _ContributeSheetState extends State<ContributeSheet> {
   Widget _buildStage() {
     return switch (_stage) {
       _ContributeStage.amount => _AmountStage(
-          pool: widget.pool,
-          amountInput: _amountInput,
-          amountError: _amountError,
-          userBalance: _userBalance,
-          remainingAmount: _remainingAmount,
-          hasSufficientBalance: _hasSufficientBalance,
-          confirmInFlight: _confirmInFlight,
-          onKey: _onAmountKey,
-          onConfirm: _onAmountConfirm,
-        ),
+        pool: widget.pool,
+        amountInput: _amountInput,
+        amountError: _amountError,
+        userBalance: _userBalance,
+        remainingAmount: _remainingAmount,
+        hasSufficientBalance: _hasSufficientBalance,
+        confirmInFlight: _confirmInFlight,
+        onKey: _onAmountKey,
+        onConfirm: _onAmountConfirm,
+      ),
       _ContributeStage.pin => _PinStage(
-          pool: widget.pool,
-          amount: _parsedAmount,
-          pinDigits: _pinDigits,
-          pinError: _pinError,
-          onKey: _onPinKey,
-          onBack: () => setState(() {
+        pool: widget.pool,
+        amount: _parsedAmount,
+        pinDigits: _pinDigits,
+        pinError: _pinError,
+        onKey: _onPinKey,
+        onBack: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _stage = _ContributeStage.amount;
+        }),
+      ),
+      _ContributeStage.processing => _ProcessingStage(
+        pool: widget.pool,
+        amount: _parsedAmount,
+      ),
+      _ContributeStage.success => _SuccessStage(
+        pool: widget.pool,
+        amount: _parsedAmount,
+        onDone: () => Navigator.of(context).pop(),
+      ),
+      _ContributeStage.error => _ErrorStage(
+        message: _errorMessage ?? 'Something went wrong.',
+        onRetry: () {
+          setState(() {
             _pinDigits = '';
             _pinError = null;
-            _stage = _ContributeStage.amount;
-          }),
-        ),
-      _ContributeStage.processing => _ProcessingStage(
-          pool: widget.pool,
-          amount: _parsedAmount,
-        ),
-      _ContributeStage.success => _SuccessStage(
-          pool: widget.pool,
-          amount: _parsedAmount,
-          onDone: () => Navigator.of(context).pop(),
-        ),
-      _ContributeStage.error => _ErrorStage(
-          message: _errorMessage ?? 'Something went wrong.',
-          onRetry: () {
-            setState(() {
-              _pinDigits = '';
-              _pinError = null;
-              _errorMessage = null;
-            });
-            _proceedFromAmount();
-          },
-          onCancel: () => Navigator.of(context).pop(),
-        ),
+            _errorMessage = null;
+          });
+          _proceedFromAmount();
+        },
+        onCancel: () => Navigator.of(context).pop(),
+      ),
     };
   }
 }
@@ -411,14 +413,14 @@ class _AmountStage extends StatelessWidget {
   final ValueChanged<String> onKey;
   final VoidCallback onConfirm;
 
-  String get _displayAmount =>
-      amountInput.isEmpty ? '\$0' : '\$$amountInput';
+  String get _displayAmount => amountInput.isEmpty ? '\$0' : '\$$amountInput';
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final parsedAmount = double.tryParse(amountInput) ?? 0.0;
-    final isValid = parsedAmount >= 0.01 &&
+    final isValid =
+        parsedAmount >= 0.01 &&
         hasSufficientBalance &&
         (remainingAmount <= 0 ? false : parsedAmount <= remainingAmount);
 
@@ -437,19 +439,30 @@ class _AmountStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: ZendSpacing.xs),
-          PoolProgressBar(progress: pool.progress, style: PoolProgressBarStyle.circle, circleSize: 90, strokeWidth: 8),
+          PoolProgressBar(
+            progress: pool.progress,
+            style: PoolProgressBarStyle.circle,
+            circleSize: 90,
+            strokeWidth: 8,
+          ),
           const SizedBox(height: ZendSpacing.xxs),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 '${pool.formattedGathered} of ${pool.formattedTarget}',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
               ),
               if (remainingAmount > 0)
                 Text(
                   '\$${remainingAmount.toStringAsFixed(2)} left',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 12,
+                    color: zt.accent,
+                  ),
                 ),
             ],
           ),
@@ -469,8 +482,7 @@ class _AmountStage extends StatelessWidget {
 
           Center(
             child: Text(
-              amountError ??
-                  'Balance: \$${userBalance.toStringAsFixed(2)}',
+              amountError ?? 'Balance: \$${userBalance.toStringAsFixed(2)}',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
@@ -523,7 +535,11 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -560,7 +576,9 @@ class _PinStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 13,
-              color: pinError != null ? ZendColors.destructive : zt.textSecondary,
+              color: pinError != null
+                  ? ZendColors.destructive
+                  : zt.textSecondary,
             ),
           ),
           const Spacer(),
@@ -627,7 +645,11 @@ class _SuccessStage extends StatelessWidget {
                 color: ZendColors.positive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.checkCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -687,7 +709,11 @@ class _ErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.xCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -713,8 +739,10 @@ class _ErrorStage extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'Geist')),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontFamily: 'Geist'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),

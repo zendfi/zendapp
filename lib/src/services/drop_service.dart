@@ -10,8 +10,8 @@ class DropService {
   DropService({
     required ApiClient apiClient,
     required WalletService walletService,
-  })  : _apiClient = apiClient,
-        _walletService = walletService;
+  }) : _apiClient = apiClient,
+       _walletService = walletService;
 
   /// Generates a fresh BLE beacon for the authenticated user (Receiver path).
   Future<BeaconGenerateResponse> generateBeacon() async {
@@ -58,14 +58,14 @@ class DropService {
     // Step 2: Build and sign the transaction locally.
     final String partiallySignedTxB64;
     if (keypairBytes != null) {
-      partiallySignedTxB64 =
-          await _walletService.buildAndSignTransactionFromCache(
-        keypairBytes: keypairBytes,
-        amountUsdc: amountUsdc,
-        recipientAddress: prepared.recipientWalletAddress,
-        blockhash: prepared.blockhash,
-        feePayerAddress: prepared.feePayer,
-      );
+      partiallySignedTxB64 = await _walletService
+          .buildAndSignTransactionFromCache(
+            keypairBytes: keypairBytes,
+            amountUsdc: amountUsdc,
+            recipientAddress: prepared.recipientWalletAddress,
+            blockhash: prepared.blockhash,
+            feePayerAddress: prepared.feePayer,
+          );
     } else {
       partiallySignedTxB64 = await _walletService.buildAndSignTransaction(
         pin: pin!,

@@ -16,6 +16,7 @@ class PoolInfoCard extends StatelessWidget {
 
   final Pool pool;
   final VoidCallback onTap;
+
   /// When true, renders a small "new message" dot badge on the card.
   final bool hasNewMessage;
 
@@ -74,7 +75,10 @@ class PoolInfoCard extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: Text(
                     pool.formattedTarget,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -117,8 +121,9 @@ class _AvatarRow extends StatelessWidget {
     final overflow = participants.length - 4;
 
     final count = visible.length + (overflow > 0 ? 1 : 0);
-    final totalWidth =
-        count == 0 ? 0.0 : _size + (_size - _overlap) * (count - 1);
+    final totalWidth = count == 0
+        ? 0.0
+        : _size + (_size - _overlap) * (count - 1);
 
     return SizedBox(
       width: totalWidth,

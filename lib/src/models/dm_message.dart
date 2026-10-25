@@ -5,7 +5,11 @@ class DmReaction {
   final int count;
   final bool reactedByMe;
 
-  const DmReaction({required this.emoji, required this.count, required this.reactedByMe});
+  const DmReaction({
+    required this.emoji,
+    required this.count,
+    required this.reactedByMe,
+  });
 
   factory DmReaction.fromJson(Map<String, dynamic> json) => DmReaction(
     emoji: json['emoji'] as String,
@@ -42,6 +46,7 @@ class DmPaymentData {
 
   final String transferId;
   final String amountUsdc;
+
   /// 'sent' or 'received' from the sender's perspective
   final String direction;
   final String? note;
@@ -87,6 +92,7 @@ class DmPaymentRequestData {
   final String amountUsdc;
   final String requesterZendtag;
   final String? note;
+
   /// 'pending' | 'paid' | 'cancelled'
   final String status;
 
@@ -116,6 +122,7 @@ class DmVibeData {
   final String stickerName;
   final String amountUsdc;
   final String transferId;
+
   /// The actual emoji character. Derived from stickerSlug if not explicitly set.
   final String? stickerEmoji;
 
@@ -175,21 +182,27 @@ class DmMessage {
   final String? clientId;
   final DateTime createdAt;
   DmLocalStatus localStatus;
+
   /// Live emoji reactions — updated optimistically and via WS frames.
   List<DmReaction> reactions;
+
   /// If this message is a reply, the quoted snippet of the parent message.
   final String? replyToContent;
   final String? replyToSenderZendtag;
+
   /// UUID of the original message being replied to — used for accurate scroll-to-original.
   final String? replyToMessageId;
+
   /// True when this message was forwarded from another chat — renders a
   /// "Forwarded" label above the bubble, matching WhatsApp/iMessage. The
   /// original sender/room is deliberately not carried over.
   final bool isForwarded;
+
   /// Set once the server confirms this message was soft-deleted (by its
   /// sender). Deleted messages render a "message deleted" placeholder
   /// instead of their original content.
   bool isDeleted;
+
   /// True when the content was encrypted at rest and has been decrypted for display.
   bool isEncrypted = false;
 
@@ -247,17 +260,23 @@ class DmMessage {
       vibeData: vibeData,
       paymentRequestData: paymentRequestData,
       clientId: json['client_id'] as String?,
-      createdAt: (DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now()).toLocal(),
+      createdAt:
+          (DateTime.tryParse(json['created_at'] as String? ?? '') ??
+                  DateTime.now())
+              .toLocal(),
       reactions: (json['reactions'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>()
           .map(DmReaction.fromJson)
           .toList(),
-      replyToContent: json['reply_to_content'] as String?
-          ?? meta['reply_to_content'] as String?,
-      replyToSenderZendtag: json['reply_to_sender_zendtag'] as String?
-          ?? meta['reply_to_sender_zendtag'] as String?,
-      replyToMessageId: json['reply_to_message_id'] as String?
-          ?? meta['reply_to_message_id'] as String?,
+      replyToContent:
+          json['reply_to_content'] as String? ??
+          meta['reply_to_content'] as String?,
+      replyToSenderZendtag:
+          json['reply_to_sender_zendtag'] as String? ??
+          meta['reply_to_sender_zendtag'] as String?,
+      replyToMessageId:
+          json['reply_to_message_id'] as String? ??
+          meta['reply_to_message_id'] as String?,
       isForwarded: meta['forwarded'] as bool? ?? false,
       isDeleted: json['deleted_at'] != null,
     );

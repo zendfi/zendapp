@@ -1,48 +1,51 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/zend_state.dart';
 import '../features/shell/zend_entry_sheet.dart';
 import '../navigation/zend_shell_controller.dart';
 import 'zend_tokens.dart';
 
-/// Which web layout the app is currently rendered in. Read by screens that
-/// need to adapt (today only [ZendShell], which drops its bottom bar and FAB
-/// when the desktop sidebar is showing them instead).
+/// Which web layout the app is rendered in.
 class ZendWebLayout extends InheritedWidget {
-  const ZendWebLayout({super.key, required this.desktop, required super.child});
+  const ZendWebLayout({
+    super.key,
+    required this.desktop,
+    required this.wide,
+    required super.child,
+  });
 
-  /// True when the desktop sidebar is visible outside the app column.
+  /// True when the desktop sidebar is showing (signed in, wide window).
+  /// [ZendShell] then drops its bottom bar/FAB and goes two-pane.
   final bool desktop;
+
+  /// True on any wide web window, signed in or not. Sheets open as dialogs.
+  final bool wide;
 
   static bool isDesktop(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ZendWebLayout>()?.desktop ??
       false;
 
+  static bool isWide(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<ZendWebLayout>()?.wide ?? false;
+
   @override
-  bool updateShouldNotify(ZendWebLayout oldWidget) =>
-      oldWidget.desktop != desktop;
+  bool updateShouldNotify(ZendWebLayout old) =>
+      old.desktop != desktop || old.wide != wide;
 }
 
-/// Hosts the whole app on the web.
+/// Hosts the app on the web.
 ///
-/// The web app is the *same* app as mobile, presented as a miniature: every
-/// screen, sheet and route renders inside one phone-width column, so nothing
-/// built for a phone ever gets stretched across a monitor. Three modes:
+///  * **Narrow** (< [desktopBreakpoint]) — full bleed, identical to the phone.
+///  * **Wide, signed out** — onboarding as a centred card on a plain page.
+///  * **Wide, signed in** — a real desktop layout: full-height sidebar on the
+///    left, the app filling the rest of the window (ZendShell goes two-pane).
 ///
-///  * **Mobile** (< [tabletBreakpoint]) — full bleed, identical to the app.
-///  * **Tablet** — the column is centred on a quiet backdrop.
-///  * **Desktop** (>= [desktopBreakpoint]) — the column plus a sidebar on the
-///    left (tabs + the Zend action) and a "get the app" panel on the right.
-///
-/// Because this wraps the Navigator (it is used from `MaterialApp.builder`),
-/// bottom sheets and dialogs are constrained to the column automatically.
-/// It also rewrites [MediaQuery] size to the column's, so width-derived logic
-/// downstream (text scaling, layout breakpoints) sees a phone, not a monitor.
-///
-/// On non-web platforms this is a pass-through.
+/// Pass-through off web.
 class ZendWebFrame extends StatelessWidget {
   const ZendWebFrame({
     super.key,
@@ -53,172 +56,141 @@ class ZendWebFrame extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
 
-  /// Below this width the app runs full-bleed, exactly like the phone app.
-  static const double tabletBreakpoint = 600;
-
-  static const double _maxColumnHeight = 920;
-  static const double _minColumnWidth =
-      375; // iPhone SE / the app's design frame
-  static const double _maxColumnWidth = 460;
-  static const double _minPanelWidth = 200;
-  static const double _maxPanelWidth = 280;
-  static const double _gap = 40;
-  static const double _outerMargin = 32;
-
-  /// Column width follows the window *height* at a modern phone's aspect
-  /// ratio (~9:19.5), so a tall monitor gets a roomier column and a laptop a
-  /// tighter one, instead of one fixed width that is wrong for both.
-  static double columnWidthFor(double columnHeight) =>
-      (columnHeight * 0.48).clamp(_minColumnWidth, _maxColumnWidth);
-
-  /// Desktop mode turns on as soon as both side panels fit at their minimum
-  /// width beside the column. Derived, not a magic number, so it moves with
-  /// the column.
-  static bool isDesktopWidth(double windowWidth, double columnWidth) =>
-      windowWidth >= columnWidth + 2 * (_minPanelWidth + _gap + _outerMargin);
+  static const double desktopBreakpoint = 900;
+  static const double sidebarWidth = 240;
 
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb) return child;
 
     final size = MediaQuery.sizeOf(context);
-    if (size.width < tabletBreakpoint) {
-      return ZendWebLayout(desktop: false, child: child);
+    if (size.width < desktopBreakpoint) {
+      return ZendWebLayout(desktop: false, wide: false, child: child);
     }
 
     final zt = ZendTheme.of(context);
-    // Leave breathing room top and bottom, but never let a short window
-    // squash the column below a usable height.
-    final verticalMargin = size.height > 720 ? 24.0 : 0.0;
-    final columnHeight = (size.height - verticalMargin * 2).clamp(
-      0.0,
-      _maxColumnHeight,
-    );
-    final columnWidth = columnWidthFor(columnHeight);
-    final desktop = isDesktopWidth(size.width, columnWidth);
-    // Side panels take whatever room is left, within limits.
-    final panelWidth = ((size.width - columnWidth) / 2 - _gap - _outerMargin)
-        .clamp(_minPanelWidth, _maxPanelWidth);
-
-    // Tablet: no sidebar, so the shell keeps its own bottom bar and FAB.
-    final column = _AppColumn(
-      width: columnWidth,
-      height: columnHeight,
-      rounded: verticalMargin > 0,
-      child: ZendWebLayout(desktop: false, child: child),
+    final media = MediaQuery.of(context);
+    final flat = media.copyWith(
+      padding: EdgeInsets.zero,
+      viewPadding: EdgeInsets.zero,
     );
 
-    // Material gives the side panels default text styling (without it Flutter
-    // draws its yellow "missing Material" underline); SizedBox.expand makes
-    // the backdrop fill the whole window.
     return Material(
       color: zt.bgSecondary,
-      child: SizedBox.expand(
-        child: desktop
-            ? ValueListenableBuilder<int?>(
-                valueListenable: ZendShellController.currentTab,
-                builder: (context, tab, _) => Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: panelWidth,
-                      child: tab == null
-                          ? const _BrandPanel()
-                          : _Sidebar(
-                              navigatorKey: navigatorKey,
-                              currentTab: tab,
-                            ),
-                    ),
-                    const SizedBox(width: _gap),
-                    // Rebuilt with the tab notifier so ZendWebLayout.desktop
-                    // flips the moment the shell mounts or unmounts: before
-                    // sign-in there is no sidebar, so nothing is hidden.
-                    _AppColumn(
-                      width: columnWidth,
-                      height: columnHeight,
-                      rounded: verticalMargin > 0,
-                      child: ZendWebLayout(desktop: tab != null, child: child),
-                    ),
-                    const SizedBox(width: _gap),
-                    SizedBox(width: panelWidth, child: const _GetTheAppPanel()),
-                  ],
+      child: ValueListenableBuilder<int?>(
+        valueListenable: ZendShellController.currentTab,
+        builder: (context, tab, _) {
+          if (tab == null) {
+            return _SignedOutPage(
+              media: flat,
+              child: ZendWebLayout(desktop: false, wide: true, child: child),
+            );
+          }
+          final contentWidth = size.width - sidebarWidth - 1;
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.keyN): () =>
+                  _Sidebar.openZend(navigatorKey),
+            },
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: sidebarWidth,
+                  child: _Sidebar(navigatorKey: navigatorKey, currentTab: tab),
                 ),
-              )
-            : Center(child: column),
+                Container(width: 1, color: zt.border),
+                Expanded(
+                  child: MediaQuery(
+                    data: flat.copyWith(size: Size(contentWidth, size.height)),
+                    child: ColoredBox(
+                      color: zt.bgPrimary,
+                      child: ZendWebLayout(
+                        desktop: true,
+                        wide: true,
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-/// The phone-sized viewport the real app renders into.
-class _AppColumn extends StatelessWidget {
-  const _AppColumn({
-    required this.width,
-    required this.height,
-    required this.rounded,
-    required this.child,
-  });
+/// Sign-in / onboarding on a wide window: the phone onboarding screens in a
+/// card, with the wordmark above and a quiet "get the app" link below.
+class _SignedOutPage extends StatelessWidget {
+  const _SignedOutPage({required this.media, required this.child});
 
-  final double width;
-  final double height;
-  final bool rounded;
+  final MediaQueryData media;
   final Widget child;
+
+  static const double _cardWidth = 440;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final radius = BorderRadius.circular(rounded ? 28 : 0);
-    final media = MediaQuery.of(context);
+    final cardHeight = (media.size.height - 160).clamp(480.0, 720.0);
 
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: radius,
-        border: Border.all(color: zt.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 40,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: MediaQuery(
-          // The app inside should believe it is on a phone of this size.
-          // Browser chrome has no notches or system bars, so padding is zero.
-          data: media.copyWith(
-            size: Size(width, height),
-            padding: EdgeInsets.zero,
-            viewPadding: EdgeInsets.zero,
-            viewInsets: EdgeInsets.zero,
-          ),
-          child: child,
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _Wordmark(),
+            const SizedBox(height: 20),
+            Container(
+              width: _cardWidth,
+              height: cardHeight,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: zt.bgPrimary,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: zt.border),
+              ),
+              child: MediaQuery(
+                data: media.copyWith(size: Size(_cardWidth, cardHeight)),
+                child: child,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => launchUrl(Uri.parse('https://usezend.app')),
+              child: Text(
+                'Get the Zend! app for your phone',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Desktop navigation: the four shell tabs plus the Zend action, mirrored
-/// from [ZendShell] through [ZendShellController].
+/// Full-height desktop navigation, mirrored from [ZendShell] through
+/// [ZendShellController].
 class _Sidebar extends StatelessWidget {
   const _Sidebar({required this.navigatorKey, required this.currentTab});
 
   final GlobalKey<NavigatorState> navigatorKey;
   final int currentTab;
 
-  /// Returns to the shell (closing any pushed screen or open sheet) and then
-  /// switches tab — the same effect as tapping the bottom bar on mobile.
   void _goToTab(int index) {
     navigatorKey.currentState?.popUntil((route) => route.isFirst);
     ZendShellController.instance?.switchToTab(index);
   }
 
-  void _openZend() {
+  static void openZend(GlobalKey<NavigatorState> navigatorKey) {
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
     navigator.popUntil((route) => route.isFirst);
@@ -227,88 +199,153 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
+    final tag = model.currentZendtag;
+    final name = model.currentDisplayName ?? tag ?? '';
+    final avatar = model.currentAvatarUrl;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const _Wordmark(),
-        const SizedBox(height: 32),
-        _NavItem(
-          icon: PhosphorIconsRegular.houseLine,
-          activeIcon: PhosphorIconsFill.houseLine,
-          label: 'Feed',
-          active: currentTab == 0,
-          badge: model.activityUnreadCount,
-          onTap: () => _goToTab(0),
-        ),
-        _NavItem(
-          icon: PhosphorIconsRegular.usersThree,
-          activeIcon: PhosphorIconsFill.usersThree,
-          label: 'People',
-          active: currentTab == 1,
-          onTap: () => _goToTab(1),
-        ),
-        _NavItem(
-          icon: PhosphorIconsRegular.chatCircleText,
-          activeIcon: PhosphorIconsFill.chatCircleText,
-          label: 'Chats',
-          active: currentTab == 2,
-          badge: model.dmUnreadTotal,
-          onTap: () => _goToTab(2),
-        ),
-        _NavItem(
-          icon: PhosphorIconsRegular.userCircle,
-          activeIcon: PhosphorIconsFill.userCircle,
-          label: 'You',
-          active: currentTab == 3,
-          onTap: () => _goToTab(3),
-        ),
-        const SizedBox(height: 24),
-        // The app's one verb, same dark-pill treatment as the mobile FAB.
-        Semantics(
-          button: true,
-          label: 'Zend money',
-          child: Material(
-            color: ZendColors.bgDeep,
-            borderRadius: BorderRadius.circular(ZendRadii.pill),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-              onTap: _openZend,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ColorFiltered(
-                      colorFilter: const ColorFilter.mode(
-                        ZendColors.accentPop,
-                        BlendMode.srcIn,
-                      ),
-                      child: Image.asset(
-                        'assets/icons/zend-icon-navbar.png',
-                        width: 18,
-                        height: 18,
-                      ),
+    return ColoredBox(
+      color: zt.bgSecondary,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _Wordmark(),
+            const SizedBox(height: 28),
+            _NavItem(
+              icon: PhosphorIconsRegular.houseLine,
+              activeIcon: PhosphorIconsFill.houseLine,
+              label: 'Feed',
+              active: currentTab == 0,
+              badge: model.activityUnreadCount,
+              onTap: () => _goToTab(0),
+            ),
+            _NavItem(
+              icon: PhosphorIconsRegular.usersThree,
+              activeIcon: PhosphorIconsFill.usersThree,
+              label: 'People',
+              active: currentTab == 1,
+              onTap: () => _goToTab(1),
+            ),
+            _NavItem(
+              icon: PhosphorIconsRegular.chatCircleText,
+              activeIcon: PhosphorIconsFill.chatCircleText,
+              label: 'Chats',
+              active: currentTab == 2,
+              badge: model.dmUnreadTotal,
+              onTap: () => _goToTab(2),
+            ),
+            const SizedBox(height: 20),
+            Tooltip(
+              message: 'Zend money (N)',
+              child: Material(
+                color: ZendColors.bgDeep,
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  mouseCursor: SystemMouseCursors.click,
+                  onTap: () => openZend(navigatorKey),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ColorFiltered(
+                          colorFilter: const ColorFilter.mode(
+                            ZendColors.accentPop,
+                            BlendMode.srcIn,
+                          ),
+                          child: Image.asset(
+                            'assets/icons/zend-icon-navbar.png',
+                            width: 18,
+                            height: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Zend',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: ZendColors.accentPop,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Zend',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: ZendColors.accentPop,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+            const Spacer(),
+            // "You" lives at the bottom as the account row, desktop-style.
+            Material(
+              color: currentTab == 3 ? zt.bgCard : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                mouseCursor: SystemMouseCursors.click,
+                onTap: () => _goToTab(3),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: zt.bgCard,
+                        backgroundImage: (avatar != null && avatar.isNotEmpty)
+                            ? CachedNetworkImageProvider(avatar)
+                            : null,
+                        child: (avatar == null || avatar.isEmpty)
+                            ? Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: TextStyle(color: zt.textPrimary),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: zt.textPrimary,
+                              ),
+                            ),
+                            if (tag != null)
+                              Text(
+                                '@$tag',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 12,
+                                  color: zt.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        PhosphorIconsRegular.gearSix,
+                        size: 18,
+                        color: zt.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -336,22 +373,24 @@ class _NavItem extends StatelessWidget {
     final color = active ? zt.textPrimary : zt.textSecondary;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Semantics(
         selected: active,
         button: true,
         child: Material(
           color: active ? zt.bgCard : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
+            mouseCursor: SystemMouseCursors.click,
+            hoverColor: zt.bgCard.withValues(alpha: 0.6),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               child: Row(
                 children: [
-                  Icon(active ? activeIcon : icon, color: color, size: 22),
-                  const SizedBox(width: 14),
+                  Icon(active ? activeIcon : icon, color: color, size: 21),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       label,
@@ -400,118 +439,17 @@ class _Wordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(left: 14),
+      padding: const EdgeInsets.only(left: 12),
       child: Text(
         'Zend!',
         style: TextStyle(
           fontFamily: 'Geist',
-          fontSize: 28,
+          fontSize: 26,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
           color: zt.textPrimary,
         ),
       ),
-    );
-  }
-}
-
-/// Left panel before sign-in, where there are no tabs to show yet.
-class _BrandPanel extends StatelessWidget {
-  const _BrandPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const _Wordmark(),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.only(left: 14),
-          child: Text(
-            'Send money to your people, right from your browser.',
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 15,
-              height: 1.4,
-              color: zt.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Right panel: the web app is the miniature, the phone app is the full
-/// thing (Drop, push, biometrics…), so point people at it.
-class _GetTheAppPanel extends StatelessWidget {
-  const _GetTheAppPanel();
-
-  static const _downloadUrl = 'https://usezend.app';
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: zt.bgCard,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: zt.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Get the app',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: zt.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Notifications, Drop and more live in the Zend! app. '
-                'Scan to download.',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  height: 1.4,
-                  color: zt.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: Semantics(
-                  label: 'QR code linking to usezend.app',
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: QrImageView(
-                      data: _downloadUrl,
-                      size: 140,
-                      padding: EdgeInsets.zero,
-                      backgroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

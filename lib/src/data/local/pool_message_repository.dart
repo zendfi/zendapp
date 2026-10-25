@@ -75,8 +75,9 @@ class PoolMessageRepository {
       'contribution_id': msg.contributionId,
       'voice_note_url': msg.voiceNoteUrl,
       'voice_note_duration_seconds': msg.voiceNoteDurationSeconds,
-      'waveform_data':
-          msg.waveformData != null ? jsonEncode(msg.waveformData) : null,
+      'waveform_data': msg.waveformData != null
+          ? jsonEncode(msg.waveformData)
+          : null,
       'local_status': _statusToString(msg.localStatus),
       'created_at': msg.createdAt.toIso8601String(),
     };
@@ -136,11 +137,15 @@ class PoolMessageRepository {
     final reactionsByMessage = <String, List<PoolReactionCount>>{};
     for (final row in reactionRows) {
       final msgId = row['message_id'] as String;
-      reactionsByMessage.putIfAbsent(msgId, () => []).add(PoolReactionCount(
-        emoji: row['emoji'] as String,
-        count: row['count'] as int,
-        reactedByMe: (row['reacted_by_me'] as int) == 1,
-      ));
+      reactionsByMessage
+          .putIfAbsent(msgId, () => [])
+          .add(
+            PoolReactionCount(
+              emoji: row['emoji'] as String,
+              count: row['count'] as int,
+              reactedByMe: (row['reacted_by_me'] as int) == 1,
+            ),
+          );
     }
     return messages.map((m) {
       final reactions = reactionsByMessage[m.id];
@@ -242,16 +247,12 @@ class PoolMessageRepository {
       whereArgs: [messageId],
     );
     for (final r in reactions) {
-      await db.insert(
-        'pool_message_reactions',
-        {
-          'message_id': messageId,
-          'emoji': r['emoji'] as String,
-          'count': r['count'] as int,
-          'reacted_by_me': (r['reacted_by_me'] as bool? ?? false) ? 1 : 0,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await db.insert('pool_message_reactions', {
+        'message_id': messageId,
+        'emoji': r['emoji'] as String,
+        'count': r['count'] as int,
+        'reacted_by_me': (r['reacted_by_me'] as bool? ?? false) ? 1 : 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 
@@ -273,14 +274,10 @@ class PoolMessageRepository {
     String? oldestFetchedServerId,
   }) async {
     final db = await _database;
-    await db.insert(
-      'pool_sync_cursors',
-      {
-        'pool_id': poolId,
-        'oldest_fetched_server_id': oldestFetchedServerId,
-        'last_synced_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('pool_sync_cursors', {
+      'pool_id': poolId,
+      'oldest_fetched_server_id': oldestFetchedServerId,
+      'last_synced_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }

@@ -22,19 +22,20 @@ class _TierConfig {
 /// Tier configs indexed by [_DepthTier] ordinal (near, mid, far, halo).
 const _kTierConfigs = [
   // near — sharp, bright, large
-  _TierConfig(pointSize: 2.8, blurSigma: 0.5,  baseOpacity: 0.92, glowCount: 0),
+  _TierConfig(pointSize: 2.8, blurSigma: 0.5, baseOpacity: 0.92, glowCount: 0),
   // mid — slightly blurred
-  _TierConfig(pointSize: 2.0, blurSigma: 1.5,  baseOpacity: 0.75, glowCount: 0),
+  _TierConfig(pointSize: 2.0, blurSigma: 1.5, baseOpacity: 0.75, glowCount: 0),
   // far — soft, small, dim
-  _TierConfig(pointSize: 1.3, blurSigma: 3.0,  baseOpacity: 0.50, glowCount: 0),
+  _TierConfig(pointSize: 1.3, blurSigma: 3.0, baseOpacity: 0.50, glowCount: 0),
   // halo — very blurred atmospheric bloom
-  _TierConfig(pointSize: 8.0, blurSigma: 8.0,  baseOpacity: 0.04, glowCount: 0),
+  _TierConfig(pointSize: 8.0, blurSigma: 8.0, baseOpacity: 0.04, glowCount: 0),
 ];
 
 /// The direction of the dissolve animation.
 enum DissolveDirection {
   /// Particles emerge from text letterforms and stream upward/toward target.
   dissolve,
+
   /// Particles descend from target and converge into text letterforms.
   reform,
 }
@@ -44,8 +45,8 @@ enum DissolveDirection {
 class ParticleState {
   ParticleState({
     required this.particle,
-    required this.speed,       // 0.15–0.55 canvas-height per full animation
-    required this.phase,       // start phase 0→1 in the repeat cycle
+    required this.speed, // 0.15–0.55 canvas-height per full animation
+    required this.phase, // start phase 0→1 in the repeat cycle
     required this.lateralJitter, // extra x-wobble amplitude (px)
     required this.jitterFreq,
     required this.jitterPhase,
@@ -62,17 +63,21 @@ class ParticleState {
 /// Builds a [ParticleState] list from sampled particles.
 List<ParticleState> buildParticleStates(TextSampleResult result, Random rng) {
   final all = [...result.near, ...result.mid, ...result.far, ...result.halo];
-  return all.map((p) => ParticleState(
-    particle: p,
-    // speed is now a fraction of the actual focal distance (not canvas height).
-    // 0.85–1.30: most particles arrive near the focal point; some overshoot
-    // slightly for a natural, non-mechanical look.
-    speed: 0.85 + rng.nextDouble() * 0.45,
-    phase: rng.nextDouble(),
-    lateralJitter: 4.0 + rng.nextDouble() * 14.0,
-    jitterFreq: 1.0 + rng.nextDouble() * 2.5,
-    jitterPhase: rng.nextDouble() * 2 * pi,
-  )).toList();
+  return all
+      .map(
+        (p) => ParticleState(
+          particle: p,
+          // speed is now a fraction of the actual focal distance (not canvas height).
+          // 0.85–1.30: most particles arrive near the focal point; some overshoot
+          // slightly for a natural, non-mechanical look.
+          speed: 0.85 + rng.nextDouble() * 0.45,
+          phase: rng.nextDouble(),
+          lateralJitter: 4.0 + rng.nextDouble() * 14.0,
+          jitterFreq: 1.0 + rng.nextDouble() * 2.5,
+          jitterPhase: rng.nextDouble() * 2 * pi,
+        ),
+      )
+      .toList();
 }
 
 /// Renders the text-dissolve/reform particle effect using depth-bucketed
@@ -86,9 +91,11 @@ class DropDissolvePainter extends CustomPainter {
     required this.direction,
     required this.states,
     required this.result,
+
     /// Fraction of canvas height where the focal point is.
     required this.focalYFraction,
     required this.focalXFraction,
+
     /// Fraction of canvas height where the text is centred (default 0.5 = centred).
     this.textYFraction = 0.5,
     this.particleColor = Colors.white,
@@ -105,7 +112,12 @@ class DropDissolvePainter extends CustomPainter {
 
   // Pre-allocated point buffers — keyed by tier index.
   // Populated each frame, no GC allocation.
-  final _tierPoints = [<ui.Offset>[], <ui.Offset>[], <ui.Offset>[], <ui.Offset>[]];
+  final _tierPoints = [
+    <ui.Offset>[],
+    <ui.Offset>[],
+    <ui.Offset>[],
+    <ui.Offset>[],
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -133,7 +145,9 @@ class DropDissolvePainter extends CustomPainter {
 
       // Text origin in canvas space.
       final textX = fX + (p.position.dx - 0.5) * result.textSize.width;
-      final textY = (size.height * textYFraction) + (p.position.dy - 0.5) * result.textSize.height;
+      final textY =
+          (size.height * textYFraction) +
+          (p.position.dy - 0.5) * result.textSize.height;
 
       // Actual Euclidean distance from this particle's text origin to the
       // focal point (avatar). fY is negative for the sender (avatar above
@@ -149,13 +163,15 @@ class DropDissolvePainter extends CustomPainter {
       // Add glyph edge normal influence for first 30% of travel.
       final normalInfluence = (1 - localT * 3.3).clamp(0.0, 1.0);
       final normalAngle = atan2(p.edgeNormal.dy, p.edgeNormal.dx);
-      final finalAngle = coneAngle * (1 - normalInfluence) + normalAngle * normalInfluence;
+      final finalAngle =
+          coneAngle * (1 - normalInfluence) + normalAngle * normalInfluence;
 
       // Distance scales with the real focal distance so particles travel
       // all the way to the avatar rather than drifting ~88px and stopping.
       // speed is 0.85–1.30 so most particles reach or slightly overshoot focal.
       final dist = focalDistance * state.speed * easedT;
-      final lateral = state.lateralJitter *
+      final lateral =
+          state.lateralJitter *
           sin(localT * state.jitterFreq * 2 * pi + state.jitterPhase);
 
       double px, py;
@@ -176,7 +192,10 @@ class DropDissolvePainter extends CustomPainter {
       // Cull bounds — minY scales with the focal point so particles that
       // travel above the canvas (toward the avatar) are not clipped.
       final minY = min(fY, 0.0) - 40;
-      if (px < -40 || px > size.width + 40 || py < minY || py > size.height + 40) {
+      if (px < -40 ||
+          px > size.width + 40 ||
+          py < minY ||
+          py > size.height + 40) {
         continue;
       }
 
@@ -205,7 +224,10 @@ class DropDissolvePainter extends CustomPainter {
         ..style = ui.PaintingStyle.stroke;
 
       if (cfg.blurSigma > 0.1) {
-        paint.maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, cfg.blurSigma);
+        paint.maskFilter = ui.MaskFilter.blur(
+          ui.BlurStyle.normal,
+          cfg.blurSigma,
+        );
       }
 
       canvas.drawPoints(ui.PointMode.points, points, paint);

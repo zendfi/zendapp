@@ -7,6 +7,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../design/zend_modal.dart';
 
 /// Offers a zendtag to a user whose handle is still their email address.
 ///
@@ -20,7 +21,7 @@ import '../../models/api_exceptions.dart';
 /// That last option is recorded server-side rather than in device preferences, so
 /// a reinstall or a second device does not re-ask someone who already declined.
 Future<void> showZendtagPromptSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -239,10 +240,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                       : _available == true
                       ? Icon(Icons.check, color: zt.accent)
                       : _available == false
-                      ? const Icon(
-                          Icons.close,
-                          color: ZendColors.destructive,
-                        )
+                      ? const Icon(Icons.close, color: ZendColors.destructive)
                       : null,
                 ),
               ),

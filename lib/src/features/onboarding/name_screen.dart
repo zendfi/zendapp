@@ -51,7 +51,10 @@ class _NameScreenState extends State<NameScreen> {
   void _onContinue() {
     final first = _firstName.text.trim();
     final last = _lastName.text.trim();
-    final displayName = [first, last].where((part) => part.isNotEmpty).join(' ');
+    final displayName = [
+      first,
+      last,
+    ].where((part) => part.isNotEmpty).join(' ');
 
     final model = ZendScope.of(context);
     model.setDisplayName(displayName);
@@ -64,7 +67,10 @@ class _NameScreenState extends State<NameScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final waitlistMatched = model.pendingWaitlistMatch;
-    final waitlistFirstName = (model.pendingWaitlistFullName ?? '').trim().split(RegExp(r'\s+')).first;
+    final waitlistFirstName = (model.pendingWaitlistFullName ?? '')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .first;
 
     return Scaffold(
       backgroundColor: zt.bgPrimary,
@@ -74,65 +80,107 @@ class _NameScreenState extends State<NameScreen> {
             const OnboardingProgressBar(step: 3, totalSteps: 6),
             Expanded(
               child: ZendScrollPage(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 40),
-                    if (waitlistMatched) ...[
-                      Text('YOU MADE IT', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, letterSpacing: 1.8, color: zt.textSecondary)),
-                      const SizedBox(height: 8),
-                      Text(
-                        waitlistFirstName.isEmpty ? "Welcome in. Let's set up your account." : "Welcome in, $waitlistFirstName.",
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 40),
+                          if (waitlistMatched) ...[
+                            Text(
+                              'YOU MADE IT',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 11,
+                                letterSpacing: 1.8,
+                                color: zt.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              waitlistFirstName.isEmpty
+                                  ? "Welcome in. Let's set up your account."
+                                  : "Welcome in, $waitlistFirstName.",
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: zt.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "We've been holding a spot for you. A couple of details and you're in.",
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 14,
+                                color: zt.textSecondary,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                          ] else ...[
+                            Text(
+                              "What's your name?",
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: zt.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          TextField(
+                            controller: _firstName,
+                            decoration: InputDecoration(
+                              hintText: 'First name',
+                              filled: false,
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: zt.border),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: zt.border),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide.none,
+                              ),
+                              hintStyle: TextStyle(color: zt.textSecondary),
+                            ),
+                            style: TextStyle(color: zt.textPrimary),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: _lastName,
+                            decoration: InputDecoration(
+                              hintText: 'Last name',
+                              filled: false,
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: zt.border),
+                              ),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: zt.border),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide.none,
+                              ),
+                              hintStyle: TextStyle(color: zt.textSecondary),
+                            ),
+                            style: TextStyle(color: zt.textPrimary),
+                          ),
+                          const Spacer(),
+                          PrimaryButton(
+                            label: 'Continue',
+                            onPressed: _onContinue,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "We've been holding a spot for you. A couple of details and you're in.",
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.5),
-                      ),
-                      const SizedBox(height: 32),
-                    ] else ...[
-                      Text("What's your name?", style: TextStyle(fontFamily: 'Geist', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
-                      const SizedBox(height: 24),
-                    ],
-                    TextField(
-                      controller: _firstName,
-                      decoration: InputDecoration(
-                        hintText: 'First name',
-                        filled: false,
-                        border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
-                        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide.none),
-                        hintStyle: TextStyle(color: zt.textSecondary),
-                      ),
-                      style: TextStyle(color: zt.textPrimary),
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _lastName,
-                      decoration: InputDecoration(
-                        hintText: 'Last name',
-                        filled: false,
-                        border: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: zt.border)),
-                        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide.none),
-                        hintStyle: TextStyle(color: zt.textSecondary),
-                      ),
-                      style: TextStyle(color: zt.textPrimary),
-                    ),
-                    const Spacer(),
-                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
               ),
             ),
           ],

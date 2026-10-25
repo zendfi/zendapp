@@ -90,7 +90,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       Future<void>.delayed(const Duration(milliseconds: 400), () {
         if (!mounted) return;
         final ctx = _navigatorKey.currentContext;
-        if (ctx == null || widget.model.appLockService.isLocked) {
+        if (ctx == null ||
+            !ctx.mounted ||
+            widget.model.appLockService.isLocked) {
           PendingNotificationService.store(
             pendingDest,
           ); // still locked at app level
@@ -134,7 +136,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         Future<void>.delayed(const Duration(milliseconds: 300), () {
           if (!mounted) return;
           final ctx = _navigatorKey.currentContext;
-          if (ctx == null) return;
+          if (ctx == null || !ctx.mounted) return;
           if (!widget.model.isAuthenticated ||
               widget.model.appLockService.isLocked) {
             PendingNotificationService.store(
@@ -298,7 +300,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       Future<void>.delayed(const Duration(milliseconds: 350), () {
         if (!mounted) return;
         final ctx = _navigatorKey.currentContext;
-        if (ctx == null) return;
+        if (ctx == null || !ctx.mounted) return;
         NotificationNavigator.dispatch(
           ctx,
           pendingDest,
@@ -341,7 +343,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     try {
       final pool = await widget.model.walletService.apiClient
           .getPoolByShortCode(shortCode);
-      if (!mounted) return;
+      if (!context.mounted) return;
       pushZendSlide(
         context,
         PoolDetailScreen(pool: pool),
@@ -552,7 +554,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
             return;
           }
           final ctx = _navigatorKey.currentContext;
-          if (ctx != null) {
+          if (ctx != null && ctx.mounted) {
             NotificationNavigator.dispatch(
               ctx,
               pendingDest,

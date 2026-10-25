@@ -30,7 +30,9 @@ Future<void> showZendErrorModal(
       final zt = ZendTheme.of(dialogContext);
       return Dialog(
         backgroundColor: zt.bgPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ZendRadii.xxl),
+        ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 28),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
@@ -40,13 +42,23 @@ Future<void> showZendErrorModal(
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                  color: zt.textPrimary,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.4),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textSecondary,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 24),
               if (onRetry != null) ...[

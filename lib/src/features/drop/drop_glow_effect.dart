@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 enum DropGlowDirection {
   /// Sender: text → glow → dissolve into drifting embers.
   dissolve,
+
   /// Receiver: drifting embers → glow builds → text materialises.
   reform,
 }
@@ -115,7 +116,11 @@ class _DropGlowEffectState extends State<DropGlowEffect> {
                   child: _BlurredText(
                     text: widget.text,
                     style: widget.style,
-                    blurRadius: _lerp(12.0, 28.0, (1.0 - glowIntensity).clamp(0.0, 1.0)),
+                    blurRadius: _lerp(
+                      12.0,
+                      28.0,
+                      (1.0 - glowIntensity).clamp(0.0, 1.0),
+                    ),
                     color: widget.glowColor,
                   ),
                 ),
@@ -184,7 +189,8 @@ class _BlurredText extends StatelessWidget {
 
 class _Ember {
   final double startX; // 0→1, normalised horizontal position
-  final double startY; // 0→1, normalised vertical position (centred around text)
+  final double
+  startY; // 0→1, normalised vertical position (centred around text)
   final double driftX; // horizontal drift amplitude
   final double driftSpeed; // vertical drift speed (upward)
   final double size; // point radius
@@ -257,12 +263,18 @@ class _EmberPainter extends CustomPainter {
       final px = (e.startX + xWobble) * size.width;
       final drift = e.driftSpeed * localT;
       final rawY = direction == DropGlowDirection.dissolve
-          ? e.startY - drift // sender: drift upward
+          ? e.startY -
+                drift // sender: drift upward
           : e.startY + drift * 0.5 - drift; // receiver: converge downward
       final py = rawY.clamp(-0.5, 1.5) * size.height;
 
       final paint = ui.Paint()
-        ..color = Color.from(alpha: alpha, red: color.r, green: color.g, blue: color.b)
+        ..color = Color.from(
+          alpha: alpha,
+          red: color.r,
+          green: color.g,
+          blue: color.b,
+        )
         ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, e.size * 0.8);
 
       canvas.drawCircle(Offset(px, py), e.size, paint);

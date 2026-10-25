@@ -7,9 +7,10 @@ import '../../design/zend_tokens.dart';
 import 'bank_send_sheet.dart';
 import 'crypto_send_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 Future<void> showWithdrawSheet(BuildContext context) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -46,7 +47,8 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
     return _parsedAmount > 0 && _parsedAmount > model.balance;
   }
 
-  bool get _belowMinimum => _parsedAmount > 0 && _parsedAmount < _minWithdrawUsdc;
+  bool get _belowMinimum =>
+      _parsedAmount > 0 && _parsedAmount < _minWithdrawUsdc;
 
   bool get _canContinue {
     final model = ZendScope.of(context);
@@ -200,9 +202,12 @@ class _AmountStage extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Balance: \$${model.balance.toStringAsFixed(2)}',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: insufficientBalance
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 12,
+              color: insufficientBalance
                   ? ZendColors.destructive
-                  : zt.textSecondary),
+                  : zt.textSecondary,
+            ),
           ),
           // Fixed-height status row — never shifts the layout regardless of
           // whether an error is shown or not.
@@ -212,15 +217,21 @@ class _AmountStage extends StatelessWidget {
                 ? Text(
                     'Amount exceeds your balance',
                     textAlign: TextAlign.center,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: ZendColors.destructive,
+                    ),
                   )
                 : belowMinimum
-                    ? Text(
-                        'Minimum withdrawal is \$5.00',
-                        textAlign: TextAlign.center,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive),
-                      )
-                    : null,
+                ? Text(
+                    'Minimum withdrawal is \$5.00',
+                    textAlign: TextAlign.center,
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: ZendColors.destructive,
+                    ),
+                  )
+                : null,
           ),
           const Spacer(),
 
@@ -235,10 +246,7 @@ class _AmountStage extends StatelessWidget {
           const Spacer(),
 
           // ── Keypad ──────────────────────────────────────────────────
-          _WithdrawKeypad(
-            onTap: onKey,
-            keyHeight: compact ? 60 : 72,
-          ),
+          _WithdrawKeypad(onTap: onKey, keyHeight: compact ? 60 : 72),
 
           const SizedBox(height: 20),
 
@@ -249,8 +257,8 @@ class _AmountStage extends StatelessWidget {
               label: canContinue
                   ? 'Continue'
                   : belowMinimum
-                      ? 'Minimum \$5.00'
-                      : 'Enter amount',
+                  ? 'Minimum \$5.00'
+                  : 'Enter amount',
               onPressed: canContinue ? onContinue : null,
             ),
           ),
@@ -288,7 +296,11 @@ class _DestinationStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -394,7 +406,11 @@ class _DestinationTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
+            Icon(
+              PhosphorIconsRegular.caretRight,
+              size: 18,
+              color: zt.textSecondary,
+            ),
           ],
         ),
       ),
@@ -493,12 +509,7 @@ class _WithdrawKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '.', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'];
 
     return Column(
       children: [

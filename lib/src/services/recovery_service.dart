@@ -40,20 +40,20 @@ class RecoveryPacket {
   final String tag;
 
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'salt': salt,
-        'iv': iv,
-        'ciphertext': ciphertext,
-        'tag': tag,
-      };
+    'version': version,
+    'salt': salt,
+    'iv': iv,
+    'ciphertext': ciphertext,
+    'tag': tag,
+  };
 
   factory RecoveryPacket.fromJson(Map<String, dynamic> j) => RecoveryPacket(
-        version: j['version'] as String,
-        salt: j['salt'] as String,
-        iv: j['iv'] as String,
-        ciphertext: j['ciphertext'] as String,
-        tag: j['tag'] as String,
-      );
+    version: j['version'] as String,
+    salt: j['salt'] as String,
+    iv: j['iv'] as String,
+    ciphertext: j['ciphertext'] as String,
+    tag: j['tag'] as String,
+  );
 
   @override
   String toString() => jsonEncode(toJson());
@@ -72,7 +72,8 @@ class RecoveryDecryptionException implements Exception {
 class RecoveryPacketNotFoundException implements Exception {
   const RecoveryPacketNotFoundException();
   @override
-  String toString() => 'RecoveryPacketNotFoundException: no recovery packet in cloud';
+  String toString() =>
+      'RecoveryPacketNotFoundException: no recovery packet in cloud';
 }
 
 /// ─── Service ─────────────────────────────────────────────────────────────────
@@ -94,8 +95,8 @@ class RecoveryService {
   RecoveryService({
     required WalletService wallet,
     required CloudBackupService cloud,
-  })  : _wallet = wallet,
-        _cloud = cloud;
+  }) : _wallet = wallet,
+       _cloud = cloud;
 
   final WalletService _wallet;
   final CloudBackupService _cloud;
@@ -138,8 +139,12 @@ class RecoveryService {
 
       await _cloud.storeRecoveryPacket(packet);
     } finally {
-      for (var i = 0; i < altKey.length; i++) { altKey[i] = 0; }
-      for (var i = 0; i < cachedKeypair.length; i++) { cachedKeypair[i] = 0; }
+      for (var i = 0; i < altKey.length; i++) {
+        altKey[i] = 0;
+      }
+      for (var i = 0; i < cachedKeypair.length; i++) {
+        cachedKeypair[i] = 0;
+      }
     }
   }
 
@@ -174,7 +179,9 @@ class RecoveryService {
         throw const RecoveryDecryptionException();
       }
     } finally {
-      for (var i = 0; i < altKey.length; i++) { altKey[i] = 0; }
+      for (var i = 0; i < altKey.length; i++) {
+        altKey[i] = 0;
+      }
     }
   }
 
@@ -190,7 +197,11 @@ class RecoveryService {
     final algorithm = AesGcm.with256bits();
     final key = SecretKey(keyBytes.toList());
     final nonce = algorithm.newNonce(); // 12 bytes, random
-    final secretBox = await algorithm.encrypt(plaintext, secretKey: key, nonce: nonce);
+    final secretBox = await algorithm.encrypt(
+      plaintext,
+      secretKey: key,
+      nonce: nonce,
+    );
     return (
       Uint8List.fromList(secretBox.concatenation(nonce: false)),
       Uint8List.fromList(nonce),

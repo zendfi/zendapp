@@ -106,18 +106,19 @@ class CloudBackupServiceAndroid implements CloudBackupService {
       final file = await _findFile(driveApi);
       if (file == null) return null;
 
-      final response = await driveApi.files.get(
-        file.id!,
-        downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      final response =
+          await driveApi.files.get(
+                file.id!,
+                downloadOptions: drive.DownloadOptions.fullMedia,
+              )
+              as drive.Media;
 
       final bytes = await response.stream.fold<List<int>>(
         [],
         (prev, chunk) => [...prev, ...chunk],
       );
       final json = utf8.decode(bytes);
-      return RecoveryPacket.fromJson(
-          jsonDecode(json) as Map<String, dynamic>);
+      return RecoveryPacket.fromJson(jsonDecode(json) as Map<String, dynamic>);
     } catch (e) {
       if (e is CloudBackupException) rethrow;
       return null;
@@ -182,8 +183,7 @@ class CloudBackupServiceIOS implements CloudBackupService {
     try {
       final value = await _ICloudKvs.get(_key);
       if (value == null) return null;
-      return RecoveryPacket.fromJson(
-          jsonDecode(value) as Map<String, dynamic>);
+      return RecoveryPacket.fromJson(jsonDecode(value) as Map<String, dynamic>);
     } catch (_) {
       return null;
     }
@@ -200,8 +200,7 @@ class CloudBackupServiceIOS implements CloudBackupService {
 class _ICloudKvs {
   static const _channel = _ICloudKvsChannel();
 
-  static Future<void> set(String key, String value) =>
-      _channel.set(key, value);
+  static Future<void> set(String key, String value) => _channel.set(key, value);
 
   static Future<String?> get(String key) => _channel.get(key);
 }

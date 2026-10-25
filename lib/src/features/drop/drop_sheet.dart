@@ -26,16 +26,17 @@ import 'drop_scanner_stage.dart';
 import 'drop_success_stage.dart';
 import '../send/send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 enum DropStage {
   scanning,
-  preview,       // unconfirmed — preview arrived, GATT still in flight
-  confirmed,     // GATT verified — proceed to tier routing (transient)
-  disambiguate,  // 2+ confirmed receivers within signal range — user picks one
-  countdown,     // Tier 1 (≤$50): 2-second auto-execute
-  confirm,       // Tier 2 ($51–$500): confirm button
-  biometric,     // Tier 3 ($501–$10,000): confirm + biometric
-  pin,           // PIN required — session cache empty or policy requires PIN
+  preview, // unconfirmed — preview arrived, GATT still in flight
+  confirmed, // GATT verified — proceed to tier routing (transient)
+  disambiguate, // 2+ confirmed receivers within signal range — user picks one
+  countdown, // Tier 1 (≤$50): 2-second auto-execute
+  confirm, // Tier 2 ($51–$500): confirm button
+  biometric, // Tier 3 ($501–$10,000): confirm + biometric
+  pin, // PIN required — session cache empty or policy requires PIN
   processing,
   success,
   error,
@@ -45,7 +46,7 @@ enum DropStage {
 ///
 /// [amount] is the USDC amount to drop, validated by the send screen.
 Future<void> showDropSheet(BuildContext context, {required double amount}) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -139,18 +140,21 @@ class _DropSheetState extends State<DropSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticOut,
-    ));
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
     DropDebugLog.i.clear(); // Fresh log for each Drop session
-    DropDebugLog.i.add('SHEET', 'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}');
+    DropDebugLog.i.add(
+      'SHEET',
+      'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}',
+    );
     _checkBluetoothAndStart();
   }
 
@@ -203,15 +207,21 @@ class _DropSheetState extends State<DropSheet>
     BluetoothAdapterState adapterState = BluetoothAdapterState.unknown;
     try {
       adapterState = await FlutterBluePlus.adapterState
-          .where((s) => s == BluetoothAdapterState.on ||
-                        s == BluetoothAdapterState.off)
+          .where(
+            (s) =>
+                s == BluetoothAdapterState.on || s == BluetoothAdapterState.off,
+          )
           .first
           .timeout(
             const Duration(seconds: 3),
             onTimeout: () => FlutterBluePlus.adapterStateNow,
           );
     } catch (e) {
-      DropDebugLog.i.add('BT', 'adapterState error: $e — attempting to continue', level: DropLogLevel.warn);
+      DropDebugLog.i.add(
+        'BT',
+        'adapterState error: $e — attempting to continue',
+        level: DropLogLevel.warn,
+      );
       // SecurityException means BLUETOOTH permission missing at manifest level
       // (Android ≤ 11). The new manifest fixes this — optimistically continue.
       adapterState = BluetoothAdapterState.on;
@@ -221,15 +231,23 @@ class _DropSheetState extends State<DropSheet>
     if (!mounted) return;
 
     if (adapterState != BluetoothAdapterState.on) {
-      DropDebugLog.i.add('BT', 'Bluetooth is OFF — cannot proceed', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'BT',
+        'Bluetooth is OFF — cannot proceed',
+        level: DropLogLevel.error,
+      );
       setState(() {
-        _errorMessage = 'Bluetooth is off. Please enable Bluetooth to use Drop.';
+        _errorMessage =
+            'Bluetooth is off. Please enable Bluetooth to use Drop.';
         _stage = DropStage.error;
       });
       return;
     }
 
-    DropDebugLog.i.add('BT', 'BLE ready — starting scan (sender mode). Receiver advertises via background service.');
+    DropDebugLog.i.add(
+      'BT',
+      'BLE ready — starting scan (sender mode). Receiver advertises via background service.',
+    );
     _startScanning();
     // Sender does NOT advertise — they scan only.
     // The receiver's beacon is broadcast by the Android ForegroundService
@@ -277,15 +295,19 @@ class _DropSheetState extends State<DropSheet>
 
       if (gap >= _kAutoSelectRssiGap) {
         // Top device is clearly closest — auto-select silently.
-        DropDebugLog.i.add('SHEET',
-            'Auto-selecting @${best.gattPayload?.zendtag} (RSSI gap=${gap}dBm > ${_kAutoSelectRssiGap}dBm threshold)',
-            level: DropLogLevel.ok);
+        DropDebugLog.i.add(
+          'SHEET',
+          'Auto-selecting @${best.gattPayload?.zendtag} (RSSI gap=${gap}dBm > ${_kAutoSelectRssiGap}dBm threshold)',
+          level: DropLogLevel.ok,
+        );
         _onReceiverConfirmed(best);
       } else {
         // Too close to call — show the disambiguation list.
         if (_stage != DropStage.disambiguate) {
-          DropDebugLog.i.add('SHEET',
-              '${confirmedList.length} devices within ${_kAutoSelectRssiGap}dBm — showing disambiguation list');
+          DropDebugLog.i.add(
+            'SHEET',
+            '${confirmedList.length} devices within ${_kAutoSelectRssiGap}dBm — showing disambiguation list',
+          );
           setState(() {
             _candidates = confirmedList;
             _stage = DropStage.disambiguate;
@@ -310,9 +332,11 @@ class _DropSheetState extends State<DropSheet>
       _previewTimeoutTimer = Timer(_kPreviewTimeout, () {
         if (!mounted) return;
         if (_stage == DropStage.preview) {
-          DropDebugLog.i.add('SHEET',
-              'Preview timed out (${_kPreviewTimeout.inSeconds}s) — GATT may have failed. Resetting to scan.',
-              level: DropLogLevel.warn);
+          DropDebugLog.i.add(
+            'SHEET',
+            'Preview timed out (${_kPreviewTimeout.inSeconds}s) — GATT may have failed. Resetting to scan.',
+            level: DropLogLevel.warn,
+          );
           setState(() {
             _confirmedReceiver = null;
             _stage = DropStage.scanning;
@@ -333,13 +357,20 @@ class _DropSheetState extends State<DropSheet>
     final nonce = receiver.gattPayload?.nonce;
     // If this nonce was already rejected/consumed, skip and keep scanning.
     if (nonce != null && _exhaustedNonces.contains(nonce)) {
-      DropDebugLog.i.add('SHEET',
-          'Skipping stale/consumed nonce ${nonce.substring(0, 8)}… — waiting for fresh beacon',
-          level: DropLogLevel.warn);
+      DropDebugLog.i.add(
+        'SHEET',
+        'Skipping stale/consumed nonce ${nonce.substring(0, 8)}… — waiting for fresh beacon',
+        level: DropLogLevel.warn,
+      );
       return;
     }
-    final tag = receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
-    DropDebugLog.i.add('SHEET', 'Receiver confirmed: @$tag — routing to tier stage', level: DropLogLevel.ok);
+    final tag =
+        receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
+    DropDebugLog.i.add(
+      'SHEET',
+      'Receiver confirmed: @$tag — routing to tier stage',
+      level: DropLogLevel.ok,
+    );
     setState(() => _confirmedReceiver = receiver);
 
     // Pause discoverable advertising while acting as sender. Every exit from
@@ -422,8 +453,10 @@ class _DropSheetState extends State<DropSheet>
         // entered PIN against the cached keypair without a server round-trip,
         // then still sign with the cache (avoids a second decrypt).
         final model = ZendScope.of(context);
-        final valid = await model.signingPolicyService
-            .verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           _onPinRejected(lockOnMaxAttempts: true);
           return;
@@ -447,7 +480,10 @@ class _DropSheetState extends State<DropSheet>
       if (lockOnMaxAttempts) {
         ZendScope.read(context).appLockService.lock();
       }
-      setState(() => _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.');
+      setState(
+        () => _errorMessage =
+            'Too many incorrect PIN attempts. Please unlock again.',
+      );
       _goTo(DropStage.error);
     } else {
       _shakeController.forward(from: 0);
@@ -469,7 +505,10 @@ class _DropSheetState extends State<DropSheet>
   /// Never called directly by a tier-confirmation stage; always reached via
   /// [_startSigning]/[_submitPin] so a signing credential is guaranteed.
   Future<void> _performTransfer({String? pin, Uint8List? keypairBytes}) async {
-    DropDebugLog.i.add('XFER', 'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}');
+    DropDebugLog.i.add(
+      'XFER',
+      'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}',
+    );
     _goTo(DropStage.processing);
     // BleAdvertiserService is no longer used from the sheet.
     // Discoverability is paused via _discoverabilityService in _onReceiverConfirmed.
@@ -502,7 +541,11 @@ class _DropSheetState extends State<DropSheet>
     } on PinDecryptionException {
       rethrow;
     } on ApiException catch (e) {
-      DropDebugLog.i.add('XFER', 'API error: ${e.userMessage}', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'XFER',
+        'API error: ${e.userMessage}',
+        level: DropLogLevel.error,
+      );
       if (!mounted) return;
 
       // Nonce-specific errors: the beacon is stale or already used.
@@ -513,9 +556,11 @@ class _DropSheetState extends State<DropSheet>
           e.errorCode == 'INVALID_NONCE') {
         final staleNonce = _confirmedReceiver?.gattPayload?.nonce;
         if (staleNonce != null) _exhaustedNonces.add(staleNonce);
-        DropDebugLog.i.add('XFER',
-            'Nonce ${staleNonce?.substring(0, 8) ?? '?'}… is ${e.errorCode} — returning to scan for fresh beacon',
-            level: DropLogLevel.warn);
+        DropDebugLog.i.add(
+          'XFER',
+          'Nonce ${staleNonce?.substring(0, 8) ?? '?'}… is ${e.errorCode} — returning to scan for fresh beacon',
+          level: DropLogLevel.warn,
+        );
         // Resume discoverability so the receiver can still be found (also
         // restarts the scan and clears the stale candidate).
         _returnToScanning();
@@ -528,7 +573,11 @@ class _DropSheetState extends State<DropSheet>
       setState(() => _errorMessage = e.userMessage);
       _goTo(DropStage.error);
     } catch (e) {
-      DropDebugLog.i.add('XFER', 'Unexpected error: $e', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'XFER',
+        'Unexpected error: $e',
+        level: DropLogLevel.error,
+      );
       if (!mounted) return;
       _resumeDiscoverability();
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
@@ -647,7 +696,8 @@ class _DropSheetState extends State<DropSheet>
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap: () => setState(() => _showDebugPanel = !_showDebugPanel),
+                        onTap: () =>
+                            setState(() => _showDebugPanel = !_showDebugPanel),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 16, top: 4),
                           child: Text(
@@ -806,7 +856,8 @@ class _DropSheetState extends State<DropSheet>
           amountFormatted: widget.amount == widget.amount.roundToDouble()
               ? '\$${widget.amount.toStringAsFixed(0)}'
               : '\$${widget.amount.toStringAsFixed(2)}',
-          recipientZendtag: _confirmedReceiver?.gattPayload?.zendtag ??
+          recipientZendtag:
+              _confirmedReceiver?.gattPayload?.zendtag ??
               _confirmedReceiver?.preview?.zendtag ??
               '?',
           note: _noteController.text.trim(),
@@ -828,8 +879,8 @@ class _DropSheetState extends State<DropSheet>
           senderInitial: model.currentZendtag?.isNotEmpty == true
               ? model.currentZendtag![0].toUpperCase()
               : (model.currentDisplayName?.isNotEmpty == true
-                  ? model.currentDisplayName![0].toUpperCase()
-                  : 'Y'),
+                    ? model.currentDisplayName![0].toUpperCase()
+                    : 'Y'),
         );
 
       case DropStage.success:
@@ -891,7 +942,9 @@ class _NoteField extends StatelessWidget {
       child: AnimatedSize(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        child: expanded ? _buildExpanded(context, zt) : _buildCollapsed(context, zt),
+        child: expanded
+            ? _buildExpanded(context, zt)
+            : _buildCollapsed(context, zt),
       ),
     );
   }
@@ -900,8 +953,8 @@ class _NoteField extends StatelessWidget {
     final hasNote = controller.text.trim().isNotEmpty;
     final preview = hasNote
         ? (controller.text.trim().length > 30
-            ? '${controller.text.trim().substring(0, 30)}…'
-            : controller.text.trim())
+              ? '${controller.text.trim().substring(0, 30)}…'
+              : controller.text.trim())
         : null;
 
     return GestureDetector(
@@ -912,7 +965,11 @@ class _NoteField extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsRegular.notePencil, size: 16, color: zt.textSecondary),
+            Icon(
+              PhosphorIconsRegular.notePencil,
+              size: 16,
+              color: zt.textSecondary,
+            ),
             const SizedBox(width: 4),
             Text(
               hasNote ? preview! : 'Add note',
@@ -972,9 +1029,12 @@ class _NoteField extends StatelessWidget {
               builder: (_, value, _) {
                 return Text(
                   '${value.text.length}/100',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: value.text.length >= 90
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: value.text.length >= 90
                         ? zt.destructive
-                        : zt.textSecondary),
+                        : zt.textSecondary,
+                  ),
                 );
               },
             ),
@@ -983,8 +1043,11 @@ class _NoteField extends StatelessWidget {
               onTap: onToggle,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(PhosphorIconsRegular.caretUp,
-                    size: 18, color: zt.textSecondary),
+                child: Icon(
+                  PhosphorIconsRegular.caretUp,
+                  size: 18,
+                  color: zt.textSecondary,
+                ),
               ),
             ),
           ],

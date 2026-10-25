@@ -85,12 +85,12 @@ class PoolParticipant {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'display_name': displayName,
-        'user_id': userId,
-        'contribution': contribution,
-        'is_external': isExternal,
-      };
+    'id': id,
+    'display_name': displayName,
+    'user_id': userId,
+    'contribution': contribution,
+    'is_external': isExternal,
+  };
 }
 
 class Pool {
@@ -144,17 +144,16 @@ class Pool {
     return Pool(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      targetAmount:
-          (json['target_amount_usdc'] as num?)?.toDouble() ?? 0.0,
-      gathered:
-          (json['gathered_amount_usdc'] as num?)?.toDouble() ?? 0.0,
+      targetAmount: (json['target_amount_usdc'] as num?)?.toDouble() ?? 0.0,
+      gathered: (json['gathered_amount_usdc'] as num?)?.toDouble() ?? 0.0,
       status: _poolStatusFromString(json['status'] as String? ?? 'active'),
       creatorUserId: json['creator_user_id'] as String? ?? '',
       creatorZendtag: json['creator_zendtag'] as String? ?? '',
       participants: participantsJson
           .map((p) => PoolParticipant.fromJson(p as Map<String, dynamic>))
           .toList(),
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
       deadline: json['deadline'] != null
           ? DateTime.tryParse(json['deadline'] as String)
@@ -163,25 +162,26 @@ class Pool {
           ? DateTime.tryParse(json['completed_at'] as String)
           : null,
       shortCode: json['short_code'] as String?,
-      allowOpenContributions: json['allow_open_contributions'] as bool? ?? false,
+      allowOpenContributions:
+          json['allow_open_contributions'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'target_amount_usdc': targetAmount,
-        'gathered_amount_usdc': gathered,
-        'status': _poolStatusToString(status),
-        'creator_user_id': creatorUserId,
-        'creator_zendtag': creatorZendtag,
-        'participants': participants.map((p) => p.toJson()).toList(),
-        'created_at': createdAt.toIso8601String(),
-        'deadline': deadline?.toIso8601String(),
-        'completed_at': completedAt?.toIso8601String(),
-        'short_code': shortCode,
-        'allow_open_contributions': allowOpenContributions,
-      };
+    'id': id,
+    'name': name,
+    'target_amount_usdc': targetAmount,
+    'gathered_amount_usdc': gathered,
+    'status': _poolStatusToString(status),
+    'creator_user_id': creatorUserId,
+    'creator_zendtag': creatorZendtag,
+    'participants': participants.map((p) => p.toJson()).toList(),
+    'created_at': createdAt.toIso8601String(),
+    'deadline': deadline?.toIso8601String(),
+    'completed_at': completedAt?.toIso8601String(),
+    'short_code': shortCode,
+    'allow_open_contributions': allowOpenContributions,
+  };
 }
 
 // ── Message types ─────────────────────────────────────────────────────────────
@@ -240,6 +240,7 @@ class PoolMessage {
   final String poolId;
   final String? senderZendtag;
   final String? senderUserId;
+
   /// CDN URL of the sender's profile photo.
   final String? senderAvatarUrl;
   final PoolMessageType messageType;
@@ -251,26 +252,26 @@ class PoolMessage {
   final DateTime createdAt;
 
   factory PoolMessage.fromJson(Map<String, dynamic> json) {
-    final reactionsJson =
-        (json['reactions'] as List<dynamic>?) ?? <dynamic>[];
+    final reactionsJson = (json['reactions'] as List<dynamic>?) ?? <dynamic>[];
     return PoolMessage(
       id: json['id'] as String? ?? '',
       poolId: json['pool_id'] as String? ?? '',
       senderZendtag: json['sender_zendtag'] as String?,
       senderUserId: json['sender_user_id'] as String?,
       senderAvatarUrl: json['sender_avatar_url'] as String?,
-      messageType:
-          _messageTypeFromString(json['message_type'] as String? ?? 'text'),
+      messageType: _messageTypeFromString(
+        json['message_type'] as String? ?? 'text',
+      ),
       content: json['content'] as String?,
       contributionId: json['contribution_id'] as String?,
       voiceNoteUrl: json['voice_note_url'] as String?,
-      voiceNoteDurationSeconds:
-          (json['voice_note_duration_seconds'] as num?)?.toInt(),
+      voiceNoteDurationSeconds: (json['voice_note_duration_seconds'] as num?)
+          ?.toInt(),
       reactions: reactionsJson
-          .map((r) =>
-              PoolReactionCount.fromJson(r as Map<String, dynamic>))
+          .map((r) => PoolReactionCount.fromJson(r as Map<String, dynamic>))
           .toList(),
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
   }

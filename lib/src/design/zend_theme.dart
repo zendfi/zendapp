@@ -101,7 +101,10 @@ ThemeData buildZendTheme() {
     scaffoldBackgroundColor: ZendColors.bgPrimary,
     textTheme: textTheme,
     splashFactory: InkRipple.splashFactory,
-    dividerTheme: const DividerThemeData(color: ZendColors.border, thickness: 1),
+    dividerTheme: const DividerThemeData(
+      color: ZendColors.border,
+      thickness: 1,
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: ZendColors.bgSecondary,
@@ -210,7 +213,7 @@ ThemeData buildZendDarkTheme() {
     useMaterial3: true,
     fontFamily: 'Geist',
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF52B788), 
+      primary: Color(0xFF52B788),
       secondary: Color(0xFF95D5B2),
       surface: Color(0xFF0D0D0D),
       onPrimary: Color(0xFF0D0D0D),

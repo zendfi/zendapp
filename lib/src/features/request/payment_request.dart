@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 enum PaymentRequestStatus { pending, paid, expired }
 
 class RequestCustomisation {
-  const RequestCustomisation({
-    this.personalNote = '',
-    this.themeColor,
-  });
+  const RequestCustomisation({this.personalNote = '', this.themeColor});
 
   final String personalNote;
   final Color? themeColor;
@@ -34,8 +31,10 @@ class PaymentRequest {
   final DateTime? expiryDate;
   final RequestCustomisation? customisation;
   final PaymentRequestStatus status;
+
   /// Set when the request was sent to a specific Zend user.
   final String? recipientZendtag;
+
   /// Set when the request was emailed to an external address.
   final String? recipientEmail;
 }

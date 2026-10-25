@@ -24,8 +24,8 @@ class EmailIntentService {
   EmailIntentService({
     required ApiClient apiClient,
     required WalletService walletService,
-  })  : _apiClient = apiClient,
-        _walletService = walletService;
+  }) : _apiClient = apiClient,
+       _walletService = walletService;
 
   /// Creates an email intent.
   ///
@@ -76,7 +76,9 @@ class EmailIntentService {
       // - A compromised backend cannot sweep any pending intent's funds.
       final approveTxSig = await _walletService.buildAndSubmitSplApprove(
         senderKeypairBytes: senderKeypairBytes,
-        delegatePubkeyB58: base58encode(ekPub.bytes), // ek_pub is the SPL delegate
+        delegatePubkeyB58: base58encode(
+          ekPub.bytes,
+        ), // ek_pub is the SPL delegate
         amountUsdc: amountUsdc,
         pin: pin ?? '',
       );
@@ -107,9 +109,15 @@ class EmailIntentService {
       return result;
     } finally {
       // Zero sensitive bytes regardless of success or failure
-      for (var i = 0; i < ekPrivBytes.length; i++) { ekPrivBytes[i] = 0; }
-      for (var i = 0; i < ekPrivSeed.length; i++) { ekPrivSeed[i] = 0; }
-      for (var i = 0; i < senderKeypairBytes.length; i++) { senderKeypairBytes[i] = 0; }
+      for (var i = 0; i < ekPrivBytes.length; i++) {
+        ekPrivBytes[i] = 0;
+      }
+      for (var i = 0; i < ekPrivSeed.length; i++) {
+        ekPrivSeed[i] = 0;
+      }
+      for (var i = 0; i < senderKeypairBytes.length; i++) {
+        senderKeypairBytes[i] = 0;
+      }
     }
   }
 
@@ -145,11 +153,17 @@ class EmailIntentService {
     );
 
     final nonceBytes = Uint8List.fromList(nonce);
-    final ciphertextBytes = Uint8List.fromList(secretBox.concatenation(nonce: false));
+    final ciphertextBytes = Uint8List.fromList(
+      secretBox.concatenation(nonce: false),
+    );
 
     final packed = Uint8List(nonceBytes.length + ciphertextBytes.length)
       ..setRange(0, nonceBytes.length, nonceBytes)
-      ..setRange(nonceBytes.length, nonceBytes.length + ciphertextBytes.length, ciphertextBytes);
+      ..setRange(
+        nonceBytes.length,
+        nonceBytes.length + ciphertextBytes.length,
+        ciphertextBytes,
+      );
 
     return base64.encode(packed);
   }

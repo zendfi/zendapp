@@ -5,6 +5,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import 'vibe_sticker_catalog.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 class VibeSendResult {
   const VibeSendResult({
@@ -23,7 +24,7 @@ Future<VibeSendResult?> showVibePickerSheet(
   BuildContext context, {
   required String roomId,
 }) {
-  return showModalBottomSheet<VibeSendResult>(
+  return showZendModalSheet<VibeSendResult>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: false,
@@ -65,9 +66,13 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
   void initState() {
     super.initState();
     _slideCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 220));
-    _slideAnim = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(1, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
     _loadStickers();
   }
 
@@ -135,12 +140,14 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
   void _send() {
     if (_selectedSticker == null) return;
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop(VibeSendResult(
-      stickerId: _selectedSticker!.id,
-      stickerEmoji: _selectedSticker!.emoji,
-      stickerLabel: _selectedSticker!.label,
-      amountUsdc: _amount,
-    ));
+    Navigator.of(context).pop(
+      VibeSendResult(
+        stickerId: _selectedSticker!.id,
+        stickerEmoji: _selectedSticker!.emoji,
+        stickerLabel: _selectedSticker!.label,
+        amountUsdc: _amount,
+      ),
+    );
   }
 
   // ── UI helpers ───────────────────────────────────────────────────────────
@@ -159,7 +166,12 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),
       ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + (bottomInset > 0 ? 0 : bottomPad)),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        16 + (bottomInset > 0 ? 0 : bottomPad),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,7 +181,8 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: zt.border,
@@ -182,7 +195,11 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
                   if (_step != _VibeStep.amount)
                     GestureDetector(
                       onTap: () => _goToStep(_VibeStep.values[_step.index - 1]),
-                      child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textSecondary, size: 20),
+                      child: Icon(
+                        PhosphorIconsRegular.caretLeft,
+                        color: zt.textSecondary,
+                        size: 20,
+                      ),
                     ),
                   if (_step != _VibeStep.amount) const SizedBox(width: 8),
                   Expanded(
@@ -202,17 +219,18 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
                   ),
                   // Step indicators
                   Row(
-                    children: List.generate(3, (i) => Container(
-                      width: i == _step.index ? 16 : 6,
-                      height: 6,
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: BoxDecoration(
-                        color: i == _step.index
-                            ? zt.accent
-                            : zt.border,
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    children: List.generate(
+                      3,
+                      (i) => Container(
+                        width: i == _step.index ? 16 : 6,
+                        height: 6,
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          color: i == _step.index ? zt.accent : zt.border,
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                 ],
               ),
@@ -222,36 +240,38 @@ class _VibePickerSheetState extends State<_VibePickerSheet>
 
           // ── Step content ──
           SlideTransition(
-            position: _step.index > 0 ? _slideAnim : const AlwaysStoppedAnimation(Offset.zero),
+            position: _step.index > 0
+                ? _slideAnim
+                : const AlwaysStoppedAnimation(Offset.zero),
             child: switch (_step) {
               _VibeStep.amount => _AmountStep(
-                  zt: zt,
-                  amount: _amount,
-                  customMode: _customMode,
-                  customCtrl: _customCtrl,
-                  amountError: _amountError,
-                  onIncrement: _increment,
-                  onDecrement: _decrement,
-                  onToggleCustom: () => setState(() {
-                    _customMode = !_customMode;
-                    _amountError = null;
-                  }),
-                  onConfirm: _confirmAmount,
-                ),
+                zt: zt,
+                amount: _amount,
+                customMode: _customMode,
+                customCtrl: _customCtrl,
+                amountError: _amountError,
+                onIncrement: _increment,
+                onDecrement: _decrement,
+                onToggleCustom: () => setState(() {
+                  _customMode = !_customMode;
+                  _amountError = null;
+                }),
+                onConfirm: _confirmAmount,
+              ),
               _VibeStep.sticker => _StickerStep(
-                  zt: zt,
-                  stickers: _stickers,
-                  loading: _loadingStickers,
-                  selected: _selectedSticker,
-                  onSelect: (s) => setState(() => _selectedSticker = s),
-                  onConfirm: _confirmSticker,
-                ),
+                zt: zt,
+                stickers: _stickers,
+                loading: _loadingStickers,
+                selected: _selectedSticker,
+                onSelect: (s) => setState(() => _selectedSticker = s),
+                onConfirm: _confirmSticker,
+              ),
               _VibeStep.preview => _PreviewStep(
-                  zt: zt,
-                  amount: _amount,
-                  sticker: _selectedSticker,
-                  onSend: _send,
-                ),
+                zt: zt,
+                amount: _amount,
+                sticker: _selectedSticker,
+                onSend: _send,
+              ),
             },
           ),
         ],
@@ -299,13 +319,18 @@ class _AmountStep extends StatelessWidget {
               GestureDetector(
                 onTap: onDecrement,
                 child: Container(
-                  width: 48, height: 48,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: zt.bgPrimary,
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(PhosphorIconsRegular.minusCircle, size: 22, color: zt.textSecondary),
+                  child: Icon(
+                    PhosphorIconsRegular.minusCircle,
+                    size: 22,
+                    color: zt.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(width: 24),
@@ -325,13 +350,18 @@ class _AmountStep extends StatelessWidget {
               GestureDetector(
                 onTap: onIncrement,
                 child: Container(
-                  width: 48, height: 48,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: zt.bgPrimary,
                     shape: BoxShape.circle,
                     border: Border.all(color: zt.border),
                   ),
-                  child: Icon(PhosphorIconsRegular.plusCircle, size: 22, color: zt.accent),
+                  child: Icon(
+                    PhosphorIconsRegular.plusCircle,
+                    size: 22,
+                    color: zt.accent,
+                  ),
                 ),
               ),
             ],
@@ -340,7 +370,10 @@ class _AmountStep extends StatelessWidget {
           Center(
             child: Text(
               '\$0.01 – \$5.00 · amount is hidden from recipient until revealed',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 10,
+                color: zt.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -350,23 +383,41 @@ class _AmountStep extends StatelessWidget {
             decoration: BoxDecoration(
               color: zt.bgPrimary,
               borderRadius: BorderRadius.circular(ZendRadii.lg),
-              border: Border.all(color: amountError != null ? ZendColors.destructive : zt.border),
+              border: Border.all(
+                color: amountError != null ? ZendColors.destructive : zt.border,
+              ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Text('\$', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textSecondary)),
+                Text(
+                  '\$',
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 20,
+                    color: zt.textSecondary,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
                     controller: customCtrl,
                     autofocus: true,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 20,
+                      color: zt.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: '0.00',
-                      hintStyle: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textSecondary.withValues(alpha: 0.4)),
-                      border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                      hintStyle: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 20,
+                        color: zt.textSecondary.withValues(alpha: 0.4),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
@@ -376,7 +427,14 @@ class _AmountStep extends StatelessWidget {
           if (amountError != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(amountError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: ZendColors.destructive)),
+              child: Text(
+                amountError!,
+                style: const TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 11,
+                  color: ZendColors.destructive,
+                ),
+              ),
             ),
           const SizedBox(height: 4),
         ],
@@ -403,12 +461,18 @@ class _AmountStep extends StatelessWidget {
             backgroundColor: zt.accent,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: Text(
             'Choose a sticker',
-            style: const TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -437,7 +501,14 @@ class _StickerStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(strokeWidth: 2)));
+    if (loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -463,17 +534,24 @@ class _StickerStep extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
                 decoration: BoxDecoration(
-                  color: isSelected ? zt.accent.withValues(alpha: 0.15) : zt.bgPrimary,
+                  color: isSelected
+                      ? zt.accent.withValues(alpha: 0.15)
+                      : zt.bgPrimary,
                   borderRadius: BorderRadius.circular(ZendRadii.lg),
                   border: Border.all(
-                    color: isSelected ? zt.accent : zt.border.withValues(alpha: 0.5),
+                    color: isSelected
+                        ? zt.accent
+                        : zt.border.withValues(alpha: 0.5),
                     width: isSelected ? 2 : 1,
                   ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(sticker.emoji, style: TextStyle(fontSize: isSelected ? 28 : 24)),
+                    Text(
+                      sticker.emoji,
+                      style: TextStyle(fontSize: isSelected ? 28 : 24),
+                    ),
                     const SizedBox(height: 3),
                     Text(
                       sticker.label,
@@ -481,7 +559,9 @@ class _StickerStep extends StatelessWidget {
                         fontFamily: 'Geist',
                         fontSize: 9,
                         color: isSelected ? zt.accent : zt.textSecondary,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.normal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -499,10 +579,19 @@ class _StickerStep extends StatelessWidget {
             backgroundColor: selected != null ? zt.accent : zt.border,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: const Text('Preview', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
+          child: const Text(
+            'Preview',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ],
     );
@@ -538,7 +627,10 @@ class _PreviewStep extends StatelessWidget {
               Text(sticker?.emoji ?? '✨', style: const TextStyle(fontSize: 64)),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: zt.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -546,13 +638,21 @@ class _PreviewStep extends StatelessWidget {
                 ),
                 child: Text(
                   '\$${amount.toStringAsFixed(2)} hidden ✨',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.accent, fontWeight: FontWeight.w600),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 13,
+                    color: zt.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Amount revealed when recipient taps',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
               ),
             ],
           ),
@@ -563,7 +663,9 @@ class _PreviewStep extends StatelessWidget {
             backgroundColor: zt.accent,
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ZendRadii.pill),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           child: Row(
@@ -571,7 +673,14 @@ class _PreviewStep extends StatelessWidget {
             children: [
               Text(sticker?.emoji ?? '✨', style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Text('Send Vibe', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w700)),
+              const Text(
+                'Send Vibe',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
         ),

@@ -81,98 +81,105 @@ class _DropCountdownStageState extends State<DropCountdownStage>
         : 'Y';
 
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 16),
+        // Sender → receiver row
+        Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 16),
-            // Sender → receiver row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            ZendAvatar(
+              radius: 20,
+              photoUrl: senderAvatarUrl,
+              initials: senderInitial,
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward, size: 16, color: zt.textSecondary),
+            const SizedBox(width: 8),
+            ZendAvatar(
+              radius: 20,
+              photoUrl: widget.receiver.preview?.avatarUrl,
+              initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Sending $_amountFormatted',
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontWeight: FontWeight.w700,
+            fontSize: 28,
+            color: zt.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'to @$_zendtag',
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 16,
+            color: zt.textSecondary,
+          ),
+        ),
+        if (widget.note != null && widget.note!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            widget.note!,
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 12,
+              color: zt.textSecondary,
+            ),
+          ),
+        ],
+        const SizedBox(height: 28),
+        // Countdown ring with avatar
+        SizedBox(
+          key: _ringKey,
+          width: 80,
+          height: 80,
+          child: AnimatedBuilder(
+            animation: _countdownCtrl,
+            builder: (context, _) => Stack(
+              alignment: Alignment.center,
               children: [
-                ZendAvatar(radius: 20, photoUrl: senderAvatarUrl, initials: senderInitial),
-                const SizedBox(width: 8),
-                Icon(Icons.arrow_forward, size: 16, color: zt.textSecondary),
-                const SizedBox(width: 8),
+                CircularProgressIndicator(
+                  value: _countdownCtrl.value,
+                  strokeWidth: 4,
+                  color: zt.accentBright,
+                  backgroundColor: zt.border,
+                ),
                 ZendAvatar(
-                  radius: 20,
+                  radius: 28,
                   photoUrl: widget.receiver.preview?.avatarUrl,
-                  initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+                  initials: _zendtag.isNotEmpty
+                      ? _zendtag[0].toUpperCase()
+                      : null,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Sending $_amountFormatted',
+          ),
+        ),
+        const SizedBox(height: 24),
+        GestureDetector(
+          onTap: () {
+            _countdownCtrl.stop();
+            widget.onCancel();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              'Cancel',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
-                fontSize: 28,
-                color: zt.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'to @$_zendtag',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 16,
+                fontSize: 14,
                 color: zt.textSecondary,
               ),
             ),
-            if (widget.note != null && widget.note!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                widget.note!,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
-              ),
-            ],
-            const SizedBox(height: 28),
-            // Countdown ring with avatar
-            SizedBox(
-              key: _ringKey,
-              width: 80,
-              height: 80,
-              child: AnimatedBuilder(
-                animation: _countdownCtrl,
-                builder: (context, _) => Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: _countdownCtrl.value,
-                      strokeWidth: 4,
-                      color: zt.accentBright,
-                      backgroundColor: zt.border,
-                    ),
-                    ZendAvatar(
-                      radius: 28,
-                      photoUrl: widget.receiver.preview?.avatarUrl,
-                      initials: _zendtag.isNotEmpty
-                          ? _zendtag[0].toUpperCase()
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: () {
-                _countdownCtrl.stop();
-                widget.onCancel();
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    color: zt.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        );
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 }

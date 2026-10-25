@@ -94,13 +94,10 @@ class CreateLockRequest {
   final double amountUsd;
   final String unlockDate; // ISO 8601 date
 
-  const CreateLockRequest({
-    required this.amountUsd,
-    required this.unlockDate,
-  });
+  const CreateLockRequest({required this.amountUsd, required this.unlockDate});
 
   Map<String, dynamic> toJson() => {
-        'amount_usd': amountUsd,
-        'unlock_date': unlockDate,
-      };
+    'amount_usd': amountUsd,
+    'unlock_date': unlockDate,
+  };
 }

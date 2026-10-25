@@ -6,6 +6,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_models.dart';
 import '../send/send_flow_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
@@ -22,7 +23,7 @@ Future<void> showTransactionReceipt(
 }) {
   // Zend-to-zend transfer
   if (tx.entry != null) {
-    return showModalBottomSheet<void>(
+    return showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -33,7 +34,7 @@ Future<void> showTransactionReceipt(
   }
 
   if (tx.bankOrder != null) {
-    return showModalBottomSheet<void>(
+    return showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -57,26 +58,25 @@ class _ReceiptSheet extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final isSent = entry.senderZendtag == model.currentZendtag;
-    final counterparty =
-        isSent ? entry.recipientZendtag : entry.senderZendtag;
+    final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
     final isConfirmed = entry.status == 'confirmed';
     final isPending = entry.status == 'pending';
 
     final statusColor = isConfirmed
         ? ZendColors.positive
         : isPending
-            ? ZendColors.accentPop
-            : ZendColors.destructive;
+        ? ZendColors.accentPop
+        : ZendColors.destructive;
     final statusIcon = isConfirmed
         ? PhosphorIconsRegular.checkCircle
         : isPending
-            ? PhosphorIconsRegular.hourglass
-            : PhosphorIconsRegular.xCircle;
+        ? PhosphorIconsRegular.hourglass
+        : PhosphorIconsRegular.xCircle;
     final statusLabel = isConfirmed
         ? 'Confirmed'
         : isPending
-            ? 'Processing'
-            : 'Failed';
+        ? 'Processing'
+        : 'Failed';
 
     final rawAmount = entry.amountUsdc;
     final amountDouble = double.tryParse(rawAmount) ?? 0.0;
@@ -90,8 +90,9 @@ class _ReceiptSheet extends StatelessWidget {
       height: screenHeight,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(ZendRadii.xxl),
+        ),
       ),
       child: Column(
         children: [
@@ -150,11 +151,12 @@ class _ReceiptSheet extends StatelessWidget {
                     Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: zt.bgSecondary,
-                          borderRadius:
-                              BorderRadius.circular(ZendRadii.pill),
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
                         ),
                         child: Text(
                           '"${entry.note}"',
@@ -238,8 +240,18 @@ class _ReceiptSheet extends StatelessWidget {
   String _formatDate(DateTime dt) {
     final local = dt.toLocal();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
     final minute = local.minute.toString().padLeft(2, '0');
@@ -348,13 +360,13 @@ class _BankSendReceiptSheet extends StatelessWidget {
     final statusColor = isSent
         ? ZendColors.positive
         : status == 'failed'
-            ? ZendColors.destructive
-            : ZendColors.accentPop;
+        ? ZendColors.destructive
+        : ZendColors.accentPop;
     final statusIcon = isSent
         ? PhosphorIconsRegular.checkCircle
         : status == 'failed'
-            ? PhosphorIconsRegular.xCircle
-            : PhosphorIconsRegular.hourglass;
+        ? PhosphorIconsRegular.xCircle
+        : PhosphorIconsRegular.hourglass;
     final statusLabel = switch (status) {
       'completed' => 'Delivered',
       'paid' => 'Sent',
@@ -383,8 +395,9 @@ class _BankSendReceiptSheet extends StatelessWidget {
       height: screenHeight,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(ZendRadii.xxl),
+        ),
       ),
       child: Column(
         children: [
@@ -430,7 +443,10 @@ class _BankSendReceiptSheet extends StatelessWidget {
                     Center(
                       child: Text(
                         '$fiatSymbol${_formatFiatValue(fiatAmount, fiatCurrency)} $fiatCurrency',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 15,
+                          color: zt.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -441,8 +457,8 @@ class _BankSendReceiptSheet extends StatelessWidget {
                       accountName != null && accountName.isNotEmpty
                           ? 'Sent to $accountName'
                           : bankName.isNotEmpty
-                              ? 'Sent to $bankName'
-                              : 'Bank transfer',
+                          ? 'Sent to $bankName'
+                          : 'Bank transfer',
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,
@@ -472,8 +488,13 @@ class _BankSendReceiptSheet extends StatelessWidget {
                           Divider(color: zt.border, height: 1),
                         ],
                         // Account number
-                        if (accountMasked != null && accountMasked.isNotEmpty) ...[
-                          _DetailRow(label: 'Account', value: accountMasked, mono: true),
+                        if (accountMasked != null &&
+                            accountMasked.isNotEmpty) ...[
+                          _DetailRow(
+                            label: 'Account',
+                            value: accountMasked,
+                            mono: true,
+                          ),
                           Divider(color: zt.border, height: 1),
                         ],
                         // Rail
@@ -485,7 +506,10 @@ class _BankSendReceiptSheet extends StatelessWidget {
                           Divider(color: zt.border, height: 1),
                         ],
                         // Date
-                        _DetailRow(label: 'Date', value: _formatDate(createdAt)),
+                        _DetailRow(
+                          label: 'Date',
+                          value: _formatDate(createdAt),
+                        ),
                         Divider(color: zt.border, height: 1),
                         // Status
                         _DetailRow(
@@ -530,8 +554,18 @@ class _BankSendReceiptSheet extends StatelessWidget {
   String _formatDate(DateTime dt) {
     final local = dt.toLocal();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
     final minute = local.minute.toString().padLeft(2, '0');

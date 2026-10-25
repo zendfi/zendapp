@@ -98,7 +98,10 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Expanded(
@@ -106,12 +109,21 @@ class _PoolDetailScreenState extends State<PoolDetailScreen> {
                       _pool.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
                   IconButton(
                     onPressed: () => showPoolSheet(context, pool: _pool),
-                    icon: Icon(PhosphorIconsRegular.usersThree, color: zt.textSecondary, size: 22),
+                    icon: Icon(
+                      PhosphorIconsRegular.usersThree,
+                      color: zt.textSecondary,
+                      size: 22,
+                    ),
                     tooltip: 'Pool details',
                   ),
                 ],

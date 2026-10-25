@@ -4,6 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Shared PIN entry stage widget, extracted from SendFlowSheet for reuse
 /// in QrPaymentSheet and other payment flows.
@@ -623,7 +624,7 @@ class VisibilityPill extends StatelessWidget {
 
   Future<void> _showOptions(BuildContext context) async {
     final zt = ZendTheme.of(context);
-    final picked = await showModalBottomSheet<TransferVisibility>(
+    final picked = await showZendModalSheet<TransferVisibility>(
       context: context,
       backgroundColor: zt.bgCard,
       shape: const RoundedRectangleBorder(

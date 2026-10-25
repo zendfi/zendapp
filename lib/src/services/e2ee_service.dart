@@ -44,10 +44,7 @@ class E2eeService {
 
   // Algorithms from the `cryptography` package
   static final _x25519 = X25519();
-  static final _hkdf = Hkdf(
-    hmac: Hmac.sha256(),
-    outputLength: 32,
-  );
+  static final _hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
   static final _chacha = Chacha20.poly1305Aead();
 
   // Cache derived symmetric keys per room to avoid re-deriving on every message
@@ -109,9 +106,10 @@ class E2eeService {
   Future<void> _registerPubkeyWithRetry(String walletAddress) async {
     for (var attempt = 0; attempt <= _registerRetryDelays.length; attempt++) {
       try {
-        await _apiClient.dio.put('/api/zend/users/me/pubkey', data: {
-          'ed25519_public_key': walletAddress,
-        });
+        await _apiClient.dio.put(
+          '/api/zend/users/me/pubkey',
+          data: {'ed25519_public_key': walletAddress},
+        );
         _pubkeyRegisteredThisSession = true;
         return;
       } catch (e) {
@@ -121,7 +119,9 @@ class E2eeService {
           // debugging only; never surface this to the user mid-flow.
           assert(() {
             // ignore: avoid_print
-            print('E2EE: Failed to register pubkey after ${attempt + 1} attempts: $e');
+            print(
+              'E2EE: Failed to register pubkey after ${attempt + 1} attempts: $e',
+            );
             return true;
           }());
           return;
@@ -245,7 +245,9 @@ class E2eeService {
       );
 
       // Wire format: nonce (12 bytes) || ciphertext || tag
-      final combined = Uint8List(12 + box.cipherText.length + box.mac.bytes.length);
+      final combined = Uint8List(
+        12 + box.cipherText.length + box.mac.bytes.length,
+      );
       combined.setRange(0, 12, nonce);
       combined.setRange(12, 12 + box.cipherText.length, box.cipherText);
       combined.setRange(
@@ -281,22 +283,21 @@ class E2eeService {
 
     try {
       final combined = base64Decode(wireContent.substring(kE2eePrefix.length));
-      if (combined.length < 12 + 16) return null; // nonce(12) + min Poly1305 tag(16)
+      if (combined.length < 12 + 16) {
+        return null; // nonce(12) + min Poly1305 tag(16)
+      }
 
       final nonceBytes = combined.sublist(0, 12);
 
       // Split ciphertext and MAC (last 16 bytes is Poly1305 tag)
       final cipherTextWithTag = combined.sublist(12);
       final cipherText = cipherTextWithTag.sublist(
-        0, cipherTextWithTag.length - 16,
+        0,
+        cipherTextWithTag.length - 16,
       );
       final mac = Mac(cipherTextWithTag.sublist(cipherTextWithTag.length - 16));
 
-      final box = SecretBox(
-        cipherText,
-        nonce: nonceBytes,
-        mac: mac,
-      );
+      final box = SecretBox(cipherText, nonce: nonceBytes, mac: mac);
 
       final plainBytes = await _chacha.decrypt(box, secretKey: key);
       return utf8.decode(plainBytes);
@@ -334,8 +335,10 @@ class E2eeService {
   }
 
   /// The finite field prime p = 2^255 - 19 used by both Curve25519 and Ed25519.
-  static final BigInt _p =
-      BigInt.parse('7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed', radix: 16);
+  static final BigInt _p = BigInt.parse(
+    '7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed',
+    radix: 16,
+  );
 
   /// Converts a compressed Ed25519 public key (little-endian, sign bit in the
   /// top bit of the last byte) to the Montgomery u-coordinate used by X25519,
@@ -409,10 +412,7 @@ class E2eeService {
           break;
         }
       }
-      return Uint8List.fromList([
-        ...List.filled(leadingZeros, 0),
-        ...bytes,
-      ]);
+      return Uint8List.fromList([...List.filled(leadingZeros, 0), ...bytes]);
     } catch (_) {
       return null;
     }

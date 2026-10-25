@@ -13,6 +13,7 @@ import 'manage_sheet.dart';
 import 'pool.dart';
 import 'pool_progress_bar.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// The Pool Sheet — ZEND BETA spec §34 (LOCKED wireframe): name,
 /// gathered/target, progress bar, Contribute button, participant list.
@@ -24,11 +25,8 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// cases, and the target-reached / pool-closed state (spec §38-39): the
 /// financial lifecycle can end (no more Contribute) while the chat this
 /// sheet sits on top of remains fully writable.
-Future<void> showPoolSheet(
-  BuildContext context, {
-  required Pool pool,
-}) {
-  return showModalBottomSheet<void>(
+Future<void> showPoolSheet(BuildContext context, {required Pool pool}) {
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -127,7 +125,9 @@ class _PoolSheetState extends State<PoolSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -140,7 +140,10 @@ class _PoolSheetState extends State<PoolSheet> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                      icon: Icon(
+                        PhosphorIconsRegular.caretLeft,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     const Spacer(),
                     // Admin entry point — spec §40: "The exact
@@ -149,7 +152,11 @@ class _PoolSheetState extends State<PoolSheet> {
                     if (isCreator && isActive)
                       IconButton(
                         onPressed: _openManage,
-                        icon: Icon(PhosphorIconsRegular.gearSix, color: zt.textSecondary, size: 20),
+                        icon: Icon(
+                          PhosphorIconsRegular.gearSix,
+                          color: zt.textSecondary,
+                          size: 20,
+                        ),
                         tooltip: 'Manage pool',
                       ),
                     if (_pool.shortCode != null)
@@ -158,7 +165,11 @@ class _PoolSheetState extends State<PoolSheet> {
                           'Join my Zend pool: https://zdfi.me/pool/${_pool.shortCode}',
                           subject: _pool.name,
                         ),
-                        icon: Icon(PhosphorIconsRegular.share, color: zt.textSecondary, size: 20),
+                        icon: Icon(
+                          PhosphorIconsRegular.share,
+                          color: zt.textSecondary,
+                          size: 20,
+                        ),
                         tooltip: 'Share pool link',
                       ),
                   ],
@@ -173,7 +184,12 @@ class _PoolSheetState extends State<PoolSheet> {
                       Center(
                         child: Text(
                           _pool.name,
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: zt.textPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -183,13 +199,22 @@ class _PoolSheetState extends State<PoolSheet> {
                           children: [
                             Text(
                               _pool.formattedGathered,
-                              style: TextStyle(fontFamily: 'Geist', fontSize: 32, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                                color: zt.textPrimary,
+                              ),
                             ),
                             if (hasTarget) ...[
                               const SizedBox(height: 2),
                               Text(
                                 'of ${_pool.formattedTarget}',
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textSecondary,
+                                ),
                               ),
                             ],
                           ],
@@ -197,7 +222,11 @@ class _PoolSheetState extends State<PoolSheet> {
                       ),
                       if (hasTarget) ...[
                         const SizedBox(height: 16),
-                        PoolProgressBar(progress: _pool.progress, style: PoolProgressBarStyle.line, height: 8),
+                        PoolProgressBar(
+                          progress: _pool.progress,
+                          style: PoolProgressBarStyle.line,
+                          height: 8,
+                        ),
                       ],
                       const SizedBox(height: 20),
 
@@ -205,7 +234,10 @@ class _PoolSheetState extends State<PoolSheet> {
                       if (!isActive)
                         Container(
                           margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: zt.bgSecondary,
                             borderRadius: BorderRadius.circular(ZendRadii.lg),
@@ -214,10 +246,14 @@ class _PoolSheetState extends State<PoolSheet> {
                             _pool.status == PoolStatus.completed
                                 ? 'Target reached. Pool closed — no further contributions can be made. Chat remains open.'
                                 : _pool.status == PoolStatus.cancelled
-                                    ? 'Pool closed. No further contributions can be made. Chat remains open.'
-                                    : 'Pool expired. No further contributions can be made. Chat remains open.',
+                                ? 'Pool closed. No further contributions can be made. Chat remains open.'
+                                : 'Pool expired. No further contributions can be made. Chat remains open.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         )
                       else
@@ -227,11 +263,16 @@ class _PoolSheetState extends State<PoolSheet> {
                         // for every active participant.
                         Padding(
                           padding: const EdgeInsets.only(bottom: 20),
-                          child: PrimaryButton(label: 'Contribute', onPressed: _openContribute),
+                          child: PrimaryButton(
+                            label: 'Contribute',
+                            onPressed: _openContribute,
+                          ),
                         ),
 
                       // ── Open-contribution link (spec §6.3-6.4) ──
-                      if (isActive && _pool.allowOpenContributions && _pool.shortCode != null)
+                      if (isActive &&
+                          _pool.allowOpenContributions &&
+                          _pool.shortCode != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 20),
                           child: OutlineActionButton(
@@ -261,25 +302,51 @@ class _PoolSheetState extends State<PoolSheet> {
 
   Widget _buildParticipantRow(PoolParticipant p) {
     final zt = ZendTheme.of(context);
-    final contribution = p.contribution == 0 ? '\$0.00' : '\$${p.contribution.toStringAsFixed(2)}';
+    final contribution = p.contribution == 0
+        ? '\$0.00'
+        : '\$${p.contribution.toStringAsFixed(2)}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          ZendAvatar(radius: 16, photoUrl: p.avatarUrl, initials: p.avatarLabel),
+          ZendAvatar(
+            radius: 16,
+            photoUrl: p.avatarUrl,
+            initials: p.avatarLabel,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary)),
+                Text(
+                  p.displayName,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    color: zt.textPrimary,
+                  ),
+                ),
                 if (p.isExternal)
-                  Text('external', style: TextStyle(fontFamily: 'Geist', fontSize: 11, color: zt.textSecondary)),
+                  Text(
+                    'external',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 11,
+                      color: zt.textSecondary,
+                    ),
+                  ),
               ],
             ),
           ),
-          Text(contribution, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
+          Text(
+            contribution,
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 13,
+              color: zt.textPrimary,
+            ),
+          ),
         ],
       ),
     );

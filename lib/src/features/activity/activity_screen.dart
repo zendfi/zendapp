@@ -88,9 +88,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           onToggleView: () => _setMode(_modeThreaded),
         );
       case _modeGraph:
-        return GraphViewScreen(
-          onToggleView: () => _setMode(_modeThreaded),
-        );
+        return GraphViewScreen(onToggleView: () => _setMode(_modeThreaded));
       default:
         return ThreadedActivityScreen(
           onToggleView: () => _setMode(_modeLegacy),

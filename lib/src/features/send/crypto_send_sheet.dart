@@ -13,10 +13,13 @@ import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
-Future<void> showCryptoSendSheet(BuildContext context,
-    {required double amount}) {
-  return showModalBottomSheet(
+Future<void> showCryptoSendSheet(
+  BuildContext context, {
+  required double amount,
+}) {
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -28,14 +31,7 @@ Future<void> showCryptoSendSheet(BuildContext context,
   );
 }
 
-enum CryptoSendStage {
-  chainAndAddress,
-  quote,
-  pin,
-  processing,
-  success,
-  error,
-}
+enum CryptoSendStage { chainAndAddress, quote, pin, processing, success, error }
 
 class CryptoSendSheet extends StatefulWidget {
   const CryptoSendSheet({super.key, required this.amount});
@@ -80,16 +76,16 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticOut,
-    ));
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadChains());
   }
@@ -160,8 +156,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
     return '\$${widget.amount.toStringAsFixed(2)}';
   }
 
-  String get _amountFormattedExact =>
-      '\$${widget.amount.toStringAsFixed(2)}';
+  String get _amountFormattedExact => '\$${widget.amount.toStringAsFixed(2)}';
 
   String _truncateAddress(String address) {
     if (address.length <= 16) return address;
@@ -230,14 +225,18 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       final model = ZendScope.of(context);
       final cache = WalletSessionCache.instance;
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
             setState(() {
-              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _errorMessage =
+                  'Too many incorrect PIN attempts. Please unlock again.';
               _stage = CryptoSendStage.error;
             });
           } else {
@@ -291,13 +290,14 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       // and zend-to-zend transfers: user signs, server co-signs as fee-payer.
       final String signedTx;
       if (keypairBytes != null) {
-        signedTx = await model.walletService.buildAndSignTransactionToAddressFromCache(
-          keypairBytes: keypairBytes,
-          amountUsdc: widget.amount,
-          destinationAddress: quote.dextopusDepositAddress,
-          blockhash: quote.blockhash,
-          feePayerAddress: quote.feePayer,
-        );
+        signedTx = await model.walletService
+            .buildAndSignTransactionToAddressFromCache(
+              keypairBytes: keypairBytes,
+              amountUsdc: widget.amount,
+              destinationAddress: quote.dextopusDepositAddress,
+              blockhash: quote.blockhash,
+              feePayerAddress: quote.feePayer,
+            );
       } else {
         signedTx = await model.walletService.buildAndSignTransactionToAddress(
           pin: pin!,
@@ -406,8 +406,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
 
   Widget _buildChainAndAddressStage() {
     final zt = ZendTheme.of(context);
-    final canGetQuote = _selectedChain != null &&
-        _addressController.text.trim().isNotEmpty;
+    final canGetQuote =
+        _selectedChain != null && _addressController.text.trim().isNotEmpty;
 
     return KeyedSubtree(
       key: const ValueKey('chainAndAddress'),
@@ -432,8 +432,11 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Search chains...',
-                prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass,
-                    size: 20, color: zt.textSecondary),
+                prefixIcon: Icon(
+                  PhosphorIconsRegular.magnifyingGlass,
+                  size: 20,
+                  color: zt.textSecondary,
+                ),
                 filled: true,
                 fillColor: zt.bgSecondary,
                 border: OutlineInputBorder(
@@ -471,13 +474,14 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   itemCount: _filteredChains.length,
                   itemBuilder: (context, i) {
                     final chain = _filteredChains[i];
-                    final displayName =
-                        chain['display_name'] as String? ?? '';
+                    final displayName = chain['display_name'] as String? ?? '';
                     final symbol = chain['symbol'] as String? ?? '';
-                    final isSelected = _selectedChain != null &&
+                    final isSelected =
+                        _selectedChain != null &&
                         _selectedChain!['chain_id'] == chain['chain_id'];
-                    final avatarLabel =
-                        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+                    final avatarLabel = displayName.isNotEmpty
+                        ? displayName[0].toUpperCase()
+                        : '?';
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -486,16 +490,18 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                         onTap: () => setState(() => _selectedChain = chain),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? zt.accent.withValues(alpha: 0.08)
                                 : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(ZendRadii.md),
+                            borderRadius: BorderRadius.circular(ZendRadii.md),
                             border: isSelected
                                 ? Border.all(
-                                    color: zt.accent.withValues(alpha: 0.3))
+                                    color: zt.accent.withValues(alpha: 0.3),
+                                  )
                                 : null,
                           ),
                           child: Row(
@@ -516,8 +522,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       displayName,
@@ -530,14 +535,21 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                     ),
                                     Text(
                                       symbol,
-                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                                      style: ZendTextStyles.tabularNumeric
+                                          .copyWith(
+                                            fontSize: 12,
+                                            color: zt.textSecondary,
+                                          ),
                                     ),
                                   ],
                                 ),
                               ),
                               if (isSelected)
-                                Icon(PhosphorIconsRegular.checkCircle,
-                                    size: 18, color: zt.accent),
+                                Icon(
+                                  PhosphorIconsRegular.checkCircle,
+                                  size: 18,
+                                  color: zt.accent,
+                                ),
                             ],
                           ),
                         ),
@@ -614,8 +626,11 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _quote = null;
                   _stage = CryptoSendStage.chainAndAddress;
                 }),
-                child: Icon(PhosphorIconsRegular.caretLeft,
-                    color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -651,13 +666,13 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
             const SizedBox(height: 8),
             Text(
               _truncateAddress(address),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 12,
+                color: zt.textSecondary,
+              ),
             ),
             const Spacer(),
-            PrimaryButton(
-              label: 'Confirm',
-              onPressed: _proceedFromQuote,
-            ),
+            PrimaryButton(label: 'Confirm', onPressed: _proceedFromQuote),
           ],
         ),
       ),
@@ -686,8 +701,11 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   _pinError = null;
                   _stage = CryptoSendStage.quote;
                 }),
-                child: Icon(PhosphorIconsRegular.caretLeft,
-                    color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -733,10 +751,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               ),
             ),
             const Spacer(),
-            _CryptoPinKeypad(
-              onTap: _onPinKey,
-              keyHeight: compact ? 56 : 64,
-            ),
+            _CryptoPinKeypad(onTap: _onPinKey, keyHeight: compact ? 56 : 64),
             SizedBox(height: compact ? 4 : 12),
           ],
         ),
@@ -801,7 +816,11 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                   color: ZendColors.destructive,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+                child: const Icon(
+                  PhosphorIconsRegular.xCircle,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -914,8 +933,11 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
                   color: ZendColors.positive,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+                child: const Icon(
+                  PhosphorIconsRegular.checkCircle,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -940,10 +962,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: 'Done',
-                onPressed: widget.onDone,
-              ),
+              child: PrimaryButton(label: 'Done', onPressed: widget.onDone),
             ),
           ],
         ),
@@ -997,12 +1016,7 @@ class _CryptoPinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [

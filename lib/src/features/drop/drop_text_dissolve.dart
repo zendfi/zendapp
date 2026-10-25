@@ -60,6 +60,7 @@ class DropTextDissolve extends StatefulWidget {
 
   final double width;
   final double height;
+
   /// Fraction 0→1 of the canvas height where the text centre is drawn.
   /// Default 0.54. Override when the widget canvas is taller than the text zone.
   final double textYFraction;

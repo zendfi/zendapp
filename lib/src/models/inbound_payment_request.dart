@@ -40,7 +40,9 @@ class InboundPaymentRequest {
       linkUrl: json['link_url'] as String? ?? '',
       amountUsdc: (json['amount_usdc'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'pending',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       requesterZendtag: json['requester_zendtag'] as String? ?? '',
       requesterDisplayName: json['requester_display_name'] as String? ?? '',
       description: json['description'] as String?,

@@ -9,7 +9,20 @@ import '../profile/user_profile_screen.dart';
 import 'activity_grouping.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-const _kPublicFeedEmojis = ['🔥', '💰', '🙏', '👑', '😭', '⚡', '🎯', '💸', '🎉', '👀', '✅', '🚀'];
+const _kPublicFeedEmojis = [
+  '🔥',
+  '💰',
+  '🙏',
+  '👑',
+  '😭',
+  '⚡',
+  '🎯',
+  '💸',
+  '🎉',
+  '👀',
+  '✅',
+  '🚀',
+];
 
 /// Answers "where do users see public posts?" — a dedicated feed of every
 /// Shared_Network Activity_Edge the viewer is authorized to see via a
@@ -37,7 +50,9 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
   void initState() {
     super.initState();
     _filterController.addListener(() {
-      setState(() => _filterQuery = _filterController.text.toLowerCase().trim());
+      setState(
+        () => _filterQuery = _filterController.text.toLowerCase().trim(),
+      );
     });
     // Fetch suggestions lazily on first open
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -62,7 +77,9 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
         _filterController.clear();
         _filterFocus.unfocus();
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _filterFocus.requestFocus());
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _filterFocus.requestFocus(),
+        );
       }
     });
   }
@@ -72,10 +89,11 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
 
-    final allPublic = model.threadedActivityEdges
-        .where((e) => !e.isDirectParticipant)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final allPublic =
+        model.threadedActivityEdges
+            .where((e) => !e.isDirectParticipant)
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     final publicEdges = _filterQuery.isEmpty
         ? allPublic
@@ -101,7 +119,10 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   Expanded(
                     child: Column(
@@ -110,11 +131,19 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       children: [
                         Text(
                           'Public',
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: zt.textPrimary,
+                          ),
                         ),
                         Text(
                           "Activity your mutuals have shared",
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 11,
+                            color: zt.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -122,7 +151,9 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                   IconButton(
                     onPressed: _toggleFilter,
                     icon: Icon(
-                      _filterActive ? PhosphorIconsRegular.magnifyingGlassMinus : PhosphorIconsRegular.magnifyingGlass,
+                      _filterActive
+                          ? PhosphorIconsRegular.magnifyingGlassMinus
+                          : PhosphorIconsRegular.magnifyingGlass,
                       color: _filterActive ? zt.accent : zt.textSecondary,
                     ),
                     tooltip: _filterActive ? 'Clear filter' : 'Filter feed',
@@ -141,20 +172,39 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                       child: TextField(
                         controller: _filterController,
                         focusNode: _filterFocus,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Filter by @handle or note…',
-                          hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                          hintStyle: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            color: zt.textSecondary,
+                          ),
+                          prefixIcon: Icon(
+                            PhosphorIconsRegular.magnifyingGlass,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
                           suffixIcon: _filterQuery.isNotEmpty
                               ? GestureDetector(
                                   onTap: () => _filterController.clear(),
-                                  child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                                  child: Icon(
+                                    PhosphorIconsRegular.xCircle,
+                                    size: 18,
+                                    color: zt.textSecondary,
+                                  ),
                                 )
                               : null,
                           filled: true,
                           fillColor: zt.bgSecondary,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(ZendRadii.pill),
                             borderSide: BorderSide.none,
@@ -182,14 +232,19 @@ class _PublicFeedScreenState extends State<PublicFeedScreen> {
                               ? 'No public activity matching "$_filterQuery"'
                               : "Nothing public yet. When one of your mutuals shares an activity with their network, it shows up here.",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            color: zt.textSecondary,
+                          ),
                         ),
                       ),
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: publicEdges.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final edge = publicEdges[i];
                         return _PublicPostRow(
@@ -221,9 +276,12 @@ class _PublicPostRowState extends State<_PublicPostRow> {
 
   String get _edgeKindStr {
     switch (widget.edge.edgeKind) {
-      case ActivityEdgeKind.zendTransfer:      return 'zend_transfer';
-      case ActivityEdgeKind.poolContribution:  return 'pool_contribution';
-      case ActivityEdgeKind.requestFulfillment: return 'request_fulfillment';
+      case ActivityEdgeKind.zendTransfer:
+        return 'zend_transfer';
+      case ActivityEdgeKind.poolContribution:
+        return 'pool_contribution';
+      case ActivityEdgeKind.requestFulfillment:
+        return 'request_fulfillment';
     }
   }
 
@@ -237,7 +295,8 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     final model = ZendScope.of(context);
     try {
       final reactions = await model.activityDataService.getEdgeReactions(
-        _edgeKindStr, widget.edge.edgeId,
+        _edgeKindStr,
+        widget.edge.edgeId,
       );
       if (mounted) setState(() => _reactions = reactions);
     } catch (_) {
@@ -262,21 +321,39 @@ class _PublicPostRowState extends State<_PublicPostRow> {
         if (newCount <= 0) {
           updated.removeAt(idx);
         } else {
-          updated[idx] = EdgeReactionCount(emoji: emoji, count: newCount, reactedByMe: false);
+          updated[idx] = EdgeReactionCount(
+            emoji: emoji,
+            count: newCount,
+            reactedByMe: false,
+          );
         }
       } else if (idx != -1) {
-        updated[idx] = EdgeReactionCount(emoji: emoji, count: updated[idx].count + 1, reactedByMe: true);
+        updated[idx] = EdgeReactionCount(
+          emoji: emoji,
+          count: updated[idx].count + 1,
+          reactedByMe: true,
+        );
       } else {
-        updated.add(EdgeReactionCount(emoji: emoji, count: 1, reactedByMe: true));
+        updated.add(
+          EdgeReactionCount(emoji: emoji, count: 1, reactedByMe: true),
+        );
       }
       _reactions = updated;
     });
 
     try {
       if (alreadyReacted) {
-        await model.activityDataService.removeEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
+        await model.activityDataService.removeEdgeReaction(
+          _edgeKindStr,
+          widget.edge.edgeId,
+          emoji,
+        );
       } else {
-        await model.activityDataService.addEdgeReaction(_edgeKindStr, widget.edge.edgeId, emoji);
+        await model.activityDataService.addEdgeReaction(
+          _edgeKindStr,
+          widget.edge.edgeId,
+          emoji,
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -290,7 +367,12 @@ class _PublicPostRowState extends State<_PublicPostRow> {
         // convention as the existing comment-post failure toast.
         setState(() => _reactions = preOptimistic);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't react — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -310,11 +392,17 @@ class _PublicPostRowState extends State<_PublicPostRow> {
       if (globalOffset.dy - pickerHeight - 12 > 60) {
         topPosition = globalOffset.dy - pickerHeight - 12;
       } else {
-        topPosition = (globalOffset.dy + msgHeight + 12).clamp(60.0, screenHeight - pickerHeight - 60);
+        topPosition = (globalOffset.dy + msgHeight + 12).clamp(
+          60.0,
+          screenHeight - pickerHeight - 60,
+        );
       }
     }
 
-    final reactedEmojis = _reactions.where((r) => r.reactedByMe).map((r) => r.emoji).toSet();
+    final reactedEmojis = _reactions
+        .where((r) => r.reactedByMe)
+        .map((r) => r.emoji)
+        .toSet();
 
     entry = OverlayEntry(
       builder: (ctx) {
@@ -338,13 +426,18 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: zt.bgElevated,
                       borderRadius: BorderRadius.circular(ZendRadii.pill),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: zt.isDark ? 0.45 : 0.12),
+                          color: Colors.black.withValues(
+                            alpha: zt.isDark ? 0.45 : 0.12,
+                          ),
                           blurRadius: 20,
                           offset: const Offset(0, 6),
                         ),
@@ -360,9 +453,13 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                               _toggleReaction(emoji);
                             },
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                              ),
                               child: AnimatedScale(
-                                scale: reactedEmojis.contains(emoji) ? 1.25 : 1.0,
+                                scale: reactedEmojis.contains(emoji)
+                                    ? 1.25
+                                    : 1.0,
                                 duration: const Duration(milliseconds: 120),
                                 child: Text(
                                   emoji,
@@ -402,7 +499,8 @@ class _PublicPostRowState extends State<_PublicPostRow> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
 
-    final showAmount = !widget.edge.amountHidden && widget.edge.amountUsdc != null;
+    final showAmount =
+        !widget.edge.amountHidden && widget.edge.amountUsdc != null;
     final amountLabel = '\$${widget.edge.amountUsdc ?? '0'}';
     final edge = widget.edge;
     final isVibe = isVibeEdge(edge);
@@ -411,9 +509,15 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     final verb = feedVerbFor(edge);
     final senderTag = edge.senderZendtag;
     final recipientTag = edge.recipientZendtag;
-    final senderLabel = senderTag != null && senderTag.isNotEmpty ? '@$senderTag' : 'Someone';
-    final recipientLabel = recipientTag != null && recipientTag.isNotEmpty ? '@$recipientTag' : 'someone';
-    final senderInitial = senderTag?.isNotEmpty == true ? senderTag![0].toUpperCase() : '?';
+    final senderLabel = senderTag != null && senderTag.isNotEmpty
+        ? '@$senderTag'
+        : 'Someone';
+    final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
+        ? '@$recipientTag'
+        : 'someone';
+    final senderInitial = senderTag?.isNotEmpty == true
+        ? senderTag![0].toUpperCase()
+        : '?';
 
     return GestureDetector(
       // Long-press shows the inline emoji picker anchored near this tile
@@ -427,7 +531,11 @@ class _PublicPostRowState extends State<_PublicPostRow> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ZendAvatar(radius: 18, photoUrl: edge.senderAvatarUrl, initials: senderInitial),
+            ZendAvatar(
+              radius: 18,
+              photoUrl: edge.senderAvatarUrl,
+              initials: senderInitial,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -437,25 +545,45 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   if (isVibe)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textPrimary,
+                        ),
                         children: [
-                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: senderLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const TextSpan(text: ' sent a Vibe ✨ to '),
-                          TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: recipientLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ],
                       ),
                     )
                   else if (isPoolContrib)
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textPrimary,
+                        ),
                         children: [
-                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: senderLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const TextSpan(text: ' contributed to a pool'),
                           if (showAmount)
                             TextSpan(
                               text: ' · $amountLabel',
-                              style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 12),
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                color: zt.textSecondary,
+                                fontSize: 12,
+                              ),
                             ),
                         ],
                       ),
@@ -463,15 +591,28 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   else
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textPrimary,
+                        ),
                         children: [
-                          TextSpan(text: senderLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: senderLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           TextSpan(text: ' $verb '),
-                          TextSpan(text: recipientLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text: recipientLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           if (showAmount)
                             TextSpan(
                               text: ' · $amountLabel',
-                              style: ZendTextStyles.tabularNumeric.copyWith(color: zt.textSecondary, fontSize: 12),
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                color: zt.textSecondary,
+                                fontSize: 12,
+                              ),
                             ),
                         ],
                       ),
@@ -479,7 +620,10 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   const SizedBox(height: 2),
                   Text(
                     _relativeTime(edge.createdAt),
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, color: zt.textSecondary.withValues(alpha: 0.8)),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 10.5,
+                      color: zt.textSecondary.withValues(alpha: 0.8),
+                    ),
                   ),
                   // Note — suppress 'vibe' system tag
                   if (edge.note?.isNotEmpty == true && !isVibe) ...[
@@ -488,7 +632,11 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                       edge.note!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary.withValues(alpha: 0.85)),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textPrimary.withValues(alpha: 0.85),
+                      ),
                     ),
                   ],
                   // ── Reaction pills ──
@@ -502,14 +650,21 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                           GestureDetector(
                             onTap: () => _toggleReaction(r.emoji),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: r.reactedByMe
                                     ? zt.accent.withValues(alpha: 0.18)
                                     : zt.bgPrimary,
-                                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                                borderRadius: BorderRadius.circular(
+                                  ZendRadii.pill,
+                                ),
                                 border: r.reactedByMe
-                                    ? Border.all(color: zt.accent.withValues(alpha: 0.5))
+                                    ? Border.all(
+                                        color: zt.accent.withValues(alpha: 0.5),
+                                      )
                                     : Border.all(color: zt.border),
                               ),
                               child: Text(
@@ -529,7 +684,10 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                     const SizedBox(height: 6),
                     Text(
                       'Hold to react',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: zt.textSecondary.withValues(alpha: 0.4)),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 10,
+                        color: zt.textSecondary.withValues(alpha: 0.4),
+                      ),
                     ),
                   ],
                 ],
@@ -578,14 +736,13 @@ class _SuggestionsStrip extends StatelessWidget {
               final zendtag = s['zendtag'] as String? ?? '';
               final avatarUrl = s['avatar_url'] as String?;
               final mutual = s['mutual_count'] as int? ?? 0;
-              final initial =
-                  zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
+              final initial = zendtag.isNotEmpty
+                  ? zendtag[0].toUpperCase()
+                  : '?';
 
               return GestureDetector(
-                onTap: () => pushZendSlide(
-                  context,
-                  UserProfileScreen(zendtag: zendtag),
-                ),
+                onTap: () =>
+                    pushZendSlide(context, UserProfileScreen(zendtag: zendtag)),
                 child: SizedBox(
                   width: 72,
                   child: Column(
@@ -599,7 +756,11 @@ class _SuggestionsStrip extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '@$zendtag',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9.5, color: zt.textPrimary, fontWeight: FontWeight.w600),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 9.5,
+                          color: zt.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -607,7 +768,10 @@ class _SuggestionsStrip extends StatelessWidget {
                       if (mutual > 0)
                         Text(
                           '$mutual mutual',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: zt.textSecondary),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            color: zt.textSecondary,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,

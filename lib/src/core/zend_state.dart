@@ -1333,8 +1333,7 @@ class ZendAppModel extends ChangeNotifier {
       final response = await transferService.getBalance();
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
-      awaitingDepositBalance =
-          double.tryParse(response.awaitingDeposit) ?? 0.0;
+      awaitingDepositBalance = double.tryParse(response.awaitingDeposit) ?? 0.0;
       lastBalanceError = null;
       // Snapshot the confirmed figure for the next launch. Fire-and-forget:
       // SnapshotCache swallows its own failures and nothing here depends on

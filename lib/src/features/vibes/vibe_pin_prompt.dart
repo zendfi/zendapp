@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/wallet_session_cache.dart';
 import '../send/send_shared_widgets.dart';
+import '../../design/zend_modal.dart';
 
 /// Resolves a signing keypair for a Vibe send, prompting for PIN when
 /// required.
@@ -26,7 +27,9 @@ Future<Uint8List?> resolveVibeSigningKeypair(
 ) async {
   final model = ZendScope.of(context);
   final cache = WalletSessionCache.instance;
-  final needsPin = await model.signingPolicyService.requiresPinForAmount(amountUsdc);
+  final needsPin = await model.signingPolicyService.requiresPinForAmount(
+    amountUsdc,
+  );
 
   if (!needsPin && cache.hasKeypair) {
     return cache.keypair;
@@ -46,7 +49,7 @@ Future<Uint8List?> showVibePinPrompt(
   BuildContext context, {
   required double amountUsdc,
 }) {
-  return showModalBottomSheet<Uint8List>(
+  return showZendModalSheet<Uint8List>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -82,16 +85,16 @@ class _VibePinSheetState extends State<_VibePinSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticOut,
-    ));
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
   }
 
   @override
@@ -124,8 +127,10 @@ class _VibePinSheetState extends State<_VibePinSheet>
 
     try {
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService
-            .verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           _onRejected(lockOnMaxAttempts: true);
           return;

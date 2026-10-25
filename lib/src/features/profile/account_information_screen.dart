@@ -14,7 +14,9 @@ class AccountInformationScreen extends StatelessWidget {
         ? model.currentDisplayName!
         : (model.username.isNotEmpty ? model.username : 'Zend User');
     final zendtag = model.username.isNotEmpty ? '@${model.username}' : '—';
-    final paymentLink = model.username.isNotEmpty ? 'zdfi.me/@${model.username}' : '—';
+    final paymentLink = model.username.isNotEmpty
+        ? 'zdfi.me/@${model.username}'
+        : '—';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -31,20 +33,26 @@ class AccountInformationScreen extends StatelessWidget {
                   children: [
                     _SectionLabel('Your details'),
                     const SizedBox(height: 8),
-                    _InfoGroup(rows: [
-                      _InfoRow(label: 'Full name', value: displayName),
-                      _InfoRow(label: 'Zendtag', value: zendtag),
-                      _InfoRow(label: 'Payment link', value: paymentLink),
-                    ]),
+                    _InfoGroup(
+                      rows: [
+                        _InfoRow(label: 'Full name', value: displayName),
+                        _InfoRow(label: 'Zendtag', value: zendtag),
+                        _InfoRow(label: 'Payment link', value: paymentLink),
+                      ],
+                    ),
                     const SizedBox(height: 24),
                     _SectionLabel('Contact'),
                     const SizedBox(height: 8),
-                    _InfoGroup(rows: [
-                      _InfoRow(
-                        label: 'Email',
-                        value: model.currentUserId != null ? 'On file' : 'Not set',
-                      ),
-                    ]),
+                    _InfoGroup(
+                      rows: [
+                        _InfoRow(
+                          label: 'Email',
+                          value: model.currentUserId != null
+                              ? 'On file'
+                              : 'Not set',
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -107,7 +115,10 @@ class _InfoRow extends StatelessWidget {
           ),
           Text(
             value,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 13,
+              color: zt.textSecondary,
+            ),
           ),
         ],
       ),

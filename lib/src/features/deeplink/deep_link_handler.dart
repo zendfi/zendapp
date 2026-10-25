@@ -57,7 +57,9 @@ class DeepLinkHandler {
         _initialLink = _parse(initialUrl);
       }
     } catch (e) {
-      if (kDebugMode) debugPrint('DeepLinkHandler: failed to get initial link: $e');
+      if (kDebugMode) {
+        debugPrint('DeepLinkHandler: failed to get initial link: $e');
+      }
     }
   }
 

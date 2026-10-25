@@ -122,7 +122,11 @@ class GraphParticipant {
   final String label;
   final String? avatarUrl;
 
-  const GraphParticipant({required this.id, required this.label, this.avatarUrl});
+  const GraphParticipant({
+    required this.id,
+    required this.label,
+    this.avatarUrl,
+  });
 }
 
 /// Req 16.1-16.3: the pure structural transform from a requesting User's
@@ -161,17 +165,23 @@ GraphModel buildRawGraph({
       () => GraphNode(
         id: counterparty.id,
         kind: counterparty.isPool ? GraphNodeKind.pool : GraphNodeKind.user,
-        label: counterparty.isPool ? (counterparty.poolName ?? 'Pool') : counterparty.displayLabel,
+        label: counterparty.isPool
+            ? (counterparty.poolName ?? 'Pool')
+            : counterparty.displayLabel,
         avatarUrl: counterparty.avatarUrl,
       ),
     );
-    graphEdges.add(GraphEdge(
-      id: edge.edgeId,
-      sourceId: selfId,
-      targetId: counterparty.id,
-      amountUsdc: edge.amountHidden ? 0.0 : (double.tryParse(edge.amountUsdc ?? '') ?? 0.0),
-      createdAt: edge.createdAt,
-    ));
+    graphEdges.add(
+      GraphEdge(
+        id: edge.edgeId,
+        sourceId: selfId,
+        targetId: counterparty.id,
+        amountUsdc: edge.amountHidden
+            ? 0.0
+            : (double.tryParse(edge.amountUsdc ?? '') ?? 0.0),
+        createdAt: edge.createdAt,
+      ),
+    );
   }
 
   // Req 16.3: exactly one spoke edge per Pool participant "present in the
@@ -189,12 +199,14 @@ GraphModel buildRawGraph({
           avatarUrl: participant.avatarUrl,
         ),
       );
-      graphEdges.add(GraphEdge(
-        id: 'spoke_${poolId}_${participant.id}',
-        sourceId: poolId,
-        targetId: participant.id,
-        isSpoke: true,
-      ));
+      graphEdges.add(
+        GraphEdge(
+          id: 'spoke_${poolId}_${participant.id}',
+          sourceId: poolId,
+          targetId: participant.id,
+          isSpoke: true,
+        ),
+      );
     }
   }
 
@@ -241,7 +253,11 @@ double recencyScoreForDays(double daysSince, double halfLifeDays) {
   return math.pow(2, -daysSince / halfLifeDays).toDouble();
 }
 
-double _recencyScoreForDate(DateTime lastActivity, DateTime now, double halfLifeDays) {
+double _recencyScoreForDate(
+  DateTime lastActivity,
+  DateTime now,
+  double halfLifeDays,
+) {
   final daysSince = now.difference(lastActivity).inMinutes / (60.0 * 24.0);
   return recencyScoreForDays(daysSince, halfLifeDays);
 }
@@ -285,8 +301,10 @@ PairWeightResult computePairWeights(
     return const PairWeightResult(counterpartyWeights: {}, selfNodeWeight: 0.0);
   }
 
-  final maxFrequency =
-      byCounterparty.values.map((l) => l.length).fold<int>(0, math.max).toDouble();
+  final maxFrequency = byCounterparty.values
+      .map((l) => l.length)
+      .fold<int>(0, math.max)
+      .toDouble();
   final maxAmount = byCounterparty.values
       .map((l) => l.fold<double>(0.0, (s, e) => s + e.amountUsdc))
       .fold<double>(0.0, math.max);
@@ -299,27 +317,43 @@ PairWeightResult computePairWeights(
     final mostRecent = pairEdges
         .map((e) => e.createdAt)
         .whereType<DateTime>()
-        .fold<DateTime?>(null, (latest, dt) => (latest == null || dt.isAfter(latest)) ? dt : latest);
+        .fold<DateTime?>(
+          null,
+          (latest, dt) => (latest == null || dt.isAfter(latest)) ? dt : latest,
+        );
 
     final frequencyScore = normalizedScore(frequency, maxFrequency);
     final amountScore = normalizedScore(amount, maxAmount);
-    final recencyScore =
-        mostRecent != null ? _recencyScoreForDate(mostRecent, effectiveNow, config.recencyHalfLifeDays) : 0.0;
+    final recencyScore = mostRecent != null
+        ? _recencyScoreForDate(
+            mostRecent,
+            effectiveNow,
+            config.recencyHalfLifeDays,
+          )
+        : 0.0;
 
-    weights[entry.key] = config.frequencyWeight * frequencyScore +
+    weights[entry.key] =
+        config.frequencyWeight * frequencyScore +
         config.recencyWeight * recencyScore +
         config.amountWeight * amountScore;
   }
 
   final selfNodeWeight = weights.values.fold<double>(0.0, (s, w) => s + w);
-  return PairWeightResult(counterpartyWeights: weights, selfNodeWeight: selfNodeWeight);
+  return PairWeightResult(
+    counterpartyWeights: weights,
+    selfNodeWeight: selfNodeWeight,
+  );
 }
 
 /// Applies a [PairWeightResult] onto `raw`, producing a new [GraphModel]
 /// with each node/edge's `visualWeight` populated. Pool spoke edges/nodes
 /// keep weight `0.0` — only the self↔counterparty relationship carries a
 /// scored weight per design.md (spokes are structural, not scored).
-GraphModel applyPairWeights(GraphModel raw, PairWeightResult result, {required String selfId}) {
+GraphModel applyPairWeights(
+  GraphModel raw,
+  PairWeightResult result, {
+  required String selfId,
+}) {
   final nodes = raw.nodes.map((n) {
     if (n.id == selfId) return n.copyWith(visualWeight: result.selfNodeWeight);
     final w = result.counterpartyWeights[n.id];
@@ -332,7 +366,11 @@ GraphModel applyPairWeights(GraphModel raw, PairWeightResult result, {required S
     return w != null ? e.copyWith(visualWeight: w) : e;
   }).toList();
 
-  return GraphModel(nodes: nodes, edges: edges, othersDrillDown: raw.othersDrillDown);
+  return GraphModel(
+    nodes: nodes,
+    edges: edges,
+    othersDrillDown: raw.othersDrillDown,
+  );
 }
 
 // ── Top-N / Others clustering (Req 18) ──────────────────────────────────────
@@ -360,8 +398,12 @@ WeightedPartition<T> partitionTopN<T>(
   if (items.length <= n) {
     return WeightedPartition(top: List<T>.of(items), others: const []);
   }
-  final sorted = List<T>.of(items)..sort((a, b) => weightOf(b).compareTo(weightOf(a)));
-  return WeightedPartition(top: sorted.sublist(0, n), others: sorted.sublist(n));
+  final sorted = List<T>.of(items)
+    ..sort((a, b) => weightOf(b).compareTo(weightOf(a)));
+  return WeightedPartition(
+    top: sorted.sublist(0, n),
+    others: sorted.sublist(n),
+  );
 }
 
 /// Req 18.1: applies [partitionTopN] to a weighted (post-`computePairWeights`)
@@ -376,9 +418,15 @@ GraphModel clusterTopN(
   final nodesById = {for (final n in weighted.nodes) n.id: n};
   final selfNode = nodesById[selfId]!;
 
-  final counterpartyNodes = weighted.nodes.where((n) => n.id != selfId && n.kind != GraphNodeKind.others).toList();
+  final counterpartyNodes = weighted.nodes
+      .where((n) => n.id != selfId && n.kind != GraphNodeKind.others)
+      .toList();
 
-  final partition = partitionTopN<GraphNode>(counterpartyNodes, (n) => n.visualWeight, config.displayThreshold);
+  final partition = partitionTopN<GraphNode>(
+    counterpartyNodes,
+    (n) => n.visualWeight,
+    config.displayThreshold,
+  );
 
   final resultNodes = <GraphNode>[selfNode, ...partition.top];
   final resultEdges = <GraphEdge>[];
@@ -396,23 +444,34 @@ GraphModel clusterTopN(
   }
 
   if (partition.others.isNotEmpty) {
-    final othersWeight = partition.others.fold<double>(0.0, (s, n) => s + n.visualWeight);
-    resultNodes.add(GraphNode(
-      id: '__others__',
-      kind: GraphNodeKind.others,
-      label: '${partition.others.length} others',
-      visualWeight: othersWeight,
-      clusteredIds: partition.others.map((n) => n.id).toList(),
-    ));
-    resultEdges.add(GraphEdge(
-      id: '${selfId}___others__',
-      sourceId: selfId,
-      targetId: '__others__',
-      visualWeight: othersWeight,
-    ));
+    final othersWeight = partition.others.fold<double>(
+      0.0,
+      (s, n) => s + n.visualWeight,
+    );
+    resultNodes.add(
+      GraphNode(
+        id: '__others__',
+        kind: GraphNodeKind.others,
+        label: '${partition.others.length} others',
+        visualWeight: othersWeight,
+        clusteredIds: partition.others.map((n) => n.id).toList(),
+      ),
+    );
+    resultEdges.add(
+      GraphEdge(
+        id: '${selfId}___others__',
+        sourceId: selfId,
+        targetId: '__others__',
+        visualWeight: othersWeight,
+      ),
+    );
   }
 
-  return GraphModel(nodes: resultNodes, edges: resultEdges, othersDrillDown: partition.others);
+  return GraphModel(
+    nodes: resultNodes,
+    edges: resultEdges,
+    othersDrillDown: partition.others,
+  );
 }
 
 /// Convenience end-to-end pipeline: raw construction → weighting →
@@ -433,7 +492,12 @@ GraphModel buildGraphModel({
     selfLabel: selfLabel,
     poolParticipants: poolParticipants,
   );
-  final weights = computePairWeights(raw, selfId: selfId, config: config, now: now);
+  final weights = computePairWeights(
+    raw,
+    selfId: selfId,
+    config: config,
+    now: now,
+  );
   final weighted = applyPairWeights(raw, weights, selfId: selfId);
   return clusterTopN(weighted, selfId: selfId, config: config);
 }

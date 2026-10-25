@@ -12,6 +12,7 @@ import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
+import '../../design/zend_modal.dart';
 
 // ── Stage enum ────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ Future<void> showQrPaymentSheet(
   BuildContext context, {
   required QrPaymentIntent intent,
 }) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -42,7 +43,7 @@ Future<void> showQrPaymentSheetFromNavigator(
   NavigatorState navigator, {
   required QrPaymentIntent intent,
 }) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: navigator.context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -109,16 +110,16 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticOut,
-    ));
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
 
     if (intent.requestLinkId != null) {
       // Request link intent — start in loading, fetch details
@@ -129,8 +130,9 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
       _resolvedAmount = intent.amountUsdc;
       _resolvedNote = intent.note;
       _stage = QrPayStage.confirm;
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _fetchFxPreview(_resolvedAmount!));
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _fetchFxPreview(_resolvedAmount!),
+      );
     } else {
       // Open intent — user enters amount
       _stage = QrPayStage.confirm;
@@ -171,8 +173,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
     return '\$${amount.toStringAsFixed(2)}';
   }
 
-  String _formatAmountExact(double amount) =>
-      '\$${amount.toStringAsFixed(2)}';
+  String _formatAmountExact(double amount) => '\$${amount.toStringAsFixed(2)}';
 
   // ── Fetch request link ────────────────────────────────────────────────────
 
@@ -201,7 +202,8 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Could not load payment request. Check your connection.';
+        _errorMessage =
+            'Could not load payment request. Check your connection.';
         _stage = QrPayStage.error;
         _isFetchError = true;
       });
@@ -309,14 +311,18 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
       final cache = WalletSessionCache.instance;
 
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
             setState(() {
-              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _errorMessage =
+                  'Too many incorrect PIN attempts. Please unlock again.';
               _stage = QrPayStage.error;
             });
           } else {
@@ -661,20 +667,21 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
 
     final effectiveAmount = _effectiveAmount;
     final balanceUnknown = balanceLoading && balance == 0.0;
-    final insufficientBalance = !balanceUnknown &&
-        effectiveAmount != null &&
-        effectiveAmount > balance;
+    final insufficientBalance =
+        !balanceUnknown && effectiveAmount != null && effectiveAmount > balance;
 
     bool canConfirm;
     if (_isOpenIntent) {
-      canConfirm = _parsedAmount >= _minOpenIntentUsdc &&
+      canConfirm =
+          _parsedAmount >= _minOpenIntentUsdc &&
           !balanceUnknown &&
           !insufficientBalance;
     } else {
       canConfirm = !balanceUnknown && !insufficientBalance;
     }
 
-    final bool belowMinimum = _isOpenIntent &&
+    final bool belowMinimum =
+        _isOpenIntent &&
         _parsedAmount > 0 &&
         _parsedAmount < _minOpenIntentUsdc;
 
@@ -704,7 +711,10 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                   else
                     Text(
                       '\$${balance.toStringAsFixed(2)}',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: ZendTheme.of(context).textSecondary),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 12,
+                        color: ZendTheme.of(context).textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -751,7 +761,10 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               const SizedBox(height: 4),
               Text(
                 '≈ ₦${_formatNgn(widget.fxPreviewNgn!)}',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: ZendTheme.of(context).textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 14,
+                  color: ZendTheme.of(context).textSecondary,
+                ),
               ),
             ],
             if (widget.resolvedNote != null &&
@@ -796,10 +809,10 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           PrimaryButton(
             label: _isOpenIntent
                 ? (belowMinimum
-                    ? 'Minimum \$0.50'
-                    : _parsedAmount > 0
-                        ? 'Zend ${_formatAmount(_parsedAmount)}'
-                        : 'Enter amount')
+                      ? 'Minimum \$0.50'
+                      : _parsedAmount > 0
+                      ? 'Zend ${_formatAmount(_parsedAmount)}'
+                      : 'Enter amount')
                 : 'Zend ${_formatAmount(widget.resolvedAmount ?? 0)}',
             onPressed: canConfirm ? widget.onConfirm : null,
           ),
@@ -905,12 +918,7 @@ class _AmountKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '.', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'];
 
     return Column(
       children: [

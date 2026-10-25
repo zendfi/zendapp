@@ -36,8 +36,7 @@ class AppLockOverlay extends StatelessWidget {
         return Stack(
           children: [
             child,
-            if (lockService.isLocked)
-              _LockScreen(lockService: lockService),
+            if (lockService.isLocked) _LockScreen(lockService: lockService),
           ],
         );
       },
@@ -83,16 +82,15 @@ class _LockScreenState extends State<_LockScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6.0, end: 4.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6.0, end: 4.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
 
     _fadeController = AnimationController(
       vsync: this,
@@ -119,7 +117,9 @@ class _LockScreenState extends State<_LockScreen>
   }
 
   Future<void> _tryBiometricUnlock() async {
-    if (!_biometricAvailable || _biometricFailures >= _maxBiometricFailures) return;
+    if (!_biometricAvailable || _biometricFailures >= _maxBiometricFailures) {
+      return;
+    }
     if (_loading) return;
 
     final pin = await _biometricService.authenticateAndGetPin();
@@ -197,7 +197,9 @@ class _LockScreenState extends State<_LockScreen>
         WalletSessionCache.instance.store(keypair);
         // Register E2EE pubkey with backend — best-effort, non-blocking.
         unawaited(model.bootstrapE2ee());
-        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+        for (var i = 0; i < keypair.length; i++) {
+          keypair[i] = 0;
+        }
       } catch (_) {}
 
       // Fade out before unlocking so the transition is smooth
@@ -322,14 +324,23 @@ class _LockScreenState extends State<_LockScreen>
                     ),
                   ),
                 ),
-                if (_biometricAvailable && _biometricFailures < _maxBiometricFailures && !_loading && !_isLockedOut) ...[
+                if (_biometricAvailable &&
+                    _biometricFailures < _maxBiometricFailures &&
+                    !_loading &&
+                    !_isLockedOut) ...[
                   TextButton.icon(
                     onPressed: _tryBiometricUnlock,
-                    icon: const Icon(PhosphorIconsRegular.fingerprint, size: 20),
+                    icon: const Icon(
+                      PhosphorIconsRegular.fingerprint,
+                      size: 20,
+                    ),
                     label: const Text('Use biometrics'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0x99E8F4EC),
-                      textStyle: const TextStyle(fontFamily: 'Geist', fontSize: 13),
+                      textStyle: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -365,12 +376,7 @@ class _PinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -434,10 +440,17 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

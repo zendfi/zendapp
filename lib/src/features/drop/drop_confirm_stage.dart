@@ -70,9 +70,10 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
     return '\$${widget.amount.toStringAsFixed(2)}';
   }
 
-  String get _zendtag => widget.receiver.gattPayload?.zendtag 
-      ?? widget.receiver.preview?.zendtag 
-      ?? '?';
+  String get _zendtag =>
+      widget.receiver.gattPayload?.zendtag ??
+      widget.receiver.preview?.zendtag ??
+      '?';
 
   Future<void> _onConfirmTapped() async {
     if (widget.requiresBiometric) {
@@ -117,14 +118,20 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ZendAvatar(radius: 22, photoUrl: senderAvatarUrl, initials: senderInitial),
+              ZendAvatar(
+                radius: 22,
+                photoUrl: senderAvatarUrl,
+                initials: senderInitial,
+              ),
               const SizedBox(width: 10),
               Icon(Icons.arrow_forward, size: 18, color: zt.textSecondary),
               const SizedBox(width: 10),
               ZendAvatar(
                 radius: 22,
                 photoUrl: widget.receiver.preview?.avatarUrl,
-                initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+                initials: _zendtag.isNotEmpty
+                    ? _zendtag[0].toUpperCase()
+                    : null,
               ),
             ],
           ),
@@ -154,7 +161,10 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
             Text(
               widget.note!,
               textAlign: TextAlign.center,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 12,
+                color: zt.textSecondary,
+              ),
             ),
           ],
           const SizedBox(height: 24),
@@ -162,7 +172,10 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
           Text(
             'Auto-cancels in ${_secondsRemaining}s',
             textAlign: TextAlign.center,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 11,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(height: 16),
           // Confirm button
@@ -176,20 +189,22 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
               ),
               alignment: Alignment.center,
               child: _biometricInProgress
-                  ? ZendLoader(
-                      size: 20,
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    )
+                  ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (widget.requiresBiometric) ...[
-                          const Icon(PhosphorIconsRegular.fingerprint, color: Colors.white, size: 18),
+                          const Icon(
+                            PhosphorIconsRegular.fingerprint,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                           const SizedBox(width: 6),
                         ],
                         Text(
-                          widget.requiresBiometric ? 'Confirm with Biometric' : 'Confirm Drop',
+                          widget.requiresBiometric
+                              ? 'Confirm with Biometric'
+                              : 'Confirm Drop',
                           style: const TextStyle(
                             fontFamily: 'Geist',
                             fontSize: 15,

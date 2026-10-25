@@ -110,32 +110,44 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
               trailing: _loading
                   ? null
                   : IconButton(
-                      icon: Icon(PhosphorIconsRegular.arrowsClockwise, color: zt.textSecondary, size: 20),
+                      icon: Icon(
+                        PhosphorIconsRegular.arrowsClockwise,
+                        color: zt.textSecondary,
+                        size: 20,
+                      ),
                       onPressed: _loadStatus,
                     ),
             ),
             const SizedBox(height: 8),
-              if (_loading)
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: GroupedListSkeleton(count: 2, rowHeight: 100),
-                  ),
-                )
-              else
-                Expanded(
-                  child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                child: ZendScrollPage(
+            if (_loading)
+              const Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: GroupedListSkeleton(count: 2, rowHeight: 100),
+                ),
+              )
+            else
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: ZendScrollPage(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _StatusCard(isApproved: _isApproved, kycStatus: _kycStatus, tosStatus: _tosStatus, lastCheckedAt: _lastCheckedAt),
+                        _StatusCard(
+                          isApproved: _isApproved,
+                          kycStatus: _kycStatus,
+                          tosStatus: _tosStatus,
+                          lastCheckedAt: _lastCheckedAt,
+                        ),
                         const SizedBox(height: 20),
 
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+                          decoration: BoxDecoration(
+                            color: zt.bgSecondary,
+                            borderRadius: BorderRadius.circular(ZendRadii.xxl),
+                          ),
                           child: const _InfoSection(),
                         ),
                         const SizedBox(height: 20),
@@ -143,8 +155,20 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                         if (_error != null) ...[
                           Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: ZendColors.destructive.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(ZendRadii.lg)),
-                            child: Text(_error!, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive)),
+                            decoration: BoxDecoration(
+                              color: ZendColors.destructive.withValues(
+                                alpha: 0.08,
+                              ),
+                              borderRadius: BorderRadius.circular(ZendRadii.lg),
+                            ),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13,
+                                color: ZendColors.destructive,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -155,32 +179,69 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                             decoration: BoxDecoration(
                               color: ZendColors.positive.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(ZendRadii.xl),
-                              border: Border.all(color: ZendColors.positive.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: ZendColors.positive.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
                             ),
                             child: const Row(
                               children: [
-                                Icon(PhosphorIconsRegular.identificationBadge, color: ZendColors.positive, size: 24),
+                                Icon(
+                                  PhosphorIconsRegular.identificationBadge,
+                                  color: ZendColors.positive,
+                                  size: 24,
+                                ),
                                 SizedBox(width: 12),
-                                Expanded(child: Text('Your identity is verified. Local payment rails are enabled.', style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: ZendColors.positive, fontWeight: FontWeight.w500))),
+                                Expanded(
+                                  child: Text(
+                                    'Your identity is verified. Local payment rails are enabled.',
+                                    style: TextStyle(
+                                      fontFamily: 'Geist',
+                                      fontSize: 14,
+                                      color: ZendColors.positive,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ] else ...[
                           PrimaryButton(
-                            label: _starting ? 'Starting verification...' : _kycLink != null ? 'Continue verification' : 'Start verification',
-                            onPressed: _starting ? () {} : _kycLink != null ? () => _openKycLink(_kycLink!) : _startKyc,
+                            label: _starting
+                                ? 'Starting verification...'
+                                : _kycLink != null
+                                ? 'Continue verification'
+                                : 'Start verification',
+                            onPressed: _starting
+                                ? () {}
+                                : _kycLink != null
+                                ? () => _openKycLink(_kycLink!)
+                                : _startKyc,
                           ),
                           const SizedBox(height: 12),
                           if (_kycLink != null)
                             TextButton(
                               onPressed: _startKyc,
-                              child: Text('Get a new verification link', style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+                              child: Text(
+                                'Get a new verification link',
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 13,
+                                  color: zt.textSecondary,
+                                ),
+                              ),
                             ),
                           const SizedBox(height: 16),
                           Text(
                             'Verification is powered by Bridge. Your data is encrypted and never shared without your consent.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         ],
                         const SizedBox(height: 8),
@@ -189,9 +250,9 @@ class _BridgeKycScreenState extends State<BridgeKycScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -231,7 +292,12 @@ class _ScreenHeader extends StatelessWidget {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.isApproved, required this.kycStatus, required this.tosStatus, required this.lastCheckedAt});
+  const _StatusCard({
+    required this.isApproved,
+    required this.kycStatus,
+    required this.tosStatus,
+    required this.lastCheckedAt,
+  });
   final bool isApproved;
   final String? kycStatus;
   final String? tosStatus;
@@ -241,52 +307,129 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final statusColor = isApproved ? ZendColors.positive : zt.accent;
-    final statusLabel = isApproved ? 'Verified' : kycStatus == null ? 'Not started' : _humanize(kycStatus!);
+    final statusLabel = isApproved
+        ? 'Verified'
+        : kycStatus == null
+        ? 'Not started'
+        : _humanize(kycStatus!);
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl)),
+      decoration: BoxDecoration(
+        color: zt.bgSecondary,
+        borderRadius: BorderRadius.circular(ZendRadii.xxl),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(ZendRadii.md)),
-              child: Icon(isApproved ? PhosphorIconsRegular.identificationBadge : PhosphorIconsRegular.shield, color: statusColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Verification status', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
-              Text(statusLabel, style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: statusColor)),
-            ]),
-          ]),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(ZendRadii.md),
+                ),
+                child: Icon(
+                  isApproved
+                      ? PhosphorIconsRegular.identificationBadge
+                      : PhosphorIconsRegular.shield,
+                  color: statusColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Verification status',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           if (tosStatus != null) ...[
             const SizedBox(height: 14),
             Divider(color: zt.border, height: 1),
             const SizedBox(height: 14),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Terms of service', style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
-              Text(_humanize(tosStatus!), style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w500, color: zt.textPrimary)),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Terms of service',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 13,
+                    color: zt.textSecondary,
+                  ),
+                ),
+                Text(
+                  _humanize(tosStatus!),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ],
           if (lastCheckedAt != null) ...[
             const SizedBox(height: 8),
-            Text('Last checked: ${_formatDate(lastCheckedAt!)}', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
+            Text(
+              'Last checked: ${_formatDate(lastCheckedAt!)}',
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: zt.textSecondary,
+              ),
+            ),
           ],
         ],
       ),
     );
   }
 
-  String _humanize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).replaceAll('_', ' ');
+  String _humanize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).replaceAll('_', ' ');
 
   String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso).toLocal();
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[dt.month - 1]} ${dt.day}';
-    } catch (_) { return iso; }
+    } catch (_) {
+      return iso;
+    }
   }
 }
 
@@ -299,7 +442,16 @@ class _InfoSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('What verification unlocks', style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: zt.textSecondary)),
+        Text(
+          'What verification unlocks',
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.4,
+            color: zt.textSecondary,
+          ),
+        ),
         const SizedBox(height: 12),
         for (final item in [
           (ZendCountry.us, 'US ACH bank transfers'),
@@ -310,14 +462,30 @@ class _InfoSection extends StatelessWidget {
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Row(children: [
-              ZendCountryFlag(country: item.$1, size: 32),
-              const SizedBox(width: 12),
-              Text(item.$2, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary)),
-            ]),
+            child: Row(
+              children: [
+                ZendCountryFlag(country: item.$1, size: 32),
+                const SizedBox(width: 12),
+                Text(
+                  item.$2,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
         const SizedBox(height: 4),
-        Text('Nigerian bank transfers (NGN) work without verification.', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+        Text(
+          'Nigerian bank transfers (NGN) work without verification.',
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 12,
+            color: zt.textSecondary,
+          ),
+        ),
       ],
     );
   }

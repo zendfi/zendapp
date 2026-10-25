@@ -116,9 +116,7 @@ class BiometricService {
   /// device passcode as a fallback — otherwise a failed fingerprint sensor or a
   /// re-enrolled face would lock the user out of their own account with no way
   /// back in, and the account holds money.
-  Future<bool> authenticateOnly({
-    String reason = 'Unlock Zend!',
-  }) async {
+  Future<bool> authenticateOnly({String reason = 'Unlock Zend!'}) async {
     try {
       return await _auth.authenticate(
         localizedReason: reason,

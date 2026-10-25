@@ -15,6 +15,7 @@ import 'change_pin_screen.dart';
 import 'export_backup_screen.dart';
 import 'recovery_phrase_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Settings > Security screen.
 ///
@@ -75,8 +76,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     final authService = ZendScope.read(context).authService;
 
     final biometricSupported = await _biometric.isAvailable();
-    final biometricEnabled =
-        biometricSupported ? await _biometric.isEnabled() : false;
+    final biometricEnabled = biometricSupported
+        ? await _biometric.isEnabled()
+        : false;
     final isZkLogin = await authService.isZkLoginAccount();
     final appLockEnabled = await _biometric.isAppLockEnabled();
     final snapshot = await _policy.snapshot();
@@ -96,7 +98,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       _pinThresholdEnabled = snapshot.pinThresholdEnabled;
       _pinThresholdAmount = snapshot.pinThresholdAmount;
       _hasRecoveryBackup = hasRecovery;
-      _thresholdController.text = snapshot.pinThresholdAmount.toStringAsFixed(0);
+      _thresholdController.text = snapshot.pinThresholdAmount.toStringAsFixed(
+        0,
+      );
       _loading = false;
     });
   }
@@ -150,7 +154,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   /// a proper bottom sheet that explains the flow with numbered steps.
   void _showBiometricSetupGuide(BuildContext context) {
     final zt = ZendTheme.of(context);
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -182,28 +186,60 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               Row(
                 children: [
                   Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(PhosphorIconsRegular.fingerprint, size: 22, color: zt.accent),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: zt.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      PhosphorIconsRegular.fingerprint,
+                      size: 22,
+                      color: zt.accent,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Text(
                     'Enable biometric unlock',
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               Text(
                 'Biometrics are linked to your PIN on this device. To enable them:',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary, height: 1.4),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textSecondary,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 20),
-              _BiometricStep(number: 1, text: 'Lock the app by pressing the home button or letting the screen time out.', zt: zt),
+              _BiometricStep(
+                number: 1,
+                text:
+                    'Lock the app by pressing the home button or letting the screen time out.',
+                zt: zt,
+              ),
               const SizedBox(height: 14),
-              _BiometricStep(number: 2, text: 'Re-open Zend and enter your PIN on the lock screen.', zt: zt),
+              _BiometricStep(
+                number: 2,
+                text: 'Re-open Zend and enter your PIN on the lock screen.',
+                zt: zt,
+              ),
               const SizedBox(height: 14),
-              _BiometricStep(number: 3, text: 'Tap "Use biometrics" that appears below the keypad after successful PIN entry.', zt: zt),
+              _BiometricStep(
+                number: 3,
+                text:
+                    'Tap "Use biometrics" that appears below the keypad after successful PIN entry.',
+                zt: zt,
+              ),
               const SizedBox(height: 28),
               PrimaryButton(
                 label: 'Got it',
@@ -264,7 +300,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   Text(
                     'Security',
@@ -280,9 +319,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             ),
             const SizedBox(height: 8),
             if (_loading)
-              const Expanded(
-                child: GroupedListSkeleton(count: 4),
-              )
+              const Expanded(child: GroupedListSkeleton(count: 4))
             else
               Expanded(
                 child: SingleChildScrollView(
@@ -301,33 +338,41 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         if (_biometricSupported) ...[
                           _SectionLabel('App lock', zt),
                           const SizedBox(height: 8),
-                          _SettingsGroup(zt: zt, tiles: [
-                            _ToggleTile(
-                              icon: PhosphorIconsRegular.fingerprint,
-                              label: 'Require unlock to open Zend!',
-                              subtitle:
-                                  'Hides your balance and activity behind Face ID, '
-                                  'fingerprint, or your device passcode',
-                              value: _appLockEnabled,
-                              zt: zt,
-                              onChanged: _toggleAppLock,
-                            ),
-                          ]),
+                          _SettingsGroup(
+                            zt: zt,
+                            tiles: [
+                              _ToggleTile(
+                                icon: PhosphorIconsRegular.fingerprint,
+                                label: 'Require unlock to open Zend!',
+                                subtitle:
+                                    'Hides your balance and activity behind Face ID, '
+                                    'fingerprint, or your device passcode',
+                                value: _appLockEnabled,
+                                zt: zt,
+                                onChanged: _toggleAppLock,
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 20),
                         ],
                       ] else ...[
                         // ── PIN section ────────────────────────────────
                         _SectionLabel('PIN', zt),
                         const SizedBox(height: 8),
-                        _SettingsGroup(zt: zt, tiles: [
-                          _Tile(
-                            icon: PhosphorIconsRegular.lockSimple,
-                            label: 'Change PIN',
-                            zt: zt,
-                            onTap: () =>
-                                pushZendSlide(context, const ChangePinScreen()),
-                          ),
-                        ]),
+                        _SettingsGroup(
+                          zt: zt,
+                          tiles: [
+                            _Tile(
+                              icon: PhosphorIconsRegular.lockSimple,
+                              label: 'Change PIN',
+                              zt: zt,
+                              onTap: () => pushZendSlide(
+                                context,
+                                const ChangePinScreen(),
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 20),
                       ],
 
@@ -336,24 +381,27 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       if (_biometricSupported && !_isZkLoginAccount) ...[
                         _SectionLabel('Biometrics', zt),
                         const SizedBox(height: 8),
-                        _SettingsGroup(zt: zt, tiles: [
-                          if (_biometricEnabled)
-                            _ToggleTile(
-                              icon: PhosphorIconsRegular.fingerprint,
-                              label: 'Biometric unlock',
-                              subtitle: 'Tap to disable biometric unlock',
-                              value: true,
-                              zt: zt,
-                              onChanged: _toggleBiometric,
-                            )
-                          else
-                            _Tile(
-                              icon: PhosphorIconsRegular.fingerprint,
-                              label: 'Biometric unlock',
-                              zt: zt,
-                              onTap: () => _showBiometricSetupGuide(context),
-                            ),
-                        ]),
+                        _SettingsGroup(
+                          zt: zt,
+                          tiles: [
+                            if (_biometricEnabled)
+                              _ToggleTile(
+                                icon: PhosphorIconsRegular.fingerprint,
+                                label: 'Biometric unlock',
+                                subtitle: 'Tap to disable biometric unlock',
+                                value: true,
+                                zt: zt,
+                                onChanged: _toggleBiometric,
+                              )
+                            else
+                              _Tile(
+                                icon: PhosphorIconsRegular.fingerprint,
+                                label: 'Biometric unlock',
+                                zt: zt,
+                                onTap: () => _showBiometricSetupGuide(context),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 20),
                       ],
 
@@ -363,119 +411,136 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       // large sends on those accounts is a Google
                       // re-authentication, enforced server-side.
                       if (!_isZkLoginAccount) ...[
-                      _SectionLabel('Payments', zt),
-                      const SizedBox(height: 8),
-                      _SettingsGroup(zt: zt, tiles: [
-                        _ToggleTile(
-                          icon: PhosphorIconsRegular.lockKey,
-                          label: 'Require PIN on every payment',
-                          subtitle:
-                              'Re-enter PIN before every send, regardless of amount',
-                          value: _pinPerPaymentEnabled,
+                        _SectionLabel('Payments', zt),
+                        const SizedBox(height: 8),
+                        _SettingsGroup(
                           zt: zt,
-                          onChanged: _togglePinPerPayment,
+                          tiles: [
+                            _ToggleTile(
+                              icon: PhosphorIconsRegular.lockKey,
+                              label: 'Require PIN on every payment',
+                              subtitle:
+                                  'Re-enter PIN before every send, regardless of amount',
+                              value: _pinPerPaymentEnabled,
+                              zt: zt,
+                              onChanged: _togglePinPerPayment,
+                            ),
+                            _ToggleTile(
+                              icon: PhosphorIconsRegular.receiptX,
+                              label: 'Require PIN for larger sends',
+                              subtitle: _pinThresholdEnabled
+                                  ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
+                                  : 'PIN required for sends over a set amount',
+                              value: _pinThresholdEnabled,
+                              zt: zt,
+                              onChanged: _togglePinThreshold,
+                            ),
+                          ],
                         ),
-                        _ToggleTile(
-                          icon: PhosphorIconsRegular.receiptX,
-                          label: 'Require PIN for larger sends',
-                          subtitle: _pinThresholdEnabled
-                              ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
-                              : 'PIN required for sends over a set amount',
-                          value: _pinThresholdEnabled,
-                          zt: zt,
-                          onChanged: _togglePinThreshold,
-                        ),
-                      ]),
 
-                      // Amount input — only shown when threshold toggle is on
-                      if (_pinThresholdEnabled) ...[
-                        const SizedBox(height: 12),
-                        _AmountInput(
-                          controller: _thresholdController,
-                          zt: zt,
-                          onSaved: _saveThresholdAmount,
-                        ),
-                      ],
+                        // Amount input — only shown when threshold toggle is on
+                        if (_pinThresholdEnabled) ...[
+                          const SizedBox(height: 12),
+                          _AmountInput(
+                            controller: _thresholdController,
+                            zt: zt,
+                            onSaved: _saveThresholdAmount,
+                          ),
+                        ],
 
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Text(
-                          _pinPerPaymentEnabled
-                              ? 'PIN is required before every send.'
-                              : _pinThresholdEnabled
-                                  ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
-                                  : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 12,
-                            color: zt.textSecondary,
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            _pinPerPaymentEnabled
+                                ? 'PIN is required before every send.'
+                                : _pinThresholdEnabled
+                                ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
+                                : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                      // ── Forgot-PIN recovery section ───────────────────
-                      _SectionLabel('If you forget your PIN', zt),
-                      const SizedBox(height: 8),
-                      _SettingsGroup(zt: zt, tiles: [
-                        _Tile(
-                          icon: _hasRecoveryBackup
-                              ? PhosphorIconsRegular.sealCheck
-                              : PhosphorIconsRegular.shield,
-                          label: _hasRecoveryBackup
-                              ? 'Update ID verification'
-                              : 'Set up PIN recovery',
+                        // ── Forgot-PIN recovery section ───────────────────
+                        _SectionLabel('If you forget your PIN', zt),
+                        const SizedBox(height: 8),
+                        _SettingsGroup(
                           zt: zt,
-                          onTap: () {
-                            if (_hasRecoveryBackup) {
-                              pushZendSlide(context,
-                                  const NationalIdEntryScreen());
-                            } else {
-                              pushZendSlide(
-                                  context,
-                                  const RecoverySetupScreen(
-                                      isFirstTime: false));
-                            }
-                          },
+                          tiles: [
+                            _Tile(
+                              icon: _hasRecoveryBackup
+                                  ? PhosphorIconsRegular.sealCheck
+                                  : PhosphorIconsRegular.shield,
+                              label: _hasRecoveryBackup
+                                  ? 'Update ID verification'
+                                  : 'Set up PIN recovery',
+                              zt: zt,
+                              onTap: () {
+                                if (_hasRecoveryBackup) {
+                                  pushZendSlide(
+                                    context,
+                                    const NationalIdEntryScreen(),
+                                  );
+                                } else {
+                                  pushZendSlide(
+                                    context,
+                                    const RecoverySetupScreen(
+                                      isFirstTime: false,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
                         ),
-                      ]),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Text(
-                          _hasRecoveryBackup
-                              ? "PIN recovery is set up. If you forget your PIN, you can verify your ID to get back in."
-                              : "Set this up once so you're never locked out if you forget your PIN.",
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 12,
-                            color: zt.textSecondary,
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            _hasRecoveryBackup
+                                ? "PIN recovery is set up. If you forget your PIN, you can verify your ID to get back in."
+                                : "Set this up once so you're never locked out if you forget your PIN.",
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       ],
 
                       // ── Backup section ────────────────────────────────
                       _SectionLabel('Backup', zt),
                       const SizedBox(height: 8),
-                      _SettingsGroup(zt: zt, tiles: [
-                        _Tile(
-                          icon: PhosphorIconsRegular.download,
-                          label: 'Back up my account',
-                          zt: zt,
-                          onTap: () => pushZendSlide(
-                              context, const ExportBackupScreen()),
-                        ),
-                        _Tile(
-                          icon: PhosphorIconsRegular.key,
-                          label: 'View secret recovery phrase',
-                          zt: zt,
-                          onTap: () => pushZendSlide(
-                              context, const RecoveryPhraseScreen()),
-                        ),
-                      ]),
+                      _SettingsGroup(
+                        zt: zt,
+                        tiles: [
+                          _Tile(
+                            icon: PhosphorIconsRegular.download,
+                            label: 'Back up my account',
+                            zt: zt,
+                            onTap: () => pushZendSlide(
+                              context,
+                              const ExportBackupScreen(),
+                            ),
+                          ),
+                          _Tile(
+                            icon: PhosphorIconsRegular.key,
+                            label: 'View secret recovery phrase',
+                            zt: zt,
+                            onTap: () => pushZendSlide(
+                              context,
+                              const RecoveryPhraseScreen(),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -502,7 +567,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 // ── Biometric setup step ──────────────────────────────────────────────────────
 
 class _BiometricStep extends StatelessWidget {
-  const _BiometricStep({required this.number, required this.text, required this.zt});
+  const _BiometricStep({
+    required this.number,
+    required this.text,
+    required this.zt,
+  });
   final int number;
   final String text;
   final ZendTheme zt;
@@ -513,19 +582,32 @@ class _BiometricStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 26, height: 26,
+          width: 26,
+          height: 26,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: zt.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: zt.accent.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
           child: Text(
             '$number',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: zt.accent),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: zt.accent,
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary, height: 1.4),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textPrimary,
+              height: 1.4,
+            ),
           ),
         ),
       ],
@@ -567,19 +649,24 @@ class _AmountInput extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '\$',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textPrimary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 16,
+              color: zt.textPrimary,
+            ),
           ),
           const SizedBox(width: 2),
           Expanded(
             child: TextField(
               controller: controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: false),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: false,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlign: TextAlign.left,
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, color: zt.textPrimary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 16,
+                color: zt.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: '500',
                 hintStyle: TextStyle(color: zt.textSecondary),
@@ -661,11 +748,12 @@ class _SettingsGroup extends StatelessWidget {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile(
-      {required this.icon,
-      required this.label,
-      required this.zt,
-      required this.onTap});
+  const _Tile({
+    required this.icon,
+    required this.label,
+    required this.zt,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final ZendTheme zt;
@@ -694,7 +782,11 @@ class _Tile extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 16,
+                color: zt.textSecondary,
+              ),
             ],
           ),
         ),

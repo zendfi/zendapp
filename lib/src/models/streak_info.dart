@@ -24,7 +24,8 @@ class StreakInfo {
     return StreakInfo(
       counterpartyUserId: json['counterparty_user_id'] as String? ?? '',
       counterpartyZendtag: json['counterparty_zendtag'] as String? ?? '',
-      counterpartyDisplayName: json['counterparty_display_name'] as String? ?? '',
+      counterpartyDisplayName:
+          json['counterparty_display_name'] as String? ?? '',
       counterpartyAvatarUrl: json['counterparty_avatar_url'] as String?,
       streakWeeks: json['streak_weeks'] as int? ?? 0,
       longestStreak: json['longest_streak'] as int? ?? 0,

@@ -54,6 +54,7 @@ class CounterpartyThread {
   final List<ActivityEdge> edges;
   final double runningTotal;
   final ActivityEdge mostRecentEdge;
+
   /// Whether [edges.length] is the true total (all pages loaded) or a
   /// lower-bound count (more pages remain server-side). When false, the
   /// UI should render the count as "N+" to signal the list is incomplete.
@@ -127,7 +128,9 @@ List<CounterpartyThread> groupByCounterparty(
     );
   }).toList();
 
-  threads.sort((a, b) => b.mostRecentEdge.createdAt.compareTo(a.mostRecentEdge.createdAt));
+  threads.sort(
+    (a, b) => b.mostRecentEdge.createdAt.compareTo(a.mostRecentEdge.createdAt),
+  );
   return threads;
 }
 
@@ -180,9 +183,10 @@ List<DedupedPoolContributor> dedupePoolContributors(
         } else {
           externalEntry = PoolContributorExternalAnonymized(
             aggregateCount: externalEntry.aggregateCount + c.aggregateCount,
-            aggregateTotalUsdc: (
-              _parseAmount(externalEntry.aggregateTotalUsdc) + _parseAmount(c.aggregateTotalUsdc)
-            ).toString(),
+            aggregateTotalUsdc:
+                (_parseAmount(externalEntry.aggregateTotalUsdc) +
+                        _parseAmount(c.aggregateTotalUsdc))
+                    .toString(),
           );
         }
     }
@@ -197,10 +201,12 @@ List<DedupedPoolContributor> dedupePoolContributors(
   ];
 
   if (externalEntry != null) {
-    result.add(DedupedPoolContributor(
-      entry: externalEntry,
-      totalUsdc: _parseAmount(externalEntry.aggregateTotalUsdc),
-    ));
+    result.add(
+      DedupedPoolContributor(
+        entry: externalEntry,
+        totalUsdc: _parseAmount(externalEntry.aggregateTotalUsdc),
+      ),
+    );
   }
 
   return result;

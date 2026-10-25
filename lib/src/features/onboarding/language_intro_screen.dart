@@ -139,7 +139,8 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
                     alignment: Alignment.centerLeft,
                     children: [...previousChildren, ?currentChild],
                   ),
-                  transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
                   child: Column(
                     key: ValueKey(_index),
                     mainAxisSize: MainAxisSize.min,

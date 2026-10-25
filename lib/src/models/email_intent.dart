@@ -5,6 +5,7 @@ class EmailIntent {
   final String status; // 'pending' | 'claimed' | 'expired' | 'cancelled'
   final String? note;
   final DateTime createdAt;
+
   /// Masked recipient email hint, e.g. "to***@gmail.com".
   final String recipientHint;
 
@@ -31,14 +32,14 @@ class EmailIntent {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'amount_usdc': amountUsdc,
-        'expiry': expiry.toIso8601String(),
-        'status': status,
-        'note': note,
-        'created_at': createdAt.toIso8601String(),
-        'recipient_hint': recipientHint,
-      };
+    'id': id,
+    'amount_usdc': amountUsdc,
+    'expiry': expiry.toIso8601String(),
+    'status': status,
+    'note': note,
+    'created_at': createdAt.toIso8601String(),
+    'recipient_hint': recipientHint,
+  };
 
   bool get isPending => status == 'pending';
   bool get isClaimed => status == 'claimed';
@@ -66,8 +67,10 @@ class CreateIntentResult {
   final double amountUsdc;
   final DateTime expiry;
   final String status;
+
   /// Masked recipient hint — e.g. "to***@gmail.com" or "@alice".
   final String recipientHint;
+
   /// Direct claim URL (present for Telegram intents; null for email intents
   /// since the link is sent directly to the recipient's email).
   final String? claimLink;

@@ -20,7 +20,12 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// this authorization entirely server-side (Req 19.2 — no separate/
 /// duplicate authorization path).
 class PersonActivityScreen extends StatefulWidget {
-  const PersonActivityScreen({super.key, required this.userId, required this.label, this.avatarUrl});
+  const PersonActivityScreen({
+    super.key,
+    required this.userId,
+    required this.label,
+    this.avatarUrl,
+  });
 
   final String userId;
   final String label;
@@ -44,7 +49,10 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
   Future<void> _load() async {
     final model = ZendScope.of(context);
     try {
-      final response = await model.activityDataService.getActivityEdgesForUser(widget.userId, limit: 50);
+      final response = await model.activityDataService.getActivityEdgesForUser(
+        widget.userId,
+        limit: 50,
+      );
       if (mounted) setState(() => _edges = response.edges);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -58,7 +66,12 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
+        const SnackBar(
+          content: Text(
+            'Details for this activity are not available',
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
+        ),
       );
       return;
     }
@@ -86,8 +99,14 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
       headline: headline,
       avatarUrl: isExternal ? edge.senderAvatarUrl : widget.avatarUrl,
       avatarInitial: isExternal
-          ? (edge.senderZendtag?.isNotEmpty == true ? edge.senderZendtag![0].toUpperCase() : '?')
-          : (widget.label.startsWith('@') ? widget.label.substring(1, 2).toUpperCase() : (widget.label.isNotEmpty ? widget.label[0].toUpperCase() : '?')),
+          ? (edge.senderZendtag?.isNotEmpty == true
+                ? edge.senderZendtag![0].toUpperCase()
+                : '?')
+          : (widget.label.startsWith('@')
+                ? widget.label.substring(1, 2).toUpperCase()
+                : (widget.label.isNotEmpty
+                      ? widget.label[0].toUpperCase()
+                      : '?')),
       onViewReceipt: () => _openReceipt(edge),
     );
   }
@@ -120,18 +139,30 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   ZendAvatar(
                     radius: 18,
                     photoUrl: widget.avatarUrl,
-                    initials: widget.label.startsWith('@') ? widget.label.substring(1, 2).toUpperCase() : (widget.label.isNotEmpty ? widget.label[0].toUpperCase() : '?'),
+                    initials: widget.label.startsWith('@')
+                        ? widget.label.substring(1, 2).toUpperCase()
+                        : (widget.label.isNotEmpty
+                              ? widget.label[0].toUpperCase()
+                              : '?'),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       widget.label,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -142,34 +173,41 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
               child: _loading
                   ? const PersonActivitySkeleton()
                   : _error != null
-                      ? ZendErrorState(
-                          title: "Couldn't load this person's activity",
-                          onRetry: () {
-                            setState(() { _error = null; _loading = true; });
-                            _load();
-                          },
-                        )
-                      : _edges.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No shared activity to show',
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                              ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _edges.length,
-                              separatorBuilder: (_, _) => const SizedBox(height: 10),
-                              itemBuilder: (context, i) {
-                                final edge = _edges[i];
-                                final headline = _describeEdge(edge, model);
-                                return _PersonActivityRow(
-                                  headline: headline,
-                                  edge: edge,
-                                  onTap: () => _openActivity(edge, headline),
-                                );
-                              },
-                            ),
+                  ? ZendErrorState(
+                      title: "Couldn't load this person's activity",
+                      onRetry: () {
+                        setState(() {
+                          _error = null;
+                          _loading = true;
+                        });
+                        _load();
+                      },
+                    )
+                  : _edges.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No shared activity to show',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _edges.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) {
+                        final edge = _edges[i];
+                        final headline = _describeEdge(edge, model);
+                        return _PersonActivityRow(
+                          headline: headline,
+                          edge: edge,
+                          onTap: () => _openActivity(edge, headline),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -179,7 +217,11 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
 }
 
 class _PersonActivityRow extends StatelessWidget {
-  const _PersonActivityRow({required this.headline, required this.edge, required this.onTap});
+  const _PersonActivityRow({
+    required this.headline,
+    required this.edge,
+    required this.onTap,
+  });
 
   final String headline;
   final ActivityEdge edge;
@@ -188,7 +230,9 @@ class _PersonActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+    final amountLabel = edge.amountHidden
+        ? 'Hidden'
+        : '\$${edge.amountUsdc ?? '0'}';
 
     return Material(
       color: zt.bgSecondary,
@@ -208,7 +252,11 @@ class _PersonActivityRow extends StatelessWidget {
                       headline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
@@ -216,7 +264,11 @@ class _PersonActivityRow extends StatelessWidget {
                         edge.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12.5,
+                          color: zt.textPrimary.withValues(alpha: 0.85),
+                        ),
                       ),
                     ],
                   ],
@@ -225,7 +277,11 @@ class _PersonActivityRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 amountLabel,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textSecondary,
+                ),
               ),
             ],
           ),

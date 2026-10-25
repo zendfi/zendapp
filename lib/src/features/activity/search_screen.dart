@@ -46,7 +46,9 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     // Auto-focus the search field when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
   }
 
   @override
@@ -96,21 +98,27 @@ class _SearchScreenState extends State<SearchScreen> {
     final q = _query.toLowerCase();
 
     // ── Local search ──────────────────────────────────────────────────────────
-    final txResults = q.isEmpty ? <dynamic>[] : model.recentTransactions.where((tx) {
-      return tx.name.toLowerCase().contains(q) ||
-          tx.note.toLowerCase().contains(q) ||
-          tx.amount.contains(q);
-    }).toList();
+    final txResults = q.isEmpty
+        ? <dynamic>[]
+        : model.recentTransactions.where((tx) {
+            return tx.name.toLowerCase().contains(q) ||
+                tx.note.toLowerCase().contains(q) ||
+                tx.amount.contains(q);
+          }).toList();
 
-    final outboundReqs = q.isEmpty ? <PaymentRequestItem>[] : model.outboundPaymentRequests.where((r) {
-      return (r.counterpartyLabel.toLowerCase().contains(q)) ||
-          (r.description?.toLowerCase().contains(q) ?? false);
-    }).toList();
+    final outboundReqs = q.isEmpty
+        ? <PaymentRequestItem>[]
+        : model.outboundPaymentRequests.where((r) {
+            return (r.counterpartyLabel.toLowerCase().contains(q)) ||
+                (r.description?.toLowerCase().contains(q) ?? false);
+          }).toList();
 
-    final inboundReqs = q.isEmpty ? <PaymentRequestItem>[] : model.inboundPaymentRequests.where((r) {
-      return (r.counterpartyLabel.toLowerCase().contains(q)) ||
-          (r.description?.toLowerCase().contains(q) ?? false);
-    }).toList();
+    final inboundReqs = q.isEmpty
+        ? <PaymentRequestItem>[]
+        : model.inboundPaymentRequests.where((r) {
+            return (r.counterpartyLabel.toLowerCase().contains(q)) ||
+                (r.description?.toLowerCase().contains(q) ?? false);
+          }).toList();
 
     // Pools gated off for launch — see [ZendFeatures.pools]. An empty result
     // list keeps the section-rendering and has-results logic below unchanged.
@@ -120,7 +128,8 @@ class _SearchScreenState extends State<SearchScreen> {
             return p.name.toLowerCase().contains(q);
           }).toList();
 
-    final hasLocalResults = txResults.isNotEmpty ||
+    final hasLocalResults =
+        txResults.isNotEmpty ||
         outboundReqs.isNotEmpty ||
         inboundReqs.isNotEmpty ||
         poolResults.isNotEmpty;
@@ -160,10 +169,18 @@ class _SearchScreenState extends State<SearchScreen> {
                             fontSize: 14,
                             color: zt.textSecondary,
                           ),
-                          prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, color: zt.textSecondary, size: 20),
+                          prefixIcon: Icon(
+                            PhosphorIconsRegular.magnifyingGlass,
+                            color: zt.textSecondary,
+                            size: 20,
+                          ),
                           suffixIcon: _query.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                                  icon: Icon(
+                                    PhosphorIconsRegular.xCircle,
+                                    size: 18,
+                                    color: zt.textSecondary,
+                                  ),
                                   onPressed: () {
                                     _ctrl.clear();
                                     _onQueryChanged('');
@@ -171,7 +188,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                 )
                               : null,
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -197,119 +216,149 @@ class _SearchScreenState extends State<SearchScreen> {
               child: _query.isEmpty
                   ? _buildEmptyState(zt)
                   : !hasResults && !_loadingUsers
-                      ? _buildNoResults(zt)
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          children: [
-                            // Remote users
-                            if (_remoteUsers.isNotEmpty || _loadingUsers) ...[
-                              _SectionHeader(label: 'Users', zt: zt),
-                              if (_loadingUsers && _remoteUsers.isEmpty)
-                                const SearchUsersSkeleton()
-                              else
-                                ..._remoteUsers.map((u) => _UserTile(
+                  ? _buildNoResults(zt)
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      children: [
+                        // Remote users
+                        if (_remoteUsers.isNotEmpty || _loadingUsers) ...[
+                          _SectionHeader(label: 'Users', zt: zt),
+                          if (_loadingUsers && _remoteUsers.isEmpty)
+                            const SearchUsersSkeleton()
+                          else
+                            ..._remoteUsers.map(
+                              (u) => _UserTile(
+                                zendtag: u['zendtag'] as String? ?? '',
+                                displayName: u['display_name'] as String? ?? '',
+                                avatarUrl: u['avatar_url'] as String?,
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  pushZendSlide(
+                                    context,
+                                    UserProfileScreen(
                                       zendtag: u['zendtag'] as String? ?? '',
-                                      displayName: u['display_name'] as String? ?? '',
-                                      avatarUrl: u['avatar_url'] as String?,
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                        pushZendSlide(
-                                          context,
-                                          UserProfileScreen(
-                                            zendtag: u['zendtag'] as String? ?? '',
-                                            knownDisplayName: u['display_name'] as String?,
-                                            knownAvatarUrl: u['avatar_url'] as String?,
-                                          ),
-                                        );
-                                      },
-                                    )),
-                              const SizedBox(height: 16),
-                            ],
-
-                            // Transactions
-                            if (txResults.isNotEmpty) ...[
-                              _SectionHeader(label: 'Transactions', zt: zt),
-                              ...txResults.map((tx) {
-                                final zTx = tx as dynamic;
-                                return _SearchTile(
-                                  leading: ZendAvatar(
-                                    radius: 18,
-                                    initials: zTx.avatarLabel as String?,
-                                    photoUrl: zTx.avatarUrl as String?,
-                                  ),
-                                  title: zTx.name as String,
-                                  subtitle: zTx.note as String,
-                                  trailing: Text(
-                                    zTx.amount as String,
-                                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: (zTx.amountColor as Color?) ?? zt.textPrimary),
-                                  ),
-                                  onTap: zTx.entry != null || zTx.bankOrder != null
-                                      ? () => showTransactionReceipt(context, tx: zTx)
-                                      : null,
-                                );
-                              }),
-                              const SizedBox(height: 16),
-                            ],
-
-                            // Payment requests
-                            if (outboundReqs.isNotEmpty || inboundReqs.isNotEmpty) ...[
-                              _SectionHeader(label: 'Payment Requests', zt: zt),
-                              ...[...inboundReqs, ...outboundReqs].map((r) => _SearchTile(
-                                    leading: ZendAvatar(
-                                      radius: 18,
-                                      initials: r.avatarInitial,
+                                      knownDisplayName:
+                                          u['display_name'] as String?,
+                                      knownAvatarUrl:
+                                          u['avatar_url'] as String?,
                                     ),
-                                    title: r.counterpartyLabel,
-                                    subtitle: r.description ?? (r.isInbound ? 'Payment request' : 'Sent request'),
-                                    trailing: Text(
-                                      r.formattedAmount,
-                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary),
-                                    ),
-                                    onTap: r.isInbound && r.isPending
-                                        ? () {
-                                            Navigator.of(context).pop();
-                                            showQrPaymentSheet(
-                                              context,
-                                              intent: QrPaymentIntent(
-                                                zendtag: r.requesterZendtag ?? '',
-                                                amountUsdc: r.amountUsdc,
-                                                note: r.description,
-                                                requestLinkId: r.requestLinkId,
-                                              ),
-                                            );
-                                          }
-                                        : null,
-                                  )),
-                              const SizedBox(height: 16),
-                            ],
+                                  );
+                                },
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                        ],
 
-                            // Pools
-                            if (poolResults.isNotEmpty) ...[
-                              _SectionHeader(label: 'Pools', zt: zt),
-                              ...poolResults.map((pool) => _SearchTile(
-                                    leading: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: zt.accentBright.withValues(alpha: 0.12),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(PhosphorIconsRegular.usersThree, size: 18, color: zt.accentBright),
-                                    ),
-                                    title: pool.name,
-                                    subtitle: '\$${pool.gathered.toStringAsFixed(2)} of \$${pool.targetAmount.toStringAsFixed(2)}',
-                                    onTap: () {
+                        // Transactions
+                        if (txResults.isNotEmpty) ...[
+                          _SectionHeader(label: 'Transactions', zt: zt),
+                          ...txResults.map((tx) {
+                            final zTx = tx as dynamic;
+                            return _SearchTile(
+                              leading: ZendAvatar(
+                                radius: 18,
+                                initials: zTx.avatarLabel as String?,
+                                photoUrl: zTx.avatarUrl as String?,
+                              ),
+                              title: zTx.name as String,
+                              subtitle: zTx.note as String,
+                              trailing: Text(
+                                zTx.amount as String,
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  fontSize: 13,
+                                  color:
+                                      (zTx.amountColor as Color?) ??
+                                      zt.textPrimary,
+                                ),
+                              ),
+                              onTap: zTx.entry != null || zTx.bankOrder != null
+                                  ? () =>
+                                        showTransactionReceipt(context, tx: zTx)
+                                  : null,
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Payment requests
+                        if (outboundReqs.isNotEmpty ||
+                            inboundReqs.isNotEmpty) ...[
+                          _SectionHeader(label: 'Payment Requests', zt: zt),
+                          ...[...inboundReqs, ...outboundReqs].map(
+                            (r) => _SearchTile(
+                              leading: ZendAvatar(
+                                radius: 18,
+                                initials: r.avatarInitial,
+                              ),
+                              title: r.counterpartyLabel,
+                              subtitle:
+                                  r.description ??
+                                  (r.isInbound
+                                      ? 'Payment request'
+                                      : 'Sent request'),
+                              trailing: Text(
+                                r.formattedAmount,
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  fontSize: 13,
+                                  color: zt.textPrimary,
+                                ),
+                              ),
+                              onTap: r.isInbound && r.isPending
+                                  ? () {
                                       Navigator.of(context).pop();
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => PoolDetailScreen(pool: pool),
+                                      showQrPaymentSheet(
+                                        context,
+                                        intent: QrPaymentIntent(
+                                          zendtag: r.requesterZendtag ?? '',
+                                          amountUsdc: r.amountUsdc,
+                                          note: r.description,
+                                          requestLinkId: r.requestLinkId,
                                         ),
                                       );
-                                    },
-                                  )),
-                            ],
-                          ],
-                        ),
+                                    }
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Pools
+                        if (poolResults.isNotEmpty) ...[
+                          _SectionHeader(label: 'Pools', zt: zt),
+                          ...poolResults.map(
+                            (pool) => _SearchTile(
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: zt.accentBright.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  PhosphorIconsRegular.usersThree,
+                                  size: 18,
+                                  color: zt.accentBright,
+                                ),
+                              ),
+                              title: pool.name,
+                              subtitle:
+                                  '\$${pool.gathered.toStringAsFixed(2)} of \$${pool.targetAmount.toStringAsFixed(2)}',
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PoolDetailScreen(pool: pool),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ),
@@ -322,7 +371,11 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(PhosphorIconsRegular.magnifyingGlass, size: 48, color: zt.textSecondary.withValues(alpha: 0.3)),
+          Icon(
+            PhosphorIconsRegular.magnifyingGlass,
+            size: 48,
+            color: zt.textSecondary.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 12),
           Text(
             'Search transactions, users, pools',
@@ -362,7 +415,11 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Text(
         label.toUpperCase(),
-        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, letterSpacing: 1.2, color: zt.textSecondary),
+        style: ZendTextStyles.tabularNumeric.copyWith(
+          fontSize: 10,
+          letterSpacing: 1.2,
+          color: zt.textSecondary,
+        ),
       ),
     );
   }
@@ -425,10 +482,7 @@ class _SearchTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: 8),
-              trailing!,
-            ],
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
           ],
         ),
       ),
@@ -461,7 +515,11 @@ class _UserTile extends StatelessWidget {
       ),
       title: name,
       subtitle: '@$zendtag',
-      trailing: Icon(PhosphorIconsRegular.caretRight, size: 12, color: zt.textSecondary),
+      trailing: Icon(
+        PhosphorIconsRegular.caretRight,
+        size: 12,
+        color: zt.textSecondary,
+      ),
       onTap: onTap,
     );
   }

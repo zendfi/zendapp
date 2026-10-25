@@ -41,8 +41,10 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(PhosphorIconsRegular.caretLeft,
-                      color: ZendColors.textOnDeep),
+                  icon: const Icon(
+                    PhosphorIconsRegular.caretLeft,
+                    color: ZendColors.textOnDeep,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -87,12 +89,17 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       final isRateLimit = e.statusCode == 429;
-      setState(() => _error = isRateLimit
-          ? 'Too many attempts. Please try again in a few minutes.'
-          : e.userMessage);
+      setState(
+        () => _error = isRateLimit
+            ? 'Too many attempts. Please try again in a few minutes.'
+            : e.userMessage,
+      );
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Could not send code. Check your connection and try again.');
+      setState(
+        () => _error =
+            'Could not send code. Check your connection and try again.',
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -199,7 +206,11 @@ class _RequestView extends StatelessWidget {
           ),
           child: const Row(
             children: [
-              Icon(PhosphorIconsRegular.mailbox, color: ZendColors.accentPop, size: 20),
+              Icon(
+                PhosphorIconsRegular.mailbox,
+                color: ZendColors.accentPop,
+                size: 20,
+              ),
               SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -227,13 +238,9 @@ class _RequestView extends StatelessWidget {
         ],
         const Spacer(),
         if (loading)
-          const Center(
-              child: ZendLoader(color: ZendColors.accentPop))
+          const Center(child: ZendLoader(color: ZendColors.accentPop))
         else
-          PrimaryButton(
-            label: 'Send verification code',
-            onPressed: onRequest,
-          ),
+          PrimaryButton(label: 'Send verification code', onPressed: onRequest),
         const SizedBox(height: 24),
       ],
     );
@@ -302,7 +309,10 @@ class _OtpView extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 filled ? otpInput[i] : '',
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: ZendColors.textOnDeep),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 22,
+                  color: ZendColors.textOnDeep,
+                ),
               ),
             );
           }),
@@ -322,9 +332,7 @@ class _OtpView extends StatelessWidget {
         if (!loading)
           _OtpKeypad(onTap: onKey)
         else
-          const Center(
-            child: ZendLoader(color: ZendColors.accentPop),
-          ),
+          const Center(child: ZendLoader(color: ZendColors.accentPop)),
         const SizedBox(height: 24),
       ],
     );
@@ -336,10 +344,18 @@ class _OtpKeypad extends StatelessWidget {
   final ValueChanged<String> onTap;
 
   static const _keys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-    '', '0', 'del',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '',
+    '0',
+    'del',
   ];
 
   @override
@@ -356,10 +372,7 @@ class _OtpKeypad extends StatelessWidget {
                       bottom: row < 3 ? 12 : 0,
                       right: col < 2 ? 8 : 0,
                     ),
-                    child: _OtpKey(
-                      label: _keys[row * 3 + col],
-                      onTap: onTap,
-                    ),
+                    child: _OtpKey(label: _keys[row * 3 + col], onTap: onTap),
                   ),
                 ),
             ],
@@ -400,10 +413,15 @@ class _OtpKeyState extends State<_OtpKey> {
           child: Center(
             child: widget.label == 'del'
                 ? const ZendBackspaceIcon(
-                    color: ZendColors.textOnDeep, size: 22)
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

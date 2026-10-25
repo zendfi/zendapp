@@ -17,6 +17,7 @@ import 'search_screen.dart';
 import 'transaction_receipt_sheet.dart';
 import '../../navigation/zend_routes.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 // ── Unified activity item ─────────────────────────────────────────────────────
 
@@ -78,7 +79,11 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
     final service = ZendScope.read(context).notificationPreferencesService;
     await service.load();
     if (mounted) {
-      setState(() => _notificationsMuted = service.isMuted(NotificationCategoryKind.activity));
+      setState(
+        () => _notificationsMuted = service.isMuted(
+          NotificationCategoryKind.activity,
+        ),
+      );
     }
   }
 
@@ -117,8 +122,9 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
     List<PaymentRequestItem> outbound,
     List<PaymentRequestItem> inbound,
   ) {
-    final renderableIntents =
-        intents.where((i) => i.isPending && _intentIsRenderable(i)).toList();
+    final renderableIntents = intents
+        .where((i) => i.isPending && _intentIsRenderable(i))
+        .toList();
 
     final List<_ActivityItem> items;
 
@@ -205,12 +211,19 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                   if (widget.onToggleView != null)
                     IconButton(
                       onPressed: widget.onToggleView,
-                      icon: Icon(PhosphorIconsRegular.shareNetwork, color: zt.textSecondary),
+                      icon: Icon(
+                        PhosphorIconsRegular.shareNetwork,
+                        color: zt.textSecondary,
+                      ),
                       tooltip: 'Switch to threaded view',
                     ),
                   IconButton(
-                    onPressed: () => pushZendSlide(context, const SearchScreen()),
-                    icon: Icon(PhosphorIconsRegular.magnifyingGlass, color: zt.textSecondary),
+                    onPressed: () =>
+                        pushZendSlide(context, const SearchScreen()),
+                    icon: Icon(
+                      PhosphorIconsRegular.magnifyingGlass,
+                      color: zt.textSecondary,
+                    ),
                     tooltip: 'Search',
                   ),
                   IconButton(
@@ -223,7 +236,9 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                           ? zt.textSecondary.withValues(alpha: 0.5)
                           : zt.textSecondary,
                     ),
-                    tooltip: _notificationsMuted ? 'Unmute notifications' : 'Mute notifications',
+                    tooltip: _notificationsMuted
+                        ? 'Unmute notifications'
+                        : 'Mute notifications',
                   ),
                 ],
               ),
@@ -235,7 +250,9 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: _filters.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
@@ -275,74 +292,77 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                 child: model.historyLoading && model.recentTransactions.isEmpty
                     ? const ActivityFeedSkeleton()
                     : items.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              SizedBox(
-                                height: 200,
-                                child: Center(
-                                  child: Text(
-                                    _emptyLabel,
-                                    style: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontSize: 14,
-                                      color: zt.textSecondary,
-                                    ),
-                                  ),
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Text(
+                                _emptyLabel,
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textSecondary,
                                 ),
                               ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: items.length,
-                            separatorBuilder: (_, _) =>
-                                Divider(color: zt.border, height: 1),
-                            itemBuilder: (context, i) {
-                              final item = items[i];
-                              final isFirst = i == 0;
-                              final isLast = i == items.length - 1;
-
-                              return switch (item) {
-                                _TxItem(:final tx) => _ActivityTile(
-                                    avatarLabel: tx.avatarLabel,
-                                    avatarUrl: tx.avatarUrl,
-                                    countryCode: tx.countryCode,
-                                    name: tx.name,
-                                    note: tx.note,
-                                    amount: tx.amount,
-                                    time: tx.time,
-                                    amountColor: tx.amountColor,
-                                    isFirst: isFirst,
-                                    isLast: isLast,
-                                    onTap: tx.entry != null ||
-                                            tx.bankOrder != null
-                                        ? () => showTransactionReceipt(
-                                              context,
-                                              tx: tx,
-                                            )
-                                        : null,
-                                  ),
-                                _IntentItem(:final intent) => _ActivityTile(
-                                    avatarLabel: intent.recipientHint.isNotEmpty
-                                        ? intent.recipientHint[0].toUpperCase()
-                                        : '?',
-                                    name: intent.recipientHint,
-                                    note: _expiryLabel(intent),
-                                    amount: '-${intent.amountFormatted}',
-                                    time: 'pending claim',
-                                    isFirst: isFirst,
-                                    isLast: isLast,
-                                    onTap: () => showPendingIntentDetail(
-                                        context, intent, model),
-                                  ),
-                                _RequestItem(:final request) =>
-                                  _buildRequestTile(
-                                      context, request, isFirst, isLast),
-                              };
-                            },
+                            ),
                           ),
+                        ],
+                      )
+                    : ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) =>
+                            Divider(color: zt.border, height: 1),
+                        itemBuilder: (context, i) {
+                          final item = items[i];
+                          final isFirst = i == 0;
+                          final isLast = i == items.length - 1;
+
+                          return switch (item) {
+                            _TxItem(:final tx) => _ActivityTile(
+                              avatarLabel: tx.avatarLabel,
+                              avatarUrl: tx.avatarUrl,
+                              countryCode: tx.countryCode,
+                              name: tx.name,
+                              note: tx.note,
+                              amount: tx.amount,
+                              time: tx.time,
+                              amountColor: tx.amountColor,
+                              isFirst: isFirst,
+                              isLast: isLast,
+                              onTap: tx.entry != null || tx.bankOrder != null
+                                  ? () =>
+                                        showTransactionReceipt(context, tx: tx)
+                                  : null,
+                            ),
+                            _IntentItem(:final intent) => _ActivityTile(
+                              avatarLabel: intent.recipientHint.isNotEmpty
+                                  ? intent.recipientHint[0].toUpperCase()
+                                  : '?',
+                              name: intent.recipientHint,
+                              note: _expiryLabel(intent),
+                              amount: '-${intent.amountFormatted}',
+                              time: 'pending claim',
+                              isFirst: isFirst,
+                              isLast: isLast,
+                              onTap: () => showPendingIntentDetail(
+                                context,
+                                intent,
+                                model,
+                              ),
+                            ),
+                            _RequestItem(:final request) => _buildRequestTile(
+                              context,
+                              request,
+                              isFirst,
+                              isLast,
+                            ),
+                          };
+                        },
+                      ),
               ),
             ),
             if (model.lastHistoryError != null)
@@ -384,9 +404,11 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
     final statusColor = switch (request.status) {
       'paid' => ZendColors.positive,
       'expired' || 'cancelled' => ZendTheme.of(context).textSecondary,
-      _ => request.isInbound
-          ? ZendColors.destructive // inbound pending = you owe
-          : ZendTheme.of(context).accent, // outbound pending = they owe you
+      _ =>
+        request.isInbound
+            ? ZendColors
+                  .destructive // inbound pending = you owe
+            : ZendTheme.of(context).accent, // outbound pending = they owe you
     };
 
     final statusLabel = switch (request.status) {
@@ -399,8 +421,8 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
     final note = request.description?.isNotEmpty == true
         ? request.description!
         : request.isInbound
-            ? 'Payment request'
-            : 'Sent request';
+        ? 'Payment request'
+        : 'Sent request';
 
     return _ActivityTile(
       avatarLabel: request.avatarInitial,
@@ -413,9 +435,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
       amountColor: statusColor,
       isFirst: isFirst,
       isLast: isLast,
-      statusDot: request.isPending
-          ? _StatusDot(color: statusColor)
-          : null,
+      statusDot: request.isPending ? _StatusDot(color: statusColor) : null,
       onTap: () {
         if (request.isInbound && request.isPending) {
           // Open QR pay sheet so the user can pay immediately
@@ -457,7 +477,7 @@ void showPendingIntentDetail(
   EmailIntent intent,
   ZendAppModel model,
 ) {
-  showModalBottomSheet<void>(
+  showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -489,8 +509,10 @@ void showPendingIntentDetail(
 /// Presents the outbound payment request detail sheet (share/copy-link),
 /// unchanged from the pre-redesign behavior (Req 15.3).
 void showOutboundRequestDetail(
-    BuildContext context, PaymentRequestItem request) {
-  showModalBottomSheet<void>(
+  BuildContext context,
+  PaymentRequestItem request,
+) {
+  showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -511,8 +533,7 @@ class _OutboundRequestSheet extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: request.linkUrl));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Link copied!',
-            style: TextStyle(fontFamily: 'Geist')),
+        content: Text('Link copied!', style: TextStyle(fontFamily: 'Geist')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -565,15 +586,21 @@ class _OutboundRequestSheet extends StatelessWidget {
             // Status badge
             Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
                   statusLabel,
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -628,7 +655,9 @@ class _OutboundRequestSheet extends StatelessWidget {
               onTap: () => _copyLink(context),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: zt.bgPrimary,
                   borderRadius: BorderRadius.circular(ZendRadii.lg),
@@ -638,7 +667,10 @@ class _OutboundRequestSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         request.linkUrl,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 11,
+                          color: zt.textSecondary,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -696,8 +728,18 @@ class _OutboundRequestSheet extends StatelessWidget {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
@@ -706,10 +748,7 @@ class _OutboundRequestSheet extends StatelessWidget {
 // ── Pending intent detail sheet ───────────────────────────────────────────────
 
 class _PendingIntentSheet extends StatefulWidget {
-  const _PendingIntentSheet({
-    required this.intent,
-    required this.onCancel,
-  });
+  const _PendingIntentSheet({required this.intent, required this.onCancel});
 
   final EmailIntent intent;
   final Future<void> Function() onCancel;
@@ -723,8 +762,18 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
 
   String _formatExpiry(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
@@ -827,15 +876,21 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
 
             Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: zt.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
                   'pending claim',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accent, fontWeight: FontWeight.w600),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: zt.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -916,13 +971,21 @@ class _DetailRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 14,
-                color: zt.textSecondary)),
-        Text(value,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14,
+            color: zt.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 13,
+            color: zt.textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -1001,8 +1064,7 @@ class _ActivityTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: radius,
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               country != null
@@ -1022,10 +1084,11 @@ class _ActivityTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: zt.textPrimary),
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1033,9 +1096,10 @@ class _ActivityTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          color: zt.textSecondary),
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -1064,7 +1128,10 @@ class _ActivityTile extends StatelessWidget {
                       ],
                       Text(
                         time,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 11,
+                          color: zt.textSecondary,
+                        ),
                       ),
                     ],
                   ),

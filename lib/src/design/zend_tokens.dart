@@ -25,6 +25,7 @@ class ZendColors {
   static const textOnDeep = Color(0xFFF0F0F0);
 
   static const positive = Color(0xFF22C55E);
+
   /// Negative amounts render in near-black, not red — a deliberate "boring"
   /// choice so a debit doesn't read as an alarm. [destructive] is reserved
   /// for actual destructive actions (delete, remove card), not routine

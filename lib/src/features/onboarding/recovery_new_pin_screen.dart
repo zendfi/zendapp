@@ -54,16 +54,15 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6.0, end: 4.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10.0, end: -6.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6.0, end: 4.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -85,7 +84,9 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
         }
         return;
       }
-      if (_pinDigits.length < 6) { _pinDigits += value; }
+      if (_pinDigits.length < 6) {
+        _pinDigits += value;
+      }
     });
 
     if (_pinDigits.length == 6) {
@@ -234,7 +235,10 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
                 opacity: _loading ? 0.3 : 1,
                 child: IgnorePointer(
                   ignoring: _loading,
-                  child: _PinKeypad(onTap: _onKey, keyHeight: compact ? 62 : 72),
+                  child: _PinKeypad(
+                    onTap: _onKey,
+                    keyHeight: compact ? 62 : 72,
+                  ),
                 ),
               ),
               SizedBox(height: compact ? 12 : 24),
@@ -256,10 +260,18 @@ class _PinKeypad extends StatelessWidget {
   final double keyHeight;
 
   static const _keys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-    '', '0', 'del',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '',
+    '0',
+    'del',
   ];
 
   @override
@@ -324,10 +336,15 @@ class _PinKeyState extends State<_PinKey> {
           child: Center(
             child: widget.label == 'del'
                 ? const ZendBackspaceIcon(
-                    color: ZendColors.textOnDeep, size: 22)
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

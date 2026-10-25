@@ -50,10 +50,7 @@ class QrPaymentIntent {
 
         // Request link intent: /{tag}/{request_link_id}
         if (segments.length >= 2 && segments[1].isNotEmpty) {
-          return QrPaymentIntent(
-            zendtag: zendtag,
-            requestLinkId: segments[1],
-          );
+          return QrPaymentIntent(zendtag: zendtag, requestLinkId: segments[1]);
         }
 
         // Fixed-amount or open intent: /{tag}?amount=X&note=Y

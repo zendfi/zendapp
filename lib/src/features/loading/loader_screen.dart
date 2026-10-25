@@ -4,10 +4,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
 class LoaderScreen extends StatelessWidget {
-  const LoaderScreen({
-    super.key,
-    this.message = 'Loading',
-  });
+  const LoaderScreen({super.key, this.message = 'Loading'});
 
   final String message;
 

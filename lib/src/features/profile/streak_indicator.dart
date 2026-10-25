@@ -22,39 +22,46 @@ class StreakIndicator extends StatelessWidget {
     if (streakWeeks < 2) return const SizedBox.shrink();
 
     return switch (variant) {
-      StreakIndicatorVariant.compact => const Text('🔥', style: TextStyle(fontSize: 12)),
+      StreakIndicatorVariant.compact => const Text(
+        '🔥',
+        style: TextStyle(fontSize: 12),
+      ),
       StreakIndicatorVariant.full => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF6B00).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(ZendRadii.pill),
-          ),
-          child: Text(
-            '🔥 ${streakWeeks}w streak',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFFF6B00)),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF6B00).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(ZendRadii.pill),
+        ),
+        child: Text(
+          '🔥 ${streakWeeks}w streak',
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFFFF6B00),
           ),
         ),
+      ),
       StreakIndicatorVariant.profile => Column(
-          children: [
-            Text(
-              '$streakWeeks',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
-                fontSize: 36,
-                color: zt.textPrimary,
-              ),
+        children: [
+          Text(
+            '$streakWeeks',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontWeight: FontWeight.w700,
+              fontSize: 36,
+              color: zt.textPrimary,
             ),
-            Text(
-              'week streak 🔥',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 13,
-                color: zt.textSecondary,
-              ),
+          ),
+          Text(
+            'week streak 🔥',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 13,
+              color: zt.textSecondary,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     };
   }
 }

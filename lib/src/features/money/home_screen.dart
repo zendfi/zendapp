@@ -43,7 +43,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final DraggableScrollableController _sheetController = DraggableScrollableController();
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
 
   static const double _minSheetSize = 0.55;
   static const double _maxSheetGap = 52;
@@ -183,7 +184,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final height = constraints.maxHeight;
         final appBarBottom = safeTop + _headerRowPadding + _headerRowHeight;
         final maxSheetTop = appBarBottom + _maxSheetGap;
-        final maxChildSize = (1 - (maxSheetTop / height)).clamp(_minSheetSize + 0.05, 0.92);
+        final maxChildSize = (1 - (maxSheetTop / height)).clamp(
+          _minSheetSize + 0.05,
+          0.92,
+        );
 
         return Stack(
           children: [
@@ -192,11 +196,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // ── Header row ──
             Positioned(
-              top: 0, left: 0, right: 0,
+              top: 0,
+              left: 0,
+              right: 0,
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: _headerRowPadding),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: _headerRowPadding,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -241,82 +250,100 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                      Row(children: [
-                        // Drop discoverable indicator — subtle dot + tap to go to settings
-                        ListenableBuilder(
-                          listenable: model.dropDiscoverabilityService,
-                          builder: (context, _) {
-                            final isOn = model.dropDiscoverabilityService.isDiscoverable;
-                            if (!isOn) return const SizedBox.shrink();
-                            return GestureDetector(
-                              onTap: () => pushZendSlide(context, const ProfileScreen()),
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 10),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: ZendColors.accentBright
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: ZendColors.accentBright
-                                        .withValues(alpha: 0.3),
-                                  ),
+                      Row(
+                        children: [
+                          // Drop discoverable indicator — subtle dot + tap to go to settings
+                          ListenableBuilder(
+                            listenable: model.dropDiscoverabilityService,
+                            builder: (context, _) {
+                              final isOn = model
+                                  .dropDiscoverabilityService
+                                  .isDiscoverable;
+                              if (!isOn) return const SizedBox.shrink();
+                              return GestureDetector(
+                                onTap: () => pushZendSlide(
+                                  context,
+                                  const ProfileScreen(),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: ZendColors.accentBright,
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: ZendColors.accentBright.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: ZendColors.accentBright.withValues(
+                                        alpha: 0.3,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Discoverable',
-                                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: ZendColors.accentBright),
-                                    ),
-                                  ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: ZendColors.accentBright,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Discoverable',
+                                        style: ZendTextStyles.tabularNumeric
+                                            .copyWith(
+                                              fontSize: 10,
+                                              color: ZendColors.accentBright,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                              );
+                            },
+                          ),
+                          // Search button — opens the global search screen
+                          GestureDetector(
+                            onTap: () =>
+                                pushZendSlide(context, const SearchScreen()),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1AFFFFFF),
+                                shape: BoxShape.circle,
                               ),
-                            );
-                          },
-                        ),
-                        // Search button — opens the global search screen
-                        GestureDetector(
-                          onTap: () => pushZendSlide(context, const SearchScreen()),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0x1AFFFFFF),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              PhosphorIconsRegular.magnifyingGlass,
-                              size: 18,
-                              color: ZendColors.textOnDeep,
+                              child: const Icon(
+                                PhosphorIconsRegular.magnifyingGlass,
+                                size: 18,
+                                color: ZendColors.textOnDeep,
+                              ),
                             ),
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () => pushZendSlide(context, const ProfileScreen()),
-                          child: ZendAvatar(
-                            radius: 18,
-                            photoUrl: model.currentAvatarUrl,
-                            initials: model.currentDisplayName?.isNotEmpty == true
-                                ? model.currentDisplayName![0].toUpperCase()
-                                : model.username.isNotEmpty
-                                    ? model.username[0].toUpperCase()
-                                    : null,
-                            backgroundColor: const Color(0x3095D5B2),
+                          GestureDetector(
+                            onTap: () =>
+                                pushZendSlide(context, const ProfileScreen()),
+                            child: ZendAvatar(
+                              radius: 18,
+                              photoUrl: model.currentAvatarUrl,
+                              initials:
+                                  model.currentDisplayName?.isNotEmpty == true
+                                  ? model.currentDisplayName![0].toUpperCase()
+                                  : model.username.isNotEmpty
+                                  ? model.username[0].toUpperCase()
+                                  : null,
+                              backgroundColor: const Color(0x3095D5B2),
+                            ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -330,7 +357,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 final sheetSize = _sheetController.isAttached
                     ? _sheetController.size.clamp(_minSheetSize, maxChildSize)
                     : _minSheetSize;
-                final t = ((sheetSize - _minSheetSize) / (maxChildSize - _minSheetSize)).clamp(0.0, 1.0);
+                final t =
+                    ((sheetSize - _minSheetSize) /
+                            (maxChildSize - _minSheetSize))
+                        .clamp(0.0, 1.0);
                 final sheetTopY = height * (1 - sheetSize);
                 // Slightly smaller than before so larger balances (5-6+ figures)
                 // don't force a line-wrap or overflow at the expanded size.
@@ -350,7 +380,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(
                                 'Zend Balance',
-                                style: ZendTextStyles.tabularNumeric.copyWith(color: const Color(0x99F0F0F0), fontSize: 11, letterSpacing: 0.8),
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  color: const Color(0x99F0F0F0),
+                                  fontSize: 11,
+                                  letterSpacing: 0.8,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Row(
@@ -361,12 +395,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       begin: _previousBalance,
                                       end: _displayedBalance,
                                     ),
-                                    duration: const Duration(milliseconds: 1200),
+                                    duration: const Duration(
+                                      milliseconds: 1200,
+                                    ),
                                     curve: Curves.elasticOut,
                                     builder: (context, value, _) {
                                       return Text(
-                                        key: const Key('zend-hero-balance-text'),
-                                        model.balanceHidden ? '••••••' : '\$${value.toStringAsFixed(2)}',
+                                        key: const Key(
+                                          'zend-hero-balance-text',
+                                        ),
+                                        model.balanceHidden
+                                            ? '••••••'
+                                            : '\$${value.toStringAsFixed(2)}',
                                         style: TextStyle(
                                           fontFamily: 'Geist',
                                           color: ZendColors.textOnDeep,
@@ -381,7 +421,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   GestureDetector(
                                     onTap: model.toggleBalanceHidden,
                                     child: Icon(
-                                      model.balanceHidden ? PhosphorIconsRegular.eyeClosed : PhosphorIconsRegular.eye,
+                                      model.balanceHidden
+                                          ? PhosphorIconsRegular.eyeClosed
+                                          : PhosphorIconsRegular.eye,
                                       color: const Color(0x80F0F0F0),
                                       size: 20,
                                     ),
@@ -393,7 +435,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 opacity: yieldOpacity,
                                 child: Text(
                                   '${model.monthlyYield.toStringAsFixed(1)}% earned this month',
-                                  style: const TextStyle(color: ZendColors.accentPop, fontSize: 12),
+                                  style: const TextStyle(
+                                    color: ZendColors.accentPop,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ],
@@ -403,13 +448,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       : Align(
                           alignment: Alignment.topLeft,
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 4, left: 20, right: 20),
+                            padding: const EdgeInsets.only(
+                              top: 4,
+                              left: 20,
+                              right: 20,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  key: const Key('zend-hero-balance-collapsed-text'),
-                                  model.balanceHidden ? '••••••' : '\$${model.sendableBalance.toStringAsFixed(2)}',
+                                  key: const Key(
+                                    'zend-hero-balance-collapsed-text',
+                                  ),
+                                  model.balanceHidden
+                                      ? '••••••'
+                                      : '\$${model.sendableBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,
@@ -422,7 +475,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 GestureDetector(
                                   onTap: model.toggleBalanceHidden,
                                   child: Icon(
-                                    model.balanceHidden ? PhosphorIconsRegular.eyeClosed : PhosphorIconsRegular.eye,
+                                    model.balanceHidden
+                                        ? PhosphorIconsRegular.eyeClosed
+                                        : PhosphorIconsRegular.eye,
                                     color: const Color(0x80F0F0F0),
                                     size: 18,
                                   ),
@@ -448,8 +503,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: Theme.of(context).scaffoldBackgroundColor,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
-                      boxShadow: const [BoxShadow(color: Color(0x1F000000), blurRadius: 24, offset: Offset(0, -4))],
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(ZendRadii.xxl),
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1F000000),
+                          blurRadius: 24,
+                          offset: Offset(0, -4),
+                        ),
+                      ],
                     ),
                     child: SafeArea(
                       top: false,
@@ -461,48 +524,114 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
                             sliver: SliverList(
                               delegate: SliverChildListDelegate([
-                                Row(children: [
-                                  Expanded(child: OutlineActionButton(label: 'Receive', onPressed: widget.onOpenReceive)),
-                                  const SizedBox(width: 12),
-                                  Expanded(child: OutlineActionButton(label: 'Withdraw', onPressed: widget.onOpenWithdraw)),
-                                ]),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlineActionButton(
+                                        label: 'Receive',
+                                        onPressed: widget.onOpenReceive,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: OutlineActionButton(
+                                        label: 'Withdraw',
+                                        onPressed: widget.onOpenWithdraw,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 18),
-                                Row(children: [Expanded(child: _SavingsCard(model: model)), const SizedBox(width: 12), Expanded(child: _PoolsCard(model: model, onTap: () => showPoolListDrawer(context)))]),
+                                Row(
+                                  children: [
+                                    Expanded(child: _SavingsCard(model: model)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _PoolsCard(
+                                        model: model,
+                                        onTap: () =>
+                                            showPoolListDrawer(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 18),
                                 // --- Card_Carousel (Req 24.1 — directly below Savings/Pools row, directly above Recent_Section) ---
                                 CardCarousel(
-                                  cards: buildCarouselCards(teaserDismissed: _teaserDismissed),
-                                  onCardTap: (card) => showEducationalModal(context, card: card),
+                                  cards: buildCarouselCards(
+                                    teaserDismissed: _teaserDismissed,
+                                  ),
+                                  onCardTap: (card) =>
+                                      showEducationalModal(context, card: card),
                                   onDismissTeaser: _dismissTeaser,
                                 ),
                                 const SizedBox(height: 18),
                                 // --- end Card_Carousel ---
                                 const Divider(),
                                 const SizedBox(height: 14),
-                                Builder(builder: (context) {
-                                  final zt = ZendTheme.of(context);
-                                  return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                    Text('Recent', style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                                    GestureDetector(
-                                      onTap: widget.onViewAll,
-                                      child: Text('view all', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.accent)),
-                                    ),
-                                  ]);
-                                }),
+                                Builder(
+                                  builder: (context) {
+                                    final zt = ZendTheme.of(context);
+                                    return Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Recent',
+                                          style: TextStyle(
+                                            fontFamily: 'Geist',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: zt.textPrimary,
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: widget.onViewAll,
+                                          child: Text(
+                                            'view all',
+                                            style: ZendTextStyles.tabularNumeric
+                                                .copyWith(
+                                                  fontSize: 12,
+                                                  color: zt.accent,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
                                 const SizedBox(height: 14),
                                 // Req 23.2: reduced from 5 to 3 items. Tap-through wiring (Req 23.4)
                                 // and the "view all" header above (Req 23.3) are otherwise unchanged.
-                                for (var i = 0; i < model.recentTransactions.take(3).length; i++) ...[
+                                for (
+                                  var i = 0;
+                                  i < model.recentTransactions.take(3).length;
+                                  i++
+                                ) ...[
                                   _TransactionRow.fromTransaction(
                                     model.recentTransactions[i],
-                                    onTap: model.recentTransactions[i].entry != null || model.recentTransactions[i].bankOrder != null
+                                    onTap:
+                                        model.recentTransactions[i].entry !=
+                                                null ||
+                                            model
+                                                    .recentTransactions[i]
+                                                    .bankOrder !=
+                                                null
                                         ? () => showTransactionReceipt(
-                                              context,
-                                              tx: model.recentTransactions[i],
-                                            )
+                                            context,
+                                            tx: model.recentTransactions[i],
+                                          )
                                         : null,
                                   ),
-                                  if (i != model.recentTransactions.take(3).length - 1) Divider(color: ZendTheme.of(context).border.withValues(alpha: 0.5), height: 1),
+                                  if (i !=
+                                      model.recentTransactions.take(3).length -
+                                          1)
+                                    Divider(
+                                      color: ZendTheme.of(
+                                        context,
+                                      ).border.withValues(alpha: 0.5),
+                                      height: 1,
+                                    ),
                                 ],
                                 const SizedBox(height: 26),
                               ]),
@@ -521,7 +650,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
 
 class _TransactionRow extends StatelessWidget {
   const _TransactionRow({
@@ -545,26 +673,28 @@ class _TransactionRow extends StatelessWidget {
   final Color? amountColor;
   final VoidCallback? onTap;
 
-  factory _TransactionRow.fromTransaction(ZendTransaction tx, {VoidCallback? onTap}) =>
-      _TransactionRow(
-        name: tx.name,
-        note: tx.note,
-        amount: tx.amount,
-        time: tx.time,
-        avatarLabel: tx.avatarLabel,
-        avatarUrl: tx.avatarUrl,
-        countryCode: tx.countryCode,
-        amountColor: tx.amountColor,
-        onTap: onTap,
-      );
+  factory _TransactionRow.fromTransaction(
+    ZendTransaction tx, {
+    VoidCallback? onTap,
+  }) => _TransactionRow(
+    name: tx.name,
+    note: tx.note,
+    amount: tx.amount,
+    time: tx.time,
+    avatarLabel: tx.avatarLabel,
+    avatarUrl: tx.avatarUrl,
+    countryCode: tx.countryCode,
+    amountColor: tx.amountColor,
+    onTap: onTap,
+  );
 
   ZendCountry? get _country => switch (countryCode) {
-        'ng' => ZendCountry.ng,
-        'us' => ZendCountry.us,
-        'gb' => ZendCountry.gb,
-        'eu' => ZendCountry.eu,
-        _ => null,
-      };
+    'ng' => ZendCountry.ng,
+    'us' => ZendCountry.us,
+    'gb' => ZendCountry.gb,
+    'eu' => ZendCountry.eu,
+    _ => null,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -574,33 +704,71 @@ class _TransactionRow extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(children: [
-          country != null
-              ? ZendCountryFlag(country: country, size: 44)
-              : ZendAvatar(
-                  radius: 22,
-                  photoUrl: avatarUrl,
-                  initials: avatarLabel,
+        child: Row(
+          children: [
+            country != null
+                ? ZendCountryFlag(country: country, size: 44)
+                : ZendAvatar(
+                    radius: 22,
+                    photoUrl: avatarUrl,
+                    initials: avatarLabel,
+                  ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    note,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: zt.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  amount,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    color: amountColor ?? zt.textPrimary,
+                  ),
                 ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-            const SizedBox(height: 3),
-            Text(note,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
-          ])),
-          const SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-            Text(amount, style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: amountColor ?? zt.textPrimary)),
-            const SizedBox(height: 4),
-            Text(time, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary)),
-          ]),
-        ]),
+                const SizedBox(height: 4),
+                Text(
+                  time,
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: zt.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -630,38 +798,70 @@ class _SavingsCard extends StatelessWidget {
             height: 118,
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             decoration: BoxDecoration(
-              color: (zt.isDark ? ZendColors.bgDeep : zt.bgCard).withValues(alpha: zt.isDark ? 0.82 : 0.78),
+              color: (zt.isDark ? ZendColors.bgDeep : zt.bgCard).withValues(
+                alpha: zt.isDark ? 0.82 : 0.78,
+              ),
               borderRadius: BorderRadius.circular(14),
               border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.50), width: 0.5),
+                top: BorderSide(
+                  color: Colors.white.withValues(
+                    alpha: zt.isDark ? 0.08 : 0.50,
+                  ),
+                  width: 0.5,
+                ),
               ),
             ),
-            child: Stack(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Savings', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-                  Icon(PhosphorIconsRegular.wallet, size: 16, color: zt.textSecondary),
-                ]),
-                const SizedBox(height: 3),
-                Text(
-                  apyStr,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 32,
-                    height: 0.98,
-                    color: zt.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                model.savingsLoading
-                    ? ZendLoader(size: 14, strokeWidth: 1.5, color: zt.textSecondary)
-                    : Text(
-                        balanceStr,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+            child: Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Savings',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                        Icon(
+                          PhosphorIconsRegular.wallet,
+                          size: 16,
+                          color: zt.textSecondary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      apyStr,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 32,
+                        height: 0.98,
+                        color: zt.textPrimary,
                       ),
-              ]),
-            ]),
+                    ),
+                    const Spacer(),
+                    model.savingsLoading
+                        ? ZendLoader(
+                            size: 14,
+                            strokeWidth: 1.5,
+                            color: zt.textSecondary,
+                          )
+                        : Text(
+                            balanceStr,
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
+                          ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -683,8 +883,9 @@ class _PoolsCard extends StatelessWidget {
     final participants = model.recentPoolParticipants;
     final displayedCount = participants.length > 2 ? 2 : participants.length;
     final overflow = participants.length - displayedCount;
-    final cardBg = (zt.isDark ? ZendColors.bgDeep : zt.bgCard)
-        .withValues(alpha: zt.isDark ? 0.82 : 0.78);
+    final cardBg = (zt.isDark ? ZendColors.bgDeep : zt.bgCard).withValues(
+      alpha: zt.isDark ? 0.82 : 0.78,
+    );
 
     return GestureDetector(
       onTap: onTap,
@@ -703,7 +904,9 @@ class _PoolsCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border(
                     top: BorderSide(
-                      color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.50),
+                      color: Colors.white.withValues(
+                        alpha: zt.isDark ? 0.08 : 0.50,
+                      ),
                       width: 0.5,
                     ),
                   ),
@@ -714,14 +917,25 @@ class _PoolsCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Pools', style: TextStyle(fontSize: 14, color: zt.textSecondary)),
-                        Icon(PhosphorIconsRegular.usersFour, size: 16, color: zt.textSecondary),
+                        Text(
+                          'Pools',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                        Icon(
+                          PhosphorIconsRegular.usersFour,
+                          size: 16,
+                          color: zt.textSecondary,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 3),
                     if (participants.isNotEmpty)
                       SizedBox(
-                        width: (displayedCount * 18 + 4) + (overflow > 0 ? 22 : 0),
+                        width:
+                            (displayedCount * 18 + 4) + (overflow > 0 ? 22 : 0),
                         height: 24,
                         child: Stack(
                           children: [
@@ -733,7 +947,10 @@ class _PoolsCard extends StatelessWidget {
                                   height: 24,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: cardBg, width: 1.5),
+                                    border: Border.all(
+                                      color: cardBg,
+                                      width: 1.5,
+                                    ),
                                   ),
                                   child: ClipOval(
                                     child: ZendAvatar(
@@ -757,7 +974,10 @@ class _PoolsCard extends StatelessWidget {
                                   alignment: Alignment.center,
                                   child: Text(
                                     '+$overflow',
-                                    style: TextStyle(fontSize: 9, color: zt.textSecondary),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: zt.textSecondary,
+                                    ),
                                   ),
                                 ),
                               ),

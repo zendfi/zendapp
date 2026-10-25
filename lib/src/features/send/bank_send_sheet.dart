@@ -13,6 +13,7 @@ import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 part 'bank_send_stages.dart';
 
@@ -26,7 +27,7 @@ part 'bank_send_stages.dart';
 const PaymentNetwork _suiBankSendNetwork = PaymentNetwork.mainnet;
 
 Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -38,34 +39,29 @@ Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
   );
 }
 
-enum _BankSendRail {
-  ngn,
-  ach,
-  fp,
-  sepa,
-}
+enum _BankSendRail { ngn, ach, fp, sepa }
 
 extension _BankSendRailExt on _BankSendRail {
   String get currency => switch (this) {
-        _BankSendRail.ngn => 'NGN',
-        _BankSendRail.ach => 'USD',
-        _BankSendRail.fp => 'GBP',
-        _BankSendRail.sepa => 'EUR',
-      };
+    _BankSendRail.ngn => 'NGN',
+    _BankSendRail.ach => 'USD',
+    _BankSendRail.fp => 'GBP',
+    _BankSendRail.sepa => 'EUR',
+  };
 
   String get bridgeCurrency => switch (this) {
-        _BankSendRail.ach => 'usd',
-        _BankSendRail.fp => 'gbp',
-        _BankSendRail.sepa => 'eur',
-        _ => '',
-      };
+    _BankSendRail.ach => 'usd',
+    _BankSendRail.fp => 'gbp',
+    _BankSendRail.sepa => 'eur',
+    _ => '',
+  };
 
   String get bridgeRail => switch (this) {
-        _BankSendRail.ach => 'ach',
-        _BankSendRail.fp => 'faster_payments',
-        _BankSendRail.sepa => 'sepa',
-        _ => '',
-      };
+    _BankSendRail.ach => 'ach',
+    _BankSendRail.fp => 'faster_payments',
+    _BankSendRail.sepa => 'sepa',
+    _ => '',
+  };
 
   bool get isIntl => this != _BankSendRail.ngn;
 }
@@ -122,7 +118,8 @@ class _BankSendSheetState extends State<BankSendSheet>
   // Sui rail only: the unsigned gasless-transfer envelope the client must sign.
   RailEnvelope? _prepareEnvelope;
   double? _fiatAmount;
-  double? _confirmedAmountUsdc; // amount_usdc returned by prepare (may be rounded up for PAJ)
+  double?
+  _confirmedAmountUsdc; // amount_usdc returned by prepare (may be rounded up for PAJ)
 
   String _pinDigits = '';
   String? _pinError;
@@ -141,13 +138,15 @@ class _BankSendSheetState extends State<BankSendSheet>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -158,19 +157,19 @@ class _BankSendSheetState extends State<BankSendSheet>
   }
 
   double get _sheetHeightFraction => switch (_stage) {
-        _BankSendStage.railSelect => 0.55,
-        _BankSendStage.bankInput => 0.72,
-        _BankSendStage.bankPicker => 0.88,
-        _BankSendStage.addIntlAccount => 0.88,
-        _BankSendStage.intlAccounts => 0.72,
-        _BankSendStage.ngnAccounts => 0.72,
-        _BankSendStage.resolving => 0.45,
-        _BankSendStage.confirmation => 0.72,
-        _BankSendStage.pin => 0.72,
-        _BankSendStage.processing => 0.45,
-        _BankSendStage.success => 0.52,
-        _BankSendStage.error => 0.52,
-      };
+    _BankSendStage.railSelect => 0.55,
+    _BankSendStage.bankInput => 0.72,
+    _BankSendStage.bankPicker => 0.88,
+    _BankSendStage.addIntlAccount => 0.88,
+    _BankSendStage.intlAccounts => 0.72,
+    _BankSendStage.ngnAccounts => 0.72,
+    _BankSendStage.resolving => 0.45,
+    _BankSendStage.confirmation => 0.72,
+    _BankSendStage.pin => 0.72,
+    _BankSendStage.processing => 0.45,
+    _BankSendStage.success => 0.52,
+    _BankSendStage.error => 0.52,
+  };
 
   void _goTo(_BankSendStage stage) => setState(() => _stage = stage);
 
@@ -186,9 +185,11 @@ class _BankSendSheetState extends State<BankSendSheet>
           model.walletService.apiClient.getBankSendNgnRates(),
           model.walletService.apiClient.getNgnSavedAccounts(),
         ]);
-        final banks = (results[0] as List<dynamic>).cast<Map<String, dynamic>>();
+        final banks = (results[0] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
         final rates = results[1] as Map<String, dynamic>;
-        final savedAccounts = (results[2] as List<dynamic>).cast<Map<String, dynamic>>();
+        final savedAccounts = (results[2] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
         if (!mounted) return;
         setState(() {
           _banks = banks;
@@ -197,13 +198,16 @@ class _BankSendSheetState extends State<BankSendSheet>
           _stage = _BankSendStage.ngnAccounts;
         });
       } else {
-        final accounts = await model.walletService.apiClient.getIntlSavedAccounts();
+        final accounts = await model.walletService.apiClient
+            .getIntlSavedAccounts();
         if (!mounted) return;
         final filtered = accounts
             .cast<Map<String, dynamic>>()
-            .where((a) =>
-                (a['currency'] as String? ?? '').toLowerCase() ==
-                rail.bridgeCurrency)
+            .where(
+              (a) =>
+                  (a['currency'] as String? ?? '').toLowerCase() ==
+                  rail.bridgeCurrency,
+            )
             .toList();
         setState(() {
           _savedAccounts = filtered;
@@ -298,10 +302,12 @@ class _BankSendSheetState extends State<BankSendSheet>
       if (!_rail.isIntl) {
         // Use saved account data if one was selected, otherwise use manual input
         final bankId = _selectedSavedAccount != null
-            ? (_selectedSavedAccount!['paj_bank_id'] as String? ?? _selectedBank!['id'] as String)
+            ? (_selectedSavedAccount!['paj_bank_id'] as String? ??
+                  _selectedBank!['id'] as String)
             : _selectedBank!['id'] as String;
         final accountNumber = _selectedSavedAccount != null
-            ? (_selectedSavedAccount!['paj_account_number'] as String? ?? _accountController.text.trim())
+            ? (_selectedSavedAccount!['paj_account_number'] as String? ??
+                  _accountController.text.trim())
             : _accountController.text.trim();
         final savedAccountId = _selectedSavedAccount?['id'] as String?;
 
@@ -337,7 +343,8 @@ class _BankSendSheetState extends State<BankSendSheet>
             ? RailEnvelope.fromJson(envelopeJson)
             : null;
         _fiatAmount = (result['fiat_amount'] as num?)?.toDouble();
-        _confirmedAmountUsdc = (result['amount_usdc'] as num?)?.toDouble() ?? widget.amount;
+        _confirmedAmountUsdc =
+            (result['amount_usdc'] as num?)?.toDouble() ?? widget.amount;
         _resolvedAccountName = result['account_name'] as String?;
         _stage = _BankSendStage.confirmation;
       });
@@ -397,14 +404,18 @@ class _BankSendSheetState extends State<BankSendSheet>
       // Verify PIN if session cache is available
       final cache = WalletSessionCache.instance;
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _pinAttempts++;
           if (_pinAttempts >= 5) {
             model.appLockService.lock();
             setState(() {
-              _errorMessage = 'Too many incorrect PIN attempts. Please unlock again.';
+              _errorMessage =
+                  'Too many incorrect PIN attempts. Please unlock again.';
               _stage = _BankSendStage.error;
             });
           } else {
@@ -451,13 +462,15 @@ class _BankSendSheetState extends State<BankSendSheet>
   Future<void> _executeWithKeypair(dynamic keypairBytes) async {
     try {
       final model = ZendScope.of(context);
-      final signedTx = await model.walletService.buildAndSignTransactionToAddressFromCache(
-        keypairBytes: keypairBytes,
-        amountUsdc: _confirmedAmountUsdc ?? widget.amount,
-        destinationAddress: _depositAddress!,
-        blockhash: _blockhash!,
-        feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
-      );
+      final signedTx = await model.walletService
+          .buildAndSignTransactionToAddressFromCache(
+            keypairBytes: keypairBytes,
+            amountUsdc: _confirmedAmountUsdc ?? widget.amount,
+            destinationAddress: _depositAddress!,
+            blockhash: _blockhash!,
+            feePayerAddress:
+                _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
+          );
       await _submitSignedTx(signedTx);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -477,13 +490,15 @@ class _BankSendSheetState extends State<BankSendSheet>
   Future<void> _executeWithPinString(String pin) async {
     try {
       final model = ZendScope.of(context);
-      final signedTx = await model.walletService.buildAndSignTransactionToAddress(
-        pin: pin,
-        amountUsdc: _confirmedAmountUsdc ?? widget.amount,
-        destinationAddress: _depositAddress!,
-        blockhash: _blockhash!,
-        feePayerAddress: _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
-      );
+      final signedTx = await model.walletService
+          .buildAndSignTransactionToAddress(
+            pin: pin,
+            amountUsdc: _confirmedAmountUsdc ?? widget.amount,
+            destinationAddress: _depositAddress!,
+            blockhash: _blockhash!,
+            feePayerAddress:
+                _feePayer ?? 'FM7tTDb8CSERXF6WjuTQGvba46L2r3YfCQp345RjxW52',
+          );
       await _submitSignedTx(signedTx);
     } on PinDecryptionException {
       rethrow;
@@ -634,10 +649,8 @@ class _BankSendSheetState extends State<BankSendSheet>
                   reverseDuration: const Duration(milliseconds: 100),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
                   child: KeyedSubtree(
                     key: ValueKey(_stage),
                     child: _buildStage(),
@@ -654,10 +667,7 @@ class _BankSendSheetState extends State<BankSendSheet>
   Widget _buildStage() {
     switch (_stage) {
       case _BankSendStage.railSelect:
-        return _RailSelectStage(
-          amount: widget.amount,
-          onSelect: _selectRail,
-        );
+        return _RailSelectStage(amount: widget.amount, onSelect: _selectRail);
       case _BankSendStage.bankInput:
         return _NgnBankInputStage(
           amount: widget.amount,
@@ -714,20 +724,28 @@ class _BankSendSheetState extends State<BankSendSheet>
           amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           fiatAmount: _fiatAmount,
           accountName: _resolvedAccountName ?? '',
-          bankName: _selectedBank?['name'] as String? ??
+          bankName:
+              _selectedBank?['name'] as String? ??
               (_selectedSavedAccount?['bank_name'] as String? ?? ''),
           accountNumberMasked: _accountController.text.isNotEmpty
               ? _maskAccount(_accountController.text.trim())
               : (_selectedSavedAccount != null
-                  ? (_selectedSavedAccount!['account_last4'] != null
-                      ? '••••${_selectedSavedAccount!['account_last4']}'
-                      : ((_selectedSavedAccount!['account_number_masked'] as String?)?.isNotEmpty == true
-                          ? _selectedSavedAccount!['account_number_masked'] as String
-                          : '—'))
-                  : '—'),
+                    ? (_selectedSavedAccount!['account_last4'] != null
+                          ? '••••${_selectedSavedAccount!['account_last4']}'
+                          : ((_selectedSavedAccount!['account_number_masked']
+                                            as String?)
+                                        ?.isNotEmpty ==
+                                    true
+                                ? _selectedSavedAccount!['account_number_masked']
+                                      as String
+                                : '—'))
+                    : '—'),
           onConfirm: _proceedFromConfirmation,
           onBack: () => _goTo(
-              _rail.isIntl ? _BankSendStage.intlAccounts : _BankSendStage.ngnAccounts),
+            _rail.isIntl
+                ? _BankSendStage.intlAccounts
+                : _BankSendStage.ngnAccounts,
+          ),
         );
       case _BankSendStage.pin:
         return _PinStage(
@@ -753,7 +771,8 @@ class _BankSendSheetState extends State<BankSendSheet>
           rail: _rail,
           amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           fiatAmount: _fiatAmount,
-          bankName: _selectedBank?['name'] as String? ??
+          bankName:
+              _selectedBank?['name'] as String? ??
               (_selectedSavedAccount?['bank_name'] as String? ?? ''),
           onDone: _dismiss,
         );

@@ -32,8 +32,10 @@ class UserProfileScreen extends StatefulWidget {
     this.userId,
     this.knownDisplayName,
     this.knownAvatarUrl,
-  }) : assert(zendtag != null || userId != null,
-            'Either zendtag or userId must be provided');
+  }) : assert(
+         zendtag != null || userId != null,
+         'Either zendtag or userId must be provided',
+       );
 
   final String? zendtag;
   final String? userId;
@@ -66,7 +68,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final model = ZendScope.of(context);
     if (_userId == null && _zendtag == null) return false;
     return _userId == model.currentUserId ||
-        (_zendtag != null && _zendtag!.toLowerCase() == model.currentZendtag?.toLowerCase());
+        (_zendtag != null &&
+            _zendtag!.toLowerCase() == model.currentZendtag?.toLowerCase());
   }
 
   Future<void> _resolveIdentity() async {
@@ -82,12 +85,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         // below needs one. This screen just doesn't render the
         // bio/mutual-context/streak fields the fuller response also
         // carries — spec §18-30 wants avatar/tag/count only.
-        final profile = await model.walletService.apiClient.getUserProfile(widget.zendtag!);
+        final profile = await model.walletService.apiClient.getUserProfile(
+          widget.zendtag!,
+        );
         if (!mounted) return;
         setState(() {
           _userId = profile.userId;
           _zendtag = profile.zendtag;
-          _displayName = profile.displayName.trim().isNotEmpty ? profile.displayName : '@${profile.zendtag}';
+          _displayName = profile.displayName.trim().isNotEmpty
+              ? profile.displayName
+              : '@${profile.zendtag}';
           _avatarUrl = profile.avatarUrl;
           _loadingIdentity = false;
         });
@@ -126,7 +133,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _edgesError = null;
     });
     try {
-      final response = await model.activityDataService.getActivityEdgesForUser(_userId!, limit: 50);
+      final response = await model.activityDataService.getActivityEdgesForUser(
+        _userId!,
+        limit: 50,
+      );
       if (mounted) {
         setState(() {
           _edges = response.edges;
@@ -157,23 +167,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final model = ZendScope.of(context);
     if (model.currentUserId == null || _userId == null) return;
 
-    final existing = model.dmService.cachedThreads.where((t) => t.counterparty.userId == _userId).firstOrNull;
+    final existing = model.dmService.cachedThreads
+        .where((t) => t.counterparty.userId == _userId)
+        .firstOrNull;
     if (existing != null) {
-      pushZendSlide(context, DmThreadScreen(roomId: existing.roomId, counterparty: existing.counterparty));
+      pushZendSlide(
+        context,
+        DmThreadScreen(
+          roomId: existing.roomId,
+          counterparty: existing.counterparty,
+        ),
+      );
       return;
     }
 
-    model.dmService.getOrCreateRoom(_userId!).then((result) {
-      if (!context.mounted) return;
-      pushZendSlide(
-        context, // ignore: use_build_context_synchronously
-        DmThreadScreen(roomId: result.roomId, counterparty: result.counterparty),
-      );
-    }).catchError((_) {
-      if (context.mounted) {
-        ZendShellController.instance?.switchToTab(2);
-      }
-    });
+    model.dmService
+        .getOrCreateRoom(_userId!)
+        .then((result) {
+          if (!context.mounted) return;
+          pushZendSlide(
+            context, // ignore: use_build_context_synchronously
+            DmThreadScreen(
+              roomId: result.roomId,
+              counterparty: result.counterparty,
+            ),
+          );
+        })
+        .catchError((_) {
+          if (context.mounted) {
+            ZendShellController.instance?.switchToTab(2);
+          }
+        });
   }
 
   void _openZend() {
@@ -197,11 +221,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final entry = entryFromEdgeForViewer(edge, model);
     if (entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Details for this activity are not available', style: TextStyle(fontFamily: 'Geist'))),
+        const SnackBar(
+          content: Text(
+            'Details for this activity are not available',
+            style: TextStyle(fontFamily: 'Geist'),
+          ),
+        ),
       );
       return;
     }
-    final tx = zendTransactionFromEdge(edge, entry, avatarLabel: edge.counterparty.initialLetter, avatarUrl: edge.counterparty.avatarUrl);
+    final tx = zendTransactionFromEdge(
+      edge,
+      entry,
+      avatarLabel: edge.counterparty.initialLetter,
+      avatarUrl: edge.counterparty.avatarUrl,
+    );
     showTransactionReceipt(context, tx: tx);
   }
 
@@ -213,7 +247,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       headline: headline,
       avatarUrl: isExternal ? edge.senderAvatarUrl : _avatarUrl,
       avatarInitial: isExternal
-          ? (edge.senderZendtag?.isNotEmpty == true ? edge.senderZendtag![0].toUpperCase() : '?')
+          ? (edge.senderZendtag?.isNotEmpty == true
+                ? edge.senderZendtag![0].toUpperCase()
+                : '?')
           : _initial,
       onViewReceipt: () => _openReceipt(edge),
       onOpenChat: isExternal ? null : _openDm,
@@ -236,7 +272,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -249,11 +288,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_identityError!, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+                      Text(
+                        _identityError!,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: _resolveIdentity,
-                        child: Text('Retry', style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.accent)),
+                        child: Text(
+                          'Retry',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            color: zt.accent,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -269,17 +322,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     Center(
                       child: Column(
                         children: [
-                          ZendAvatar(radius: 40, photoUrl: _avatarUrl, initials: _initial),
+                          ZendAvatar(
+                            radius: 40,
+                            photoUrl: _avatarUrl,
+                            initials: _initial,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             _label,
-                            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                              color: zt.textPrimary,
+                            ),
                           ),
                           if (!_loadingEdges) ...[
                             const SizedBox(height: 4),
                             Text(
                               '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together',
-                              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13,
+                                color: zt.textSecondary,
+                              ),
                             ),
                           ],
                         ],
@@ -292,13 +358,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: _isOwnProfile
                           ? OutlineActionButton(
                               label: 'Edit profile',
-                              onPressed: () => pushZendSlide(context, const AccountInformationScreen()),
+                              onPressed: () => pushZendSlide(
+                                context,
+                                const AccountInformationScreen(),
+                              ),
                             )
                           : Row(
                               children: [
-                                Expanded(child: OutlineActionButton(label: 'Chat', onPressed: _openDm)),
+                                Expanded(
+                                  child: OutlineActionButton(
+                                    label: 'Chat',
+                                    onPressed: _openDm,
+                                  ),
+                                ),
                                 const SizedBox(width: 12),
-                                Expanded(child: PrimaryButton(label: 'Zend', onPressed: _openZend)),
+                                Expanded(
+                                  child: PrimaryButton(
+                                    label: 'Zend',
+                                    onPressed: _openZend,
+                                  ),
+                                ),
                               ],
                             ),
                     ),
@@ -310,31 +389,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: _loadingEdges
                           ? const PersonActivitySkeleton()
                           : _edgesError != null
-                              ? ZendErrorState(
-                                  title: "Couldn't load activity",
-                                  onRetry: _loadEdges,
-                                )
-                              : _edges.isEmpty
-                                  ? Center(
-                                      child: Text(
-                                        'No activity yet',
-                                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                                      ),
-                                    )
-                                  : ListView.separated(
-                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                                      itemCount: _edges.length,
-                                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                                      itemBuilder: (context, i) {
-                                        final edge = _edges[i];
-                                        final headline = _describeEdge(edge);
-                                        return _PersonActivityRow(
-                                          headline: headline,
-                                          edge: edge,
-                                          onTap: () => _openActivity(edge, headline),
-                                        );
-                                      },
-                                    ),
+                          ? ZendErrorState(
+                              title: "Couldn't load activity",
+                              onRetry: _loadEdges,
+                            )
+                          : _edges.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No activity yet',
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 14,
+                                  color: zt.textSecondary,
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              itemCount: _edges.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, i) {
+                                final edge = _edges[i];
+                                final headline = _describeEdge(edge);
+                                return _PersonActivityRow(
+                                  headline: headline,
+                                  edge: edge,
+                                  onTap: () => _openActivity(edge, headline),
+                                );
+                              },
+                            ),
                     ),
                   ],
                 ),
@@ -347,7 +431,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 }
 
 class _PersonActivityRow extends StatelessWidget {
-  const _PersonActivityRow({required this.headline, required this.edge, required this.onTap});
+  const _PersonActivityRow({
+    required this.headline,
+    required this.edge,
+    required this.onTap,
+  });
 
   final String headline;
   final ActivityEdge edge;
@@ -356,7 +444,9 @@ class _PersonActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final amountLabel = edge.amountHidden ? 'Hidden' : '\$${edge.amountUsdc ?? '0'}';
+    final amountLabel = edge.amountHidden
+        ? 'Hidden'
+        : '\$${edge.amountUsdc ?? '0'}';
 
     return Material(
       color: zt.bgSecondary,
@@ -376,7 +466,11 @@ class _PersonActivityRow extends StatelessWidget {
                       headline,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
@@ -384,7 +478,11 @@ class _PersonActivityRow extends StatelessWidget {
                         edge.note!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 12.5, color: zt.textPrimary.withValues(alpha: 0.85)),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12.5,
+                          color: zt.textPrimary.withValues(alpha: 0.85),
+                        ),
                       ),
                     ],
                   ],
@@ -393,7 +491,11 @@ class _PersonActivityRow extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 amountLabel,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textSecondary,
+                ),
               ),
             ],
           ),

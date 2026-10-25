@@ -107,7 +107,12 @@ class _PeopleScreenState extends State<PeopleScreen> {
     }
   }
 
-  void _openProfile({String? zendtag, String? userId, String? displayName, String? avatarUrl}) {
+  void _openProfile({
+    String? zendtag,
+    String? userId,
+    String? displayName,
+    String? avatarUrl,
+  }) {
     pushZendSlide(
       context,
       UserProfileScreen(
@@ -145,7 +150,12 @@ class _PeopleScreenState extends State<PeopleScreen> {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
               child: Text(
                 'People',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 26, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
               ),
             ),
             // ── Search — blends in, doesn't dominate ──
@@ -168,7 +178,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
                 controller: _searchController,
                 focusNode: _searchFocus,
                 onChanged: _onQueryChanged,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  color: zt.textPrimary,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search username or email',
                   hintStyle: TextStyle(
@@ -176,19 +190,30 @@ class _PeopleScreenState extends State<PeopleScreen> {
                     fontSize: 14,
                     color: zt.textSecondary.withValues(alpha: 0.7),
                   ),
-                  prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 18, color: zt.textSecondary),
+                  prefixIcon: Icon(
+                    PhosphorIconsRegular.magnifyingGlass,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
                   suffixIcon: _query.isNotEmpty
                       ? GestureDetector(
                           onTap: () {
                             _searchController.clear();
                             _onQueryChanged('');
                           },
-                          child: Icon(PhosphorIconsRegular.xCircle, size: 18, color: zt.textSecondary),
+                          child: Icon(
+                            PhosphorIconsRegular.xCircle,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
                         )
                       : null,
                   filled: true,
                   fillColor: zt.bgSecondary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                     borderSide: BorderSide.none,
@@ -197,7 +222,9 @@ class _PeopleScreenState extends State<PeopleScreen> {
               ),
             ),
             Expanded(
-              child: isSearching ? _buildSearchResults(zt) : _buildDefault(zt, model, threads),
+              child: isSearching
+                  ? _buildSearchResults(zt)
+                  : _buildDefault(zt, model, threads),
             ),
           ],
         ),
@@ -214,7 +241,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
         child: Text(
           "We couldn't find anyone with that identity.",
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14,
+            color: zt.textSecondary,
+          ),
         ),
       );
     }
@@ -231,13 +262,21 @@ class _PeopleScreenState extends State<PeopleScreen> {
           subtitle: '@$tag',
           avatarUrl: avatarUrl,
           avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
-          onTap: () => _openProfile(zendtag: tag, displayName: name, avatarUrl: avatarUrl),
+          onTap: () => _openProfile(
+            zendtag: tag,
+            displayName: name,
+            avatarUrl: avatarUrl,
+          ),
         );
       },
     );
   }
 
-  Widget _buildDefault(ZendTheme zt, ZendAppModel model, List<CounterpartyThread> threads) {
+  Widget _buildDefault(
+    ZendTheme zt,
+    ZendAppModel model,
+    List<CounterpartyThread> threads,
+  ) {
     if (threads.isEmpty) {
       return Center(
         child: Padding(
@@ -245,7 +284,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
           child: Text(
             'Nothing here yet. Zend someone to get things started.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textSecondary,
+            ),
           ),
         ),
       );
@@ -272,7 +315,12 @@ class _PeopleScreenState extends State<PeopleScreen> {
             padding: const EdgeInsets.only(bottom: 8, top: 4),
             child: Text(
               'Recent',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: zt.textSecondary,
+              ),
             ),
           );
         }
@@ -280,7 +328,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
           final thread = threads[i - 1];
           return _PersonRow(
             displayName: thread.counterparty.displayLabel,
-            subtitle: '${thread.edges.length}${thread.countIsExact ? '' : '+'} '
+            subtitle:
+                '${thread.edges.length}${thread.countIsExact ? '' : '+'} '
                 'activit${thread.edges.length == 1 ? 'y' : 'ies'} together',
             avatarUrl: thread.counterparty.avatarUrl,
             avatarLabel: thread.counterparty.initialLetter,
@@ -300,7 +349,12 @@ class _PeopleScreenState extends State<PeopleScreen> {
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
                 'People you might know',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: zt.textSecondary,
+                ),
               ),
             ),
             SizedBox(
@@ -312,7 +366,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
                 itemBuilder: (context, j) {
                   final s = suggestions[j];
                   final tag = s['zendtag'] as String? ?? '';
-                  final name = (s['display_name'] as String?)?.trim().isNotEmpty == true
+                  final name =
+                      (s['display_name'] as String?)?.trim().isNotEmpty == true
                       ? s['display_name'] as String
                       : tag;
                   final avatarUrl = s['avatar_url'] as String?;
@@ -320,7 +375,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
                     displayName: name,
                     avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
                     avatarUrl: avatarUrl,
-                    onTap: () => _openProfile(zendtag: tag, displayName: name, avatarUrl: avatarUrl),
+                    onTap: () => _openProfile(
+                      zendtag: tag,
+                      displayName: name,
+                      avatarUrl: avatarUrl,
+                    ),
                   );
                 },
               ),
@@ -360,14 +419,33 @@ class _PersonRow extends StatelessWidget {
           child: Row(
             children: [
               // radius 26 + 14px gap — same as the chat list tiles.
-              ZendAvatar(radius: 26, initials: avatarLabel, photoUrl: avatarUrl),
+              ZendAvatar(
+                radius: 26,
+                initials: avatarLabel,
+                photoUrl: avatarUrl,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
-                    Text(subtitle, style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -410,7 +488,11 @@ class _DiscoveryColumn extends StatelessWidget {
               displayName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 11.5, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 11.5,
+                color: zt.textSecondary,
+              ),
             ),
           ],
         ),

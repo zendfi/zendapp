@@ -9,14 +9,20 @@ import 'api_client.dart';
 class DmMessageInfo {
   const DmMessageInfo({required this.sentAt, this.readAt});
   final DateTime sentAt;
+
   /// Null if the counterparty hasn't read up to this message yet.
   final DateTime? readAt;
 }
 
 class DmMessagesResult {
-  const DmMessagesResult({required this.messages, this.nextCursor, this.counterpartyLastReadMessageId});
+  const DmMessagesResult({
+    required this.messages,
+    this.nextCursor,
+    this.counterpartyLastReadMessageId,
+  });
   final List<DmMessage> messages;
   final String? nextCursor;
+
   /// The counterparty's current read cursor — the id of the last message
   /// they've read in this room. Used to hydrate "read" (double-tick) status
   /// on the current user's own sent messages when a thread is (re)opened,
@@ -121,7 +127,10 @@ class DmService {
   /// Removes all persisted clear-chat boundaries from SharedPreferences.
   Future<void> _clearPersistedBoundaries() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith('dm_cleared_')).toList();
+    final keys = prefs
+        .getKeys()
+        .where((k) => k.startsWith('dm_cleared_'))
+        .toList();
     for (final key in keys) {
       await prefs.remove(key);
     }
@@ -175,9 +184,7 @@ class DmService {
     }
 
     // ── Network fallback ──────────────────────────────────────────────────
-    final response = await _apiClient.dio.get(
-      '/api/zend/dm/with/$otherUserId',
-    );
+    final response = await _apiClient.dio.get('/api/zend/dm/with/$otherUserId');
     final roomId = response.data['room_id'] as String;
     final cp = DmCounterparty.fromJson(
       response.data['counterparty'] as Map<String, dynamic>,
@@ -225,7 +232,8 @@ class DmService {
     return DmMessagesResult(
       messages: messages,
       nextCursor: response.data['next_cursor'] as String?,
-      counterpartyLastReadMessageId: response.data['counterparty_last_read_message_id'] as String?,
+      counterpartyLastReadMessageId:
+          response.data['counterparty_last_read_message_id'] as String?,
     );
   }
 
@@ -249,7 +257,9 @@ class DmService {
       'client_id': clientId,
       if (forwarded) 'forwarded': true,
     };
-    if (replyToContent != null || replyToSenderZendtag != null || replyToMessageId != null) {
+    if (replyToContent != null ||
+        replyToSenderZendtag != null ||
+        replyToMessageId != null) {
       data['metadata'] = {
         'reply_to_content': replyToContent,
         'reply_to_sender_zendtag': replyToSenderZendtag,
@@ -267,7 +277,8 @@ class DmService {
       'message_type': 'text',
       'content': content,
       'client_id': clientId,
-      'created_at': response.data['created_at'] as String? ??
+      'created_at':
+          response.data['created_at'] as String? ??
           DateTime.now().toIso8601String(),
       'reply_to_content': replyToContent,
       'reply_to_sender_zendtag': replyToSenderZendtag,
@@ -290,7 +301,9 @@ class DmService {
       '/api/zend/dm/$roomId/messages/$messageId/info',
     );
     return DmMessageInfo(
-      sentAt: DateTime.tryParse(response.data['sent_at'] as String? ?? '') ?? DateTime.now(),
+      sentAt:
+          DateTime.tryParse(response.data['sent_at'] as String? ?? '') ??
+          DateTime.now(),
       readAt: response.data['read_at'] != null
           ? DateTime.tryParse(response.data['read_at'] as String)
           : null,
@@ -378,7 +391,9 @@ class DmService {
         status: 'pending',
       ),
       clientId: clientId,
-      createdAt: DateTime.tryParse(response.data['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(response.data['created_at'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
@@ -390,16 +405,16 @@ class DmService {
       data: {'visibility': visibility},
     );
   }
+
   Future<Map<String, dynamic>> prepareVibe(
     String roomId, {
     required String stickerId,
     required double amountUsdc,
-  }) =>
-      _apiClient.prepareVibe(
-        roomId: roomId,
-        stickerId: stickerId,
-        amountUsdc: amountUsdc,
-      );
+  }) => _apiClient.prepareVibe(
+    roomId: roomId,
+    stickerId: stickerId,
+    amountUsdc: amountUsdc,
+  );
 
   /// Step 2: submits the client-signed transaction to complete the Vibe.
   Future<Map<String, dynamic>> submitVibe(
@@ -408,12 +423,11 @@ class DmService {
     required double amountUsdc,
     required String partiallySignedTx,
     required String clientId,
-  }) =>
-      _apiClient.submitVibe(
-        roomId: roomId,
-        stickerId: stickerId,
-        amountUsdc: amountUsdc,
-        partiallySignedTx: partiallySignedTx,
-        clientId: clientId,
-      );
+  }) => _apiClient.submitVibe(
+    roomId: roomId,
+    stickerId: stickerId,
+    amountUsdc: amountUsdc,
+    partiallySignedTx: partiallySignedTx,
+    clientId: clientId,
+  );
 }

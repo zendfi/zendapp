@@ -23,7 +23,11 @@ const double _kInner = 5.0;
 ///
 /// The inner corner (the one facing the *next* bubble from the same sender)
 /// tightens for any bubble that isn't alone at that edge of the group.
-BorderRadius _groupedBorderRadius({required bool isMe, required bool isFirst, required bool isLast}) {
+BorderRadius _groupedBorderRadius({
+  required bool isMe,
+  required bool isFirst,
+  required bool isLast,
+}) {
   if (isMe) {
     return BorderRadius.only(
       topLeft: const Radius.circular(_kOuter),
@@ -77,34 +81,38 @@ class MissionRoomMessage extends StatelessWidget {
         padding: EdgeInsets.only(top: isContinuation ? 2 : 6, bottom: 2),
         child: switch (message.messageTypeEnum) {
           PoolMessageType.contributionEvent => _ContributionEventRow(
-              message: message,
-              onLongPress: () => onLongPress(context),
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-              onRetry: onRetry,
-              readers: readers),
+            message: message,
+            onLongPress: () => onLongPress(context),
+            onReactionTap: onReactionTap,
+            currentUserId: currentUserId,
+            onRetry: onRetry,
+            readers: readers,
+          ),
           PoolMessageType.vibe => _VibeMessageRow(
-              message: message,
-              currentUserId: currentUserId,
-              onRetry: onRetry),
+            message: message,
+            currentUserId: currentUserId,
+            onRetry: onRetry,
+          ),
           PoolMessageType.voiceNote => _VoiceNoteRow(
-              message: message,
-              onLongPress: () => onLongPress(context),
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-              isContinuation: isContinuation,
-              onRetry: onRetry,
-              player: player,
-              onPlayTap: onPlayTap,
-              readers: readers),
+            message: message,
+            onLongPress: () => onLongPress(context),
+            onReactionTap: onReactionTap,
+            currentUserId: currentUserId,
+            isContinuation: isContinuation,
+            onRetry: onRetry,
+            player: player,
+            onPlayTap: onPlayTap,
+            readers: readers,
+          ),
           _ => _TextMessageRow(
-              message: message,
-              onLongPress: () => onLongPress(context),
-              onReactionTap: onReactionTap,
-              currentUserId: currentUserId,
-              isContinuation: isContinuation,
-              onRetry: onRetry,
-              readers: readers),
+            message: message,
+            onLongPress: () => onLongPress(context),
+            onReactionTap: onReactionTap,
+            currentUserId: currentUserId,
+            isContinuation: isContinuation,
+            onRetry: onRetry,
+            readers: readers,
+          ),
         },
       ),
     );
@@ -114,7 +122,11 @@ class MissionRoomMessage extends StatelessWidget {
 // ── Delivery status ───────────────────────────────────────────────────────────
 
 class _DeliveryStatus extends StatelessWidget {
-  const _DeliveryStatus({required this.status, required this.onRetry, this.onDark = false});
+  const _DeliveryStatus({
+    required this.status,
+    required this.onRetry,
+    this.onDark = false,
+  });
   final LocalStatus status;
   final VoidCallback? onRetry;
   final bool onDark;
@@ -125,11 +137,23 @@ class _DeliveryStatus extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.6)
         : ZendTheme.of(context).textSecondary.withValues(alpha: 0.5);
     return switch (status) {
-      LocalStatus.sending  => Icon(PhosphorIconsRegular.clock,  size: 11, color: color),
-      LocalStatus.delivered => Icon(PhosphorIconsRegular.checkCircle,  size: 11, color: color),
-      LocalStatus.failed   => GestureDetector(
+      LocalStatus.sending => Icon(
+        PhosphorIconsRegular.clock,
+        size: 11,
+        color: color,
+      ),
+      LocalStatus.delivered => Icon(
+        PhosphorIconsRegular.checkCircle,
+        size: 11,
+        color: color,
+      ),
+      LocalStatus.failed => GestureDetector(
         onTap: onRetry,
-        child: const Icon(PhosphorIconsRegular.warningCircle, size: 11, color: ZendColors.destructive),
+        child: const Icon(
+          PhosphorIconsRegular.warningCircle,
+          size: 11,
+          color: ZendColors.destructive,
+        ),
       ),
     };
   }
@@ -156,7 +180,9 @@ class _ReadReceiptAvatars extends StatelessWidget {
               child: ZendAvatar(
                 radius: 8,
                 photoUrl: entries[i].value,
-                initials: entries[i].key.isNotEmpty ? entries[i].key[0].toUpperCase() : '?',
+                initials: entries[i].key.isNotEmpty
+                    ? entries[i].key[0].toUpperCase()
+                    : '?',
               ),
             ),
         ],
@@ -207,12 +233,22 @@ class _ReactionRow extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(r.emoji, style: const TextStyle(fontSize: 13, decoration: TextDecoration.none)),
+                Text(
+                  r.emoji,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
                 if (r.count > 1) ...[
                   const SizedBox(width: 3),
                   Text(
                     '${r.count}',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: r.reactedByMe ? zt.accent : zt.textSecondary, fontWeight: FontWeight.w700),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ],
@@ -266,9 +302,10 @@ class _TextMessageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final sender   = message.senderZendtag ?? '?';
-    final initial  = sender.isNotEmpty ? sender[0].toUpperCase() : '?';
-    final isMe     = message.senderUserId != null && message.senderUserId == currentUserId;
+    final sender = message.senderZendtag ?? '?';
+    final initial = sender.isNotEmpty ? sender[0].toUpperCase() : '?';
+    final isMe =
+        message.senderUserId != null && message.senderUserId == currentUserId;
     final labelColor = _senderColor(sender, zt);
 
     final decoration = isMe
@@ -276,19 +313,34 @@ class _TextMessageRow extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
+              colors: [
+                zt.accent,
+                Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!,
+              ],
             ),
-            borderRadius: _groupedBorderRadius(isMe: true, isFirst: !isContinuation, isLast: true),
+            borderRadius: _groupedBorderRadius(
+              isMe: true,
+              isFirst: !isContinuation,
+              isLast: true,
+            ),
           )
         : BoxDecoration(
             color: zt.bubbleReceived,
-            borderRadius: _groupedBorderRadius(isMe: false, isFirst: !isContinuation, isLast: true),
+            borderRadius: _groupedBorderRadius(
+              isMe: false,
+              isFirst: !isContinuation,
+              isLast: true,
+            ),
           );
-    final textColor  = isMe ? Colors.white : zt.textPrimary;
-    final timeColor  = isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary;
+    final textColor = isMe ? Colors.white : zt.textPrimary;
+    final timeColor = isMe
+        ? Colors.white.withValues(alpha: 0.65)
+        : zt.textSecondary;
 
     return Column(
-      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         // Sender label — only on first bubble in a run, for other people
         if (!isContinuation && !isMe)
@@ -296,27 +348,41 @@ class _TextMessageRow extends StatelessWidget {
             padding: const EdgeInsets.only(left: 40, bottom: 2),
             child: Text(
               '@$sender',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
+              ),
             ),
           ),
         Row(
-          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Avatar slot — 32px wide, avatar only on group-start
-            if (!isMe) SizedBox(
-              width: 32,
-              child: !isContinuation
-                  ? ZendAvatar(radius: 13, photoUrl: message.senderAvatarUrl, initials: initial)
-                  : null,
-            ),
+            if (!isMe)
+              SizedBox(
+                width: 32,
+                child: !isContinuation
+                    ? ZendAvatar(
+                        radius: 13,
+                        photoUrl: message.senderAvatarUrl,
+                        initials: initial,
+                      )
+                    : null,
+              ),
             // Bubble
             Flexible(
               child: Container(
                 constraints: BoxConstraints(
                   maxWidth: MediaQuery.of(context).size.width * 0.74,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: decoration,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,11 +410,18 @@ class _TextMessageRow extends StatelessWidget {
                               children: [
                                 Text(
                                   _formatTime(message.createdAt),
-                                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+                                  style: ZendTextStyles.tabularNumeric.copyWith(
+                                    fontSize: 10,
+                                    color: timeColor,
+                                  ),
                                 ),
                                 if (isMe) ...[
                                   const SizedBox(width: 4),
-                                  _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: true),
+                                  _DeliveryStatus(
+                                    status: message.localStatus,
+                                    onRetry: onRetry,
+                                    onDark: true,
+                                  ),
                                 ],
                               ],
                             ),
@@ -376,8 +449,16 @@ class _TextMessageRow extends StatelessWidget {
         // Reaction chips
         if (message.reactions.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 36, right: isMe ? 8 : 0),
-            child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
+            padding: EdgeInsets.only(
+              top: 4,
+              left: isMe ? 0 : 36,
+              right: isMe ? 8 : 0,
+            ),
+            child: _ReactionRow(
+              reactions: message.reactions,
+              currentUserId: currentUserId,
+              onTap: onReactionTap,
+            ),
           ),
       ],
     );
@@ -405,7 +486,8 @@ class _VibeMessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMe = message.senderUserId != null && message.senderUserId == currentUserId;
+    final isMe =
+        message.senderUserId != null && message.senderUserId == currentUserId;
     final vd = message.vibeData;
     if (vd == null) {
       // Malformed/legacy payload — fail closed with a neutral placeholder
@@ -475,7 +557,10 @@ class _ContributionEventRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: zt.bubbleReceived,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: zt.accent.withValues(alpha: 0.22), width: 0.8),
+              border: Border.all(
+                color: zt.accent.withValues(alpha: 0.22),
+                width: 0.8,
+              ),
             ),
             child: Text.rich(
               TextSpan(
@@ -496,7 +581,10 @@ class _ContributionEventRow extends StatelessWidget {
                     alignment: PlaceholderAlignment.middle,
                     child: Text(
                       _formatTime(message.createdAt),
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 10,
+                        color: timeColor,
+                      ),
                     ),
                   ),
                 ],
@@ -508,7 +596,11 @@ class _ContributionEventRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Center(
-              child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
+              child: _ReactionRow(
+                reactions: message.reactions,
+                currentUserId: currentUserId,
+                onTap: onReactionTap,
+              ),
             ),
           ),
       ],
@@ -544,30 +636,48 @@ class _VoiceNoteRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final sender  = message.senderZendtag ?? '?';
+    final sender = message.senderZendtag ?? '?';
     final initial = sender.isNotEmpty ? sender[0].toUpperCase() : '?';
-    final isMe    = message.senderUserId != null && message.senderUserId == currentUserId;
-    final dur     = message.voiceNoteDurationSeconds ?? 0;
+    final isMe =
+        message.senderUserId != null && message.senderUserId == currentUserId;
+    final dur = message.voiceNoteDurationSeconds ?? 0;
 
-    final isPlaying  = player?.playing ?? false;
-    final position   = player?.position ?? Duration.zero;
-    final total      = Duration(seconds: dur);
-    final progress   = dur > 0 ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0) : 0.0;
-    final timeLabel  = isPlaying ? _formatDuration(total - position) : _formatDuration(total);
-    final timeColor  = isMe ? Colors.white.withValues(alpha: 0.65) : zt.textSecondary;
+    final isPlaying = player?.playing ?? false;
+    final position = player?.position ?? Duration.zero;
+    final total = Duration(seconds: dur);
+    final progress = dur > 0
+        ? (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+    final timeLabel = isPlaying
+        ? _formatDuration(total - position)
+        : _formatDuration(total);
+    final timeColor = isMe
+        ? Colors.white.withValues(alpha: 0.65)
+        : zt.textSecondary;
 
     final decoration = isMe
         ? BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [zt.accent, Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!],
+              colors: [
+                zt.accent,
+                Color.lerp(zt.accent, const Color(0xFF1A9E60), 0.18)!,
+              ],
             ),
-            borderRadius: _groupedBorderRadius(isMe: true, isFirst: !isContinuation, isLast: true),
+            borderRadius: _groupedBorderRadius(
+              isMe: true,
+              isFirst: !isContinuation,
+              isLast: true,
+            ),
           )
         : BoxDecoration(
             color: zt.bubbleReceived,
-            borderRadius: _groupedBorderRadius(isMe: false, isFirst: !isContinuation, isLast: true),
+            borderRadius: _groupedBorderRadius(
+              isMe: false,
+              isFirst: !isContinuation,
+              isLast: true,
+            ),
           );
 
     // The playback controls inside the bubble
@@ -575,12 +685,18 @@ class _VoiceNoteRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (message.localStatus == LocalStatus.sending)
-          ZendLoader(size: 22, strokeWidth: 2, color: isMe ? Colors.white : zt.accent)
+          ZendLoader(
+            size: 22,
+            strokeWidth: 2,
+            color: isMe ? Colors.white : zt.accent,
+          )
         else
           GestureDetector(
             onTap: onPlayTap,
             child: Icon(
-              isPlaying ? PhosphorIconsRegular.pauseCircle : PhosphorIconsRegular.playCircle,
+              isPlaying
+                  ? PhosphorIconsRegular.pauseCircle
+                  : PhosphorIconsRegular.playCircle,
               size: 26,
               color: isMe ? Colors.white : zt.accent,
             ),
@@ -593,30 +709,48 @@ class _VoiceNoteRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress.toDouble(),
               minHeight: 3,
-              backgroundColor: (isMe ? Colors.white : zt.accent).withValues(alpha: 0.25),
-              valueColor: AlwaysStoppedAnimation<Color>(isMe ? Colors.white : zt.accent),
+              backgroundColor: (isMe ? Colors.white : zt.accent).withValues(
+                alpha: 0.25,
+              ),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isMe ? Colors.white : zt.accent,
+              ),
             ),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           timeLabel,
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: isMe ? Colors.white.withValues(alpha: 0.8) : zt.textSecondary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 11,
+            color: isMe
+                ? Colors.white.withValues(alpha: 0.8)
+                : zt.textSecondary,
+          ),
         ),
         const SizedBox(width: 8),
         Text(
           _formatTime(message.createdAt),
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: timeColor),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 10,
+            color: timeColor,
+          ),
         ),
         if (isMe) ...[
           const SizedBox(width: 4),
-          _DeliveryStatus(status: message.localStatus, onRetry: onRetry, onDark: true),
+          _DeliveryStatus(
+            status: message.localStatus,
+            onRetry: onRetry,
+            onDark: true,
+          ),
         ],
       ],
     );
 
     return Column(
-      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         // Sender label — only on first bubble in a run, for other people
         if (!isContinuation && !isMe)
@@ -624,29 +758,45 @@ class _VoiceNoteRow extends StatelessWidget {
             padding: const EdgeInsets.only(left: 40, bottom: 2),
             child: Text(
               '@$sender',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: _senderColor(sender, zt)),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _senderColor(sender, zt),
+              ),
             ),
           ),
         Row(
-          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Avatar slot — 32px wide, avatar only on group-start
-            if (!isMe) SizedBox(
-              width: 32,
-              child: !isContinuation
-                  ? ZendAvatar(radius: 13, photoUrl: message.senderAvatarUrl, initials: initial)
-                  : null,
-            ),
+            if (!isMe)
+              SizedBox(
+                width: 32,
+                child: !isContinuation
+                    ? ZendAvatar(
+                        radius: 13,
+                        photoUrl: message.senderAvatarUrl,
+                        initials: initial,
+                      )
+                    : null,
+              ),
             // Bubble
             Flexible(
               child: GestureDetector(
-                onTap: message.localStatus == LocalStatus.sending ? null : onPlayTap,
+                onTap: message.localStatus == LocalStatus.sending
+                    ? null
+                    : onPlayTap,
                 child: Container(
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.74,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   decoration: decoration,
                   child: playbackContent,
                 ),
@@ -668,8 +818,16 @@ class _VoiceNoteRow extends StatelessWidget {
         // Reaction chips
         if (message.reactions.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: 4, left: isMe ? 0 : 36, right: isMe ? 8 : 0),
-            child: _ReactionRow(reactions: message.reactions, currentUserId: currentUserId, onTap: onReactionTap),
+            padding: EdgeInsets.only(
+              top: 4,
+              left: isMe ? 0 : 36,
+              right: isMe ? 8 : 0,
+            ),
+            child: _ReactionRow(
+              reactions: message.reactions,
+              currentUserId: currentUserId,
+              onTap: onReactionTap,
+            ),
           ),
       ],
     );

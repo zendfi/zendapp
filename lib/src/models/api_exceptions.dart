@@ -61,8 +61,7 @@ class ApiException extends ZendException {
   }
 
   @override
-  String toString() =>
-      'ApiException($statusCode, $errorCode): $rawMessage';
+  String toString() => 'ApiException($statusCode, $errorCode): $rawMessage';
 }
 
 class NetworkException extends ZendException {

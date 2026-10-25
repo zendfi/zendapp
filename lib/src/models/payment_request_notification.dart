@@ -18,9 +18,8 @@ class PaymentRequestNotification {
       requestId: json['request_id'] as String? ?? '',
       requesterZendtag: json['requester_zendtag'] as String? ?? '',
       requesterDisplayName: json['requester_display_name'] as String? ?? '',
-      amountUsdc: double.tryParse(
-            (json['amount_usdc'] as Object?)?.toString() ?? '',
-          ) ??
+      amountUsdc:
+          double.tryParse((json['amount_usdc'] as Object?)?.toString() ?? '') ??
           0.0,
       description: json['description'] as String?,
     );

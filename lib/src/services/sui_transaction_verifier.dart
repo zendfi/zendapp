@@ -291,9 +291,7 @@ SuiVerifiedTransfer verifyGaslessUsdcTransfer({
 
   final recipientInput = transaction.inputs[1];
   if (recipientInput is! SuiPureInput) {
-    throw SuiTransactionVerificationException(
-      'Input 1 is not an inline value',
-    );
+    throw SuiTransactionVerificationException('Input 1 is not an inline value');
   }
   final recipientAddress = recipientInput.asAddress;
   if (recipientAddress == null) {
@@ -306,9 +304,7 @@ SuiVerifiedTransfer verifyGaslessUsdcTransfer({
   if (recipient == expectedSender) {
     // The backend rejects this too, but a self-transfer that reached signing
     // would be a sign the resolution step was manipulated.
-    throw SuiTransactionVerificationException(
-      'Recipient equals the sender',
-    );
+    throw SuiTransactionVerificationException('Recipient equals the sender');
   }
   if (expectation.expectedRecipient != null &&
       normaliseSuiAddress(expectation.expectedRecipient!) != recipient) {

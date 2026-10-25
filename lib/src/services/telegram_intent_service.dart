@@ -26,8 +26,8 @@ class TelegramIntentService {
   TelegramIntentService({
     required ApiClient apiClient,
     required WalletService walletService,
-  })  : _apiClient = apiClient,
-        _walletService = walletService;
+  }) : _apiClient = apiClient,
+       _walletService = walletService;
 
   /// Creates a Telegram pending intent.
   ///
@@ -114,9 +114,15 @@ class TelegramIntentService {
       );
     } finally {
       // Zero all key material regardless of success or failure.
-      for (var i = 0; i < ekPrivBytes.length; i++) { ekPrivBytes[i] = 0; }
-      for (var i = 0; i < ekPrivSeed.length; i++) { ekPrivSeed[i] = 0; }
-      for (var i = 0; i < senderKeypairBytes.length; i++) { senderKeypairBytes[i] = 0; }
+      for (var i = 0; i < ekPrivBytes.length; i++) {
+        ekPrivBytes[i] = 0;
+      }
+      for (var i = 0; i < ekPrivSeed.length; i++) {
+        ekPrivSeed[i] = 0;
+      }
+      for (var i = 0; i < senderKeypairBytes.length; i++) {
+        senderKeypairBytes[i] = 0;
+      }
     }
   }
 
@@ -135,13 +141,16 @@ class TelegramIntentService {
       nonce: nonce,
     );
     final nonceBytes = Uint8List.fromList(nonce);
-    final ciphertextBytes =
-        Uint8List.fromList(secretBox.concatenation(nonce: false));
-    final packed =
-        Uint8List(nonceBytes.length + ciphertextBytes.length)
-          ..setRange(0, nonceBytes.length, nonceBytes)
-          ..setRange(nonceBytes.length,
-              nonceBytes.length + ciphertextBytes.length, ciphertextBytes);
+    final ciphertextBytes = Uint8List.fromList(
+      secretBox.concatenation(nonce: false),
+    );
+    final packed = Uint8List(nonceBytes.length + ciphertextBytes.length)
+      ..setRange(0, nonceBytes.length, nonceBytes)
+      ..setRange(
+        nonceBytes.length,
+        nonceBytes.length + ciphertextBytes.length,
+        ciphertextBytes,
+      );
     return base64.encode(packed);
   }
 }

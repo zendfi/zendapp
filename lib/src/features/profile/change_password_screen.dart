@@ -48,19 +48,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     TextField(
                       controller: _currentController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Current password'),
+                      decoration: const InputDecoration(
+                        labelText: 'Current password',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _newController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'New password'),
+                      decoration: const InputDecoration(
+                        labelText: 'New password',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _confirmController,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Confirm password'),
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm password',
+                      ),
                     ),
                   ],
                 ),

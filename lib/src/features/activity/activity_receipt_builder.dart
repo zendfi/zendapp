@@ -40,17 +40,24 @@ TransferHistoryEntry? entryFromEdge(
       ? edge.recipientZendtag
       : (isSelfSender ? edge.counterparty.zendtag : selfZendtag);
 
-  if (edge.transactionSignature == null || senderZendtag == null || recipientZendtag == null) {
+  if (edge.transactionSignature == null ||
+      senderZendtag == null ||
+      recipientZendtag == null) {
     return null;
   }
 
-  final senderAvatarUrl = isExternalEdge ? edge.senderAvatarUrl : (isSelfSender ? selfAvatarUrl : edge.counterparty.avatarUrl);
-  final recipientAvatarUrl =
-      isExternalEdge ? edge.recipientAvatarUrl : (isSelfSender ? edge.counterparty.avatarUrl : selfAvatarUrl);
-  final senderDisplayName =
-      isExternalEdge ? edge.senderDisplayName : (isSelfSender ? selfDisplayName : edge.counterparty.displayName);
-  final recipientDisplayName =
-      isExternalEdge ? edge.recipientDisplayName : (isSelfSender ? edge.counterparty.displayName : selfDisplayName);
+  final senderAvatarUrl = isExternalEdge
+      ? edge.senderAvatarUrl
+      : (isSelfSender ? selfAvatarUrl : edge.counterparty.avatarUrl);
+  final recipientAvatarUrl = isExternalEdge
+      ? edge.recipientAvatarUrl
+      : (isSelfSender ? edge.counterparty.avatarUrl : selfAvatarUrl);
+  final senderDisplayName = isExternalEdge
+      ? edge.senderDisplayName
+      : (isSelfSender ? selfDisplayName : edge.counterparty.displayName);
+  final recipientDisplayName = isExternalEdge
+      ? edge.recipientDisplayName
+      : (isSelfSender ? edge.counterparty.displayName : selfDisplayName);
 
   return TransferHistoryEntry(
     id: edge.edgeId,
@@ -69,7 +76,10 @@ TransferHistoryEntry? entryFromEdge(
 }
 
 /// Convenience wrapper that pulls the viewer's identity from [model].
-TransferHistoryEntry? entryFromEdgeForViewer(ActivityEdge edge, ZendAppModel model) {
+TransferHistoryEntry? entryFromEdgeForViewer(
+  ActivityEdge edge,
+  ZendAppModel model,
+) {
   return entryFromEdge(
     edge,
     selfUserId: model.currentUserId,
@@ -81,11 +91,18 @@ TransferHistoryEntry? entryFromEdgeForViewer(ActivityEdge edge, ZendAppModel mod
 
 /// Builds the [ZendTransaction] wrapper the existing `showTransactionReceipt`
 /// sheet expects, given an edge and the entry built from it.
-ZendTransaction zendTransactionFromEdge(ActivityEdge edge, TransferHistoryEntry entry, {required String avatarLabel, String? avatarUrl}) {
+ZendTransaction zendTransactionFromEdge(
+  ActivityEdge edge,
+  TransferHistoryEntry entry, {
+  required String avatarLabel,
+  String? avatarUrl,
+}) {
   return ZendTransaction(
     name: entry.senderZendtag,
     note: edge.note ?? '',
-    amount: edge.amountHidden ? 'Hidden' : '${edge.isOutgoing ? '-' : '+'}\$${edge.amountUsdc ?? '0'}',
+    amount: edge.amountHidden
+        ? 'Hidden'
+        : '${edge.isOutgoing ? '-' : '+'}\$${edge.amountUsdc ?? '0'}',
     time: '',
     avatarLabel: avatarLabel,
     avatarUrl: avatarUrl,

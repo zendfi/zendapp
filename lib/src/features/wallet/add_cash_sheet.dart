@@ -10,6 +10,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/add_cash_models.dart';
+import '../../design/zend_modal.dart';
 
 /// Add Cash — funding a Zend balance from outside Zend.
 ///
@@ -44,7 +45,7 @@ import '../../models/add_cash_models.dart';
 /// Receive keeps its guard for an unrelated reason: a `zdfi.me/@handle` link
 /// would expose the email placeholder to whoever it is shared with.
 Future<void> showAddCashSheet(BuildContext context) async {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -117,8 +118,9 @@ class _AddCashSheetState extends State<AddCashSheet> {
       _chainsError = null;
     });
     try {
-      final chains =
-          await ZendScope.read(context).walletService.apiClient.getDepositChains();
+      final chains = await ZendScope.read(
+        context,
+      ).walletService.apiClient.getDepositChains();
       if (!mounted) return;
       setState(() {
         _chains = chains;
@@ -156,7 +158,8 @@ class _AddCashSheetState extends State<AddCashSheet> {
       if (!mounted) return;
       setState(() {
         _loadingAddress = false;
-        _addressError = "Couldn't get a deposit address for ${chain.displayName}.";
+        _addressError =
+            "Couldn't get a deposit address for ${chain.displayName}.";
       });
     }
   }
@@ -196,19 +199,22 @@ class _AddCashSheetState extends State<AddCashSheet> {
     HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$label copied', style: const TextStyle(fontFamily: 'Geist')),
+        content: Text(
+          '$label copied',
+          style: const TextStyle(fontFamily: 'Geist'),
+        ),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
   String get _title => switch (_stage) {
-        _Stage.method => 'Add cash',
-        _Stage.cryptoChain => 'Choose a network',
-        _Stage.cryptoAddress => _selectedChain?.displayName ?? 'Deposit',
-        _Stage.ngnAmount => 'How much?',
-        _Stage.ngnInstructions => 'Make the transfer',
-      };
+    _Stage.method => 'Add cash',
+    _Stage.cryptoChain => 'Choose a network',
+    _Stage.cryptoAddress => _selectedChain?.displayName ?? 'Deposit',
+    _Stage.ngnAmount => 'How much?',
+    _Stage.ngnInstructions => 'Make the transfer',
+  };
 
   void _back() {
     switch (_stage) {
@@ -233,8 +239,10 @@ class _AddCashSheetState extends State<AddCashSheet> {
     final mq = MediaQuery.of(context);
     final keyboardInset = mq.viewInsets.bottom;
 
-    final sheetHeight =
-        ((mq.size.height - keyboardInset) * 0.92).clamp(320.0, mq.size.height);
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.92).clamp(
+      320.0,
+      mq.size.height,
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardInset),
@@ -242,8 +250,9 @@ class _AddCashSheetState extends State<AddCashSheet> {
         height: sheetHeight,
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -260,7 +269,8 @@ class _AddCashSheetState extends State<AddCashSheet> {
                     IconButton(
                       onPressed: _back,
                       icon: Icon(
-                        _stage == _Stage.method || _stage == _Stage.ngnInstructions
+                        _stage == _Stage.method ||
+                                _stage == _Stage.ngnInstructions
                             ? PhosphorIconsRegular.x
                             : PhosphorIconsRegular.caretLeft,
                         color: zt.textPrimary,
@@ -353,7 +363,10 @@ class _AddCashSheetState extends State<AddCashSheet> {
 
   Widget _buildChainPicker(ZendTheme zt) {
     if (_loadingChains) {
-      return const Center(key: ValueKey('chainsLoading'), child: ZendLoader(size: 24));
+      return const Center(
+        key: ValueKey('chainsLoading'),
+        child: ZendLoader(size: 24),
+      );
     }
     if (_chainsError != null) {
       return _ErrorState(
@@ -404,8 +417,11 @@ class _AddCashSheetState extends State<AddCashSheet> {
                       ],
                     ),
                   ),
-                  Icon(PhosphorIconsRegular.caretRight,
-                      size: 16, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.caretRight,
+                    size: 16,
+                    color: zt.textSecondary,
+                  ),
                 ],
               ),
             ),
@@ -419,13 +435,18 @@ class _AddCashSheetState extends State<AddCashSheet> {
 
   Widget _buildAddress(ZendTheme zt) {
     if (_loadingAddress) {
-      return const Center(key: ValueKey('addrLoading'), child: ZendLoader(size: 24));
+      return const Center(
+        key: ValueKey('addrLoading'),
+        child: ZendLoader(size: 24),
+      );
     }
     if (_addressError != null || _address == null) {
       return _ErrorState(
         key: const ValueKey('addrError'),
         message: _addressError ?? 'Something went wrong.',
-        onRetry: _selectedChain != null ? () => _pickChain(_selectedChain!) : null,
+        onRetry: _selectedChain != null
+            ? () => _pickChain(_selectedChain!)
+            : null,
       );
     }
 
@@ -461,7 +482,10 @@ class _AddCashSheetState extends State<AddCashSheet> {
                   onTap: () => _copy(addr.depositAddress, 'Address'),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: zt.bgSecondary,
                       borderRadius: BorderRadius.circular(ZendRadii.lg),
@@ -479,7 +503,11 @@ class _AddCashSheetState extends State<AddCashSheet> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Icon(PhosphorIconsRegular.copy, size: 18, color: zt.accent),
+                        Icon(
+                          PhosphorIconsRegular.copy,
+                          size: 18,
+                          color: zt.accent,
+                        ),
                       ],
                     ),
                   ),
@@ -491,7 +519,8 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 _Notice(
                   zt: zt,
                   icon: PhosphorIconsRegular.warning,
-                  text: 'Only send ${addr.symbol.isNotEmpty ? addr.symbol : 'funds'} '
+                  text:
+                      'Only send ${addr.symbol.isNotEmpty ? addr.symbol : 'funds'} '
                       'on ${addr.blockchainName.isNotEmpty ? addr.blockchainName : addr.displayName}. '
                       'Anything else sent to this address is lost.',
                 ),
@@ -500,7 +529,8 @@ class _AddCashSheetState extends State<AddCashSheet> {
                   _Notice(
                     zt: zt,
                     icon: PhosphorIconsRegular.clock,
-                    text: 'This address is for this deposit only — '
+                    text:
+                        'This address is for this deposit only — '
                         'come back here for a fresh one next time.',
                   ),
                 ],
@@ -557,7 +587,9 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 TextField(
                   controller: _amountController,
                   focusNode: _amountFocus,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Geist',
@@ -629,7 +661,10 @@ class _AddCashSheetState extends State<AddCashSheet> {
               ),
               child: _preparing
                   ? const ZendLoader(
-                      size: 20, strokeWidth: 2, color: ZendColors.textOnDeep)
+                      size: 20,
+                      strokeWidth: 2,
+                      color: ZendColors.textOnDeep,
+                    )
                   : const Text(
                       'Continue',
                       style: TextStyle(
@@ -692,11 +727,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _DetailRow(
-                  zt: zt,
-                  label: 'Bank',
-                  value: inst.bankName,
-                ),
+                _DetailRow(zt: zt, label: 'Bank', value: inst.bankName),
                 Divider(color: zt.border, height: 1),
                 _DetailRow(
                   zt: zt,
@@ -715,7 +746,8 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 _Notice(
                   zt: zt,
                   icon: PhosphorIconsRegular.warning,
-                  text: 'Send the exact amount from your own bank account. '
+                  text:
+                      'Send the exact amount from your own bank account. '
                       'A different amount can delay or fail the transfer.',
                 ),
                 const SizedBox(height: 10),
@@ -812,7 +844,11 @@ class _MethodRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 16,
+                color: zt.textSecondary,
+              ),
             ],
           ),
         ),
@@ -839,8 +875,11 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final valueStyle = monospace
-        ? ZendTextStyles.tabularNumeric
-            .copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)
+        ? ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: zt.textPrimary,
+          )
         : TextStyle(
             fontFamily: 'Geist',
             fontSize: 15,
@@ -856,7 +895,11 @@ class _DetailRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
             ),
             const Spacer(),
             Flexible(
@@ -951,7 +994,11 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),

@@ -113,10 +113,7 @@ class AuthService {
     await _secureStorage.write(key: _displayNameKey, value: result.displayName);
     // Written last, and only after the session is durably stored: startup routing
     // keys off this, so a marker without a token would strand the next launch.
-    await _secureStorage.write(
-      key: _authMethodKey,
-      value: authMethodZkLogin,
-    );
+    await _secureStorage.write(key: _authMethodKey, value: authMethodZkLogin);
     // A zkLogin-native account has no Solana wallet, so nothing is written to
     // _walletAddressKey here. Callers must treat a null wallet address as normal
     // rather than as a broken account.

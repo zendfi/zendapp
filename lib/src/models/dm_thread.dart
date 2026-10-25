@@ -14,7 +14,8 @@ class DmCounterparty {
   final String displayName;
   final String? avatarUrl;
 
-  String get initialLetter => zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
+  String get initialLetter =>
+      zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
 
   factory DmCounterparty.fromJson(Map<String, dynamic> json) {
     return DmCounterparty(
@@ -63,7 +64,8 @@ class DmThread {
       ),
       lastMessage: lastMsg,
       unreadCount: json['unread_count'] as int? ?? 0,
-      lastMessageAt: DateTime.tryParse(json['last_message_at'] as String? ?? '') ??
+      lastMessageAt:
+          DateTime.tryParse(json['last_message_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -91,14 +93,19 @@ class DmThread {
         // DmMessage.fromJson. Falls back to '0.00' only if metadata was
         // genuinely empty/missing (shouldn't happen for real payment
         // messages), rather than always showing $0.
-        final amt = double.tryParse(lastMessage!.paymentData?.amountUsdc ?? '') ?? 0.0;
+        final amt =
+            double.tryParse(lastMessage!.paymentData?.amountUsdc ?? '') ?? 0.0;
         return '💸 \$${amt.toStringAsFixed(2)}';
       case DmMessageType.vibe:
         final vd = lastMessage!.vibeData;
         final amt = double.tryParse(vd?.amountUsdc ?? '') ?? 0.0;
         return '${vd?.displayEmoji ?? '✨'} Vibe · \$${amt.toStringAsFixed(2)}';
       case DmMessageType.paymentRequest:
-        final amt = double.tryParse(lastMessage!.paymentRequestData?.amountUsdc ?? '') ?? 0.0;
+        final amt =
+            double.tryParse(
+              lastMessage!.paymentRequestData?.amountUsdc ?? '',
+            ) ??
+            0.0;
         return '💬 Payment request · \$${amt.toStringAsFixed(2)}';
     }
   }

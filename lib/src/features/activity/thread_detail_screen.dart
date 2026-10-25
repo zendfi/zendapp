@@ -13,6 +13,7 @@ import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 const _kReactionEmojis = [
   '🔥',
@@ -158,7 +159,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
         .map((r) => r.emoji)
         .toSet();
 
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -297,7 +298,7 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
   }
 
   void _showMakePublicSheet(ActivityEdge edge) {
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       useRootNavigator: false,

@@ -6,7 +6,19 @@ import 'package:web_socket_channel/status.dart' as ws_status;
 
 enum WsConnectionState { disconnected, connecting, connected, reconnecting }
 
-enum WsFrameType { ack, message, typing, readReceipt, reaction, reactionRemoved, presenceUpdate, recordingAudio, messageDeleted, error, unknown }
+enum WsFrameType {
+  ack,
+  message,
+  typing,
+  readReceipt,
+  reaction,
+  reactionRemoved,
+  presenceUpdate,
+  recordingAudio,
+  messageDeleted,
+  error,
+  unknown,
+}
 
 class WsServerFrame {
   final WsFrameType type;
@@ -50,8 +62,9 @@ class PoolWebSocketService {
   /// When set, overrides the default `/api/zend/pools/$poolId/ws`.
   final String? pathOverride;
 
-  final ValueNotifier<WsConnectionState> connectionState =
-      ValueNotifier(WsConnectionState.disconnected);
+  final ValueNotifier<WsConnectionState> connectionState = ValueNotifier(
+    WsConnectionState.disconnected,
+  );
 
   final _streamController = StreamController<WsServerFrame>.broadcast();
 
@@ -213,11 +226,13 @@ class PoolWebSocketService {
 
   /// Sends a `send_message` frame to the server.
   void sendMessage(String clientId, String content) {
-    _send(jsonEncode({
-      'type': 'send_message',
-      'client_id': clientId,
-      'content': content,
-    }));
+    _send(
+      jsonEncode({
+        'type': 'send_message',
+        'client_id': clientId,
+        'content': content,
+      }),
+    );
   }
 
   /// Sends a `send_message` frame with reply context (DM rooms only).
@@ -233,9 +248,13 @@ class PoolWebSocketService {
       'client_id': clientId,
       'content': content,
     };
-    if (replyToMessageId != null) frame['reply_to_message_id'] = replyToMessageId;
+    if (replyToMessageId != null) {
+      frame['reply_to_message_id'] = replyToMessageId;
+    }
     if (replyToContent != null) frame['reply_to_content'] = replyToContent;
-    if (replyToSenderZendtag != null) frame['reply_to_sender_zendtag'] = replyToSenderZendtag;
+    if (replyToSenderZendtag != null) {
+      frame['reply_to_sender_zendtag'] = replyToSenderZendtag;
+    }
     _send(jsonEncode(frame));
   }
 
@@ -247,36 +266,32 @@ class PoolWebSocketService {
   /// Sends a `read` frame to the server.
   /// [lastReadMessageId] is the server_id of the most recent visible message.
   void sendRead(String lastReadMessageId) {
-    _send(jsonEncode({
-      'type': 'read',
-      'last_read_message_id': lastReadMessageId,
-    }));
+    _send(
+      jsonEncode({'type': 'read', 'last_read_message_id': lastReadMessageId}),
+    );
   }
 
   /// Sends an emoji reaction to a specific message.
   void sendReaction(String messageId, String emoji) {
-    _send(jsonEncode({
-      'type': 'reaction',
-      'message_id': messageId,
-      'emoji': emoji,
-    }));
+    _send(
+      jsonEncode({'type': 'reaction', 'message_id': messageId, 'emoji': emoji}),
+    );
   }
 
   /// Removes an emoji reaction from a specific message.
   void sendReactionRemoved(String messageId, String emoji) {
-    _send(jsonEncode({
-      'type': 'reaction_removed',
-      'message_id': messageId,
-      'emoji': emoji,
-    }));
+    _send(
+      jsonEncode({
+        'type': 'reaction_removed',
+        'message_id': messageId,
+        'emoji': emoji,
+      }),
+    );
   }
 
   /// Sends a "recording audio" status (DM rooms only).
   void sendRecordingAudio(bool isRecording) {
-    _send(jsonEncode({
-      'type': 'recording_audio',
-      'is_recording': isRecording,
-    }));
+    _send(jsonEncode({'type': 'recording_audio', 'is_recording': isRecording}));
   }
 
   void _send(String data) {

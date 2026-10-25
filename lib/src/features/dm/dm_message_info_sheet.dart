@@ -7,6 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
 import '../../services/dm_service.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Shows the "Message info" sheet — mirrors WhatsApp's message-info screen:
 /// the bubble itself at the top, then a Sent/Read timeline below it.
@@ -20,7 +21,7 @@ void showDmMessageInfoSheet(
   required DmMessage message,
   required WidgetBuilder previewBuilder,
 }) {
-  showModalBottomSheet(
+  showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -63,15 +64,41 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
   Future<void> _load() async {
     final model = ZendScope.read(context);
     try {
-      final info = await model.dmService.getMessageInfo(widget.roomId, widget.message.id);
-      if (mounted) setState(() { _info = info; _loading = false; });
+      final info = await model.dmService.getMessageInfo(
+        widget.roomId,
+        widget.message.id,
+      );
+      if (mounted) {
+        setState(() {
+          _info = info;
+          _loading = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() { _error = true; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = true;
+          _loading = false;
+        });
+      }
     }
   }
 
   String _formatFull(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '${months[dt.month - 1]} ${dt.day}, $h:$m';
@@ -80,13 +107,18 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final isMe = widget.message.senderUserId == ZendScope.read(context).currentUserId;
+    final isMe =
+        widget.message.senderUserId == ZendScope.read(context).currentUserId;
 
     return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewPadding.bottom + 20),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewPadding.bottom + 20,
+      ),
       decoration: BoxDecoration(
         color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(ZendRadii.xxl),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -101,12 +133,21 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                 Expanded(
                   child: Text(
                     'Message info',
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
+                    ),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
-                  child: Icon(PhosphorIconsRegular.xCircle, color: zt.textSecondary, size: 22),
+                  child: Icon(
+                    PhosphorIconsRegular.xCircle,
+                    color: zt.textSecondary,
+                    size: 22,
+                  ),
                 ),
               ],
             ),
@@ -129,49 +170,61 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                     child: InlineRowsSkeleton(count: 2),
                   )
                 : _error
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          "Couldn't load message info",
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
-                        ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (!isMe)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                'Read receipts are only available for messages you sent.',
-                                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
-                              ),
-                            ),
-                          if (isMe && _info?.readAt != null)
-                            _InfoRow(
-                              icon: PhosphorIconsRegular.checks,
-                              iconColor: ZendColors.accentPop,
-                              label: 'Read',
-                              time: _formatFull(_info!.readAt!),
-                              zt: zt,
-                            ),
-                          if (isMe)
-                            _InfoRow(
-                              icon: PhosphorIconsRegular.check,
-                              iconColor: zt.textSecondary,
-                              label: 'Delivered',
-                              time: _formatFull(_info?.sentAt ?? widget.message.createdAt),
-                              zt: zt,
-                            ),
-                          _InfoRow(
-                            icon: PhosphorIconsRegular.paperPlaneTilt,
-                            iconColor: zt.textSecondary,
-                            label: 'Sent',
-                            time: _formatFull(_info?.sentAt ?? widget.message.createdAt),
-                            zt: zt,
-                          ),
-                        ],
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      "Couldn't load message info",
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
                       ),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!isMe)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            'Read receipts are only available for messages you sent.',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                            ),
+                          ),
+                        ),
+                      if (isMe && _info?.readAt != null)
+                        _InfoRow(
+                          icon: PhosphorIconsRegular.checks,
+                          iconColor: ZendColors.accentPop,
+                          label: 'Read',
+                          time: _formatFull(_info!.readAt!),
+                          zt: zt,
+                        ),
+                      if (isMe)
+                        _InfoRow(
+                          icon: PhosphorIconsRegular.check,
+                          iconColor: zt.textSecondary,
+                          label: 'Delivered',
+                          time: _formatFull(
+                            _info?.sentAt ?? widget.message.createdAt,
+                          ),
+                          zt: zt,
+                        ),
+                      _InfoRow(
+                        icon: PhosphorIconsRegular.paperPlaneTilt,
+                        iconColor: zt.textSecondary,
+                        label: 'Sent',
+                        time: _formatFull(
+                          _info?.sentAt ?? widget.message.createdAt,
+                        ),
+                        zt: zt,
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -205,12 +258,19 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textPrimary,
+              ),
             ),
           ),
           Text(
             time,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 13,
+              color: zt.textSecondary,
+            ),
           ),
         ],
       ),

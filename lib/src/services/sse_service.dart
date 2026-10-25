@@ -10,6 +10,7 @@ enum SseEventType {
   transferUpdate,
   transferFailed,
   balanceUpdate,
+
   /// Money arrived from outside Zend — a crypto deposit or a fiat pay-in.
   /// Emitted alongside [balanceUpdate], which still drives the balance
   /// refresh; this one carries the amount and provenance the arrival banner
@@ -109,16 +110,14 @@ class SseService {
   SseService({
     required String baseUrl,
     required FlutterSecureStorage secureStorage,
-  })  : _baseUrl = baseUrl,
-        _secureStorage = secureStorage;
+  }) : _baseUrl = baseUrl,
+       _secureStorage = secureStorage;
 
   /// The stream of SSE events. Subscribe to this to receive real-time updates.
   /// Heartbeat events are filtered out.
   Stream<SseEvent> get events {
     _controller ??= StreamController<SseEvent>.broadcast();
-    return _controller!.stream.where(
-      (e) => e.type != SseEventType.heartbeat,
-    );
+    return _controller!.stream.where((e) => e.type != SseEventType.heartbeat);
   }
 
   /// Start the SSE connection. Call this when the user is authenticated
@@ -158,18 +157,20 @@ class SseService {
 
     _cancelToken = CancelToken();
 
-    final dio = Dio(BaseOptions(
-      baseUrl: _baseUrl,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-      },
-      responseType: ResponseType.stream,
-      // No timeout — SSE is a long-lived connection
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: null,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: _baseUrl,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+        responseType: ResponseType.stream,
+        // No timeout — SSE is a long-lived connection
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: null,
+      ),
+    );
 
     try {
       final response = await dio.get<ResponseBody>(
@@ -202,7 +203,9 @@ class SseService {
       // lines the same way SSE's own multi-line `data:` frames need.
       String currentEventType = 'message';
 
-      final lines = stream.transform(utf8.decoder).transform(const LineSplitter());
+      final lines = stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
 
       await for (final line in lines) {
         if (!_active) break;
@@ -282,10 +285,7 @@ class SseService {
     required Duration max,
   }) {
     return Duration(
-      seconds: (current.inSeconds * 2).clamp(
-        initial.inSeconds,
-        max.inSeconds,
-      ),
+      seconds: (current.inSeconds * 2).clamp(initial.inSeconds, max.inSeconds),
     );
   }
 
@@ -295,8 +295,6 @@ class SseService {
   ///
   /// Visible for testing.
   static Duration jitteredReconnectDelay(Duration delay, Random random) {
-    return Duration(
-      milliseconds: random.nextInt(delay.inMilliseconds + 1),
-    );
+    return Duration(milliseconds: random.nextInt(delay.inMilliseconds + 1));
   }
 }

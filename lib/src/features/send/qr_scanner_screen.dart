@@ -187,12 +187,18 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       // Back button
                       IconButton(
-                        icon: const Icon(PhosphorIconsRegular.caretLeft, color: Colors.white),
+                        icon: const Icon(
+                          PhosphorIconsRegular.caretLeft,
+                          color: Colors.white,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                         tooltip: 'Back',
                       ),
@@ -221,10 +227,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: _TorchButton(
-                torchOn: _torchOn,
-                onTap: _toggleTorch,
-              ),
+              child: _TorchButton(torchOn: _torchOn, onTap: _toggleTorch),
             ),
           ),
         ],

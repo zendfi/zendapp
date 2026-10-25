@@ -15,6 +15,7 @@ import '../send/send_flow_sheet.dart';
 import '../send/send_shared_widgets.dart' show VisibilityPill;
 import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// The Zend entry point — identity-first, per redesign.md §10-16, merged
 /// with §12-13 (Send/Request) into a single consolidated screen.
@@ -54,7 +55,7 @@ Future<void> showZendEntrySheet(
   // computes its own height (keyboard-aware) and applies its own
   // `SafeArea` internally, matching `zendtag_prompt_sheet.dart`, the one
   // OS-keyboard sheet in this app that demonstrably works.
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

@@ -12,8 +12,8 @@ class ZendContact {
     required this.zendtag,
     required this.displayName,
     this.avatarUrl,
-    required this.deviceName,  // name as it appears in the phone contacts list
-    required this.query,       // the email/phone that matched
+    required this.deviceName, // name as it appears in the phone contacts list
+    required this.query, // the email/phone that matched
   });
 
   final String zendtag;
@@ -56,7 +56,8 @@ class ContactsService extends ChangeNotifier {
       return;
     }
     if (_loading) return;
-    if (!force && _lastFetch != null &&
+    if (!force &&
+        _lastFetch != null &&
         DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5)) {
       return;
     }
@@ -82,7 +83,8 @@ class ContactsService extends ChangeNotifier {
 
       // Collect all emails and phone numbers
       final queries = <String>[];
-      final queryToName = <String, String>{}; // normalized query → device display name
+      final queryToName =
+          <String, String>{}; // normalized query → device display name
 
       for (final contact in contacts) {
         final deviceName = contact.displayName;
@@ -144,7 +146,9 @@ class ContactsService extends ChangeNotifier {
   /// Converts Zend contacts to RecentContact for the payments sheet list.
   List<RecentContact> toRecentContacts() {
     return _zendContacts.map((c) {
-      final label = c.deviceName.isNotEmpty ? c.deviceName[0].toUpperCase() : '?';
+      final label = c.deviceName.isNotEmpty
+          ? c.deviceName[0].toUpperCase()
+          : '?';
       return RecentContact(
         name: c.deviceName,
         tag: c.zendtag,

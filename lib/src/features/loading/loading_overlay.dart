@@ -4,10 +4,7 @@ import '../../core/zend_state.dart';
 import 'loader_screen.dart';
 
 class LoadingOverlay extends StatelessWidget {
-  const LoadingOverlay({
-    super.key,
-    required this.child,
-  });
+  const LoadingOverlay({super.key, required this.child});
 
   final Widget child;
 
@@ -22,13 +19,13 @@ class LoadingOverlay extends StatelessWidget {
             child,
             if (model.isLoading) ...[
               // Dismiss keyboard whenever the loader is shown
-              Builder(builder: (ctx) {
-                FocusScope.of(ctx).unfocus();
-                return const SizedBox.shrink();
-              }),
-              LoaderScreen(
-                message: model.loadingMessage,
+              Builder(
+                builder: (ctx) {
+                  FocusScope.of(ctx).unfocus();
+                  return const SizedBox.shrink();
+                },
               ),
+              LoaderScreen(message: model.loadingMessage),
             ],
           ],
         );

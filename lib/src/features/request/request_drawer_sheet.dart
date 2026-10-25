@@ -11,6 +11,7 @@ import '../../services/sound_service.dart';
 import 'payment_request.dart';
 import 'request_qr_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Requesting money — visually mirrors [SendFlowSheet]'s identity-first,
 /// amount-entry design (redesign.md §12-13: "Same structure" as Send, just
@@ -25,7 +26,7 @@ Future<void> showRequestDrawer(
   bool amountReadOnly = false,
   String? prefilledRecipient,
 }) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -102,7 +103,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   }
 
   String get _amountFormatted {
-    if (_amount == _amount.roundToDouble()) return '\$${_amount.toStringAsFixed(0)}';
+    if (_amount == _amount.roundToDouble()) {
+      return '\$${_amount.toStringAsFixed(0)}';
+    }
     return '\$${_amount.toStringAsFixed(2)}';
   }
 
@@ -119,7 +122,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     try {
       final response = await model.walletService.apiClient.createPaymentRequest(
         amountUsdc: _amount,
-        description: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        description: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
         expiresAt: null,
         recipientZendtag: tag,
         recipientEmail: null,
@@ -169,8 +174,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     // height that shrinks by the keyboard inset rather than a fixed
     // fraction that the keyboard then covers. A bounded height is also
     // what makes `Expanded` legal inside each stage.
-    final sheetHeight = ((mq.size.height - keyboardInset) * 0.62)
-        .clamp(300.0, mq.size.height);
+    final sheetHeight = ((mq.size.height - keyboardInset) * 0.62).clamp(
+      300.0,
+      mq.size.height,
+    );
 
     return PopScope(
       canPop: _stage != _RequestStage.loading,
@@ -180,7 +187,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
           height: sheetHeight,
           decoration: BoxDecoration(
             color: zt.bgPrimary,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(ZendRadii.xxl),
+            ),
           ),
           child: SafeArea(
             top: false,
@@ -198,7 +207,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
                     transitionBuilder: (child, animation) => FadeTransition(
                       opacity: animation,
                       child: SlideTransition(
-                        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation),
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.04),
+                          end: Offset.zero,
+                        ).animate(animation),
                         child: child,
                       ),
                     ),
@@ -216,24 +228,27 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   Widget _buildStage() {
     return switch (_stage) {
       _RequestStage.amount => _RequestAmountStage(
-          key: const ValueKey('amount'),
-          amountController: _amountController,
-          amountFocus: _amountFocus,
-          amountReadOnly: widget.amountReadOnly,
-          noteController: _noteController,
-          recipientLabel: widget.prefilledRecipient,
-          amountFormatted: _amountFormatted,
-          canCreate: _canCreate,
-          onAmountChanged: (v) => setState(() => _amount = double.tryParse(v) ?? 0),
-          onSubmit: _submit,
-        ),
-      _RequestStage.loading => const _RequestLoadingStage(key: ValueKey('loading')),
+        key: const ValueKey('amount'),
+        amountController: _amountController,
+        amountFocus: _amountFocus,
+        amountReadOnly: widget.amountReadOnly,
+        noteController: _noteController,
+        recipientLabel: widget.prefilledRecipient,
+        amountFormatted: _amountFormatted,
+        canCreate: _canCreate,
+        onAmountChanged: (v) =>
+            setState(() => _amount = double.tryParse(v) ?? 0),
+        onSubmit: _submit,
+      ),
+      _RequestStage.loading => const _RequestLoadingStage(
+        key: ValueKey('loading'),
+      ),
       _RequestStage.success => _RequestSuccessStage(
-          key: const ValueKey('success'),
-          request: _createdRequest!,
-          onDone: () => Navigator.of(context).pop(),
-          onShowQr: () => showRequestQrSheet(context, request: _createdRequest!),
-        ),
+        key: const ValueKey('success'),
+        request: _createdRequest!,
+        onDone: () => Navigator.of(context).pop(),
+        onShowQr: () => showRequestQrSheet(context, request: _createdRequest!),
+      ),
     };
   }
 }
@@ -281,13 +296,25 @@ class _RequestAmountStage extends StatelessWidget {
                   Text(
                     'Request',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 20, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   if (recipientLabel != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      recipientLabel!.startsWith('@') ? recipientLabel! : '@$recipientLabel',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textSecondary),
+                      recipientLabel!.startsWith('@')
+                          ? recipientLabel!
+                          : '@$recipientLabel',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 20),
@@ -295,14 +322,31 @@ class _RequestAmountStage extends StatelessWidget {
                     controller: amountController,
                     focusNode: amountFocus,
                     readOnly: amountReadOnly,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 40,
+                      fontWeight: FontWeight.w700,
+                      color: zt.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       prefixText: '\$',
-                      prefixStyle: TextStyle(fontFamily: 'Geist', fontSize: 32, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                      prefixStyle: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                       hintText: '0',
-                      hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textSecondary),
+                      hintStyle: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textSecondary,
+                      ),
                       // Explicitly borderless/unfilled — the global
                       // InputDecorationTheme fills and pill-rounds inputs,
                       // which would draw a capsule around the big figure.
@@ -325,15 +369,26 @@ class _RequestAmountStage extends StatelessWidget {
                       controller: noteController,
                       textAlign: TextAlign.center,
                       textInputAction: TextInputAction.done,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: zt.textPrimary,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Add a note',
-                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                        hintStyle: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
+                        ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         filled: false,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -366,7 +421,14 @@ class _RequestLoadingStage extends StatelessWidget {
         children: [
           ZendLoader(size: 32, color: zt.accent),
           const SizedBox(height: 20),
-          Text('Creating request…', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
+          Text(
+            'Creating request…',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 15,
+              color: zt.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -376,7 +438,12 @@ class _RequestLoadingStage extends StatelessWidget {
 // ── Success Stage ─────────────────────────────────────────────────────────────
 
 class _RequestSuccessStage extends StatefulWidget {
-  const _RequestSuccessStage({super.key, required this.request, required this.onDone, required this.onShowQr});
+  const _RequestSuccessStage({
+    super.key,
+    required this.request,
+    required this.onDone,
+    required this.onShowQr,
+  });
 
   final PaymentRequest request;
   final VoidCallback onDone;
@@ -386,26 +453,35 @@ class _RequestSuccessStage extends StatefulWidget {
   State<_RequestSuccessStage> createState() => _RequestSuccessStageState();
 }
 
-class _RequestSuccessStageState extends State<_RequestSuccessStage> with SingleTickerProviderStateMixin {
+class _RequestSuccessStageState extends State<_RequestSuccessStage>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amount = widget.request.amount;
-    final amountStr = amount == amount.roundToDouble() ? '\$${amount.toStringAsFixed(0)}' : '\$${amount.toStringAsFixed(2)}';
+    final amountStr = amount == amount.roundToDouble()
+        ? '\$${amount.toStringAsFixed(0)}'
+        : '\$${amount.toStringAsFixed(2)}';
     final tag = widget.request.recipientZendtag;
     final note = widget.request.description;
 
@@ -418,28 +494,74 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage> with SingleT
           ScaleTransition(
             scale: _scale,
             child: Container(
-              width: 64, height: 64,
-              decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: ZendColors.positive,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                PhosphorIconsRegular.checkCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
           ),
           const SizedBox(height: 20),
           // Spec §14's confirmation pattern, mirrored for Request: "Sent"
           // becomes "Requested" — same lightweight amount / to / note shape.
-          Text('Requested', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 32, color: zt.textPrimary)),
+          Text(
+            'Requested',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontWeight: FontWeight.w700,
+              fontSize: 32,
+              color: zt.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(amountStr, style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 40, color: zt.textPrimary)),
+          Text(
+            amountStr,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontWeight: FontWeight.w700,
+              fontSize: 40,
+              color: zt.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
           if (tag != null)
-            Text('from @$tag', style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary)),
+            Text(
+              'from @$tag',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                color: zt.textSecondary,
+              ),
+            ),
           if (note.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text('"$note"', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontStyle: FontStyle.italic, color: zt.textSecondary)),
+            Text(
+              '"$note"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: zt.textSecondary,
+              ),
+            ),
           ],
           const SizedBox(height: 32),
-          SizedBox(width: double.infinity, child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr)),
+          SizedBox(
+            width: double.infinity,
+            child: PrimaryButton(label: 'Show QR', onPressed: widget.onShowQr),
+          ),
           const SizedBox(height: 12),
-          SizedBox(width: double.infinity, child: OutlineActionButton(label: 'Done', onPressed: widget.onDone)),
+          SizedBox(
+            width: double.infinity,
+            child: OutlineActionButton(label: 'Done', onPressed: widget.onDone),
+          ),
         ],
       ),
     );

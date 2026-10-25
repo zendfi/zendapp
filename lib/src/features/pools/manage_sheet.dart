@@ -6,12 +6,10 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import 'pool.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
-Future<void> showManageSheet(
-  BuildContext context, {
-  required Pool pool,
-}) {
-  return showModalBottomSheet<void>(
+Future<void> showManageSheet(BuildContext context, {required Pool pool}) {
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

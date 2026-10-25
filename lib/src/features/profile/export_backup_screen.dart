@@ -34,7 +34,9 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
     setState(() {
       _errorMessage = null;
       if (value == 'del') {
-        if (_pinDigits.isNotEmpty) _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        if (_pinDigits.isNotEmpty) {
+          _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        }
         return;
       }
       if (_pinDigits.length >= 6) return;
@@ -50,13 +52,24 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
       await model.walletService.verifyLocalPin(pin);
       if (!mounted) return;
       _verifiedPin = pin;
-      setState(() { _loading = false; _stage = _ExportBackupStage.warning; });
+      setState(() {
+        _loading = false;
+        _stage = _ExportBackupStage.warning;
+      });
     } on PinDecryptionException {
       if (!mounted) return;
-      setState(() { _loading = false; _errorMessage = 'Incorrect PIN'; _pinDigits = ''; });
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Incorrect PIN';
+        _pinDigits = '';
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _errorMessage = 'Something went wrong'; _pinDigits = ''; });
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Something went wrong';
+        _pinDigits = '';
+      });
     }
   }
 
@@ -95,22 +108,35 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
           icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Export backup',
-          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 20, color: zt.textPrimary)),
+        title: Text(
+          'Export backup',
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            color: zt.textPrimary,
+          ),
+        ),
       ),
       body: SafeArea(
         child: switch (_stage) {
           _ExportBackupStage.pin => _PinStage(
-              digits: _pinDigits,
-              errorMessage: _errorMessage,
-              loading: _loading,
-              compact: compact,
-              zt: zt,
-              onKey: _onPinKey,
-            ),
-          _ExportBackupStage.warning => _WarningStage(zt: zt, onConfirm: _export),
+            digits: _pinDigits,
+            errorMessage: _errorMessage,
+            loading: _loading,
+            compact: compact,
+            zt: zt,
+            onKey: _onPinKey,
+          ),
+          _ExportBackupStage.warning => _WarningStage(
+            zt: zt,
+            onConfirm: _export,
+          ),
           _ExportBackupStage.exporting => Center(child: ZendLoader()),
-          _ExportBackupStage.done => _DoneStage(zt: zt, onDone: () => Navigator.of(context).pop()),
+          _ExportBackupStage.done => _DoneStage(
+            zt: zt,
+            onDone: () => Navigator.of(context).pop(),
+          ),
         },
       ),
     );
@@ -118,8 +144,14 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
 }
 
 class _PinStage extends StatelessWidget {
-  const _PinStage({required this.digits, this.errorMessage, required this.loading,
-      required this.compact, required this.zt, required this.onKey});
+  const _PinStage({
+    required this.digits,
+    this.errorMessage,
+    required this.loading,
+    required this.compact,
+    required this.zt,
+    required this.onKey,
+  });
   final String digits;
   final String? errorMessage;
   final bool loading, compact;
@@ -133,29 +165,55 @@ class _PinStage extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(height: compact ? 24 : 40),
-          Text('Confirm your PIN', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 26, color: zt.textPrimary)),
+          Text(
+            'Confirm your PIN',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontWeight: FontWeight.w700,
+              fontSize: 26,
+              color: zt.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Enter your PIN to generate the backup file.', textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+          Text(
+            'Enter your PIN to generate the backup file.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textSecondary,
+            ),
+          ),
           SizedBox(height: compact ? 32 : 48),
           _PinDots(filledCount: digits.length, zt: zt),
           const SizedBox(height: 16),
           SizedBox(
             height: 20,
             child: errorMessage != null
-                ? Text(errorMessage!, textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive))
+                ? Text(
+                    errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: ZendColors.destructive,
+                    ),
+                  )
                 : loading
-                    ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
-                    : null,
+                ? Center(child: ZendLoader(size: 16, strokeWidth: 1.5))
+                : null,
           ),
           const Spacer(),
           Opacity(
             opacity: loading ? 0.3 : 1.0,
             child: IgnorePointer(
               ignoring: loading,
-              child: _Keypad(onTap: onKey, keyHeight: compact ? 56 : 64, zt: zt),
+              child: _Keypad(
+                onTap: onKey,
+                keyHeight: compact ? 56 : 64,
+                zt: zt,
+              ),
             ),
           ),
           SizedBox(height: compact ? 12 : 24),
@@ -182,20 +240,37 @@ class _WarningStage extends StatelessWidget {
             decoration: BoxDecoration(
               color: ZendColors.destructive.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: ZendColors.destructive.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: ZendColors.destructive.withValues(alpha: 0.2),
+              ),
             ),
             child: Column(
               children: [
-                const Icon(PhosphorIconsRegular.warningCircle, color: ZendColors.destructive, size: 40),
+                const Icon(
+                  PhosphorIconsRegular.warningCircle,
+                  color: ZendColors.destructive,
+                  size: 40,
+                ),
                 const SizedBox(height: 12),
-                Text('Store this file safely.',
+                Text(
+                  'Store this file safely.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 22, color: zt.textPrimary)),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    color: zt.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'Anyone with this file and your PIN can access your wallet.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -208,16 +283,27 @@ class _WarningStage extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: zt.accent,
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
-              child: const Text('I understand — export backup',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'I understand — export backup',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary),
+            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -239,16 +325,37 @@ class _DoneStage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 64, height: 64,
-            decoration: const BoxDecoration(color: ZendColors.positive, shape: BoxShape.circle),
-            child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: ZendColors.positive,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              PhosphorIconsRegular.checkCircle,
+              color: Colors.white,
+              size: 36,
+            ),
           ),
           const SizedBox(height: 20),
-          Text('Backup exported',
-            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary)),
+          Text(
+            'Backup exported',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontWeight: FontWeight.w700,
+              fontSize: 28,
+              color: zt.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Store it somewhere safe.',
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+          Text(
+            'Store it somewhere safe.',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textSecondary,
+            ),
+          ),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -257,9 +364,18 @@ class _DoneStage extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: zt.accent,
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
-              child: const Text('Done', style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Done',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -285,11 +401,15 @@ class _PinDots extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
-            width: 16, height: 16,
+            width: 16,
+            height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: filled ? zt.accent : Colors.transparent,
-              border: Border.all(color: filled ? zt.accent : zt.border, width: 2),
+              border: Border.all(
+                color: filled ? zt.accent : zt.border,
+                width: 2,
+              ),
             ),
           ),
         );
@@ -299,36 +419,55 @@ class _PinDots extends StatelessWidget {
 }
 
 class _Keypad extends StatelessWidget {
-  const _Keypad({required this.onTap, required this.keyHeight, required this.zt});
+  const _Keypad({
+    required this.onTap,
+    required this.keyHeight,
+    required this.zt,
+  });
   final void Function(String) onTap;
   final double keyHeight;
   final ZendTheme zt;
 
   @override
   Widget build(BuildContext context) {
-    const keys = ['1','2','3','4','5','6','7','8','9','','0','del'];
-    return Column(children: [
-      for (var row = 0; row < 4; row++) ...[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [for (var col = 0; col < 3; col++)
-            _Key(label: keys[row*3+col], onTap: onTap, height: keyHeight, zt: zt),
-          ],
-        ),
-        if (row < 3) const SizedBox(height: 14),
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
+    return Column(
+      children: [
+        for (var row = 0; row < 4; row++) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (var col = 0; col < 3; col++)
+                _Key(
+                  label: keys[row * 3 + col],
+                  onTap: onTap,
+                  height: keyHeight,
+                  zt: zt,
+                ),
+            ],
+          ),
+          if (row < 3) const SizedBox(height: 14),
+        ],
       ],
-    ]);
+    );
   }
 }
 
 class _Key extends StatefulWidget {
-  const _Key({required this.label, required this.onTap, required this.height, required this.zt});
+  const _Key({
+    required this.label,
+    required this.onTap,
+    required this.height,
+    required this.zt,
+  });
   final String label;
   final void Function(String) onTap;
   final double height;
   final ZendTheme zt;
-  @override State<_Key> createState() => _KeyState();
+  @override
+  State<_Key> createState() => _KeyState();
 }
+
 class _KeyState extends State<_Key> {
   bool _pressed = false;
   @override
@@ -336,17 +475,29 @@ class _KeyState extends State<_Key> {
     if (widget.label.isEmpty) return SizedBox(width: 80, height: widget.height);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) { setState(() => _pressed = true); widget.onTap(widget.label); },
+      onTapDown: (_) {
+        setState(() => _pressed = true);
+        widget.onTap(widget.label);
+      },
       onTapCancel: () => setState(() => _pressed = false),
       onTapUp: (_) => setState(() => _pressed = false),
       child: AnimatedScale(
         duration: const Duration(milliseconds: 70),
         scale: _pressed ? 0.92 : 1.0,
-        child: SizedBox(width: 80, height: widget.height,
+        child: SizedBox(
+          width: 80,
+          height: widget.height,
           child: Center(
             child: widget.label == 'del'
                 ? ZendBackspaceIcon(color: widget.zt.textPrimary, size: 22)
-                : Text(widget.label, style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, color: widget.zt.textPrimary, fontWeight: FontWeight.w400)),
+                : Text(
+                    widget.label,
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      color: widget.zt.textPrimary,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
           ),
         ),
       ),

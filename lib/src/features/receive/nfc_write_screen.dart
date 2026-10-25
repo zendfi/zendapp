@@ -135,7 +135,10 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(PhosphorIconsRegular.caretLeft, color: ZendColors.textOnDeep),
+          icon: const Icon(
+            PhosphorIconsRegular.caretLeft,
+            color: ZendColors.textOnDeep,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -332,11 +335,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
         );
 
       case _WriteState.error:
-        return _ActionButton(
-          label: 'Try again',
-          onTap: _retry,
-          primary: true,
-        );
+        return _ActionButton(label: 'Try again', onTap: _retry, primary: true);
 
       case _WriteState.unavailable:
         return _ActionButton(
@@ -370,13 +369,9 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: primary
-              ? ZendColors.accent
-              : const Color(0x1AE8F4EC),
+          color: primary ? ZendColors.accent : const Color(0x1AE8F4EC),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: primary
-              ? null
-              : Border.all(color: const Color(0x26E8F4EC)),
+          border: primary ? null : Border.all(color: const Color(0x26E8F4EC)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -385,9 +380,7 @@ class _ActionButton extends StatelessWidget {
             fontFamily: 'Geist',
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: primary
-                ? ZendColors.textOnDeep
-                : const Color(0xCCE8F4EC),
+            color: primary ? ZendColors.textOnDeep : const Color(0xCCE8F4EC),
           ),
         ),
       ),

@@ -42,16 +42,15 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -105,7 +104,9 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
         WalletSessionCache.instance.store(keypair);
         // Register E2EE pubkey with backend — best-effort, non-blocking.
         unawaited(model.bootstrapE2ee());
-        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+        for (var i = 0; i < keypair.length; i++) {
+          keypair[i] = 0;
+        }
       } catch (_) {}
 
       if (!mounted) return;
@@ -265,12 +266,7 @@ class _PinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -334,10 +330,17 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

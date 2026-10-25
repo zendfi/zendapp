@@ -78,8 +78,7 @@ class SigningPolicyService {
   /// Enables the amount threshold with the given [amount] in USDC.
   Future<void> setPinThreshold({required double amount}) async {
     await _storage.write(key: _pinThresholdEnabledKey, value: 'true');
-    await _storage.write(
-        key: _pinThresholdAmountKey, value: amount.toString());
+    await _storage.write(key: _pinThresholdAmountKey, value: amount.toString());
   }
 
   /// Disables the amount threshold.
@@ -143,11 +142,16 @@ class SigningPolicyService {
         if (cached == null || decrypted.length != cached.length) return false;
         var match = true;
         for (var i = 0; i < decrypted.length; i++) {
-          if (decrypted[i] != cached[i]) { match = false; break; }
+          if (decrypted[i] != cached[i]) {
+            match = false;
+            break;
+          }
         }
         return match;
       } finally {
-        for (var i = 0; i < decrypted.length; i++) { decrypted[i] = 0; }
+        for (var i = 0; i < decrypted.length; i++) {
+          decrypted[i] = 0;
+        }
       }
     } catch (_) {
       return false;

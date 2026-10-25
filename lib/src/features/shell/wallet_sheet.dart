@@ -17,6 +17,7 @@ import '../savings/pocket_screen.dart';
 import '../send/withdraw_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Wallet — ZEND BETA spec §7-9: reached only by tapping the balance on
 /// Feed. "The one place Zend can comfortably become a financial dashboard,
@@ -29,16 +30,14 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// balance-tap gesture on Feed is exactly that kind of contextual reveal
 /// rather than a navigation destination in its own right.
 Future<void> showWalletSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const FractionallySizedBox(
-      heightFactor: 0.92,
-      child: WalletSheet(),
-    ),
+    builder: (_) =>
+        const FractionallySizedBox(heightFactor: 0.92, child: WalletSheet()),
   );
 }
 
@@ -56,7 +55,9 @@ class _WalletSheetState extends State<WalletSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final model = ZendScope.of(context);
       if (model.balance == 0.0 && !model.balanceLoading) model.fetchBalance();
-      if (model.recentTransactions.isEmpty && !model.historyLoading) model.fetchHistory();
+      if (model.recentTransactions.isEmpty && !model.historyLoading) {
+        model.fetchHistory();
+      }
     });
   }
 
@@ -101,7 +102,9 @@ class _WalletSheetState extends State<WalletSheet> {
     return Container(
       decoration: BoxDecoration(
         color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(ZendRadii.xxl),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -114,7 +117,9 @@ class _WalletSheetState extends State<WalletSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SizedBox(width: 40), // balances the × on the right so the title stays centered
+                  const SizedBox(
+                    width: 40,
+                  ), // balances the × on the right so the title stays centered
                   const Center(child: ZendSheetHandle()),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -136,20 +141,36 @@ class _WalletSheetState extends State<WalletSheet> {
                         children: [
                           Text(
                             'Your money',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textSecondary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: zt.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap: model.toggleBalanceHidden,
                             child: Text(
-                              model.balanceHidden ? '••••••' : '\$${model.sendableBalance.toStringAsFixed(2)}',
-                              style: TextStyle(fontFamily: 'Geist', fontSize: 40, fontWeight: FontWeight.w700, color: zt.textPrimary),
+                              model.balanceHidden
+                                  ? '••••••'
+                                  : '\$${model.sendableBalance.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 40,
+                                fontWeight: FontWeight.w700,
+                                color: zt.textPrimary,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Available',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              color: zt.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -169,7 +190,11 @@ class _WalletSheetState extends State<WalletSheet> {
                             ? null
                             : Text(
                                 '\$${model.savingsBalance.toStringAsFixed(model.savingsBalance == model.savingsBalance.roundToDouble() ? 0 : 2)}',
-                                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: zt.textPrimary,
+                                ),
                               ),
                         onTap: () {
                           Navigator.of(context).pop();
@@ -226,28 +251,51 @@ class _WalletSheetState extends State<WalletSheet> {
                     // ── Recent ──
                     Text(
                       'Recent',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    if (model.historyLoading && model.recentTransactions.isEmpty)
+                    if (model.historyLoading &&
+                        model.recentTransactions.isEmpty)
                       const WalletRecentSkeleton()
                     else if (model.recentTransactions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Text(
                           'Nothing here yet.',
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            color: zt.textSecondary,
+                          ),
                         ),
                       )
                     else
-                      for (var i = 0; i < model.recentTransactions.take(5).length; i++) ...[
+                      for (
+                        var i = 0;
+                        i < model.recentTransactions.take(5).length;
+                        i++
+                      ) ...[
                         _RecentRow(
                           tx: model.recentTransactions[i],
-                          onTap: model.recentTransactions[i].entry != null || model.recentTransactions[i].bankOrder != null
-                              ? () => showTransactionReceipt(context, tx: model.recentTransactions[i])
+                          onTap:
+                              model.recentTransactions[i].entry != null ||
+                                  model.recentTransactions[i].bankOrder != null
+                              ? () => showTransactionReceipt(
+                                  context,
+                                  tx: model.recentTransactions[i],
+                                )
                               : null,
                         ),
-                        if (i != model.recentTransactions.take(5).length - 1) Divider(color: zt.border.withValues(alpha: 0.5), height: 1),
+                        if (i != model.recentTransactions.take(5).length - 1)
+                          Divider(
+                            color: zt.border.withValues(alpha: 0.5),
+                            height: 1,
+                          ),
                       ],
                   ],
                 ),
@@ -263,21 +311,38 @@ class _WalletSheetState extends State<WalletSheet> {
     // Spec §9 — "No cards yet. [ Add card ]" for a User with none, no
     // functional card issuance exists in the app today, so the button
     // states its own limitation rather than pretending to work.
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Cards', style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w700, color: zt.textPrimary)),
+            Text(
+              'Cards',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: zt.textPrimary,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text('No cards yet.', style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
+            Text(
+              'No cards yet.',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -286,7 +351,12 @@ class _WalletSheetState extends State<WalletSheet> {
                 onPressed: () {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cards are coming soon', style: TextStyle(fontFamily: 'Geist'))),
+                    const SnackBar(
+                      content: Text(
+                        'Cards are coming soon',
+                        style: TextStyle(fontFamily: 'Geist'),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -317,9 +387,22 @@ class _WalletRow extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
+                ),
               ),
-              trailing ?? Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
+              trailing ??
+                  Icon(
+                    PhosphorIconsRegular.caretRight,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
             ],
           ),
         ),
@@ -343,19 +426,33 @@ class _RecentRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            ZendAvatar(radius: 16, photoUrl: tx.avatarUrl, initials: tx.avatarLabel),
+            ZendAvatar(
+              radius: 16,
+              photoUrl: tx.avatarUrl,
+              initials: tx.avatarLabel,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 tx.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: zt.textPrimary,
+                ),
               ),
             ),
             Text(
               tx.amount,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: tx.amountColor ?? zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: tx.amountColor ?? zt.textPrimary,
+              ),
             ),
           ],
         ),

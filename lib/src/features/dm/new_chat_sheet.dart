@@ -14,6 +14,7 @@ import '../pools/create_pool_drawer.dart';
 import 'dm_thread_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_modal.dart';
 
 /// New Chat/Pool entry point — reached from the Chats tab's floating
 /// action button. Search/select a contact or mutual to start a DM, or
@@ -31,7 +32,7 @@ Future<void> showNewChatSheet(BuildContext context) {
   // the sheet's painted area, letting the route's transparent background
   // show through. Sizing and safe-area handling live inside the sheet
   // instead (see build), which is the pattern zendtag_prompt_sheet uses.
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

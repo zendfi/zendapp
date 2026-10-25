@@ -6,12 +6,14 @@ import '../models/drop_models.dart';
 
 /// Method channel for communication with the Android DropAdvertiserService.
 /// Must match the channel name declared in DropAdvertiserService.kt.
-const MethodChannel _kDropChannel = MethodChannel('com.zendfi.app/drop_advertiser');
+const MethodChannel _kDropChannel = MethodChannel(
+  'com.zendfi.app/drop_advertiser',
+);
 
 /// Service and characteristic UUIDs used for GATT — must match BleScannerService constants.
 const String kGattServiceUuid = '12345678-1234-1234-1234-123456789abc';
-const String kGattCharUuid    = 'abcdefab-cdef-abcd-efab-cdefabcdefab';
-const String kZendAppIdHex    = '5A454E44'; // "ZEND"
+const String kGattCharUuid = 'abcdefab-cdef-abcd-efab-cdefabcdefab';
+const String kZendAppIdHex = '5A454E44'; // "ZEND"
 
 class BleAdvertiserService {
   GattPayload? _currentPayload;
@@ -28,7 +30,10 @@ class BleAdvertiserService {
   Future<void> startAdvertising(GattPayload payload) async {
     _currentPayload = payload;
     _isAdvertising = true;
-    DropDebugLog.i.add('ADV', 'Starting advertising for @${payload.zendtag} nonce=${payload.nonce.substring(0, 8)}…');
+    DropDebugLog.i.add(
+      'ADV',
+      'Starting advertising for @${payload.zendtag} nonce=${payload.nonce.substring(0, 8)}…',
+    );
 
     if (Platform.isAndroid) {
       await _startAndroid(payload);
@@ -65,9 +70,17 @@ class BleAdvertiserService {
         'expires_at': payload.expiresAt,
         'signature': payload.signature,
       });
-      DropDebugLog.i.add('ADV', 'Android: MethodChannel startAdvertising OK', level: DropLogLevel.ok);
+      DropDebugLog.i.add(
+        'ADV',
+        'Android: MethodChannel startAdvertising OK',
+        level: DropLogLevel.ok,
+      );
     } on PlatformException catch (e) {
-      DropDebugLog.i.add('ADV', 'Android: MethodChannel failed: ${e.message}', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'ADV',
+        'Android: MethodChannel failed: ${e.message}',
+        level: DropLogLevel.error,
+      );
       throw Exception('Failed to start Android BLE advertising: ${e.message}');
     }
   }
@@ -96,9 +109,17 @@ class BleAdvertiserService {
         'expires_at': payload.expiresAt,
         'signature': payload.signature,
       });
-      DropDebugLog.i.add('ADV', 'iOS: MethodChannel startAdvertising OK', level: DropLogLevel.ok);
+      DropDebugLog.i.add(
+        'ADV',
+        'iOS: MethodChannel startAdvertising OK',
+        level: DropLogLevel.ok,
+      );
     } on PlatformException catch (e) {
-      DropDebugLog.i.add('ADV', 'iOS: MethodChannel failed: ${e.message}', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'ADV',
+        'iOS: MethodChannel failed: ${e.message}',
+        level: DropLogLevel.error,
+      );
       throw Exception('Failed to start iOS BLE advertising: ${e.message}');
     }
   }
@@ -115,18 +136,30 @@ class BleAdvertiserService {
 
   void _scheduleRefresh(GattPayload payload) {
     _refreshTimer?.cancel();
-    final expiresAt = DateTime.fromMillisecondsSinceEpoch(payload.expiresAt * 1000);
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+      payload.expiresAt * 1000,
+    );
     final refreshAt = expiresAt.subtract(const Duration(seconds: 5));
     final delay = refreshAt.difference(DateTime.now());
 
     if (delay.isNegative) {
-      DropDebugLog.i.add('ADV', 'Beacon already expired at scheduling, no refresh scheduled', level: DropLogLevel.warn);
+      DropDebugLog.i.add(
+        'ADV',
+        'Beacon already expired at scheduling, no refresh scheduled',
+        level: DropLogLevel.warn,
+      );
       return;
     }
 
-    DropDebugLog.i.add('ADV', 'Beacon refresh scheduled in ${delay.inSeconds}s');
+    DropDebugLog.i.add(
+      'ADV',
+      'Beacon refresh scheduled in ${delay.inSeconds}s',
+    );
     _refreshTimer = Timer(delay, () {
-      DropDebugLog.i.add('ADV', 'Beacon about to expire — triggering refresh callback');
+      DropDebugLog.i.add(
+        'ADV',
+        'Beacon about to expire — triggering refresh callback',
+      );
       _onRefreshNeeded?.call();
     });
   }

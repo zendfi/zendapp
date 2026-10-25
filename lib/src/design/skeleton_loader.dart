@@ -10,7 +10,8 @@ class _Shimmer extends StatefulWidget {
   State<_Shimmer> createState() => _ShimmerState();
 }
 
-class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
@@ -34,7 +35,8 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (ctx, child) => Opacity(opacity: 0.35 + 0.45 * _anim.value, child: child),
+      builder: (ctx, child) =>
+          Opacity(opacity: 0.35 + 0.45 * _anim.value, child: child),
       child: widget.child,
     );
   }
@@ -42,7 +44,11 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 
 /// A single skeleton block — rounded rectangle placeholder.
 class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({required this.width, required this.height, this.radius = 10});
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 10,
+  });
   final double width;
   final double height;
   final double radius;
@@ -116,13 +122,13 @@ class DmThreadSkeleton extends StatelessWidget {
     // Alternating bubble pattern mirroring a real conversation
     const bubbles = [
       (isMe: false, width: 0.55, lines: 1),
-      (isMe: true,  width: 0.45, lines: 1),
+      (isMe: true, width: 0.45, lines: 1),
       (isMe: false, width: 0.65, lines: 2),
-      (isMe: true,  width: 0.55, lines: 1),
-      (isMe: true,  width: 0.38, lines: 1),
+      (isMe: true, width: 0.55, lines: 1),
+      (isMe: true, width: 0.38, lines: 1),
       (isMe: false, width: 0.48, lines: 1),
       (isMe: false, width: 0.72, lines: 2),
-      (isMe: true,  width: 0.60, lines: 1),
+      (isMe: true, width: 0.60, lines: 1),
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -150,8 +156,10 @@ class DmThreadSkeleton extends StatelessWidget {
                 lines: reversedBubbles[idx].lines,
                 isMe: reversedBubbles[idx].isMe,
                 // Show avatar circle only on the last bubble in a received run
-                showAvatar: !reversedBubbles[idx].isMe &&
-                    (idx == reversedBubbles.length - 1 || reversedBubbles[idx + 1].isMe),
+                showAvatar:
+                    !reversedBubbles[idx].isMe &&
+                    (idx == reversedBubbles.length - 1 ||
+                        reversedBubbles[idx + 1].isMe),
               ),
               const SizedBox(height: 8),
             ],
@@ -177,6 +185,7 @@ class _SkeletonBubbleRow extends StatelessWidget {
   final double bubbleWidth;
   final int lines;
   final bool isMe;
+
   /// When true, renders an avatar circle on the left (last in a received run).
   final bool showAvatar;
 
@@ -192,7 +201,10 @@ class _SkeletonBubbleRow extends StatelessWidget {
 
     final bubble = Container(
       width: bubbleWidth,
-      padding: EdgeInsets.symmetric(horizontal: 13, vertical: lines == 1 ? 10 : 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: 13,
+        vertical: lines == 1 ? 10 : 12,
+      ),
       decoration: BoxDecoration(
         color: isMe ? zt.accent.withValues(alpha: 0.25) : zt.bgSecondary,
         borderRadius: radius,
@@ -204,14 +216,20 @@ class _SkeletonBubbleRow extends StatelessWidget {
           Container(
             height: 12,
             width: double.infinity,
-            decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(
+              color: zt.border,
+              borderRadius: BorderRadius.circular(6),
+            ),
           ),
           if (lines > 1) ...[
             const SizedBox(height: 5),
             Container(
               height: 12,
               width: bubbleWidth * 0.6,
-              decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(
+                color: zt.border,
+                borderRadius: BorderRadius.circular(6),
+              ),
             ),
           ],
         ],
@@ -249,8 +267,6 @@ class _SkeletonBubbleRow extends StatelessWidget {
   }
 }
 
-
-
 // ── Activity feed skeleton (threaded & legacy) ───────────────────────────────
 
 /// Skeleton for both ThreadedActivityScreen and LegacyActivityListView —
@@ -270,7 +286,7 @@ class ActivityFeedSkeleton extends StatelessWidget {
           // Vary widths slightly so it doesn't look like a grid
           final nameW = 80.0 + (i % 4) * 22.0;
           final noteW = 130.0 + (i % 3) * 28.0;
-          final amtW  = 40.0 + (i % 3) * 10.0;
+          final amtW = 40.0 + (i % 3) * 10.0;
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Container(
@@ -284,7 +300,8 @@ class ActivityFeedSkeleton extends StatelessWidget {
                 children: [
                   // Avatar circle
                   Container(
-                    width: 44, height: 44,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: zt.border,
                       shape: BoxShape.circle,
@@ -329,34 +346,37 @@ class GraphViewSkeleton extends StatelessWidget {
 
   static const _nodes = [
     // (dx, dy, radius) — relative to center of canvas, as fractions of width
-    (0.0,   0.0,   22.0),   // center — "me"
+    (0.0, 0.0, 22.0), // center — "me"
     (-0.28, -0.22, 16.0),
-    ( 0.30, -0.18, 16.0),
-    (-0.18,  0.28, 16.0),
-    ( 0.24,  0.25, 16.0),
-    (-0.40,  0.05, 13.0),
-    ( 0.08, -0.38, 13.0),
-    (-0.10,  0.40, 13.0),
+    (0.30, -0.18, 16.0),
+    (-0.18, 0.28, 16.0),
+    (0.24, 0.25, 16.0),
+    (-0.40, 0.05, 13.0),
+    (0.08, -0.38, 13.0),
+    (-0.10, 0.40, 13.0),
   ];
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return _Shimmer(
-      child: LayoutBuilder(builder: (ctx, constraints) {
-        final cx = constraints.maxWidth / 2;
-        final cy = constraints.maxHeight / 2;
-        return CustomPaint(
-          painter: _GraphSkeletonPainter(
-            nodes: _nodes,
-            cx: cx, cy: cy,
-            width: constraints.maxWidth,
-            lineColor: zt.border,
-            nodeColor: zt.bgSecondary,
-          ),
-          size: Size(constraints.maxWidth, constraints.maxHeight),
-        );
-      }),
+      child: LayoutBuilder(
+        builder: (ctx, constraints) {
+          final cx = constraints.maxWidth / 2;
+          final cy = constraints.maxHeight / 2;
+          return CustomPaint(
+            painter: _GraphSkeletonPainter(
+              nodes: _nodes,
+              cx: cx,
+              cy: cy,
+              width: constraints.maxWidth,
+              lineColor: zt.border,
+              nodeColor: zt.bgSecondary,
+            ),
+            size: Size(constraints.maxWidth, constraints.maxHeight),
+          );
+        },
+      ),
     );
   }
 }
@@ -385,9 +405,9 @@ class _GraphSkeletonPainter extends CustomPainter {
       ..color = nodeColor
       ..style = PaintingStyle.fill;
 
-    final positions = nodes.map((n) =>
-      Offset(cx + n.$1 * width, cy + n.$2 * width),
-    ).toList();
+    final positions = nodes
+        .map((n) => Offset(cx + n.$1 * width, cy + n.$2 * width))
+        .toList();
 
     // Draw lines from center to every other node
     for (var i = 1; i < positions.length; i++) {
@@ -429,7 +449,8 @@ class UserProfileSkeleton extends StatelessWidget {
             // Avatar
             Center(
               child: Container(
-                width: 88, height: 88,
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
                   color: zt.bgSecondary,
                   shape: BoxShape.circle,
@@ -588,13 +609,13 @@ class MissionRoomSkeleton extends StatelessWidget {
     final w = MediaQuery.of(context).size.width;
 
     const rows = [
-      (left: true,  bubbleW: 0.56, lines: 1),
-      (left: true,  bubbleW: 0.66, lines: 2),
+      (left: true, bubbleW: 0.56, lines: 1),
+      (left: true, bubbleW: 0.66, lines: 2),
       (left: false, bubbleW: 0.44, lines: 1),
-      (left: true,  bubbleW: 0.50, lines: 1),
+      (left: true, bubbleW: 0.50, lines: 1),
       (left: false, bubbleW: 0.60, lines: 2),
       (left: false, bubbleW: 0.38, lines: 1),
-      (left: true,  bubbleW: 0.72, lines: 1),
+      (left: true, bubbleW: 0.72, lines: 1),
     ];
 
     return _Shimmer(
@@ -613,7 +634,8 @@ class MissionRoomSkeleton extends StatelessWidget {
                   if (r.left) ...[
                     // Avatar circle
                     Container(
-                      width: 32, height: 32,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: zt.bgSecondary,
                         shape: BoxShape.circle,
@@ -627,7 +649,12 @@ class MissionRoomSkeleton extends StatelessWidget {
                           // Sender name chip
                           _SkeletonBox(width: 60, height: 10, radius: 5),
                           const SizedBox(height: 4),
-                          _MissionBubble(width: w * r.bubbleW, lines: r.lines, zt: zt, isLeft: true),
+                          _MissionBubble(
+                            width: w * r.bubbleW,
+                            lines: r.lines,
+                            zt: zt,
+                            isLeft: true,
+                          ),
                         ],
                       ),
                     ),
@@ -635,7 +662,12 @@ class MissionRoomSkeleton extends StatelessWidget {
                   ] else ...[
                     SizedBox(width: w * 0.15),
                     Flexible(
-                      child: _MissionBubble(width: w * r.bubbleW, lines: r.lines, zt: zt, isLeft: false),
+                      child: _MissionBubble(
+                        width: w * r.bubbleW,
+                        lines: r.lines,
+                        zt: zt,
+                        isLeft: false,
+                      ),
                     ),
                   ],
                 ],
@@ -650,7 +682,12 @@ class MissionRoomSkeleton extends StatelessWidget {
 }
 
 class _MissionBubble extends StatelessWidget {
-  const _MissionBubble({required this.width, required this.lines, required this.zt, required this.isLeft});
+  const _MissionBubble({
+    required this.width,
+    required this.lines,
+    required this.zt,
+    required this.isLeft,
+  });
   final double width;
   final int lines;
   final ZendTheme zt;
@@ -674,12 +711,24 @@ class _MissionBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(height: 12, width: double.infinity,
-            decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(6))),
+          Container(
+            height: 12,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: zt.border,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
           if (lines > 1) ...[
             const SizedBox(height: 5),
-            Container(height: 12, width: width * 0.55,
-              decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(6))),
+            Container(
+              height: 12,
+              width: width * 0.55,
+              decoration: BoxDecoration(
+                color: zt.border,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
           ],
         ],
       ),
@@ -704,8 +753,12 @@ class SearchUsersSkeleton extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -743,9 +796,18 @@ class WalletRecentSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
               children: [
-                Container(width: 32, height: 32, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _SkeletonBox(width: 100 + (i % 3) * 24.0, height: 13)),
+                Expanded(
+                  child: _SkeletonBox(width: 100 + (i % 3) * 24.0, height: 13),
+                ),
                 const SizedBox(width: 12),
                 _SkeletonBox(width: 44, height: 13),
               ],
@@ -781,7 +843,10 @@ class GroupedListSkeleton extends StatelessWidget {
             for (var i = 0; i < count; i++) ...[
               Container(
                 height: rowHeight,
-                decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl)),
+                decoration: BoxDecoration(
+                  color: zt.bgSecondary,
+                  borderRadius: BorderRadius.circular(ZendRadii.xl),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -808,11 +873,29 @@ class CustomiseFormSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(height: 140, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xxl))),
+            Container(
+              height: 140,
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.xxl),
+              ),
+            ),
             const SizedBox(height: 24),
-            Container(height: 120, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl))),
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.xl),
+              ),
+            ),
             const SizedBox(height: 16),
-            Container(height: 90, decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.xl))),
+            Container(
+              height: 90,
+              decoration: BoxDecoration(
+                color: zt.bgSecondary,
+                borderRadius: BorderRadius.circular(ZendRadii.xl),
+              ),
+            ),
           ],
         ),
       ),
@@ -839,7 +922,14 @@ class CompactThreadListSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             child: Row(
               children: [
-                Container(width: 40, height: 40, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 _SkeletonBox(width: 120 + (i % 3) * 20.0, height: 14),
               ],
@@ -869,7 +959,14 @@ class InlineRowsSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Container(width: 18, height: 18, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 10),
                 _SkeletonBox(width: 90, height: 12),
                 const Spacer(),
@@ -901,7 +998,14 @@ class SelectableRowListSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Container(width: 28, height: 28, decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle)),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 _SkeletonBox(width: 90 + (i % 3) * 16.0, height: 13),
               ],
@@ -935,8 +1039,12 @@ class PersonActivitySkeleton extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: zt.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

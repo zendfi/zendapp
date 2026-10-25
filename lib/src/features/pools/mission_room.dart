@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../data/local/pool_message_repository.dart';
 import '../../design/skeleton_loader.dart';
@@ -23,8 +24,18 @@ import 'pool.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 const _curatedEmojis = [
-  '🔥', '💰', '🙏', '👑', '😭', '⚡',
-  '🎯', '💸', '🎉', '👀', '✅', '🚀',
+  '🔥',
+  '💰',
+  '🙏',
+  '👑',
+  '😭',
+  '⚡',
+  '🎯',
+  '💸',
+  '🎉',
+  '👀',
+  '✅',
+  '🚀',
 ];
 
 class MissionRoom extends StatefulWidget {
@@ -60,6 +71,7 @@ class _MissionRoomState extends State<MissionRoom> {
   // ── Read receipts ─────────────────────────────────────────────────────────────
   /// Maps zendtag → last_read_message_id (server_id) for other pool members.
   final Map<String, String> _readReceipts = {};
+
   /// Maps zendtag → avatar_url for read receipt display.
   final Map<String, String?> _readerAvatars = {};
   String? _myLastReadMessageId;
@@ -143,7 +155,9 @@ class _MissionRoomState extends State<MissionRoom> {
       // See zendapp-hardening spec Req 1.6.
       getTicket: () async {
         try {
-          final response = await apiClient.dio.post('/api/zend/pools/ws-ticket');
+          final response = await apiClient.dio.post(
+            '/api/zend/pools/ws-ticket',
+          );
           return response.data['ticket'] as String?;
         } catch (_) {
           // Ticket fetch failed — PoolWebSocketService falls back to ?token=
@@ -188,7 +202,8 @@ class _MissionRoomState extends State<MissionRoom> {
   void _onConnectionStateChanged() {
     if (!mounted) return;
     final state = _wsService.connectionState.value;
-    final shouldShow = _hasConnectedOnce &&
+    final shouldShow =
+        _hasConnectedOnce &&
         (state == WsConnectionState.reconnecting ||
             state == WsConnectionState.disconnected);
     if (shouldShow != _showReconnecting) {
@@ -255,7 +270,7 @@ class _MissionRoomState extends State<MissionRoom> {
         final model = ZendScope.of(context);
         final missed = await model.walletService.apiClient.listMessages(
           poolId: _pool.id,
-          afterId: lastServerId,   // null → fetches latest batch
+          afterId: lastServerId, // null → fetches latest batch
           limit: 100,
         );
         if (!mounted) return;
@@ -281,7 +296,12 @@ class _MissionRoomState extends State<MissionRoom> {
           // rather than assuming they're fully caught up because nothing
           // told them otherwise.
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Couldn't sync the latest messages — will retry automatically", style: TextStyle(fontFamily: 'Geist'))),
+            const SnackBar(
+              content: Text(
+                "Couldn't sync the latest messages — will retry automatically",
+                style: TextStyle(fontFamily: 'Geist'),
+              ),
+            ),
           );
         }
       }
@@ -307,8 +327,12 @@ class _MissionRoomState extends State<MissionRoom> {
     _scrollController.dispose();
     _textController.dispose();
     _recordingTimer?.cancel();
-    for (final p in _players.values) { p.dispose(); }
-    for (final t in _typingTimers.values) { t.cancel(); }
+    for (final p in _players.values) {
+      p.dispose();
+    }
+    for (final t in _typingTimers.values) {
+      t.cancel();
+    }
     super.dispose();
   }
 
@@ -332,9 +356,9 @@ class _MissionRoomState extends State<MissionRoom> {
         setState(() => _upsertMessageLocal(msg));
         _jumpToBottom();
         _sendReadReceipt();
-        // If message is from someone else, badge cleared on next frame —
-        // the room is open so we're reading it immediately.
-        // No badge needed here since the user can see the room.
+      // If message is from someone else, badge cleared on next frame —
+      // the room is open so we're reading it immediately.
+      // No badge needed here since the user can see the room.
 
       case WsFrameType.ack:
         final clientId = frame.data['client_id'] as String?;
@@ -345,7 +369,9 @@ class _MissionRoomState extends State<MissionRoom> {
             clientId,
             LocalStatus.delivered,
             serverId: serverId,
-            serverCreatedAt: createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+            serverCreatedAt: createdAtStr != null
+                ? DateTime.tryParse(createdAtStr)
+                : null,
           );
           setState(() {
             final idx = _messages.indexWhere((m) => m.clientId == clientId);
@@ -353,7 +379,9 @@ class _MissionRoomState extends State<MissionRoom> {
               _messages[idx] = _messages[idx].copyWith(
                 localStatus: LocalStatus.delivered,
                 serverId: serverId,
-                createdAt: createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+                createdAt: createdAtStr != null
+                    ? DateTime.tryParse(createdAtStr)
+                    : null,
               );
             }
           });
@@ -366,7 +394,12 @@ class _MissionRoomState extends State<MissionRoom> {
         if (isTyping) {
           _typingTimers[senderTag]?.cancel();
           _typingTimers[senderTag] = Timer(const Duration(seconds: 5), () {
-            if (mounted) setState(() { _typingUsers.remove(senderTag); _typingTimers.remove(senderTag); });
+            if (mounted) {
+              setState(() {
+                _typingUsers.remove(senderTag);
+                _typingTimers.remove(senderTag);
+              });
+            }
           });
           setState(() => _typingUsers.add(senderTag));
         } else {
@@ -435,7 +468,10 @@ class _MissionRoomState extends State<MissionRoom> {
   // ── Local message management ─────────────────────────────────────────────────
 
   void _upsertMessageLocal(PoolMessageLocal msg) {
-    final idx = _messages.indexWhere((m) => m.id == msg.id || (m.serverId != null && m.serverId == msg.serverId));
+    final idx = _messages.indexWhere(
+      (m) =>
+          m.id == msg.id || (m.serverId != null && m.serverId == msg.serverId),
+    );
     if (idx >= 0) {
       _messages[idx] = msg;
     } else {
@@ -480,7 +516,8 @@ class _MissionRoomState extends State<MissionRoom> {
 
   void _onScroll() {
     if (_loadingOlder || _fullyLoaded) return;
-    if (_scrollController.hasClients && _scrollController.position.pixels <= 200) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels <= 200) {
       _loadOlderMessages();
     }
   }
@@ -496,7 +533,10 @@ class _MissionRoomState extends State<MissionRoom> {
       final oldestCreatedAt = oldest.createdAt.toIso8601String();
 
       // Check local cache first
-      final localOlder = await _repository.getOlderMessages(poolId, oldestCreatedAt);
+      final localOlder = await _repository.getOlderMessages(
+        poolId,
+        oldestCreatedAt,
+      );
       if (localOlder.isNotEmpty) {
         _insertOlderMessagesPreservingScroll(localOlder);
         setState(() => _loadingOlder = false);
@@ -506,7 +546,10 @@ class _MissionRoomState extends State<MissionRoom> {
       // Fetch from server
       final oldestServerId = oldest.serverId;
       if (oldestServerId == null) {
-        setState(() { _loadingOlder = false; _fullyLoaded = true; });
+        setState(() {
+          _loadingOlder = false;
+          _fullyLoaded = true;
+        });
         return;
       }
 
@@ -517,12 +560,17 @@ class _MissionRoomState extends State<MissionRoom> {
       );
       if (!mounted) return;
 
-      final localFetched = fetched.map(PoolMessageLocal.fromPoolMessage).toList();
+      final localFetched = fetched
+          .map(PoolMessageLocal.fromPoolMessage)
+          .toList();
       for (final msg in localFetched) {
         await _repository.upsertMessage(msg);
       }
       if (localFetched.isNotEmpty) {
-        await _repository.upsertCursor(poolId, oldestFetchedServerId: localFetched.first.serverId);
+        await _repository.upsertCursor(
+          poolId,
+          oldestFetchedServerId: localFetched.first.serverId,
+        );
       }
 
       _insertOlderMessagesPreservingScroll(localFetched);
@@ -539,7 +587,12 @@ class _MissionRoomState extends State<MissionRoom> {
       if (mounted) {
         setState(() => _loadingOlder = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load earlier messages', style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              'Could not load earlier messages',
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -605,7 +658,9 @@ class _MissionRoomState extends State<MissionRoom> {
     final isMe = reactorZendtag == model.currentZendtag;
 
     setState(() {
-      final idx = _messages.indexWhere((m) => m.id == messageId || m.serverId == messageId);
+      final idx = _messages.indexWhere(
+        (m) => m.id == messageId || m.serverId == messageId,
+      );
       if (idx < 0) return;
 
       final msg = _messages[idx];
@@ -620,7 +675,9 @@ class _MissionRoomState extends State<MissionRoom> {
             reactedByMe: reactions[rIdx].reactedByMe || isMe,
           );
         } else {
-          reactions.add(PoolReactionCount(emoji: emoji, count: 1, reactedByMe: isMe));
+          reactions.add(
+            PoolReactionCount(emoji: emoji, count: 1, reactedByMe: isMe),
+          );
         }
       } else {
         if (rIdx >= 0) {
@@ -644,11 +701,15 @@ class _MissionRoomState extends State<MissionRoom> {
       final dbMessageId = updatedMsg.serverId ?? updatedMsg.id;
       _repository.upsertReactions(
         dbMessageId,
-        updatedMsg.reactions.map((r) => {
-          'emoji': r.emoji,
-          'count': r.count,
-          'reacted_by_me': r.reactedByMe,
-        }).toList(),
+        updatedMsg.reactions
+            .map(
+              (r) => {
+                'emoji': r.emoji,
+                'count': r.count,
+                'reacted_by_me': r.reactedByMe,
+              },
+            )
+            .toList(),
       );
     });
   }
@@ -704,7 +765,8 @@ class _MissionRoomState extends State<MissionRoom> {
       senderUserId: model.currentUserId,
       senderAvatarUrl: model.currentAvatarUrl,
       messageType: 'vibe',
-      content: '{"sticker_slug":"${vibe.stickerEmoji}","sticker_name":"${vibe.stickerLabel}",'
+      content:
+          '{"sticker_slug":"${vibe.stickerEmoji}","sticker_name":"${vibe.stickerLabel}",'
           '"amount_usdc":"${vibe.amountUsdc}","sticker_id":"${vibe.stickerId}"}',
       localStatus: LocalStatus.sending,
       createdAt: DateTime.now(),
@@ -784,16 +846,19 @@ class _MissionRoomState extends State<MissionRoom> {
         throw Exception('Vibe cancelled');
       }
 
-      final signedTx = await model.walletService.buildAndSignTransactionFromCache(
-        keypairBytes: keypair,
-        amountUsdc: vibe.amountUsdc,
-        recipientAddress: prepareData['recipient_wallet_address'] as String,
-        blockhash: prepareData['blockhash'] as String,
-        feePayerAddress: prepareData['fee_payer'] as String,
-        senderAtaOverride: prepareData['sender_ata'] as String?,
-        recipientAtaOverride: prepareData['recipient_ata'] as String?,
-      );
-      for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+      final signedTx = await model.walletService
+          .buildAndSignTransactionFromCache(
+            keypairBytes: keypair,
+            amountUsdc: vibe.amountUsdc,
+            recipientAddress: prepareData['recipient_wallet_address'] as String,
+            blockhash: prepareData['blockhash'] as String,
+            feePayerAddress: prepareData['fee_payer'] as String,
+            senderAtaOverride: prepareData['sender_ata'] as String?,
+            recipientAtaOverride: prepareData['recipient_ata'] as String?,
+          );
+      for (var i = 0; i < keypair.length; i++) {
+        keypair[i] = 0;
+      }
 
       await model.walletService.apiClient.submitPoolVibe(
         poolId: _pool.id,
@@ -830,7 +895,10 @@ class _MissionRoomState extends State<MissionRoom> {
 
   // ── Reactions ────────────────────────────────────────────────────────────────
 
-  void _showReactionPicker(PoolMessageLocal message, BuildContext messageContext) {
+  void _showReactionPicker(
+    PoolMessageLocal message,
+    BuildContext messageContext,
+  ) {
     // Position the picker inline near the long-pressed message — no sheet,
     // no bottom-of-screen popup. Anchors above the message (or below when
     // the message is near the top of the screen).
@@ -849,7 +917,10 @@ class _MissionRoomState extends State<MissionRoom> {
       if (globalOffset.dy - pickerHeight - 12 > 60) {
         topPosition = globalOffset.dy - pickerHeight - 12;
       } else {
-        topPosition = (globalOffset.dy + msgHeight + 12).clamp(60.0, screenHeight - pickerHeight - 60);
+        topPosition = (globalOffset.dy + msgHeight + 12).clamp(
+          60.0,
+          screenHeight - pickerHeight - 60,
+        );
       }
     }
 
@@ -871,27 +942,47 @@ class _MissionRoomState extends State<MissionRoom> {
     final model = ZendScope.of(context);
     final existing = message.reactions.firstWhere(
       (r) => r.emoji == emoji,
-      orElse: () => const PoolReactionCount(emoji: '', count: 0, reactedByMe: false),
+      orElse: () =>
+          const PoolReactionCount(emoji: '', count: 0, reactedByMe: false),
     );
 
-    _updateReaction(message.id, emoji, model.currentZendtag,
-        increment: !existing.reactedByMe);
+    _updateReaction(
+      message.id,
+      emoji,
+      model.currentZendtag,
+      increment: !existing.reactedByMe,
+    );
 
     final messageId = message.serverId ?? message.id;
     try {
       if (existing.reactedByMe) {
         await model.walletService.apiClient.removeReaction(
-          poolId: _pool.id, messageId: messageId, emoji: emoji);
+          poolId: _pool.id,
+          messageId: messageId,
+          emoji: emoji,
+        );
       } else {
         await model.walletService.apiClient.addReaction(
-          poolId: _pool.id, messageId: messageId, emoji: emoji);
+          poolId: _pool.id,
+          messageId: messageId,
+          emoji: emoji,
+        );
       }
     } catch (_) {
       if (mounted) {
-        _updateReaction(message.id, emoji, model.currentZendtag,
-            increment: existing.reactedByMe);
+        _updateReaction(
+          message.id,
+          emoji,
+          model.currentZendtag,
+          increment: existing.reactedByMe,
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't react — try again", style: TextStyle(fontFamily: 'Geist'))),
+          const SnackBar(
+            content: Text(
+              "Couldn't react — try again",
+              style: TextStyle(fontFamily: 'Geist'),
+            ),
+          ),
         );
       }
     }
@@ -947,8 +1038,12 @@ class _MissionRoomState extends State<MissionRoom> {
     _players[msgId] = player;
 
     // Rebuild when playback state changes.
-    player.playerStateStream.listen((_) { if (mounted) setState(() {}); });
-    player.positionStream.listen((_) { if (mounted) setState(() {}); });
+    player.playerStateStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+    player.positionStream.listen((_) {
+      if (mounted) setState(() {});
+    });
 
     player.playbackEventStream.listen(
       (_) {},
@@ -1035,7 +1130,10 @@ class _MissionRoomState extends State<MissionRoom> {
     for (var i = 0; i < _messages.length; i++) {
       final msg = _messages[i];
       final msgDate = DateTime(
-          msg.createdAt.year, msg.createdAt.month, msg.createdAt.day);
+        msg.createdAt.year,
+        msg.createdAt.month,
+        msg.createdAt.day,
+      );
 
       // Date separator
       if (lastDate == null || msgDate != lastDate) {
@@ -1046,7 +1144,8 @@ class _MissionRoomState extends State<MissionRoom> {
       }
 
       // Grouping: same sender within 2 minutes = continuation
-      final isContinuation = lastSenderId != null &&
+      final isContinuation =
+          lastSenderId != null &&
           lastSenderId == msg.senderUserId &&
           lastMessageTime != null &&
           msg.createdAt.difference(lastMessageTime).inMinutes < 2 &&
@@ -1069,156 +1168,228 @@ class _MissionRoomState extends State<MissionRoom> {
       children: [
         // ── Reconnecting banner ──
         if (_showReconnecting)
-          Builder(builder: (context) {
-            final zt = ZendTheme.of(context);
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
-              color: zt.bgSecondary,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ZendLoader(size: 12, strokeWidth: 1.5, color: zt.textSecondary),
-                  const SizedBox(width: 8),
-                  Text('Reconnecting...', style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
-                ],
-              ),
-            );
-          }),
+          Builder(
+            builder: (context) {
+              final zt = ZendTheme.of(context);
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ZendSpacing.lg,
+                  vertical: ZendSpacing.xs,
+                ),
+                color: zt.bgSecondary,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ZendLoader(
+                      size: 12,
+                      strokeWidth: 1.5,
+                      color: zt.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reconnecting...',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
 
         // ── Could not connect banner ──
         if (!_showReconnecting && _wsService.consecutiveFailures >= 5)
-          Builder(builder: (context) {
-            final zt = ZendTheme.of(context);
-            return GestureDetector(
-              onTap: () => _wsService.resetAndReconnect(),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
-                color: ZendColors.destructive.withValues(alpha: 0.1),
-                child: Text(
-                  'Could not connect. Tap to retry.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textPrimary),
+          Builder(
+            builder: (context) {
+              final zt = ZendTheme.of(context);
+              return GestureDetector(
+                onTap: () => _wsService.resetAndReconnect(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ZendSpacing.lg,
+                    vertical: ZendSpacing.xs,
+                  ),
+                  color: ZendColors.destructive.withValues(alpha: 0.1),
+                  child: Text(
+                    'Could not connect. Tap to retry.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: zt.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
 
         // ── Closed-pool archive banner ──
         if (!_isActive)
-          Builder(builder: (context) {
-            final zt = ZendTheme.of(context);
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.lg, vertical: ZendSpacing.xs),
-              color: zt.bgSecondary,
-              child: Text(
-                'This pool has closed — messages are read-only',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
-              ),
-            );
-          }),
+          Builder(
+            builder: (context) {
+              final zt = ZendTheme.of(context);
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ZendSpacing.lg,
+                  vertical: ZendSpacing.xs,
+                ),
+                color: zt.bgSecondary,
+                child: Text(
+                  'This pool has closed — messages are read-only',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
+                ),
+              );
+            },
+          ),
 
         // ── Message list ──
         Expanded(
           child: _loading
               ? const MissionRoomSkeleton()
               : _messages.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No messages yet. Say something! 👋',
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: ZendTheme.of(context).textSecondary),
-                      ),
-                    )
-                  : Stack(
-                      children: [
-                        Builder(builder: (context) {
-                          final displayList = _buildDisplayList();
-                          return ListView.builder(
-                            controller: _scrollController,
-                            cacheExtent: 500,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: ZendSpacing.lg,
-                                vertical: ZendSpacing.xs),
-                            itemCount: displayList.length + (_loadingOlder ? 1 : 0),
-                            itemBuilder: (_, i) {
-                              // Loading older indicator at top
-                              if (_loadingOlder && i == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Center(
-                                    child: ZendLoader(
-                                      size: 20,
-                                      strokeWidth: 2,
-                                      color: ZendTheme.of(context).accentBright,
-                                    ),
+              ? Center(
+                  child: Text(
+                    'No messages yet. Say something! 👋',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      color: ZendTheme.of(context).textSecondary,
+                    ),
+                  ),
+                )
+              : Stack(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final displayList = _buildDisplayList();
+                        return ListView.builder(
+                          controller: _scrollController,
+                          cacheExtent: 500,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: ZendSpacing.lg,
+                            vertical: ZendSpacing.xs,
+                          ),
+                          itemCount:
+                              displayList.length + (_loadingOlder ? 1 : 0),
+                          itemBuilder: (_, i) {
+                            // Loading older indicator at top
+                            if (_loadingOlder && i == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Center(
+                                  child: ZendLoader(
+                                    size: 20,
+                                    strokeWidth: 2,
+                                    color: ZendTheme.of(context).accentBright,
                                   ),
-                                );
-                              }
-                              final listIdx = _loadingOlder ? i - 1 : i;
-                              final item = displayList[listIdx];
-                              if (item is _DateSeparatorItem) {
-                                return _DateSeparator(date: item.date);
-                              }
-                              final msgItem = item as _MessageItem;
-                              final msg = msgItem.message;
-                              // Only show read receipts on the LAST message in
-                              // a consecutive run of messages from this sender
-                              // (same pattern as iMessage: "Delivered" only once
-                              // at the bottom of a burst, not on every bubble).
-                              final isLastInRun = () {
-                                if (listIdx + 1 >= displayList.length) return true;
-                                final next = displayList[listIdx + 1];
-                                if (next is _DateSeparatorItem) return true;
-                                return (next as _MessageItem).message.senderUserId != msg.senderUserId;
-                              }();
-                              return RepaintBoundary(
-                                child: MissionRoomMessage(
-                                  key: ValueKey(msg.id),
-                                  message: msg,
-                                  currentUserId: currentUserId,
-                                  isContinuation: msgItem.isContinuation,
-                                  onLongPress: (ctx) => _showReactionPicker(msg, ctx),
-                                  onReactionTap: (emoji) => _toggleReaction(msg, emoji),
-                                  // Read receipts only on the last message in a run.
-                                  readers: (msg.senderUserId == currentUserId && isLastInRun)
-                                      ? _readersOf(msg.serverId)
-                                      : const {},
-                                  player: _playerFor(msg.id),
-                                  onPlayTap: msg.messageTypeEnum == PoolMessageType.voiceNote
-                                      ? () => _togglePlayback(msg)
-                                      : null,
-                                  onRetry: msg.localStatus == LocalStatus.failed
-                                      ? () {
-                                          if (msg.messageTypeEnum == PoolMessageType.vibe) {
-                                            _retryVibe(msg);
-                                          } else if (msg.clientId != null && msg.content != null) {
-                                            _repository.updateStatus(msg.clientId!, LocalStatus.sending);
-                                            setState(() {
-                                              final idx = _messages.indexWhere((m) => m.id == msg.id);
-                                              if (idx >= 0) _messages[idx] = msg.copyWith(localStatus: LocalStatus.sending);
-                                            });
-                                            _outboxQueue.enqueue(msg.clientId!, msg.content!);
-                                          } else if (msg.messageTypeEnum == PoolMessageType.voiceNote &&
-                                              msg.clientId != null) {
-                                            _repository.updateStatus(msg.clientId!, LocalStatus.failed);
-                                          }
-                                        }
-                                      : null,
                                 ),
                               );
-                            },
-                          );
-                        }),
-
-                        // ── Scroll-to-bottom button ──
-                        _ScrollToBottomButton(
-                          scrollController: _scrollController,
-                        ),
-                      ],
+                            }
+                            final listIdx = _loadingOlder ? i - 1 : i;
+                            final item = displayList[listIdx];
+                            if (item is _DateSeparatorItem) {
+                              return _DateSeparator(date: item.date);
+                            }
+                            final msgItem = item as _MessageItem;
+                            final msg = msgItem.message;
+                            // Only show read receipts on the LAST message in
+                            // a consecutive run of messages from this sender
+                            // (same pattern as iMessage: "Delivered" only once
+                            // at the bottom of a burst, not on every bubble).
+                            final isLastInRun = () {
+                              if (listIdx + 1 >= displayList.length) {
+                                return true;
+                              }
+                              final next = displayList[listIdx + 1];
+                              if (next is _DateSeparatorItem) return true;
+                              return (next as _MessageItem)
+                                      .message
+                                      .senderUserId !=
+                                  msg.senderUserId;
+                            }();
+                            return RepaintBoundary(
+                              child: MissionRoomMessage(
+                                key: ValueKey(msg.id),
+                                message: msg,
+                                currentUserId: currentUserId,
+                                isContinuation: msgItem.isContinuation,
+                                onLongPress: (ctx) =>
+                                    _showReactionPicker(msg, ctx),
+                                onReactionTap: (emoji) =>
+                                    _toggleReaction(msg, emoji),
+                                // Read receipts only on the last message in a run.
+                                readers:
+                                    (msg.senderUserId == currentUserId &&
+                                        isLastInRun)
+                                    ? _readersOf(msg.serverId)
+                                    : const {},
+                                player: _playerFor(msg.id),
+                                onPlayTap:
+                                    msg.messageTypeEnum ==
+                                        PoolMessageType.voiceNote
+                                    ? () => _togglePlayback(msg)
+                                    : null,
+                                onRetry: msg.localStatus == LocalStatus.failed
+                                    ? () {
+                                        if (msg.messageTypeEnum ==
+                                            PoolMessageType.vibe) {
+                                          _retryVibe(msg);
+                                        } else if (msg.clientId != null &&
+                                            msg.content != null) {
+                                          _repository.updateStatus(
+                                            msg.clientId!,
+                                            LocalStatus.sending,
+                                          );
+                                          setState(() {
+                                            final idx = _messages.indexWhere(
+                                              (m) => m.id == msg.id,
+                                            );
+                                            if (idx >= 0) {
+                                              _messages[idx] = msg.copyWith(
+                                                localStatus:
+                                                    LocalStatus.sending,
+                                              );
+                                            }
+                                          });
+                                          _outboxQueue.enqueue(
+                                            msg.clientId!,
+                                            msg.content!,
+                                          );
+                                        } else if (msg.messageTypeEnum ==
+                                                PoolMessageType.voiceNote &&
+                                            msg.clientId != null) {
+                                          _repository.updateStatus(
+                                            msg.clientId!,
+                                            LocalStatus.failed,
+                                          );
+                                        }
+                                      }
+                                    : null,
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
+
+                    // ── Scroll-to-bottom button ──
+                    _ScrollToBottomButton(scrollController: _scrollController),
+                  ],
+                ),
         ),
 
         // ── Typing indicator ──
@@ -1309,14 +1480,18 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (i) {
                   final delay = i / 3;
-                  final value = ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
+                  final value = ((_controller.value - delay) % 1.0).clamp(
+                    0.0,
+                    1.0,
+                  );
                   final opacity = value < 0.5 ? value * 2 : (1 - value) * 2;
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 1.5),
                     child: Opacity(
                       opacity: opacity.clamp(0.3, 1.0),
                       child: Container(
-                        width: 5, height: 5,
+                        width: 5,
+                        height: 5,
                         decoration: BoxDecoration(
                           color: zt.textSecondary,
                           shape: BoxShape.circle,
@@ -1331,7 +1506,11 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           const SizedBox(width: 6),
           Text(
             _label,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              color: zt.textSecondary,
+            ),
           ),
         ],
       ),
@@ -1354,8 +1533,18 @@ class _DateSeparator extends StatelessWidget {
     if (date == today) return 'Today';
     if (date == yesterday) return 'Yesterday';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}';
   }
@@ -1369,7 +1558,9 @@ class _DateSeparator extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            color: zt.isDark ? zt.bgElevated : Colors.black.withValues(alpha: 0.06),
+            color: zt.isDark
+                ? zt.bgElevated
+                : Colors.black.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(ZendRadii.pill),
           ),
           child: Text(
@@ -1378,7 +1569,9 @@ class _DateSeparator extends StatelessWidget {
               fontFamily: 'Geist',
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: zt.isDark ? zt.textSecondary : zt.textPrimary.withValues(alpha: 0.75),
+              color: zt.isDark
+                  ? zt.textSecondary
+                  : zt.textPrimary.withValues(alpha: 0.75),
             ),
           ),
         ),
@@ -1418,8 +1611,8 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
   void _onScroll() {
     if (!widget.scrollController.hasClients) return;
     final pos = widget.scrollController.position;
-    final shouldShow = pos.maxScrollExtent > 0 &&
-        pos.maxScrollExtent - pos.pixels > 120;
+    final shouldShow =
+        pos.maxScrollExtent > 0 && pos.maxScrollExtent - pos.pixels > 120;
     if (shouldShow != _show) {
       setState(() => _show = shouldShow);
     }
@@ -1446,9 +1639,19 @@ class _ScrollToBottomButtonState extends State<_ScrollToBottomButton> {
           decoration: BoxDecoration(
             color: ZendTheme.of(context).accent,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: const Icon(PhosphorIconsRegular.caretDown, color: Colors.white, size: 22),
+          child: const Icon(
+            PhosphorIconsRegular.caretDown,
+            color: Colors.white,
+            size: 22,
+          ),
         ),
       ),
     );
@@ -1543,136 +1746,211 @@ class _InputBarState extends State<_InputBar> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary.withValues(alpha: 0.82),
-        border: Border(top: BorderSide(color: zt.border.withValues(alpha: 0.35), width: 0.5)),
-      ),
-      padding: EdgeInsets.fromLTRB(ZendSpacing.md, 10, ZendSpacing.md, 12 + bottomInset),
-      child: widget.isRecording
-          ? Row(
-              children: [
-                const Icon(PhosphorIconsRegular.record, color: ZendColors.destructive, size: 14),
-                const SizedBox(width: ZendSpacing.xs),
-                Text('Recording ${widget.recordingSeconds}s / 30s',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textPrimary)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => unawaited(widget.onMicStop()),
-                  child: const Text('Stop', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: ZendColors.destructive)),
-                ),
-              ],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Vibe button — temporarily disabled for design parity
-                // ignore: dead_code
-                if (false && widget.onSendVibe != null && widget.poolId != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: GestureDetector(
-                      onTap: () async {
-                        final result = await showVibePickerSheet(
-                          context,
-                          roomId: widget.poolId!,
-                        );
-                        if (result != null && mounted) {
-                          await widget.onSendVibe!(result);
-                        }
-                      },
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                        child: Icon(PhosphorIconsRegular.gift, size: 18, color: zt.textSecondary),
+          decoration: BoxDecoration(
+            color: zt.bgPrimary.withValues(alpha: 0.82),
+            border: Border(
+              top: BorderSide(
+                color: zt.border.withValues(alpha: 0.35),
+                width: 0.5,
+              ),
+            ),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            ZendSpacing.md,
+            10,
+            ZendSpacing.md,
+            12 + bottomInset,
+          ),
+          child: widget.isRecording
+              ? Row(
+                  children: [
+                    const Icon(
+                      PhosphorIconsRegular.record,
+                      color: ZendColors.destructive,
+                      size: 14,
+                    ),
+                    const SizedBox(width: ZendSpacing.xs),
+                    Text(
+                      'Recording ${widget.recordingSeconds}s / 30s',
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 13,
+                        color: zt.textPrimary,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: ZendSpacing.xs),
-                ],
-                // Mic button — pinned to bottom edge, doesn't drift with text growth
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: GestureDetector(
-                    onLongPressStart: (_) => unawaited(widget.onMicStart()),
-                    onLongPressEnd: (_) => unawaited(widget.onMicStop()),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
-                      child: Icon(PhosphorIconsRegular.microphone, size: 18, color: zt.textSecondary),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: ZendSpacing.xs),
-                // Message input bubble — text field only
-                Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    decoration: BoxDecoration(
-                      color: zt.bgSecondary,
-                      borderRadius: BorderRadius.circular(ZendRadii.pill),
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.white.withValues(alpha: zt.isDark ? 0.08 : 0.55),
-                          width: 0.5,
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => unawaited(widget.onMicStop()),
+                      child: const Text(
+                        'Stop',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontWeight: FontWeight.w600,
+                          color: ZendColors.destructive,
                         ),
                       ),
                     ),
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-                    child: TextField(
-                      controller: widget.controller,
-                      maxLines: 4,
-                      minLines: 1,
-                      maxLength: 280,
-                      textInputAction: TextInputAction.newline,
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-                      buildCounter: (_, {required currentLength, required isFocused, maxLength}) {
-                        if (!isFocused || !overLimit) return null;
-                        return Text('$remaining', style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.destructive));
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Message the group...',
-                        hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                        border: InputBorder.none,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: ZendSpacing.xs),
-                // Send button — outside the bubble, same level as mic
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: GestureDetector(
-                    onTap: overLimit || widget.sending || _charCount == 0 ? null : widget.onSend,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: overLimit || _charCount == 0 ? zt.border : zt.accent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: widget.sending
-                          ? Padding(
-                              padding: const EdgeInsets.all(9),
-                              child: ZendLoader(size: 16, strokeWidth: 1.5, color: Colors.white),
-                            )
-                          : Icon(
-                              PhosphorIconsRegular.paperPlaneTilt,
-                              size: 17,
-                              color: overLimit || _charCount == 0 ? zt.textSecondary : Colors.white,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Vibe button — gated with the rest of vibes.
+                    if (ZendFeatures.vibes &&
+                        widget.onSendVibe != null &&
+                        widget.poolId != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: GestureDetector(
+                          onTap: () async {
+                            final result = await showVibePickerSheet(
+                              context,
+                              roomId: widget.poolId!,
+                            );
+                            if (result != null && mounted) {
+                              await widget.onSendVibe!(result);
+                            }
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: zt.bgSecondary,
+                              shape: BoxShape.circle,
                             ),
+                            child: Icon(
+                              PhosphorIconsRegular.gift,
+                              size: 18,
+                              color: zt.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: ZendSpacing.xs),
+                    ],
+                    // Mic button — pinned to bottom edge, doesn't drift with text growth
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: GestureDetector(
+                        onLongPressStart: (_) => unawaited(widget.onMicStart()),
+                        onLongPressEnd: (_) => unawaited(widget.onMicStop()),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: zt.bgSecondary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            PhosphorIconsRegular.microphone,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: ZendSpacing.xs),
+                    // Message input bubble — text field only
+                    Expanded(
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        decoration: BoxDecoration(
+                          color: zt.bgSecondary,
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(
+                                alpha: zt.isDark ? 0.08 : 0.55,
+                              ),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+                        child: TextField(
+                          controller: widget.controller,
+                          maxLines: 4,
+                          minLines: 1,
+                          maxLength: 280,
+                          textInputAction: TextInputAction.newline,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            color: zt.textPrimary,
+                          ),
+                          buildCounter:
+                              (
+                                _, {
+                                required currentLength,
+                                required isFocused,
+                                maxLength,
+                              }) {
+                                if (!isFocused || !overLimit) return null;
+                                return Text(
+                                  '$remaining',
+                                  style: ZendTextStyles.tabularNumeric.copyWith(
+                                    fontSize: 11,
+                                    color: ZendColors.destructive,
+                                  ),
+                                );
+                              },
+                          decoration: InputDecoration(
+                            hintText: 'Message the group...',
+                            hintStyle: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 14,
+                              color: zt.textSecondary,
+                            ),
+                            border: InputBorder.none,
+                            counterText: '',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: ZendSpacing.xs),
+                    // Send button — outside the bubble, same level as mic
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: GestureDetector(
+                        onTap: overLimit || widget.sending || _charCount == 0
+                            ? null
+                            : widget.onSend,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: overLimit || _charCount == 0
+                                ? zt.border
+                                : zt.accent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: widget.sending
+                              ? Padding(
+                                  padding: const EdgeInsets.all(9),
+                                  child: ZendLoader(
+                                    size: 16,
+                                    strokeWidth: 1.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Icon(
+                                  PhosphorIconsRegular.paperPlaneTilt,
+                                  size: 17,
+                                  color: overLimit || _charCount == 0
+                                      ? zt.textSecondary
+                                      : Colors.white,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
         ),
-        ),
+      ),
     );
   }
 }
@@ -1693,6 +1971,7 @@ class _QuickReactOverlay extends StatefulWidget {
   final List<String> emojis;
   final ValueChanged<String> onSelect;
   final VoidCallback onDismiss;
+
   /// Absolute Y position (from screen top) for the picker row.
   /// Null → centers vertically.
   final double? anchorTop;
@@ -1709,7 +1988,10 @@ class _QuickReactOverlayState extends State<_QuickReactOverlay>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
     _ctrl.forward();
   }
@@ -1743,13 +2025,18 @@ class _QuickReactOverlayState extends State<_QuickReactOverlay>
             child: ScaleTransition(
               scale: _scale,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: zt.bgElevated,
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: zt.isDark ? 0.45 : 0.12),
+                      color: Colors.black.withValues(
+                        alpha: zt.isDark ? 0.45 : 0.12,
+                      ),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -1767,7 +2054,8 @@ class _QuickReactOverlayState extends State<_QuickReactOverlay>
                             emoji,
                             style: const TextStyle(
                               fontSize: 28,
-                              decoration: TextDecoration.none, // no yellow underline
+                              decoration:
+                                  TextDecoration.none, // no yellow underline
                               decorationColor: Colors.transparent,
                             ),
                           ),

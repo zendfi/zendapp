@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/dm_thread.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_modal.dart';
 
 /// Shows a bottom sheet listing the user's DM threads so they can pick who
 /// to forward a message to. Returns the chosen [DmCounterparty] and
@@ -15,7 +16,7 @@ import '../../models/handle_label.dart';
 Future<({String roomId, DmCounterparty counterparty})?> showDmForwardSheet(
   BuildContext context,
 ) {
-  return showModalBottomSheet<({String roomId, DmCounterparty counterparty})>(
+  return showZendModalSheet<({String roomId, DmCounterparty counterparty})>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

@@ -10,18 +10,17 @@ import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'pool_info_card.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Opens the Pool List Drawer as a modal bottom sheet.
 Future<void> showPoolListDrawer(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const FractionallySizedBox(
-      heightFactor: 1.0,
-      child: PoolListDrawer(),
-    ),
+    builder: (_) =>
+        const FractionallySizedBox(heightFactor: 1.0, child: PoolListDrawer()),
   );
 }
 
@@ -36,11 +35,7 @@ class PoolListDrawer extends StatelessWidget {
   void _navigateToPool(BuildContext context, Pool pool) {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      pushZendSlide(
-        context,
-        PoolDetailScreen(pool: pool),
-        rootNavigator: true,
-      );
+      pushZendSlide(context, PoolDetailScreen(pool: pool), rootNavigator: true);
     });
   }
 
@@ -89,7 +84,11 @@ class PoolListDrawer extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(PhosphorIconsRegular.plusCircle, size: 18, color: zt.accentBright),
+                  Icon(
+                    PhosphorIconsRegular.plusCircle,
+                    size: 18,
+                    color: zt.accentBright,
+                  ),
                   const SizedBox(width: ZendSpacing.xs),
                   Text(
                     'Create Pool',
@@ -123,14 +122,22 @@ class PoolListDrawer extends StatelessWidget {
           children: [
             Text(
               'Failed to load pools',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: ZendSpacing.sm),
             TextButton(
               onPressed: () => model.fetchPools(),
               child: Text(
                 'Retry',
-                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.accentBright),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontWeight: FontWeight.w600,
+                  color: zt.accentBright,
+                ),
               ),
             ),
           ],
@@ -138,16 +145,28 @@ class PoolListDrawer extends StatelessWidget {
       );
     }
 
-    final active = model.pools.where((p) => p.status == PoolStatus.active).toList();
-    final completed = model.pools.where((p) => p.status == PoolStatus.completed).toList();
-    final expired = model.pools.where((p) => p.status == PoolStatus.expired).toList();
-    final cancelled = model.pools.where((p) => p.status == PoolStatus.cancelled).toList();
+    final active = model.pools
+        .where((p) => p.status == PoolStatus.active)
+        .toList();
+    final completed = model.pools
+        .where((p) => p.status == PoolStatus.completed)
+        .toList();
+    final expired = model.pools
+        .where((p) => p.status == PoolStatus.expired)
+        .toList();
+    final cancelled = model.pools
+        .where((p) => p.status == PoolStatus.cancelled)
+        .toList();
 
     if (model.pools.isEmpty) {
       return Center(
         child: Text(
           'No pools yet',
-          style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 15,
+            color: zt.textSecondary,
+          ),
         ),
       );
     }
@@ -164,7 +183,9 @@ class PoolListDrawer extends StatelessWidget {
             child: PoolInfoCard(
               pool: pool,
               onTap: () => _navigateToPool(context, pool),
-              hasNewMessage: ZendScope.of(context).poolsWithNewMessages.contains(pool.id),
+              hasNewMessage: ZendScope.of(
+                context,
+              ).poolsWithNewMessages.contains(pool.id),
             ),
           ),
         );
@@ -198,7 +219,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: ZendSpacing.xs, top: ZendSpacing.xs),
+      padding: const EdgeInsets.only(
+        bottom: ZendSpacing.xs,
+        top: ZendSpacing.xs,
+      ),
       child: Text(
         title,
         style: TextStyle(

@@ -12,11 +12,7 @@ import 'pin_restore_screen.dart';
 import '../shell/zend_shell.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({
-    super.key,
-    this.contactHint,
-    this.isEmail = false,
-  });
+  const OtpScreen({super.key, this.contactHint, this.isEmail = false});
 
   /// The phone number or email the code was sent to (for display only).
   final String? contactHint;
@@ -194,10 +190,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
           if (hasKeypair) {
             navigator.pushAndRemoveUntil(
-                zendRoute(page: const ZendShell()), (route) => false);
+              zendRoute(page: const ZendShell()),
+              (route) => false,
+            );
           } else {
             navigator.pushAndRemoveUntil(
-                zendRoute(page: const PinRestoreScreen()), (route) => false);
+              zendRoute(page: const PinRestoreScreen()),
+              (route) => false,
+            );
           }
         } catch (e) {
           model.stopLoading();
@@ -238,78 +238,119 @@ class _OtpScreenState extends State<OtpScreen> {
             const OnboardingProgressBar(step: 2, totalSteps: 6),
             Expanded(
               child: ZendScrollPage(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 44),
-                    Text('Enter the code', style: TextStyle(fontFamily: 'Geist', fontSize: 28, fontWeight: FontWeight.w700, color: zt.textPrimary)),
-                    const SizedBox(height: 6),
-                    Text(_subtitleText, style: TextStyle(color: zt.textSecondary, fontSize: 14)),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: List.generate(6, (index) {
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(right: index == 5 ? 0 : 6),
-                            child: _OtpBox(
-                              controller: _controllers[index],
-                              focusNode: _focusNodes[index],
-                              onChanged: (value) {
-                                if (value.isNotEmpty) {
-                                  if (value.length > 1) {
-                                    _controllers[index].text = value.characters.last.toString();
-                                    _controllers[index].selection = const TextSelection.collapsed(offset: 1);
-                                  }
-                                  _focusNext(index);
-                                }
-                              },
-                              onBackspace: () => _handleBackspace(index),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 44),
+                          Text(
+                            'Enter the code',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: zt.textPrimary,
                             ),
                           ),
-                        );
-                      }),
-                    ),
-                    if (_errorText != null) ...[
-                      const SizedBox(height: 8),
-                      Text(_errorText!, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive)),
-                    ],
-                    const SizedBox(height: 12),
-                    if (_remaining.inSeconds > 0)
-                      Text(
-                        'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
-                      )
-                    else
-                      GestureDetector(
-                        onTap: _resending ? null : _resend,
-                        child: _resending
-                            ? Align(
-                                alignment: Alignment.centerLeft,
-                                child: ZendLoader(size: 16, strokeWidth: 2, color: zt.textSecondary),
-                              )
-                            : const Text(
-                                'Resend code',
-                                style: TextStyle(
-                                  fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600,
-                                  color: ZendColors.accentPop,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: ZendColors.accentPop,
+                          const SizedBox(height: 6),
+                          Text(
+                            _subtitleText,
+                            style: TextStyle(
+                              color: zt.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: List.generate(6, (index) {
+                              return Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: index == 5 ? 0 : 6,
+                                  ),
+                                  child: _OtpBox(
+                                    controller: _controllers[index],
+                                    focusNode: _focusNodes[index],
+                                    onChanged: (value) {
+                                      if (value.isNotEmpty) {
+                                        if (value.length > 1) {
+                                          _controllers[index].text = value
+                                              .characters
+                                              .last
+                                              .toString();
+                                          _controllers[index].selection =
+                                              const TextSelection.collapsed(
+                                                offset: 1,
+                                              );
+                                        }
+                                        _focusNext(index);
+                                      }
+                                    },
+                                    onBackspace: () => _handleBackspace(index),
+                                  ),
                                 ),
+                              );
+                            }),
+                          ),
+                          if (_errorText != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              _errorText!,
+                              style: const TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13,
+                                color: ZendColors.destructive,
                               ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          if (_remaining.inSeconds > 0)
+                            Text(
+                              'Resend in ${_remaining.inMinutes}:${(_remaining.inSeconds % 60).toString().padLeft(2, '0')}',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 13,
+                                color: zt.textSecondary,
+                              ),
+                            )
+                          else
+                            GestureDetector(
+                              onTap: _resending ? null : _resend,
+                              child: _resending
+                                  ? Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: ZendLoader(
+                                        size: 16,
+                                        strokeWidth: 2,
+                                        color: zt.textSecondary,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Resend code',
+                                      style: TextStyle(
+                                        fontFamily: 'Geist',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: ZendColors.accentPop,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: ZendColors.accentPop,
+                                      ),
+                                    ),
+                            ),
+                          const Spacer(),
+                          PrimaryButton(
+                            label: 'Continue',
+                            onPressed: _onContinue,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                    const Spacer(),
-                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
-                    const SizedBox(height: 24),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
               ),
             ),
           ],
@@ -337,8 +378,12 @@ class _OtpBox extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Focus(
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
-          if (controller.text.isEmpty) { onBackspace(); return KeyEventResult.handled; }
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (controller.text.isEmpty) {
+            onBackspace();
+            return KeyEventResult.handled;
+          }
         }
         return KeyEventResult.ignored;
       },
@@ -352,11 +397,19 @@ class _OtpBox extends StatelessWidget {
           maxLength: 1,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: TextStyle(fontFamily: 'Geist', fontSize: 24, fontWeight: FontWeight.w700, color: zt.textPrimary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: zt.textPrimary,
+          ),
           decoration: InputDecoration(
             counterText: '',
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 0,
+              vertical: 12,
+            ),
             filled: true,
             fillColor: zt.bgSecondary,
             border: const OutlineInputBorder(

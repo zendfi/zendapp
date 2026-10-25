@@ -41,16 +41,15 @@ class _ChangePinScreenState extends State<ChangePinScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -172,9 +171,9 @@ class _ChangePinScreenState extends State<ChangePinScreen>
       await model.walletService.changePin(_currentPin, _newPin);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN changed successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('PIN changed successfully')));
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -223,8 +222,11 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: _goBack,
-                  child: const Icon(PhosphorIconsRegular.caretLeft,
-                      color: ZendColors.textOnDeep, size: 24),
+                  child: const Icon(
+                    PhosphorIconsRegular.caretLeft,
+                    color: ZendColors.textOnDeep,
+                    size: 24,
+                  ),
                 ),
               ),
               SizedBox(height: compact ? 32 : 48),
@@ -296,14 +298,14 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                         ),
                       )
                     : _loading
-                        ? const Center(
-                            child: ZendLoader(
-                              size: 16,
-                              strokeWidth: 1.5,
-                              color: ZendColors.accentPop,
-                            ),
-                          )
-                        : null,
+                    ? const Center(
+                        child: ZendLoader(
+                          size: 16,
+                          strokeWidth: 1.5,
+                          color: ZendColors.accentPop,
+                        ),
+                      )
+                    : null,
               ),
               const Spacer(),
               Opacity(
@@ -346,8 +348,7 @@ class _PinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color:
-                    filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
                 width: 2,
               ),
             ),
@@ -366,12 +367,7 @@ class _PinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -435,10 +431,17 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

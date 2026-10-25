@@ -16,6 +16,7 @@ import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
+import '../../design/zend_modal.dart';
 
 /// Stage machine for the "Pay with Zend" Payment Modal Sheet — the dedicated
 /// native UI shown when a `zdfi.me` deep link resolves to a Developer-
@@ -24,14 +25,23 @@ import 'send_shared_widgets.dart';
 /// pattern with two additional terminal stages for cases that don't apply
 /// to peer-to-peer requests: `notFound` and `unavailable` (already
 /// expired/paid/cancelled).
-enum DevPayStage { loading, confirm, pin, processing, success, error, notFound, unavailable }
+enum DevPayStage {
+  loading,
+  confirm,
+  pin,
+  processing,
+  success,
+  error,
+  notFound,
+  unavailable,
+}
 
 Future<void> showDevPaymentModalSheet(
   BuildContext context, {
   required String zendtag,
   required String requestLinkId,
 }) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -39,7 +49,8 @@ Future<void> showDevPaymentModalSheet(
     backgroundColor: Colors.transparent,
     isDismissible: true,
     enableDrag: true,
-    builder: (_) => DevPaymentModalSheet(zendtag: zendtag, requestLinkId: requestLinkId),
+    builder: (_) =>
+        DevPaymentModalSheet(zendtag: zendtag, requestLinkId: requestLinkId),
   );
 }
 
@@ -84,14 +95,20 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
   @override
   void initState() {
     super.initState();
-    _shakeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut));
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
+        );
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
@@ -132,7 +149,8 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Could not load payment request. Check your connection.';
+        _errorMessage =
+            'Could not load payment request. Check your connection.';
         _stage = DevPayStage.error;
       });
     }
@@ -141,8 +159,11 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
   Future<void> _resolveNotFoundOrUnavailable() async {
     try {
       final model = ZendScope.of(context);
-      final status = await model.walletService.apiClient
-          .getPublicRequestStatus(widget.zendtag, widget.requestLinkId, platform: _platform);
+      final status = await model.walletService.apiClient.getPublicRequestStatus(
+        widget.zendtag,
+        widget.requestLinkId,
+        platform: _platform,
+      );
       if (!mounted) return;
       if (!status.found) {
         setState(() => _stage = DevPayStage.notFound);
@@ -170,8 +191,9 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
     }
   }
 
-  String _formatAmount(double amount) =>
-      amount == amount.roundToDouble() ? '\$${amount.toStringAsFixed(0)}' : '\$${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) => amount == amount.roundToDouble()
+      ? '\$${amount.toStringAsFixed(0)}'
+      : '\$${amount.toStringAsFixed(2)}';
 
   /// Re-fetches the request's current status immediately before invoking
   /// the signing flow (Requirement 4.8). If it's no longer payable, aborts
@@ -180,8 +202,11 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
   Future<void> _onConfirmTap() async {
     final model = ZendScope.of(context);
     try {
-      final status = await model.walletService.apiClient
-          .getPublicRequestStatus(widget.zendtag, widget.requestLinkId, platform: _platform);
+      final status = await model.walletService.apiClient.getPublicRequestStatus(
+        widget.zendtag,
+        widget.requestLinkId,
+        platform: _platform,
+      );
       if (!mounted) return;
       if (!status.found) {
         setState(() => _stage = DevPayStage.notFound);
@@ -227,7 +252,9 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
     setState(() {
       _pinError = null;
       if (value == 'del') {
-        if (_pinDigits.isNotEmpty) _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        if (_pinDigits.isNotEmpty) {
+          _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+        }
         return;
       }
       if (_pinDigits.length >= 6) return;
@@ -245,8 +272,10 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
       final cache = WalletSessionCache.instance;
 
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService
-            .verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           _handleWrongPin();
@@ -309,33 +338,36 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
 
       final String partiallySignedTxB64;
       if (keypairBytes != null) {
-        partiallySignedTxB64 = await model.walletService.buildAndSignTransactionFromCache(
-          keypairBytes: keypairBytes,
-          amountUsdc: amount,
-          recipientAddress: prepared.recipientWalletAddress,
-          blockhash: prepared.blockhash,
-          feePayerAddress: prepared.feePayer,
-          senderAtaOverride: prepared.senderAta,
-          recipientAtaOverride: prepared.recipientAta,
-        );
+        partiallySignedTxB64 = await model.walletService
+            .buildAndSignTransactionFromCache(
+              keypairBytes: keypairBytes,
+              amountUsdc: amount,
+              recipientAddress: prepared.recipientWalletAddress,
+              blockhash: prepared.blockhash,
+              feePayerAddress: prepared.feePayer,
+              senderAtaOverride: prepared.senderAta,
+              recipientAtaOverride: prepared.recipientAta,
+            );
       } else {
-        partiallySignedTxB64 = await model.walletService.buildAndSignTransaction(
-          pin: pin!,
-          amountUsdc: amount,
-          recipientAddress: prepared.recipientWalletAddress,
-          blockhash: prepared.blockhash,
-          feePayerAddress: prepared.feePayer,
-          senderAtaOverride: prepared.senderAta,
-          recipientAtaOverride: prepared.recipientAta,
-        );
+        partiallySignedTxB64 = await model.walletService
+            .buildAndSignTransaction(
+              pin: pin!,
+              amountUsdc: amount,
+              recipientAddress: prepared.recipientWalletAddress,
+              blockhash: prepared.blockhash,
+              feePayerAddress: prepared.feePayer,
+              senderAtaOverride: prepared.senderAta,
+              recipientAtaOverride: prepared.recipientAta,
+            );
       }
 
-      final result = await model.walletService.apiClient.submitDevRequestPayment(
-        widget.zendtag,
-        widget.requestLinkId,
-        partiallySignedTxB64,
-        platform: _platform,
-      );
+      final result = await model.walletService.apiClient
+          .submitDevRequestPayment(
+            widget.zendtag,
+            widget.requestLinkId,
+            partiallySignedTxB64,
+            platform: _platform,
+          );
 
       if (!mounted) return;
 
@@ -411,7 +443,9 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
           height: screenHeight * 0.92,
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(ZendRadii.xxl),
+            ),
           ),
           child: Column(
             children: [
@@ -425,8 +459,14 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(animation);
-                    return FadeTransition(opacity: animation, child: SlideTransition(position: slide, child: child));
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, 0.04),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: slide, child: child),
+                    );
                   },
                   child: RepaintBoundary(child: _buildStageContent()),
                 ),
@@ -488,7 +528,8 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
           children: [
             Expanded(
               child: SendSuccessStage(
-                amountFormattedExact: '\$${(_amountUsdc ?? 0.0).toStringAsFixed(2)}',
+                amountFormattedExact:
+                    '\$${(_amountUsdc ?? 0.0).toStringAsFixed(2)}',
                 recipientZendtag: _requesterZendtag ?? widget.zendtag,
                 onDone: _dismiss,
               ),
@@ -505,7 +546,11 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
                   child: Text(
                     "Payment confirmed — return to ${_requesterDisplayName ?? 'the developer'}'s site failed.",
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive),
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: ZendColors.destructive,
+                    ),
                   ),
                 ),
               ),
@@ -539,7 +584,9 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
         return _DevTerminalStage(
           key: const ValueKey('unavailable'),
           title: 'Unavailable',
-          message: _unavailableReason ?? 'This payment request is no longer available.',
+          message:
+              _unavailableReason ??
+              'This payment request is no longer available.',
           onDismiss: _dismiss,
         );
     }
@@ -562,8 +609,9 @@ class _DevConfirmStage extends StatelessWidget {
   final String requesterZendtag;
   final VoidCallback onConfirm;
 
-  String _formatAmount(double amount) =>
-      amount == amount.roundToDouble() ? '\$${amount.toStringAsFixed(0)}' : '\$${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) => amount == amount.roundToDouble()
+      ? '\$${amount.toStringAsFixed(0)}'
+      : '\$${amount.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context) {
@@ -591,7 +639,10 @@ class _DevConfirmStage extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '@$requesterZendtag',
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 13,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(height: 20),
           Text(
@@ -609,14 +660,22 @@ class _DevConfirmStage extends StatelessWidget {
               description!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
             ),
           ],
           if (insufficientBalance) ...[
             const SizedBox(height: 8),
             const Text(
               'Insufficient balance',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                color: ZendColors.destructive,
+              ),
             ),
           ],
           const Spacer(),
@@ -653,13 +712,22 @@ class _DevTerminalStage extends StatelessWidget {
           children: [
             Text(
               title,
-              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 28, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w700,
+                fontSize: 28,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(

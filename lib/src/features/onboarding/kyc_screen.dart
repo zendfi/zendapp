@@ -36,22 +36,32 @@ class KycScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       'Required to send money. Takes 30 seconds.',
-                      style: TextStyle(color: ZendTheme.of(context).textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: ZendTheme.of(context).textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     TextField(
                       controller: controller,
                       keyboardType: TextInputType.number,
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 18,
+                      ),
                       decoration: const InputDecoration(hintText: 'BVN'),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () {},
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.centerLeft,
+                      ),
                       child: Text(
                         'Why we need this ›',
-                        style: TextStyle(color: ZendTheme.of(context).textSecondary),
+                        style: TextStyle(
+                          color: ZendTheme.of(context).textSecondary,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -59,7 +69,9 @@ class KycScreen extends StatelessWidget {
                       label: 'Verify',
                       onPressed: () async {
                         model.startLoading('Verifying identity...');
-                        await Future.delayed(const Duration(milliseconds: 2000));
+                        await Future.delayed(
+                          const Duration(milliseconds: 2000),
+                        );
                         model.stopLoading();
                         if (!context.mounted) return;
                         pushReplacementZendSlide(

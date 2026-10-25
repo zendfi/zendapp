@@ -55,7 +55,7 @@ class PushNotificationService {
   static String? activePoolId;
 
   PushNotificationService({required ApiClient apiClient})
-      : _apiClient = apiClient;
+    : _apiClient = apiClient;
 
   Future<void> initialize() async {
     // Web has no local-notification implementation and FCM web push needs a
@@ -112,8 +112,10 @@ class PushNotificationService {
   /// everything (or signed out entirely).
   Future<void> clearBadge() async {
     if (kIsWeb) return;
-    final darwinImpl = _localNotifications.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final darwinImpl = _localNotifications
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     // badgeNumber: 0 clears the badge; flutter_local_notifications' iOS
     // implementation applies this via a zero-duration local notification
     // under the hood, which is the supported way to change the badge
@@ -146,7 +148,8 @@ class PushNotificationService {
 
     final androidImpl = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+).
     // Without this grant, notifications will not appear in the status bar
@@ -169,6 +172,7 @@ class PushNotificationService {
       );
     }
   }
+
   Future<void> _registerToken() async {
     final token = await FirebaseMessaging.instance.getToken();
     if (token != null) {
@@ -178,7 +182,9 @@ class PushNotificationService {
 
   void _listenForTokenRefresh() {
     _tokenRefreshSub?.cancel();
-    _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+    _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((
+      newToken,
+    ) async {
       await _sendTokenToBackend(newToken);
     });
   }
@@ -189,7 +195,9 @@ class PushNotificationService {
   void _listenForBackgroundNotificationTaps() {
     // App was in background and user tapped the notification
     _backgroundTapSub?.cancel();
-    _backgroundTapSub = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _backgroundTapSub = FirebaseMessaging.onMessageOpenedApp.listen((
+      RemoteMessage message,
+    ) {
       _handleNotificationData(message.data);
     });
   }
@@ -207,7 +215,8 @@ class PushNotificationService {
     if (type == 'payment_request') {
       try {
         final notification = PaymentRequestNotification.fromJson(data);
-        if (notification.requesterZendtag.isNotEmpty && notification.amountUsdc > 0) {
+        if (notification.requesterZendtag.isNotEmpty &&
+            notification.amountUsdc > 0) {
           pendingPaymentRequestFromNotification = notification;
         }
       } catch (_) {}
@@ -240,7 +249,9 @@ class PushNotificationService {
 
   void _listenForForegroundMessages() {
     _foregroundMessageSub?.cancel();
-    _foregroundMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _foregroundMessageSub = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
       _showLocalNotificationForMessage(_localNotifications, message.data);
 
       final type = message.data['type'] as String? ?? '';
@@ -300,11 +311,11 @@ class PushNotificationService {
 /// reason for the data-only switch.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kDebugMode) {
-    debugPrint('PushNotifications: background message received: ${message.messageId}');
+    debugPrint(
+      'PushNotifications: background message received: ${message.messageId}',
+    );
   }
 
   // A fresh plugin instance — this handler runs in its own background
@@ -343,8 +354,10 @@ Future<void> _initLocalNotificationsCore(
     onDidReceiveNotificationResponse: onTap,
   );
 
-  final androidImpl = plugin.resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>();
+  final androidImpl = plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
 
   // One Android channel per category, matching the backend's
   // NotificationCategory::android_channel_id() exactly (see
@@ -395,11 +408,15 @@ Future<void> _showLocalNotificationForMessage(
   // simply null while backgrounded/killed.
   if (type == 'dm_message') {
     final roomId = data['room_id'] as String?;
-    if (roomId != null && roomId == PushNotificationService.activeDmRoomId) return;
+    if (roomId != null && roomId == PushNotificationService.activeDmRoomId) {
+      return;
+    }
   }
   if (type == 'pool_message') {
     final poolId = data['pool_id'] as String?;
-    if (poolId != null && poolId == PushNotificationService.activePoolId) return;
+    if (poolId != null && poolId == PushNotificationService.activePoolId) {
+      return;
+    }
   }
 
   final category = NotificationCategoryKindX.fromType(type);
@@ -450,7 +467,9 @@ Future<void> _showLocalNotificationForMessage(
 /// icon) if there's no avatar URL or the download/decode fails for any
 /// reason — a broken avatar must never prevent the notification itself
 /// from showing.
-Future<AndroidBitmap<Object>?> _downloadAvatarAsCircularBitmap(String? avatarUrl) async {
+Future<AndroidBitmap<Object>?> _downloadAvatarAsCircularBitmap(
+  String? avatarUrl,
+) async {
   if (avatarUrl == null || avatarUrl.isEmpty) return null;
   try {
     final file = await DefaultCacheManager().getSingleFile(avatarUrl);
@@ -469,7 +488,9 @@ Future<AndroidBitmap<Object>?> _downloadAvatarAsCircularBitmap(String? avatarUrl
 /// path (not raw bytes), so this reuses the same cached file directly
 /// rather than re-encoding a cropped copy — iOS's own notification UI
 /// already masks attachment thumbnails to a rounded shape.
-Future<List<DarwinNotificationAttachment>?> _iosAttachmentFor(String avatarUrl) async {
+Future<List<DarwinNotificationAttachment>?> _iosAttachmentFor(
+  String avatarUrl,
+) async {
   try {
     final file = await DefaultCacheManager().getSingleFile(avatarUrl);
     return [DarwinNotificationAttachment(file.path)];
@@ -487,7 +508,11 @@ Future<List<DarwinNotificationAttachment>?> _iosAttachmentFor(String avatarUrl) 
 /// default square largeIcon corners.
 Future<Uint8List> _cropToCircle(Uint8List bytes) async {
   const size = 256;
-  final codec = await ui.instantiateImageCodec(bytes, targetWidth: size, targetHeight: size);
+  final codec = await ui.instantiateImageCodec(
+    bytes,
+    targetWidth: size,
+    targetHeight: size,
+  );
   final frame = await codec.getNextFrame();
   final image = frame.image;
 
@@ -500,7 +525,9 @@ Future<Uint8List> _cropToCircle(Uint8List bytes) async {
 
   final picture = recorder.endRecording();
   final circularImage = await picture.toImage(size, size);
-  final pngBytes = await circularImage.toByteData(format: ui.ImageByteFormat.png);
+  final pngBytes = await circularImage.toByteData(
+    format: ui.ImageByteFormat.png,
+  );
   return pngBytes!.buffer.asUint8List();
 }
 
@@ -520,7 +547,8 @@ Future<Uint8List> _cropToCircle(Uint8List bytes) async {
 /// "the same underlying thing" collapse to one notification slot
 /// deterministically.
 int _notificationIdForData(Map<String, dynamic> data, String type) {
-  final identity = data['room_id'] as String? ??
+  final identity =
+      data['room_id'] as String? ??
       data['pool_id'] as String? ??
       data['edge_id'] as String? ??
       data['transfer_id'] as String? ??

@@ -35,7 +35,10 @@ class ReceiveScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(
@@ -57,10 +60,7 @@ class ReceiveScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ZendQrCard(
-                        username: username,
-                        paymentUrl: _paymentLink,
-                      ),
+                      ZendQrCard(username: username, paymentUrl: _paymentLink),
                       const SizedBox(height: 12),
 
                       PrimaryButton(
@@ -73,9 +73,8 @@ class ReceiveScreen extends StatelessWidget {
                         label: 'Write NFC tag',
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => NfcWriteScreen(
-                              paymentUrl: _paymentLink,
-                            ),
+                            builder: (_) =>
+                                NfcWriteScreen(paymentUrl: _paymentLink),
                           ),
                         ),
                       ),

@@ -8,11 +8,7 @@ import 'request_utils.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CustomisationPanel extends StatefulWidget {
-  const CustomisationPanel({
-    super.key,
-    required this.onConfirm,
-    this.initial,
-  });
+  const CustomisationPanel({super.key, required this.onConfirm, this.initial});
 
   final ValueChanged<RequestCustomisation> onConfirm;
   final RequestCustomisation? initial;
@@ -89,9 +85,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             controller: _noteController,
             maxLines: 3,
             minLines: 2,
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(_noteMaxLength),
-            ],
+            inputFormatters: [LengthLimitingTextInputFormatter(_noteMaxLength)],
             onChanged: (_) => setState(() {}),
             style: TextStyle(
               fontFamily: 'Geist',
@@ -127,9 +121,12 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             alignment: Alignment.centerRight,
             child: Text(
               '$remaining characters remaining',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: remaining < 30
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: remaining < 30
                     ? ZendColors.destructive
-                    : zt.textSecondary),
+                    : zt.textSecondary,
+              ),
             ),
           ),
           const SizedBox(height: ZendSpacing.md),
@@ -164,7 +161,11 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
                           : null,
                     ),
                     child: isSelected
-                        ? const Icon(PhosphorIconsRegular.checkCircle, size: 16, color: Colors.white)
+                        ? const Icon(
+                            PhosphorIconsRegular.checkCircle,
+                            size: 16,
+                            color: Colors.white,
+                          )
                         : null,
                   ),
                 ),
@@ -172,10 +173,7 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
             }).toList(),
           ),
           const SizedBox(height: ZendSpacing.lg),
-          PrimaryButton(
-            label: 'Done',
-            onPressed: _onDone,
-          ),
+          PrimaryButton(label: 'Done', onPressed: _onDone),
         ],
       ),
     );

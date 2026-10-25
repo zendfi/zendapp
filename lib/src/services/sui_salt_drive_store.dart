@@ -73,10 +73,12 @@ class SuiSaltDriveStore {
       final file = await _find(api);
       if (file == null) return null;
 
-      final media = await api.files.get(
-        file.id!,
-        downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      final media =
+          await api.files.get(
+                file.id!,
+                downloadOptions: drive.DownloadOptions.fullMedia,
+              )
+              as drive.Media;
       final bytes = await media.stream.fold<List<int>>(
         <int>[],
         (accumulated, chunk) => accumulated..addAll(chunk),
@@ -109,7 +111,9 @@ class SuiSaltDriveStore {
       if (existing == null) return;
       await api.files.delete(existing.id!);
     } catch (error) {
-      throw SuiSaltDriveException('Could not remove your recovery share: $error');
+      throw SuiSaltDriveException(
+        'Could not remove your recovery share: $error',
+      );
     } finally {
       client.close();
     }

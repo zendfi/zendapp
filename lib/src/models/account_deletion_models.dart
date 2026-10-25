@@ -84,6 +84,5 @@ class DeletionReadiness {
   bool get blockedByPendingTransfers => blockers.contains('pending_transfers');
 
   /// Total still held across every rail.
-  double get totalHeldUsdc =>
-      holdings.fold(0, (sum, h) => sum + h.usdcBalance);
+  double get totalHeldUsdc => holdings.fold(0, (sum, h) => sum + h.usdcBalance);
 }

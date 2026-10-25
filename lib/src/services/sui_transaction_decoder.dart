@@ -473,7 +473,10 @@ class SuiArgument {
       case 0:
         return const SuiArgument(kind: SuiArgumentKind.gas);
       case 1:
-        return SuiArgument(kind: SuiArgumentKind.input, index: reader.readU16());
+        return SuiArgument(
+          kind: SuiArgumentKind.input,
+          index: reader.readU16(),
+        );
       case 2:
         return SuiArgument(
           kind: SuiArgumentKind.result,

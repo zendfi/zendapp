@@ -21,10 +21,10 @@ class _StreamParticle {
     required this.angle,
     required this.speed,
     required this.baseSize,
-    required this.turbulenceAmp,   // lateral oscillation amplitude (px)
-    required this.turbulenceFreq,  // oscillation cycles per lifetime
+    required this.turbulenceAmp, // lateral oscillation amplitude (px)
+    required this.turbulenceFreq, // oscillation cycles per lifetime
     required this.turbulencePhase, // unique phase offset so they don't sync
-    required this.brightness,      // 0.6–1.0 luminosity variation
+    required this.brightness, // 0.6–1.0 luminosity variation
   });
 
   final double startPhase;
@@ -37,7 +37,8 @@ class _StreamParticle {
   final double turbulencePhase;
   final double brightness;
 
-  ({double px, double py, double opacity, double radius, double brightness})? evaluate(
+  ({double px, double py, double opacity, double radius, double brightness})?
+  evaluate(
     double t,
     double canvasW,
     double canvasH,
@@ -59,8 +60,8 @@ class _StreamParticle {
 
     // Turbulence: sinusoidal lateral shiver along the travel axis.
     // Creates the fluid "shimmer" that makes particles look alive.
-    final turbulence = turbulenceAmp *
-        sin(localT * turbulenceFreq * 2 * pi + turbulencePhase);
+    final turbulence =
+        turbulenceAmp * sin(localT * turbulenceFreq * 2 * pi + turbulencePhase);
 
     // The turbulence is perpendicular to the beam direction — rotate it.
     // For a vertical beam: turbulence is purely horizontal.
@@ -119,8 +120,8 @@ class DropFluidParticlePainter extends CustomPainter {
     this.intensityMultiplier = 1.0,
     double beamHalfAngle = 0.30,
     this.gaussianFalloff = 0.5,
-  })  : _particles = _buildParticles(count, beamHalfAngle),
-        super(repaint: animation);
+  }) : _particles = _buildParticles(count, beamHalfAngle),
+       super(repaint: animation);
 
   final Animation<double> animation;
   final FluidParticleDirection direction;
@@ -138,23 +139,26 @@ class DropFluidParticlePainter extends CustomPainter {
       final u1 = max(rng.nextDouble(), 1e-10);
       final u2 = rng.nextDouble();
       final gaussian = sqrt(-2 * log(u1)) * cos(2 * pi * u2);
-      final angle = (gaussian * halfAngle / 2.2).clamp(-halfAngle * 2.2, halfAngle * 2.2);
+      final angle = (gaussian * halfAngle / 2.2).clamp(
+        -halfAngle * 2.2,
+        halfAngle * 2.2,
+      );
 
       // Turbulence parameters — vary per particle for organic feel.
-      final turbAmp = 4.0 + rng.nextDouble() * 16.0;   // 4–20px amplitude
-      final turbFreq = 1.0 + rng.nextDouble() * 2.5;    // 1–3.5 cycles
+      final turbAmp = 4.0 + rng.nextDouble() * 16.0; // 4–20px amplitude
+      final turbFreq = 1.0 + rng.nextDouble() * 2.5; // 1–3.5 cycles
       final turbPhase = rng.nextDouble() * 2 * pi;
 
       return _StreamParticle(
         startPhase: rng.nextDouble(),
-        lifetime: 0.28 + rng.nextDouble() * 0.40,      // 28–68% of cycle
+        lifetime: 0.28 + rng.nextDouble() * 0.40, // 28–68% of cycle
         angle: angle,
-        speed: 0.18 + rng.nextDouble() * 0.32,         // 18–50% of canvas height
-        baseSize: 0.9 + rng.nextDouble() * 2.1,        // 0.9–3.0px
+        speed: 0.18 + rng.nextDouble() * 0.32, // 18–50% of canvas height
+        baseSize: 0.9 + rng.nextDouble() * 2.1, // 0.9–3.0px
         turbulenceAmp: turbAmp,
         turbulenceFreq: turbFreq,
         turbulencePhase: turbPhase,
-        brightness: 0.60 + rng.nextDouble() * 0.40,    // 60–100%
+        brightness: 0.60 + rng.nextDouble() * 0.40, // 60–100%
       );
     });
   }
@@ -167,16 +171,28 @@ class DropFluidParticlePainter extends CustomPainter {
     final focalY = focalYFraction * size.height;
 
     for (final p in _particles) {
-      final result = p.evaluate(t, size.width, size.height, focalX, focalY, direction);
+      final result = p.evaluate(
+        t,
+        size.width,
+        size.height,
+        focalX,
+        focalY,
+        direction,
+      );
       if (result == null) continue;
 
       // Gaussian weight — heavily down-weights particles far from beam axis
       // to give a dense centre with soft edges.
       final angleFraction = (p.angle / (0.30 * 2.2)).abs().clamp(0.0, 1.0);
-      final gaussianWeight = exp(-gaussianFalloff * angleFraction * angleFraction * 6);
+      final gaussianWeight = exp(
+        -gaussianFalloff * angleFraction * angleFraction * 6,
+      );
 
       final effectiveOpacity =
-          result.opacity * intensityMultiplier * gaussianWeight * result.brightness;
+          result.opacity *
+          intensityMultiplier *
+          gaussianWeight *
+          result.brightness;
       if (effectiveOpacity <= 0.01) continue;
 
       final r = particleColor.r;
@@ -205,7 +221,11 @@ class DropFluidParticlePainter extends CustomPainter {
             blue: b,
           )
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
-        canvas.drawCircle(Offset(result.px, result.py), result.radius * 2.5, glowPaint);
+        canvas.drawCircle(
+          Offset(result.px, result.py),
+          result.radius * 2.5,
+          glowPaint,
+        );
       }
     }
   }
@@ -235,16 +255,22 @@ class DropGlowTextPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (glowOpacity <= 0.01) return;
     final tp = TextPainter(
-      text: TextSpan(text: text, style: style.copyWith(
-        foreground: Paint()
-          ..color = Colors.white.withValues(alpha: glowOpacity)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius),
-      )),
+      text: TextSpan(
+        text: text,
+        style: style.copyWith(
+          foreground: Paint()
+            ..color = Colors.white.withValues(alpha: glowOpacity)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius),
+        ),
+      ),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
     tp.layout(maxWidth: size.width);
-    tp.paint(canvas, Offset((size.width - tp.width) / 2, (size.height - tp.height) / 2));
+    tp.paint(
+      canvas,
+      Offset((size.width - tp.width) / 2, (size.height - tp.height) / 2),
+    );
   }
 
   @override

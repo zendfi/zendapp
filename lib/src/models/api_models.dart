@@ -12,10 +12,7 @@ class OtpResponse {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'session_id': sessionId,
-      'expires_at': expiresAt.toIso8601String(),
-    };
+    return {'session_id': sessionId, 'expires_at': expiresAt.toIso8601String()};
   }
 }
 
@@ -142,10 +139,7 @@ class ZendtagCheckResponse {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'zendtag': zendtag,
-      'available': available,
-    };
+    return {'zendtag': zendtag, 'available': available};
   }
 }
 
@@ -199,10 +193,7 @@ class BackupResponse {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'key_id': keyId,
-      'public_key': publicKey,
-    };
+    return {'key_id': keyId, 'public_key': publicKey};
   }
 }
 
@@ -229,7 +220,7 @@ class RetrieveBackupResponse {
       encryptionVersion: json['encryption_version'] as int? ?? 2,
       kdfParams: json['key_metadata'] is Map<String, dynamic>
           ? (json['key_metadata'] as Map<String, dynamic>)['kdf']
-              as Map<String, dynamic>?
+                as Map<String, dynamic>?
           : null,
     );
   }
@@ -249,6 +240,7 @@ class BalanceResponse {
   final String walletAddress;
   final String solBalance;
   final String usdcBalance;
+
   /// What a send can actually draw on: on-chain USDC the rail reports as
   /// spendable, minus the sum of pending email intent amounts.
   ///
@@ -339,6 +331,7 @@ class TransferHistoryEntry {
   final String? recipientAvatarUrl;
   final String? senderDisplayName;
   final String? recipientDisplayName;
+
   /// For email-intent claim transfers: the masked original recipient email
   /// (e.g. "te***@gmail.com"). When non-null, use this for display instead of
   /// [recipientZendtag] on the sender's activity feed.
@@ -392,7 +385,8 @@ class TransferHistoryEntry {
       'recipient_avatar_url': recipientAvatarUrl,
       'sender_display_name': senderDisplayName,
       'recipient_display_name': recipientDisplayName,
-      if (emailRecipientHint != null) 'email_recipient_hint': emailRecipientHint,
+      if (emailRecipientHint != null)
+        'email_recipient_hint': emailRecipientHint,
     };
   }
 }
@@ -695,9 +689,8 @@ class MutualContext {
     return MutualContext(
       transactionCount: json['transaction_count'] as int? ?? 0,
       totalUsdc: json['total_usdc'] as String? ?? '0.00',
-      lastTransactionAt: DateTime.tryParse(
-            json['last_transaction_at'] as String? ?? '',
-          ) ??
+      lastTransactionAt:
+          DateTime.tryParse(json['last_transaction_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -724,7 +717,8 @@ class PublicUserProfile {
   final MutualContext? mutualContext;
   final int publicActivityCount;
 
-  String get initialLetter => zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
+  String get initialLetter =>
+      zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
 
   factory PublicUserProfile.fromJson(Map<String, dynamic> json) {
     final mcJson = json['mutual_context'] as Map<String, dynamic>?;

@@ -16,7 +16,11 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 enum _InputMode { usd, ngn }
 
 class SendScreen extends StatefulWidget {
-  const SendScreen({super.key, required this.onOpenRecipients, this.onTransferComplete});
+  const SendScreen({
+    super.key,
+    required this.onOpenRecipients,
+    this.onTransferComplete,
+  });
 
   final Future<void> Function(double) onOpenRecipients;
   final VoidCallback? onTransferComplete;
@@ -36,7 +40,8 @@ class _SendScreenState extends State<SendScreen>
 
   late final AnimationController _swapCtrl;
 
-  double get _parsedRaw => _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
+  double get _parsedRaw =>
+      _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
 
   /// The USDC amount that will actually be sent on-chain.
   /// PAJ only honors 2dp precision — we floor to 2dp to avoid overpaying.
@@ -106,8 +111,7 @@ class _SendScreenState extends State<SendScreen>
     }
   }
 
-  String get _currencyLabel =>
-      _inputMode == _InputMode.usd ? 'USD' : 'NGN';
+  String get _currencyLabel => _inputMode == _InputMode.usd ? 'USD' : 'NGN';
 
   @override
   void initState() {
@@ -156,12 +160,14 @@ class _SendScreenState extends State<SendScreen>
         // In USD mode, enforce max 2 decimal places
         if (_inputMode == _InputMode.usd && _digits.contains('.')) {
           final parts = _digits.split('.');
-          if (parts.length == 2 && parts[1].length >= 2) return; // already at 2dp
+          if (parts.length == 2 && parts[1].length >= 2) {
+            return; // already at 2dp
+          }
         }
         // Prevent leading zeros: "0" + "0" → stay "0"; "0" + "5" → replace with "5"
         if (_digits == '0') {
           if (value == '0') return; // block 00, 000, etc.
-          _digits = value;          // replace lone zero with non-zero digit
+          _digits = value; // replace lone zero with non-zero digit
         } else {
           _digits += value;
         }
@@ -175,7 +181,10 @@ class _SendScreenState extends State<SendScreen>
     if (_ngnPerUsd == null) _fetchRate();
 
     setState(() {
-      if (_digits.isNotEmpty && _parsedRaw > 0 && _ngnPerUsd != null && _ngnPerUsd! > 0) {
+      if (_digits.isNotEmpty &&
+          _parsedRaw > 0 &&
+          _ngnPerUsd != null &&
+          _ngnPerUsd! > 0) {
         if (_inputMode == _InputMode.usd) {
           // USD → NGN: show the NGN equivalent of the 2dp-floored USD
           final usd2dp = (_parsedRaw * 100).floor() / 100.0;
@@ -189,7 +198,9 @@ class _SendScreenState extends State<SendScreen>
       } else {
         _digits = '';
       }
-      _inputMode = _inputMode == _InputMode.usd ? _InputMode.ngn : _InputMode.usd;
+      _inputMode = _inputMode == _InputMode.usd
+          ? _InputMode.ngn
+          : _InputMode.usd;
     });
 
     _swapCtrl.forward(from: 0);
@@ -219,20 +230,33 @@ class _SendScreenState extends State<SendScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconPill(icon: PhosphorIconsRegular.qrCode, onTap: () => pushZendSlide(context, const QrScannerScreen())),
+                          _IconPill(
+                            icon: PhosphorIconsRegular.qrCode,
+                            onTap: () =>
+                                pushZendSlide(context, const QrScannerScreen()),
+                          ),
                           // Profile — balance is now surfaced in the navbar
                           // (see ZendBottomBar's _BalanceNavItem), so it no
                           // longer needs its own pill here.
                           GestureDetector(
-                            onTap: () => pushZendSlide(context, const ProfileScreen()),
+                            onTap: () =>
+                                pushZendSlide(context, const ProfileScreen()),
                             child: ZendAvatar(
                               radius: 18,
                               photoUrl: ZendScope.of(context).currentAvatarUrl,
-                              initials: ZendScope.of(context).currentDisplayName?.isNotEmpty == true
-                                  ? ZendScope.of(context).currentDisplayName![0].toUpperCase()
+                              initials:
+                                  ZendScope.of(
+                                        context,
+                                      ).currentDisplayName?.isNotEmpty ==
+                                      true
+                                  ? ZendScope.of(
+                                      context,
+                                    ).currentDisplayName![0].toUpperCase()
                                   : ZendScope.of(context).username.isNotEmpty
-                                      ? ZendScope.of(context).username[0].toUpperCase()
-                                      : null,
+                                  ? ZendScope.of(
+                                      context,
+                                    ).username[0].toUpperCase()
+                                  : null,
                               backgroundColor: const Color(0x3095D5B2),
                             ),
                           ),
@@ -244,20 +268,32 @@ class _SendScreenState extends State<SendScreen>
                     child: SingleChildScrollView(
                       physics: const NeverScrollableScrollPhysics(),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight - 60),
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 60,
+                        ),
                         child: IntrinsicHeight(
                           child: Column(
                             children: [
-                              SizedBox(height: veryCompact ? 16 : compact ? 44 : 68),
+                              SizedBox(
+                                height: veryCompact
+                                    ? 16
+                                    : compact
+                                    ? 44
+                                    : 68,
+                              ),
 
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 180),
                                 child: Text(
                                   _currencyLabel,
                                   key: ValueKey(_currencyLabel),
-                                  style: ZendTextStyles.tabularNumeric.copyWith(color: isNgn
+                                  style: ZendTextStyles.tabularNumeric.copyWith(
+                                    color: isNgn
                                         ? const Color(0xCCF0F0F0)
-                                        : const Color(0x80F0F0F0), fontSize: 11, letterSpacing: 1.4),
+                                        : const Color(0x80F0F0F0),
+                                    fontSize: 11,
+                                    letterSpacing: 1.4,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -304,14 +340,20 @@ class _SendScreenState extends State<SendScreen>
                                     child: Container(
                                       key: ValueKey(_secondaryDisplay),
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: isNgn
                                             ? const Color(0x22F0F0F0)
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                                        borderRadius: BorderRadius.circular(
+                                          ZendRadii.pill,
+                                        ),
                                         border: isNgn
-                                            ? Border.all(color: const Color(0x33F0F0F0))
+                                            ? Border.all(
+                                                color: const Color(0x33F0F0F0),
+                                              )
                                             : null,
                                       ),
                                       child: Row(
@@ -319,7 +361,11 @@ class _SendScreenState extends State<SendScreen>
                                         children: [
                                           Text(
                                             _secondaryDisplay!,
-                                            style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x99F0F0F0), fontSize: 13),
+                                            style: ZendTextStyles.tabularNumeric
+                                                .copyWith(
+                                                  color: Color(0x99F0F0F0),
+                                                  fontSize: 13,
+                                                ),
                                           ),
                                           const SizedBox(width: 4),
                                           const Icon(
@@ -339,8 +385,14 @@ class _SendScreenState extends State<SendScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        isNgn ? 'Switch to USD' : 'Switch to NGN',
-                                        style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x44F0F0F0), fontSize: 11),
+                                        isNgn
+                                            ? 'Switch to USD'
+                                            : 'Switch to NGN',
+                                        style: ZendTextStyles.tabularNumeric
+                                            .copyWith(
+                                              color: Color(0x44F0F0F0),
+                                              fontSize: 11,
+                                            ),
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
@@ -355,7 +407,11 @@ class _SendScreenState extends State<SendScreen>
                               const Spacer(),
                               _Keypad(
                                 onTap: _onKey,
-                                keyHeight: veryCompact ? 48 : compact ? 56 : 78,
+                                keyHeight: veryCompact
+                                    ? 48
+                                    : compact
+                                    ? 56
+                                    : 78,
                                 decimalEnabled: _inputMode == _InputMode.usd,
                               ),
                               SizedBox(height: veryCompact ? 6 : 14),
@@ -363,8 +419,16 @@ class _SendScreenState extends State<SendScreen>
                                 children: [
                                   Expanded(
                                     child: _DropHoldButton(
-                                      enabled: _usdAmount > 0 && _usdAmount <= ZendScope.of(context).sendableBalance,
-                                      onActivated: () => showDropSheet(context, amount: _usdAmount),
+                                      enabled:
+                                          _usdAmount > 0 &&
+                                          _usdAmount <=
+                                              ZendScope.of(
+                                                context,
+                                              ).sendableBalance,
+                                      onActivated: () => showDropSheet(
+                                        context,
+                                        amount: _usdAmount,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -373,10 +437,10 @@ class _SendScreenState extends State<SendScreen>
                                       label: 'Request',
                                       onTap: _usdAmount > 0
                                           ? () => showRequestDrawer(
-                                                context,
-                                                initialAmount: _usdAmount,
-                                                amountReadOnly: true,
-                                              )
+                                              context,
+                                              initialAmount: _usdAmount,
+                                              amountReadOnly: true,
+                                            )
                                           : () {},
                                     ),
                                   ),
@@ -541,7 +605,9 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                               widthFactor: fill,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: ZendColors.accentBright.withValues(alpha: 0.18),
+                                  color: ZendColors.accentBright.withValues(
+                                    alpha: 0.18,
+                                  ),
                                 ),
                               ),
                             ),
@@ -606,7 +672,10 @@ class _GlassPill extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'Geist', color: ZendColors.textOnDeep, fontSize: 14),
+            fontFamily: 'Geist',
+            color: ZendColors.textOnDeep,
+            fontSize: 14,
+          ),
         ),
       ),
     );
@@ -679,12 +748,7 @@ class _Keypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '.', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'];
 
     return Column(
       children: [
@@ -762,7 +826,10 @@ class _KeypadKeyState extends State<_KeypadKey> {
             height: widget.keyHeight,
             child: Center(
               child: isDel
-                  ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 24)
+                  ? const ZendBackspaceIcon(
+                      color: ZendColors.textOnDeep,
+                      size: 24,
+                    )
                   : Text(
                       widget.label,
                       style: const TextStyle(
@@ -862,7 +929,9 @@ class _UsdAmountDisplay extends StatelessWidget {
                     ),
                   ),
                   _BouncyDigits(
-                    text: decimalPart == null || decimalPart!.isEmpty ? '—' : decimalPart!,
+                    text: decimalPart == null || decimalPart!.isEmpty
+                        ? '—'
+                        : decimalPart!,
                     style: decStyle,
                   ),
                 ],
@@ -935,9 +1004,10 @@ class _BouncyDigitState extends State<_BouncyDigit>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
-    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scale = Tween<double>(
+      begin: 0.7,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
   }
 

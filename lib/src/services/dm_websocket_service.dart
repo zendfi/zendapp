@@ -18,20 +18,22 @@ class DmWebSocketService {
     required Future<String?> Function() getToken,
     required ApiClient apiClient,
   }) : _ws = PoolWebSocketService(
-          poolId: roomId,
-          baseWsUrl: baseWsUrl,
-          getToken: getToken,
-          pathOverride: '/api/zend/dm/$roomId/ws',
-          getTicket: () async {
-            try {
-              final response = await apiClient.dio.post('/api/zend/dm/ws-ticket');
-              return response.data['ticket'] as String?;
-            } catch (_) {
-              // Ticket fetch failed — PoolWebSocketService falls back to ?token=
-              return null;
-            }
-          },
-        );
+         poolId: roomId,
+         baseWsUrl: baseWsUrl,
+         getToken: getToken,
+         pathOverride: '/api/zend/dm/$roomId/ws',
+         getTicket: () async {
+           try {
+             final response = await apiClient.dio.post(
+               '/api/zend/dm/ws-ticket',
+             );
+             return response.data['ticket'] as String?;
+           } catch (_) {
+             // Ticket fetch failed — PoolWebSocketService falls back to ?token=
+             return null;
+           }
+         },
+       );
 
   final PoolWebSocketService _ws;
 
@@ -58,14 +60,13 @@ class DmWebSocketService {
     String? replyToMessageId,
     String? replyToContent,
     String? replyToSenderZendtag,
-  }) =>
-      _ws.sendMessageWithReply(
-        clientId,
-        content,
-        replyToMessageId: replyToMessageId,
-        replyToContent: replyToContent,
-        replyToSenderZendtag: replyToSenderZendtag,
-      );
+  }) => _ws.sendMessageWithReply(
+    clientId,
+    content,
+    replyToMessageId: replyToMessageId,
+    replyToContent: replyToContent,
+    replyToSenderZendtag: replyToSenderZendtag,
+  );
 
   void sendTyping(bool isTyping) => _ws.sendTyping(isTyping);
 

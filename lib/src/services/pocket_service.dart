@@ -5,8 +5,7 @@ import '../models/savings_models.dart';
 class PocketService {
   final ApiClient _apiClient;
 
-  const PocketService({required ApiClient apiClient})
-      : _apiClient = apiClient;
+  const PocketService({required ApiClient apiClient}) : _apiClient = apiClient;
 
   Future<List<SavingsPocket>> listPockets() => _apiClient.listPockets();
 
@@ -31,8 +30,9 @@ class PocketService {
       _apiClient.prepareGoalWithdraw(pocketId);
 
   Future<SavingsSubmitResult> submitGoalWithdraw(
-          String pocketId, String signedTx) =>
-      _apiClient.submitGoalWithdraw(pocketId, signedTx);
+    String pocketId,
+    String signedTx,
+  ) => _apiClient.submitGoalWithdraw(pocketId, signedTx);
 
   Future<SavingsPrepareResponse> prepareLockWithdraw() =>
       _apiClient.prepareLockWithdraw();

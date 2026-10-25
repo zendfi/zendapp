@@ -122,7 +122,10 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(duration: const Duration(milliseconds: 320), vsync: this);
+    _ctrl = AnimationController(
+      duration: const Duration(milliseconds: 320),
+      vsync: this,
+    );
     _entrance = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
     _menuFade = CurvedAnimation(
       parent: _ctrl,
@@ -141,7 +144,11 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
   Future<void> _dismiss([VoidCallback? then]) async {
     if (_dismissing) return;
     _dismissing = true;
-    await _ctrl.animateBack(0, duration: const Duration(milliseconds: 220), curve: Curves.easeInCubic);
+    await _ctrl.animateBack(
+      0,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInCubic,
+    );
     widget.onDismiss();
     then?.call();
   }
@@ -152,8 +159,10 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
   /// both fit on-screen with [_screenEdgePadding] of breathing room.
   Rect _targetRect(Size screenSize, double topSafeArea, double bottomSafeArea) {
     final origin = widget.originRect;
-    final minTop = topSafeArea + _screenEdgePadding + _reactionRowHeight + _reactionRowGap;
-    final maxTop = screenSize.height -
+    final minTop =
+        topSafeArea + _screenEdgePadding + _reactionRowHeight + _reactionRowGap;
+    final maxTop =
+        screenSize.height -
         bottomSafeArea -
         _screenEdgePadding -
         _menuGap -
@@ -183,84 +192,88 @@ class _MessageActionOverlayState extends State<_MessageActionOverlay>
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (context, _) {
-        final t = _entrance.value;
-        final rect = Rect.lerp(widget.originRect, target, t)!;
-        // Slight overshoot scale for the "bounce" feel — peaks just before
-        // settling, mirrors the bubble's own arrival-bounce curve elsewhere
-        // in this feature.
-        final bounce = t < 1.0 ? 1.0 + (0.04 * (1 - t) * t * 4) : 1.0;
+          final t = _entrance.value;
+          final rect = Rect.lerp(widget.originRect, target, t)!;
+          // Slight overshoot scale for the "bounce" feel — peaks just before
+          // settling, mirrors the bubble's own arrival-bounce curve elsewhere
+          // in this feature.
+          final bounce = t < 1.0 ? 1.0 + (0.04 * (1 - t) * t * 4) : 1.0;
 
-        return Stack(
-          children: [
-            // ── Blurred + dimmed backdrop ──────────────────────────────
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => _dismiss(),
-                behavior: HitTestBehavior.opaque,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: 18 * t,
-                    sigmaY: 18 * t,
+          return Stack(
+            children: [
+              // ── Blurred + dimmed backdrop ──────────────────────────────
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => _dismiss(),
+                  behavior: HitTestBehavior.opaque,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18 * t, sigmaY: 18 * t),
+                    child: ColoredBox(
+                      color: Colors.black.withValues(alpha: 0.18 * t),
+                    ),
                   ),
-                  child: ColoredBox(color: Colors.black.withValues(alpha: 0.18 * t)),
                 ),
               ),
-            ),
 
-            // ── Reaction row — anchored above the bubble's target position ──
-            Positioned(
-              left: 16,
-              right: 16,
-              top: target.top - _reactionRowGap - _reactionRowHeight,
-              child: Opacity(
-                opacity: _menuFade.value.clamp(0.0, 1.0),
+              // ── Reaction row — anchored above the bubble's target position ──
+              Positioned(
+                left: 16,
+                right: 16,
+                top: target.top - _reactionRowGap - _reactionRowHeight,
+                child: Opacity(
+                  opacity: _menuFade.value.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: 0.85 + 0.15 * _menuFade.value.clamp(0.0, 1.0),
+                    alignment: widget.isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: _ReactionPickerRow(
+                      message: widget.message,
+                      onTap: (emoji) {
+                        widget.onReactionTap(emoji);
+                        _dismiss();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── The bubble itself — animates from origin to target ──────
+              Positioned(
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
                 child: Transform.scale(
-                  scale: 0.85 + 0.15 * _menuFade.value.clamp(0.0, 1.0),
-                  alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
-                  child: _ReactionPickerRow(
-                    message: widget.message,
-                    onTap: (emoji) {
-                      widget.onReactionTap(emoji);
-                      _dismiss();
-                    },
+                  scale: bounce,
+                  child: IgnorePointer(child: widget.previewBuilder(context)),
+                ),
+              ),
+
+              // ── Action menu — anchored below the bubble's target position ──
+              Positioned(
+                left: widget.isMe ? null : target.left,
+                right: widget.isMe ? screenSize.width - target.right : null,
+                top: target.top + target.height + _menuGap,
+                width: 220,
+                child: Opacity(
+                  opacity: _menuFade.value.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(
+                      0,
+                      8 * (1 - _menuFade.value.clamp(0.0, 1.0)),
+                    ),
+                    child: _ActionMenu(
+                      zt: zt,
+                      actions: widget.actions,
+                      onAction: (action) => _dismiss(action),
+                    ),
                   ),
                 ),
               ),
-            ),
-
-            // ── The bubble itself — animates from origin to target ──────
-            Positioned(
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              child: Transform.scale(
-                scale: bounce,
-                child: IgnorePointer(child: widget.previewBuilder(context)),
-              ),
-            ),
-
-            // ── Action menu — anchored below the bubble's target position ──
-            Positioned(
-              left: widget.isMe ? null : target.left,
-              right: widget.isMe ? screenSize.width - target.right : null,
-              top: target.top + target.height + _menuGap,
-              width: 220,
-              child: Opacity(
-                opacity: _menuFade.value.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(0, 8 * (1 - _menuFade.value.clamp(0.0, 1.0))),
-                  child: _ActionMenu(
-                    zt: zt,
-                    actions: widget.actions,
-                    onAction: (action) => _dismiss(action),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -283,13 +296,19 @@ class _ReactionPickerRow extends StatelessWidget {
           color: zt.bgElevated,
           borderRadius: BorderRadius.circular(ZendRadii.pill),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 10, offset: const Offset(0, 3)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: _kReactionEmojis.map((e) {
-            final alreadyReacted = message.reactions.any((r) => r.emoji == e && r.reactedByMe);
+            final alreadyReacted = message.reactions.any(
+              (r) => r.emoji == e && r.reactedByMe,
+            );
             return GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -300,7 +319,10 @@ class _ReactionPickerRow extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                 decoration: alreadyReacted
-                    ? BoxDecoration(color: zt.accent.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(ZendRadii.pill))
+                    ? BoxDecoration(
+                        color: zt.accent.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      )
                     : null,
                 // decoration: TextDecoration.none + transparent decorationColor
                 // is required on raw emoji glyphs — without it some platforms
@@ -328,7 +350,11 @@ class _ReactionPickerRow extends StatelessWidget {
 // ── Action menu ──────────────────────────────────────────────────────────────
 
 class _ActionMenu extends StatelessWidget {
-  const _ActionMenu({required this.zt, required this.actions, required this.onAction});
+  const _ActionMenu({
+    required this.zt,
+    required this.actions,
+    required this.onAction,
+  });
   final ZendTheme zt;
   final DmMessageActions actions;
   final void Function(VoidCallback action) onAction;
@@ -337,9 +363,16 @@ class _ActionMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <Widget>[];
 
-    void addItem(String label, IconData icon, VoidCallback? action, {bool destructive = false}) {
+    void addItem(
+      String label,
+      IconData icon,
+      VoidCallback? action, {
+      bool destructive = false,
+    }) {
       if (action == null) return;
-      if (items.isNotEmpty) items.add(Divider(height: 1, color: zt.border.withValues(alpha: 0.5)));
+      if (items.isNotEmpty) {
+        items.add(Divider(height: 1, color: zt.border.withValues(alpha: 0.5)));
+      }
       final color = destructive ? ZendColors.destructive : zt.textPrimary;
       items.add(
         InkWell(
@@ -351,7 +384,11 @@ class _ActionMenu extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: color),
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      color: color,
+                    ),
                   ),
                 ),
                 Icon(icon, size: 18, color: color),
@@ -363,10 +400,19 @@ class _ActionMenu extends StatelessWidget {
     }
 
     addItem('Reply', PhosphorIconsRegular.arrowBendUpLeft, actions.onReply);
-    addItem('Forward', PhosphorIconsRegular.arrowBendUpRight, actions.onForward);
+    addItem(
+      'Forward',
+      PhosphorIconsRegular.arrowBendUpRight,
+      actions.onForward,
+    );
     addItem('Copy', PhosphorIconsRegular.copy, actions.onCopy);
     addItem('Info', PhosphorIconsRegular.info, actions.onInfo);
-    addItem('Delete', PhosphorIconsRegular.trash, actions.onDelete, destructive: true);
+    addItem(
+      'Delete',
+      PhosphorIconsRegular.trash,
+      actions.onDelete,
+      destructive: true,
+    );
 
     return Material(
       color: Colors.transparent,
@@ -375,7 +421,11 @@ class _ActionMenu extends StatelessWidget {
           color: zt.bgElevated,
           borderRadius: BorderRadius.circular(ZendRadii.lg),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 14, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         clipBehavior: Clip.antiAlias,

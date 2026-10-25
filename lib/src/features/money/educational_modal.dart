@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/zend_tokens.dart';
 import 'carousel_card_model.dart';
+import '../../design/zend_modal.dart';
 
 /// Opens the Educational_Modal for a given Educational_Card (Req 26.2),
 /// presented as a modal overlay rather than a full-screen navigation route
@@ -9,8 +10,11 @@ import 'carousel_card_model.dart';
 /// already used throughout this codebase (`transaction_receipt_sheet.dart`,
 /// `legacy_activity_list_view.dart`'s outbound-request/pending-intent
 /// sheets, and the Pools/Savings/Send feature sheets).
-Future<void> showEducationalModal(BuildContext context, {required CarouselCardModel card}) {
-  return showModalBottomSheet<void>(
+Future<void> showEducationalModal(
+  BuildContext context, {
+  required CarouselCardModel card,
+}) {
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -85,7 +89,10 @@ class _EducationalModalSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
             ),
             Text(
@@ -100,7 +107,12 @@ class _EducationalModalSheet extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               resolveModalBody(card.modalBodyContentRef),
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, height: 1.5, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                height: 1.5,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -109,7 +121,11 @@ class _EducationalModalSheet extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
                   'Got it',
-                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.accent),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w600,
+                    color: zt.accent,
+                  ),
                 ),
               ),
             ),

@@ -157,11 +157,11 @@ class _GoalCreationSheetState extends State<GoalCreationSheet> {
   }
 
   double get _heightFactor => switch (_stage) {
-        _GoalStage.nameEmoji => 0.85,
-        _GoalStage.targetDeadline => 0.82,
-        _GoalStage.mode => 0.65,
-        _GoalStage.confirm => 0.72,
-      };
+    _GoalStage.nameEmoji => 0.85,
+    _GoalStage.targetDeadline => 0.82,
+    _GoalStage.mode => 0.65,
+    _GoalStage.confirm => 0.72,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -191,73 +191,73 @@ class _GoalCreationSheetState extends State<GoalCreationSheet> {
 
   Widget _buildStage() {
     if (_processing) {
-      return const Center(
-        child: ZendLoader(color: ZendColors.accentBright),
-      );
+      return const Center(child: ZendLoader(color: ZendColors.accentBright));
     }
 
     return switch (_stage) {
       _GoalStage.nameEmoji => _NameEmojiStage(
-          nameController: _nameController,
-          selectedEmoji: _selectedEmoji,
-          nameError: _nameError,
-          onEmojiSelected: (e) => setState(() => _selectedEmoji = e),
-          onContinue: () {
-            if (!_nameValid) {
-              setState(() => _nameError = _nameController.text.trim().isEmpty
+        nameController: _nameController,
+        selectedEmoji: _selectedEmoji,
+        nameError: _nameError,
+        onEmojiSelected: (e) => setState(() => _selectedEmoji = e),
+        onContinue: () {
+          if (!_nameValid) {
+            setState(
+              () => _nameError = _nameController.text.trim().isEmpty
                   ? 'Enter a goal name'
-                  : 'Name must be 40 characters or less');
-              return;
-            }
-            setState(() {
-              _nameError = null;
-              _stage = _GoalStage.targetDeadline;
-            });
-          },
-        ),
+                  : 'Name must be 40 characters or less',
+            );
+            return;
+          }
+          setState(() {
+            _nameError = null;
+            _stage = _GoalStage.targetDeadline;
+          });
+        },
+      ),
       _GoalStage.targetDeadline => _TargetDeadlineStage(
-          targetInput: _targetInput,
-          targetError: _targetError,
-          deadline: _deadline,
-          targetValid: _targetValid,
-          onKey: _onTargetKey,
-          onPickDeadline: _pickDeadline,
-          onClearDeadline: () => setState(() => _deadline = null),
-          onContinue: () {
-            if (!_targetValid) {
-              setState(() => _targetError = 'Enter a target of at least \$1');
-              return;
-            }
-            setState(() {
-              _targetError = null;
-              _stage = _GoalStage.mode;
-            });
-          },
-          onBack: () => setState(() => _stage = _GoalStage.nameEmoji),
-        ),
-      _GoalStage.mode => _ModeStage(
-          selectedMode: _mode,
-          onModeSelected: (m) => setState(() => _mode = m),
-          onContinue: () => setState(() => _stage = _GoalStage.confirm),
-          onBack: () => setState(() => _stage = _GoalStage.targetDeadline),
-        ),
-      _GoalStage.confirm => _ConfirmStage(
-          name: _nameController.text.trim(),
-          emoji: _selectedEmoji,
-          targetUsd: _parsedTarget,
-          deadline: _deadline,
-          mode: _mode,
-          pinDigits: _pinDigits,
-          pinError: _pinError,
-          errorMessage: _errorMessage,
-          onKey: _onPinKey,
-          onBack: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _errorMessage = null;
+        targetInput: _targetInput,
+        targetError: _targetError,
+        deadline: _deadline,
+        targetValid: _targetValid,
+        onKey: _onTargetKey,
+        onPickDeadline: _pickDeadline,
+        onClearDeadline: () => setState(() => _deadline = null),
+        onContinue: () {
+          if (!_targetValid) {
+            setState(() => _targetError = 'Enter a target of at least \$1');
+            return;
+          }
+          setState(() {
+            _targetError = null;
             _stage = _GoalStage.mode;
-          }),
-        ),
+          });
+        },
+        onBack: () => setState(() => _stage = _GoalStage.nameEmoji),
+      ),
+      _GoalStage.mode => _ModeStage(
+        selectedMode: _mode,
+        onModeSelected: (m) => setState(() => _mode = m),
+        onContinue: () => setState(() => _stage = _GoalStage.confirm),
+        onBack: () => setState(() => _stage = _GoalStage.targetDeadline),
+      ),
+      _GoalStage.confirm => _ConfirmStage(
+        name: _nameController.text.trim(),
+        emoji: _selectedEmoji,
+        targetUsd: _parsedTarget,
+        deadline: _deadline,
+        mode: _mode,
+        pinDigits: _pinDigits,
+        pinError: _pinError,
+        errorMessage: _errorMessage,
+        onKey: _onPinKey,
+        onBack: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _errorMessage = null;
+          _stage = _GoalStage.mode;
+        }),
+      ),
     };
   }
 }
@@ -280,10 +280,36 @@ class _NameEmojiStage extends StatelessWidget {
   final VoidCallback onContinue;
 
   static const _commonEmojis = [
-    '🎯', '🏠', '🚗', '✈️', '💍', '🎓', '💻', '📱',
-    '🏋️', '🌴', '🎸', '📚', '🐶', '🍕', '⚽', '🎮',
-    '💎', '🌟', '🎁', '🏖️', '🚀', '🎨', '🏔️', '🌈',
-    '💰', '🎪', '🦋', '🌺', '🍀', '🎵',
+    '🎯',
+    '🏠',
+    '🚗',
+    '✈️',
+    '💍',
+    '🎓',
+    '💻',
+    '📱',
+    '🏋️',
+    '🌴',
+    '🎸',
+    '📚',
+    '🐶',
+    '🍕',
+    '⚽',
+    '🎮',
+    '💎',
+    '🌟',
+    '🎁',
+    '🏖️',
+    '🚀',
+    '🎨',
+    '🏔️',
+    '🌈',
+    '💰',
+    '🎪',
+    '🦋',
+    '🌺',
+    '🍀',
+    '🎵',
   ];
 
   @override
@@ -416,13 +442,22 @@ class _TargetDeadlineStage extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onBack;
 
-  String get _displayAmount =>
-      targetInput.isEmpty ? '\$0' : '\$$targetInput';
+  String get _displayAmount => targetInput.isEmpty ? '\$0' : '\$$targetInput';
 
   String _formatDate(DateTime d) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -440,7 +475,11 @@ class _TargetDeadlineStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -484,15 +523,20 @@ class _TargetDeadlineStage extends StatelessWidget {
             onTap: onPickDeadline,
             child: Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: ZendSpacing.md, vertical: ZendSpacing.sm),
+                horizontal: ZendSpacing.md,
+                vertical: ZendSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: zt.bgSecondary,
                 borderRadius: BorderRadius.circular(ZendRadii.md),
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsRegular.calendar,
-                      size: 16, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.calendar,
+                    size: 16,
+                    color: zt.textSecondary,
+                  ),
                   const SizedBox(width: ZendSpacing.xs),
                   Expanded(
                     child: Text(
@@ -511,7 +555,11 @@ class _TargetDeadlineStage extends StatelessWidget {
                   if (deadline != null)
                     GestureDetector(
                       onTap: onClearDeadline,
-                      child: Icon(PhosphorIconsRegular.xCircle, size: 16, color: zt.textSecondary),
+                      child: Icon(
+                        PhosphorIconsRegular.xCircle,
+                        size: 16,
+                        color: zt.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -559,7 +607,11 @@ class _ModeStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -585,7 +637,8 @@ class _ModeStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.sm),
           _ModeOption(
             title: 'Strict',
-            description: 'Locked until you reach your target. Keeps you on track.',
+            description:
+                'Locked until you reach your target. Keeps you on track.',
             icon: PhosphorIconsRegular.lockKey,
             isSelected: selectedMode == 'strict',
             onTap: () => onModeSelected('strict'),
@@ -679,7 +732,11 @@ class _ModeOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(PhosphorIconsRegular.checkCircle, color: ZendColors.accentBright, size: 20),
+              const Icon(
+                PhosphorIconsRegular.checkCircle,
+                color: ZendColors.accentBright,
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -716,8 +773,18 @@ class _ConfirmStage extends StatelessWidget {
 
   String _formatDate(DateTime d) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -734,7 +801,11 @@ class _ConfirmStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -762,7 +833,10 @@ class _ConfirmStage extends StatelessWidget {
                 const SizedBox(height: ZendSpacing.xs),
                 Text(
                   'Target: \$${targetUsd.toStringAsFixed(2)}',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: zt.textSecondary),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 14,
+                    color: zt.textSecondary,
+                  ),
                 ),
                 if (deadline != null)
                   Text(

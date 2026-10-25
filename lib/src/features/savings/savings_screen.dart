@@ -10,6 +10,7 @@ import '../../models/savings_models.dart';
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -58,7 +59,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   }
 
   Future<void> _openDepositSheet() async {
-    await showModalBottomSheet<void>(
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -72,7 +73,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   Future<void> _openWithdrawSheet() async {
     final position = _position;
     if (position == null) return;
-    await showModalBottomSheet<void>(
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -97,15 +98,16 @@ class _SavingsScreenState extends State<SavingsScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                icon: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
 
             // ── Body ─────────────────────────────────────────────────────
-            Expanded(
-              child: _buildBody(zt),
-            ),
+            Expanded(child: _buildBody(zt)),
           ],
         ),
       ),
@@ -120,11 +122,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
     final position = _position!;
 
     if (!position.hasPosition) {
-      return _ZeroState(
-        zt: zt,
-        metrics: metrics,
-        onSave: _openDepositSheet,
-      );
+      return _ZeroState(zt: zt, metrics: metrics, onSave: _openDepositSheet);
     }
 
     return _ActiveState(
@@ -271,10 +269,7 @@ class _ZeroState extends StatelessWidget {
           // ── CTA button ────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
-            child: PrimaryButton(
-              label: 'Save money',
-              onPressed: onSave,
-            ),
+            child: PrimaryButton(label: 'Save money', onPressed: onSave),
           ),
         ],
       ),
@@ -391,10 +386,7 @@ class _ActiveState extends StatelessWidget {
         // ── Action buttons ────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
-          child: PrimaryButton(
-            label: 'Add money',
-            onPressed: onAddMoney,
-          ),
+          child: PrimaryButton(label: 'Add money', onPressed: onAddMoney),
         ),
         const SizedBox(height: ZendSpacing.sm),
         SizedBox(
@@ -461,7 +453,11 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: ZendSpacing.xxs),
           Text(
             value,
-            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 16, fontWeight: FontWeight.w500, color: valueColor ?? zt.textPrimary),
+            style: ZendTextStyles.tabularNumeric.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: valueColor ?? zt.textPrimary,
+            ),
           ),
         ],
       ),

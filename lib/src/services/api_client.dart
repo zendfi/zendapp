@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -943,7 +942,10 @@ class ApiClient {
   /// Takes bytes plus a filename rather than a `File` so it works on web, where
   /// image_picker returns a blob URL with no filesystem path. [fileName] is only
   /// used to pick the MIME type.
-  Future<String> uploadAvatar(Uint8List bytes, {required String fileName}) async {
+  Future<String> uploadAvatar(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
     try {
       final mimeType = _mimeTypeFromPath(fileName);
       final response = await _dio.post(

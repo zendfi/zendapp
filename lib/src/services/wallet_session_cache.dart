@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 /// In-memory keypair cache for the duration of an authenticated session.
 ///
 /// The keypair is NEVER persisted to disk, [SharedPreferences], or any platform

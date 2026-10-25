@@ -27,7 +27,10 @@ class _SuccessScreenState extends State<SuccessScreen> {
     try {
       final displayName = model.currentDisplayName ?? model.username;
       final zendtag = model.username;
-      final registerResponse = await model.authService.register(displayName, zendtag);
+      final registerResponse = await model.authService.register(
+        displayName,
+        zendtag,
+      );
 
       if (!mounted) return;
 
@@ -42,7 +45,10 @@ class _SuccessScreenState extends State<SuccessScreen> {
       model.stopLoading();
       if (!mounted) return;
 
-      navigator.pushAndRemoveUntil(zendRoute(page: const PinSetupScreen()), (route) => false);
+      navigator.pushAndRemoveUntil(
+        zendRoute(page: const PinSetupScreen()),
+        (route) => false,
+      );
     } on ApiException catch (e) {
       model.stopLoading();
       if (!mounted) return;
@@ -60,7 +66,9 @@ class _SuccessScreenState extends State<SuccessScreen> {
       model.stopLoading();
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Please try again.')),
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
       );
     }
   }
@@ -80,58 +88,64 @@ class _SuccessScreenState extends State<SuccessScreen> {
             ),
             Expanded(
               child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const CircleAvatar(
-                    radius: 34,
-                    backgroundColor: Color(0x33E8F4EC),
-                    child: Icon(PhosphorIconsRegular.userCircle, color: ZendColors.textOnDeep),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    "You're in, @${widget.username}",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 28,
-                      height: 1.08,
-                      color: ZendColors.textOnDeep,
-                      fontWeight: FontWeight.w700,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const CircleAvatar(
+                          radius: 34,
+                          backgroundColor: Color(0x33E8F4EC),
+                          child: Icon(
+                            PhosphorIconsRegular.userCircle,
+                            color: ZendColors.textOnDeep,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          "You're in, @${widget.username}",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 28,
+                            height: 1.08,
+                            color: ZendColors.textOnDeep,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'zdfi.me/@${widget.username}',
+                          textAlign: TextAlign.center,
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            color: Color(0x80F0F0F0),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          "You're set to send money to anyone, anywhere. Share your @ to get paid too.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0x99F0F0F0),
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        PrimaryButton(
+                          label: 'Go to ZendApp',
+                          backgroundColor: ZendColors.accentBright,
+                          foregroundColor: ZendColors.textPrimary,
+                          onPressed: _onGoToZendApp,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'zdfi.me/@${widget.username}',
-                    textAlign: TextAlign.center,
-                    style: ZendTextStyles.tabularNumeric.copyWith(color: Color(0x80F0F0F0), fontSize: 13),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    "You're set to send money to anyone, anywhere. Share your @ to get paid too.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0x99F0F0F0),
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  PrimaryButton(
-                    label: 'Go to ZendApp',
-                    backgroundColor: ZendColors.accentBright,
-                    foregroundColor: ZendColors.textPrimary,
-                    onPressed: _onGoToZendApp,
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
               ),
             ),
           ],

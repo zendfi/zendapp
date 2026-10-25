@@ -37,16 +37,15 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -123,7 +122,9 @@ class _PinSetupScreenState extends State<PinSetupScreen>
         // key can be published; skipping it here is what let two freshly
         // signed-up users be unable to bootstrap E2EE with each other.
         unawaited(model.bootstrapE2ee());
-        for (var i = 0; i < keypair.length; i++) { keypair[i] = 0; }
+        for (var i = 0; i < keypair.length; i++) {
+          keypair[i] = 0;
+        }
       } catch (_) {
         // Non-fatal — session cache empty, PIN will be requested on first send
       }
@@ -169,109 +170,109 @@ class _PinSetupScreenState extends State<PinSetupScreen>
             ),
             Expanded(
               child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              SizedBox(height: compact ? 32 : 48),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    SizedBox(height: compact ? 32 : 48),
 
-              // Phase indicator dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(2, (i) {
-                  final active = i <= _phase.index;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: active ? 20 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: active
-                            ? ZendColors.accentPop
-                            : const Color(0x33E8F4EC),
-                        borderRadius: BorderRadius.circular(4),
+                    // Phase indicator dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(2, (i) {
+                        final active = i <= _phase.index;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: active ? 20 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? ZendColors.accentPop
+                                  : const Color(0x33E8F4EC),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'Set your transfer PIN',
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 28,
+                        color: ZendColors.textOnDeep,
                       ),
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 24),
+                    const SizedBox(height: 8),
+                    Text(
+                      _phase == _PinPhase.create
+                          ? 'This PIN secures your wallet and authorizes transfers'
+                          : 'Re-enter your PIN to confirm',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        color: Color(0x99E8F4EC),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 28 : 44),
 
-              Text(
-                'Set your transfer PIN',
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 28,
-                  color: ZendColors.textOnDeep,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _phase == _PinPhase.create
-                    ? 'This PIN secures your wallet and authorizes transfers'
-                    : 'Re-enter your PIN to confirm',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 14,
-                  color: Color(0x99E8F4EC),
-                ),
-              ),
-              SizedBox(height: compact ? 28 : 44),
+                    // PIN dots
+                    AnimatedBuilder(
+                      animation: _shakeController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(_shakeAnimation.value, 0),
+                          child: child,
+                        );
+                      },
+                      child: _PinDots(filledCount: _digits.length),
+                    ),
+                    const SizedBox(height: 16),
 
-              // PIN dots
-              AnimatedBuilder(
-                animation: _shakeController,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(_shakeAnimation.value, 0),
-                    child: child,
-                  );
-                },
-                child: _PinDots(filledCount: _digits.length),
-              ),
-              const SizedBox(height: 16),
+                    // Fixed-height status row — no layout jump
+                    SizedBox(
+                      height: 20,
+                      child: _errorMessage != null
+                          ? Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13,
+                                color: ZendColors.destructive,
+                              ),
+                            )
+                          : _loading
+                          ? const Center(
+                              child: ZendLoader(
+                                size: 16,
+                                strokeWidth: 1.5,
+                                color: ZendColors.accentPop,
+                              ),
+                            )
+                          : null,
+                    ),
 
-              // Fixed-height status row — no layout jump
-              SizedBox(
-                height: 20,
-                child: _errorMessage != null
-                    ? Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          color: ZendColors.destructive,
+                    const Spacer(),
+
+                    Opacity(
+                      opacity: _loading ? 0.3 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: _loading,
+                        child: _PinKeypad(
+                          onTap: _onKey,
+                          keyHeight: compact ? 62 : 72,
                         ),
-                      )
-                    : _loading
-                        ? const Center(
-                            child: ZendLoader(
-                              size: 16,
-                              strokeWidth: 1.5,
-                              color: ZendColors.accentPop,
-                            ),
-                          )
-                        : null,
-              ),
-
-              const Spacer(),
-
-              Opacity(
-                opacity: _loading ? 0.3 : 1.0,
-                child: IgnorePointer(
-                  ignoring: _loading,
-                  child: _PinKeypad(
-                    onTap: _onKey,
-                    keyHeight: compact ? 62 : 72,
-                  ),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 12 : 24),
+                  ],
                 ),
-              ),
-              SizedBox(height: compact ? 12 : 24),
-            ],
-          ),
               ),
             ),
           ],
@@ -304,8 +305,7 @@ class _PinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color:
-                    filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
                 width: 2,
               ),
             ),
@@ -324,12 +324,7 @@ class _PinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -393,10 +388,17 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

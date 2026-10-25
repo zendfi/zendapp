@@ -53,16 +53,18 @@ class PrimaryButton extends StatelessWidget {
           foregroundColor: foregroundColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+          ),
         ),
         child: isLoading
             ? ZendLoader(size: 20, strokeWidth: 2, color: foregroundColor)
             : Text(
                 label,
                 style: const TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600),
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
       ),
     );
@@ -70,8 +72,11 @@ class PrimaryButton extends StatelessWidget {
 }
 
 class OutlineActionButton extends StatelessWidget {
-  const OutlineActionButton(
-      {super.key, required this.label, required this.onPressed});
+  const OutlineActionButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
 
   final String label;
   final VoidCallback onPressed;
@@ -87,14 +92,16 @@ class OutlineActionButton extends StatelessWidget {
           foregroundColor: zt.textPrimary,
           side: BorderSide(color: zt.border),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(ZendRadii.pill)),
+            borderRadius: BorderRadius.circular(ZendRadii.pill),
+          ),
         ),
         child: Text(
           label,
           style: const TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
+            fontFamily: 'Geist',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -130,7 +137,9 @@ class OnboardingProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final progress = totalSteps <= 0 ? 0.0 : (step / totalSteps).clamp(0.0, 1.0);
+    final progress = totalSteps <= 0
+        ? 0.0
+        : (step / totalSteps).clamp(0.0, 1.0);
     final track = trackColor ?? zt.border;
     final fill = fillColor ?? zt.accent;
 
@@ -171,8 +180,9 @@ class ZendSheetHandle extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: zt.border,
-            borderRadius:
-                const BorderRadius.all(Radius.circular(ZendRadii.pill)),
+            borderRadius: const BorderRadius.all(
+              Radius.circular(ZendRadii.pill),
+            ),
           ),
         ),
       ),
@@ -191,11 +201,12 @@ class ZendSheetHandle extends StatelessWidget {
 /// Same constructor API as before (`size`/`strokeWidth`/`color`) so no call
 /// site needs to change — only the rendering underneath is new.
 class ZendLoader extends StatefulWidget {
-  const ZendLoader(
-      {super.key,
-      this.size = 22,
-      this.strokeWidth = 2,
-      this.color = ZendColors.accentPop});  // accentPop = #95D5B2 — works on both themes
+  const ZendLoader({
+    super.key,
+    this.size = 22,
+    this.strokeWidth = 2,
+    this.color = ZendColors.accentPop,
+  }); // accentPop = #95D5B2 — works on both themes
 
   final double size;
   final double strokeWidth;
@@ -205,13 +216,17 @@ class ZendLoader extends StatefulWidget {
   State<ZendLoader> createState() => _ZendLoaderState();
 }
 
-class _ZendLoaderState extends State<ZendLoader> with SingleTickerProviderStateMixin {
+class _ZendLoaderState extends State<ZendLoader>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
   }
 
   @override
@@ -242,7 +257,11 @@ class _ZendLoaderState extends State<ZendLoader> with SingleTickerProviderStateM
 }
 
 class _ZendLoaderPainter extends CustomPainter {
-  _ZendLoaderPainter({required this.progress, required this.color, required this.strokeWidth});
+  _ZendLoaderPainter({
+    required this.progress,
+    required this.color,
+    required this.strokeWidth,
+  });
 
   final double progress;
   final Color color;
@@ -269,7 +288,8 @@ class _ZendLoaderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-    const sweep = 1.7 * 3.14159265358979; // ~270°, matches Material's arc length
+    const sweep =
+        1.7 * 3.14159265358979; // ~270°, matches Material's arc length
     final startAngle = progress * 2 * 3.14159265358979 - (3.14159265358979 / 2);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
@@ -282,7 +302,9 @@ class _ZendLoaderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ZendLoaderPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+      oldDelegate.progress != progress ||
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth;
 }
 
 /// Shared error state for a failed data load, with an optional retry action.
@@ -314,18 +336,31 @@ class ZendErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsRegular.warning, size: 40, color: zt.destructive.withValues(alpha: 0.7)),
+            Icon(
+              PhosphorIconsRegular.warning,
+              size: 40,
+              color: zt.destructive.withValues(alpha: 0.7),
+            ),
             const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 16, fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                color: zt.textSecondary,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
@@ -352,10 +387,6 @@ class ZendBackspaceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      PhosphorIconsRegular.backspace,
-      color: color,
-      size: size,
-    );
+    return Icon(PhosphorIconsRegular.backspace, color: color, size: size);
   }
 }

@@ -52,16 +52,12 @@ class SnapshotCache {
     if (userId.isEmpty) return;
     try {
       final db = await _db.database;
-      await db.insert(
-        _table,
-        {
-          'user_id': userId,
-          'key': key,
-          'payload': jsonEncode(payload),
-          'saved_at': DateTime.now().toUtc().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await db.insert(_table, {
+        'user_id': userId,
+        'key': key,
+        'payload': jsonEncode(payload),
+        'saved_at': DateTime.now().toUtc().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (_) {
       // Best-effort.
     }
@@ -82,8 +78,11 @@ class SnapshotCache {
       );
       if (rows.isEmpty) return null;
 
-      final savedAt = DateTime.tryParse(rows.first['saved_at'] as String? ?? '');
-      if (savedAt == null || DateTime.now().toUtc().difference(savedAt) > maxAge) {
+      final savedAt = DateTime.tryParse(
+        rows.first['saved_at'] as String? ?? '',
+      );
+      if (savedAt == null ||
+          DateTime.now().toUtc().difference(savedAt) > maxAge) {
         return null;
       }
       return jsonDecode(rows.first['payload'] as String);

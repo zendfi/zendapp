@@ -25,9 +25,9 @@ class PinMigrationScreen extends StatefulWidget {
 }
 
 enum _MigrationPhase {
-  verifyOld,   // Step 1: enter 4-digit current PIN
-  createNew,   // Step 2: enter new 6-digit PIN
-  confirmNew,  // Step 3: confirm new 6-digit PIN
+  verifyOld, // Step 1: enter 4-digit current PIN
+  createNew, // Step 2: enter new 6-digit PIN
+  confirmNew, // Step 3: confirm new 6-digit PIN
 }
 
 class _PinMigrationScreenState extends State<PinMigrationScreen>
@@ -52,16 +52,15 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeOut,
-    ));
+    _shakeAnimation = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0, end: -10), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -10, end: 10), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 10, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 4), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+      ],
+    ).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeOut));
   }
 
   @override
@@ -219,18 +218,17 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
   }
 
   String get _heading => switch (_phase) {
-        _MigrationPhase.verifyOld => 'Upgrade your PIN',
-        _MigrationPhase.createNew => 'Set a new 6-digit PIN',
-        _MigrationPhase.confirmNew => 'Confirm your new PIN',
-      };
+    _MigrationPhase.verifyOld => 'Upgrade your PIN',
+    _MigrationPhase.createNew => 'Set a new 6-digit PIN',
+    _MigrationPhase.confirmNew => 'Confirm your new PIN',
+  };
 
   String get _subtitle => switch (_phase) {
-        _MigrationPhase.verifyOld =>
-            'Enter your current PIN to confirm it\'s you.',
-        _MigrationPhase.createNew =>
-            'Your new PIN will protect your wallet with 1,000,000 possible combinations.',
-        _MigrationPhase.confirmNew => 'Enter your new PIN again to confirm.',
-      };
+    _MigrationPhase.verifyOld => 'Enter your current PIN to confirm it\'s you.',
+    _MigrationPhase.createNew =>
+      'Your new PIN will protect your wallet with 1,000,000 possible combinations.',
+    _MigrationPhase.confirmNew => 'Enter your new PIN again to confirm.',
+  };
 
   // Phase progress: 0=verify, 1=create, 2=confirm — show as 3-step dots
   int get _phaseIndex => _phase.index;
@@ -274,7 +272,10 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
               // Security upgrade badge on verify step
               if (_phase == _MigrationPhase.verifyOld) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: ZendColors.accentPop.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -285,11 +286,19 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(PhosphorIconsRegular.shieldCheck, color: ZendColors.accentPop, size: 14),
+                      const Icon(
+                        PhosphorIconsRegular.shieldCheck,
+                        color: ZendColors.accentPop,
+                        size: 14,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Security upgrade',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: ZendColors.accentPop, letterSpacing: 0.5),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 11,
+                          color: ZendColors.accentPop,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ],
                   ),
@@ -348,14 +357,14 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                         ),
                       )
                     : _loading
-                        ? const Center(
-                            child: ZendLoader(
-                              size: 16,
-                              strokeWidth: 1.5,
-                              color: ZendColors.accentPop,
-                            ),
-                          )
-                        : null,
+                    ? const Center(
+                        child: ZendLoader(
+                          size: 16,
+                          strokeWidth: 1.5,
+                          color: ZendColors.accentPop,
+                        ),
+                      )
+                    : null,
               ),
 
               const Spacer(),
@@ -455,12 +464,7 @@ class _PinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '', '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
     return Column(
       children: [
@@ -484,7 +488,11 @@ class _PinKeypad extends StatelessWidget {
 }
 
 class _PinKey extends StatefulWidget {
-  const _PinKey({required this.label, required this.onTap, required this.height});
+  const _PinKey({
+    required this.label,
+    required this.onTap,
+    required this.height,
+  });
 
   final String label;
   final ValueChanged<String> onTap;
@@ -520,10 +528,17 @@ class _PinKeyState extends State<_PinKey> {
           height: widget.height,
           child: Center(
             child: widget.label == 'del'
-                ? const ZendBackspaceIcon(color: ZendColors.textOnDeep, size: 22)
+                ? const ZendBackspaceIcon(
+                    color: ZendColors.textOnDeep,
+                    size: 22,
+                  )
                 : Text(
                     widget.label,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 22, fontWeight: FontWeight.w400, color: ZendColors.textOnDeep),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: ZendColors.textOnDeep,
+                    ),
                   ),
           ),
         ),

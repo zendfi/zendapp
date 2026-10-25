@@ -43,7 +43,9 @@ class RecoverySetupScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     icon: Icon(
-                      isFirstTime ? PhosphorIconsRegular.xCircle : PhosphorIconsRegular.caretLeft,
+                      isFirstTime
+                          ? PhosphorIconsRegular.xCircle
+                          : PhosphorIconsRegular.caretLeft,
                       color: zt.textPrimary,
                     ),
                     onPressed: () => _skip(context),
@@ -96,19 +98,22 @@ class RecoverySetupScreen extends StatelessWidget {
               // Benefits list
               _BulletItem(
                 icon: PhosphorIconsRegular.cloudSun,
-                text: 'Your recovery file is saved to your Google Drive or iCloud — Zend never sees it.',
+                text:
+                    'Your recovery file is saved to your Google Drive or iCloud — Zend never sees it.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
                 icon: PhosphorIconsRegular.fingerprint,
-                text: 'Your government ID number is the only key — we can\'t decrypt it for you.',
+                text:
+                    'Your government ID number is the only key — we can\'t decrypt it for you.',
                 zt: zt,
               ),
               const SizedBox(height: 12),
               _BulletItem(
                 icon: PhosphorIconsRegular.lockKey,
-                text: 'Even if your phone is lost, your money stays recoverable.',
+                text:
+                    'Even if your phone is lost, your money stays recoverable.',
                 zt: zt,
               ),
 
@@ -154,10 +159,7 @@ class RecoverySetupScreen extends StatelessWidget {
   }
 
   void _proceed(BuildContext context) {
-    pushZendSlide(
-      context,
-      NationalIdEntryScreen(onComplete: onComplete),
-    );
+    pushZendSlide(context, NationalIdEntryScreen(onComplete: onComplete));
   }
 
   void _skip(BuildContext context) {
@@ -170,11 +172,7 @@ class RecoverySetupScreen extends StatelessWidget {
 }
 
 class _BulletItem extends StatelessWidget {
-  const _BulletItem({
-    required this.icon,
-    required this.text,
-    required this.zt,
-  });
+  const _BulletItem({required this.icon, required this.text, required this.zt});
 
   final IconData icon;
   final String text;

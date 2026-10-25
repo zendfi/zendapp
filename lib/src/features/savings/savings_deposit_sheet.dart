@@ -14,11 +14,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 enum _DepositStage { amount, pin, processing, success, error }
 
 class SavingsDepositSheet extends StatefulWidget {
-  const SavingsDepositSheet({
-    super.key,
-    this.pocketId,
-    this.pocketLabel,
-  });
+  const SavingsDepositSheet({super.key, this.pocketId, this.pocketLabel});
 
   /// If set, deposits into this specific pocket (goal or lock).
   final String? pocketId;
@@ -60,8 +56,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
   bool get _meetsMinimum => _parsedAmount >= _minDeposit;
   bool get _amountValid => _meetsMinimum && _hasSufficientBalance;
 
-  String get _displayAmount =>
-      _amountInput.isEmpty ? '\$0' : '\$$_amountInput';
+  String get _displayAmount => _amountInput.isEmpty ? '\$0' : '\$$_amountInput';
 
   void _onAmountKey(String key) {
     HapticFeedback.lightImpact();
@@ -136,7 +131,10 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
       final cache = WalletSessionCache.instance;
 
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           setState(() {
@@ -230,12 +228,12 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
   }
 
   double get _heightFactor => switch (_stage) {
-        _DepositStage.amount => 0.82,
-        _DepositStage.pin => 0.70,
-        _DepositStage.processing => 0.45,
-        _DepositStage.success => 0.50,
-        _DepositStage.error => 0.55,
-      };
+    _DepositStage.amount => 0.82,
+    _DepositStage.pin => 0.70,
+    _DepositStage.processing => 0.45,
+    _DepositStage.success => 0.50,
+    _DepositStage.error => 0.55,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -266,43 +264,43 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
   Widget _buildStage() {
     return switch (_stage) {
       _DepositStage.amount => _AmountStage(
-          amountInput: _amountInput,
-          displayAmount: _displayAmount,
-          amountError: _amountError,
-          userBalance: _userBalance,
-          amountValid: _amountValid,
-          onKey: _onAmountKey,
-          onConfirm: _onAmountConfirm,
-          pocketLabel: widget.pocketLabel,
-        ),
+        amountInput: _amountInput,
+        displayAmount: _displayAmount,
+        amountError: _amountError,
+        userBalance: _userBalance,
+        amountValid: _amountValid,
+        onKey: _onAmountKey,
+        onConfirm: _onAmountConfirm,
+        pocketLabel: widget.pocketLabel,
+      ),
       _DepositStage.pin => _PinStage(
-          amount: _parsedAmount,
-          pinDigits: _pinDigits,
-          pinError: _pinError,
-          onKey: _onPinKey,
-          onBack: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _stage = _DepositStage.amount;
-          }),
-        ),
+        amount: _parsedAmount,
+        pinDigits: _pinDigits,
+        pinError: _pinError,
+        onKey: _onPinKey,
+        onBack: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _stage = _DepositStage.amount;
+        }),
+      ),
       _DepositStage.processing => _ProcessingStage(amount: _parsedAmount),
       _DepositStage.success => _SuccessStage(
-          amount: _parsedAmount,
-          onDone: () => Navigator.of(context).pop(),
-        ),
+        amount: _parsedAmount,
+        onDone: () => Navigator.of(context).pop(),
+      ),
       _DepositStage.error => _ErrorStage(
-          message: _errorMessage ?? 'Something went wrong.',
-          onRetry: () {
-            setState(() {
-              _pinDigits = '';
-              _pinError = null;
-              _errorMessage = null;
-            });
-            _proceedFromAmount();
-          },
-          onCancel: () => Navigator.of(context).pop(),
-        ),
+        message: _errorMessage ?? 'Something went wrong.',
+        onRetry: () {
+          setState(() {
+            _pinDigits = '';
+            _pinError = null;
+            _errorMessage = null;
+          });
+          _proceedFromAmount();
+        },
+        onCancel: () => Navigator.of(context).pop(),
+      ),
     };
   }
 }
@@ -339,7 +337,9 @@ class _AmountStage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            pocketLabel?.trim().isNotEmpty == true ? pocketLabel! : 'Save money',
+            pocketLabel?.trim().isNotEmpty == true
+                ? pocketLabel!
+                : 'Save money',
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 22,
@@ -418,7 +418,11 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -521,7 +525,11 @@ class _SuccessStage extends StatelessWidget {
                 color: ZendColors.positive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.checkCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -583,7 +591,11 @@ class _ErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.xCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -609,8 +621,10 @@ class _ErrorStage extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'Geist')),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontFamily: 'Geist'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),

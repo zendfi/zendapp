@@ -11,6 +11,7 @@ import '../../navigation/zend_routes.dart';
 import 'graph_model.dart';
 import 'person_activity_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Phase 3 Graph_View — an opt-in node/edge visualization of the same
 /// visibility-authorized `ActivityEdge` data the Threaded_Activity_View
@@ -32,12 +33,14 @@ class GraphViewScreen extends StatefulWidget {
   State<GraphViewScreen> createState() => _GraphViewScreenState();
 }
 
-class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProviderStateMixin {
+class _GraphViewScreenState extends State<GraphViewScreen>
+    with SingleTickerProviderStateMixin {
   GraphModel? _model;
   _PhysicsGraphLayout? _layout;
   Ticker? _ticker;
   Duration _lastTick = Duration.zero;
-  final TransformationController _transformController = TransformationController();
+  final TransformationController _transformController =
+      TransformationController();
 
   @override
   void initState() {
@@ -96,7 +99,7 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
   }
 
   void _openOthersDrillDown(GraphModel model) {
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -110,7 +113,14 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
     _kickNode(node);
     final selfId = ZendScope.of(context).currentUserId ?? 'self';
     if (node.id == selfId || node.kind != GraphNodeKind.user) return;
-    pushZendSlide(context, PersonActivityScreen(userId: node.id, label: node.label, avatarUrl: node.avatarUrl));
+    pushZendSlide(
+      context,
+      PersonActivityScreen(
+        userId: node.id,
+        label: node.label,
+        avatarUrl: node.avatarUrl,
+      ),
+    );
   }
 
   @override
@@ -141,7 +151,10 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
                   ),
                   IconButton(
                     onPressed: widget.onToggleView,
-                    icon: Icon(PhosphorIconsRegular.listBullets, color: zt.textSecondary),
+                    icon: Icon(
+                      PhosphorIconsRegular.listBullets,
+                      color: zt.textSecondary,
+                    ),
                     tooltip: 'Switch to threaded view',
                   ),
                 ],
@@ -151,31 +164,35 @@ class _GraphViewScreenState extends State<GraphViewScreen> with SingleTickerProv
               child: (zendModel.threadedActivityLoading && _model == null)
                   ? const GraphViewSkeleton()
                   : (_model == null || _model!.nodes.length <= 1)
-                      ? Center(
-                          child: Text(
-                            'No relationships to visualize yet',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                          ),
-                        )
-                      : LayoutBuilder(
-                          builder: (context, constraints) {
-                            final layout = _layout!;
-                            layout.ensureSized(constraints.biggest);
-                            return InteractiveViewer(
-                              transformationController: _transformController,
-                              minScale: 0.5,
-                              maxScale: 3.0,
-                              boundaryMargin: const EdgeInsets.all(200),
-                              child: _GraphCanvas(
-                                model: _model!,
-                                positions: layout.positions,
-                                size: constraints.biggest,
-                                onTapOthers: () => _openOthersDrillDown(_model!),
-                                onTapNode: _openPersonActivity,
-                              ),
-                            );
-                          },
+                  ? Center(
+                      child: Text(
+                        'No relationships to visualize yet',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 14,
+                          color: zt.textSecondary,
                         ),
+                      ),
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final layout = _layout!;
+                        layout.ensureSized(constraints.biggest);
+                        return InteractiveViewer(
+                          transformationController: _transformController,
+                          minScale: 0.5,
+                          maxScale: 3.0,
+                          boundaryMargin: const EdgeInsets.all(200),
+                          child: _GraphCanvas(
+                            model: _model!,
+                            positions: layout.positions,
+                            size: constraints.biggest,
+                            onTapOthers: () => _openOthersDrillDown(_model!),
+                            onTapNode: _openPersonActivity,
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -217,7 +234,9 @@ class _PhysicsGraphLayout {
     _velocities.clear();
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2 - 40;
-    final rand = math.Random(42); // deterministic initial layout across rebuilds
+    final rand = math.Random(
+      42,
+    ); // deterministic initial layout across rebuilds
     for (var i = 0; i < model.nodes.length; i++) {
       final node = model.nodes[i];
       _velocities[node.id] = Offset.zero;
@@ -227,7 +246,12 @@ class _PhysicsGraphLayout {
       }
       final angle = (i / math.max(1, model.nodes.length - 1)) * 2 * math.pi;
       final jitter = (rand.nextDouble() - 0.5) * 20;
-      positions[node.id] = center + Offset(math.cos(angle) * (radius * 0.8 + jitter), math.sin(angle) * (radius * 0.8 + jitter));
+      positions[node.id] =
+          center +
+          Offset(
+            math.cos(angle) * (radius * 0.8 + jitter),
+            math.sin(angle) * (radius * 0.8 + jitter),
+          );
     }
   }
 
@@ -239,9 +263,15 @@ class _PhysicsGraphLayout {
     if (pos == null || size == null) return;
     final center = Offset(size.width / 2, size.height / 2);
     var direction = pos - center;
-    if (direction.distance < 1) direction = Offset(math.Random().nextDouble() - 0.5, math.Random().nextDouble() - 0.5);
+    if (direction.distance < 1) {
+      direction = Offset(
+        math.Random().nextDouble() - 0.5,
+        math.Random().nextDouble() - 0.5,
+      );
+    }
     final normalized = direction / direction.distance;
-    _velocities[nodeId] = (_velocities[nodeId] ?? Offset.zero) + normalized * _impulseMagnitude;
+    _velocities[nodeId] =
+        (_velocities[nodeId] ?? Offset.zero) + normalized * _impulseMagnitude;
   }
 
   /// Advances the simulation by [dt] seconds. Returns true if anything
@@ -250,7 +280,9 @@ class _PhysicsGraphLayout {
     final size = _size;
     if (size == null || dt <= 0) return false;
 
-    final forces = <String, Offset>{for (final n in model.nodes) n.id: Offset.zero};
+    final forces = <String, Offset>{
+      for (final n in model.nodes) n.id: Offset.zero,
+    };
 
     for (var i = 0; i < model.nodes.length; i++) {
       for (var j = i + 1; j < model.nodes.length; j++) {
@@ -346,7 +378,11 @@ class _GraphCanvas extends StatelessWidget {
         children: [
           CustomPaint(
             size: size,
-            painter: _GraphEdgePainter(model: model, positions: positions, color: zt.border),
+            painter: _GraphEdgePainter(
+              model: model,
+              positions: positions,
+              color: zt.border,
+            ),
           ),
           for (final node in model.nodes)
             if (positions[node.id] != null)
@@ -357,9 +393,12 @@ class _GraphCanvas extends StatelessWidget {
                   onTap: node.kind == GraphNodeKind.others
                       ? onTapOthers
                       : node.kind == GraphNodeKind.user
-                          ? () => onTapNode(node)
-                          : null,
-                  child: _GraphNodeWidget(node: node, radius: _nodeRadius(node)),
+                      ? () => onTapNode(node)
+                      : null,
+                  child: _GraphNodeWidget(
+                    node: node,
+                    radius: _nodeRadius(node),
+                  ),
                 ),
               ),
         ],
@@ -369,7 +408,11 @@ class _GraphCanvas extends StatelessWidget {
 }
 
 class _GraphEdgePainter extends CustomPainter {
-  _GraphEdgePainter({required this.model, required this.positions, required this.color});
+  _GraphEdgePainter({
+    required this.model,
+    required this.positions,
+    required this.color,
+  });
 
   final GraphModel model;
   final Map<String, Offset> positions;
@@ -384,7 +427,9 @@ class _GraphEdgePainter extends CustomPainter {
 
       final strokeWidth = edge.isSpoke ? 1.5 : 1.0 + edge.visualWeight * 3.0;
       final paint = Paint()
-        ..color = edge.isSpoke ? color.withValues(alpha: 0.5) : color.withValues(alpha: 0.9)
+        ..color = edge.isSpoke
+            ? color.withValues(alpha: 0.5)
+            : color.withValues(alpha: 0.9)
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke;
 
@@ -416,7 +461,11 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.accent.withValues(alpha: 0.18),
-            child: Icon(PhosphorIconsRegular.usersThree, color: zt.accent, size: radius * 0.9),
+            child: Icon(
+              PhosphorIconsRegular.usersThree,
+              color: zt.accent,
+              size: radius * 0.9,
+            ),
           ),
         );
       case GraphNodeKind.others:
@@ -426,7 +475,11 @@ class _GraphNodeWidget extends StatelessWidget {
           child: CircleAvatar(
             radius: radius,
             backgroundColor: zt.border,
-            child: Icon(PhosphorIconsRegular.dotsThreeVertical, color: zt.textSecondary, size: radius * 0.9),
+            child: Icon(
+              PhosphorIconsRegular.dotsThreeVertical,
+              color: zt.textSecondary,
+              size: radius * 0.9,
+            ),
           ),
         );
       case GraphNodeKind.user:
@@ -444,7 +497,11 @@ class _GraphNodeWidget extends StatelessWidget {
 }
 
 class _LabeledNode extends StatelessWidget {
-  const _LabeledNode({required this.child, required this.label, required this.zt});
+  const _LabeledNode({
+    required this.child,
+    required this.label,
+    required this.zt,
+  });
 
   final Widget child;
   final String label;
@@ -464,7 +521,11 @@ class _LabeledNode extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 10, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 10,
+              color: zt.textSecondary,
+            ),
           ),
         ),
       ],
@@ -500,7 +561,9 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
         color: zt.bgSecondary,
         borderRadius: BorderRadius.circular(ZendRadii.xxl),
       ),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         child: Column(
@@ -512,7 +575,10 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                 width: 36,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(color: zt.border, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+                decoration: BoxDecoration(
+                  color: zt.border,
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                ),
               ),
             ),
             Text(
@@ -529,7 +595,8 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: visible.length,
-                separatorBuilder: (_, _) => Divider(color: zt.border, height: 1),
+                separatorBuilder: (_, _) =>
+                    Divider(color: zt.border, height: 1),
                 itemBuilder: (context, i) {
                   final node = visible[i];
                   return ListTile(
@@ -539,7 +606,13 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                       photoUrl: node.avatarUrl,
                       initials: node.initialLetter,
                     ),
-                    title: Text(node.label, style: TextStyle(fontFamily: 'Geist', color: zt.textPrimary)),
+                    title: Text(
+                      node.label,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        color: zt.textPrimary,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -550,7 +623,11 @@ class _OthersDrillDownSheetState extends State<_OthersDrillDownSheet> {
                 onPressed: () => setState(() => _visibleCount += _pageSize),
                 child: Text(
                   'Load more',
-                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.accent),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w600,
+                    color: zt.accent,
+                  ),
                 ),
               ),
             ],

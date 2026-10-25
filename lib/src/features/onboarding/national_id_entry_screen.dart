@@ -35,7 +35,12 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
     {'code': 'KE', 'label': 'Kenya', 'name': 'National ID', 'digits': 8},
     {'code': 'ZA', 'label': 'South Africa', 'name': 'ID Number', 'digits': 13},
     {'code': 'IN', 'label': 'India', 'name': 'Aadhaar', 'digits': 12},
-    {'code': 'US', 'label': 'United States', 'name': 'SSN (last 4)', 'digits': 4},
+    {
+      'code': 'US',
+      'label': 'United States',
+      'name': 'SSN (last 4)',
+      'digits': 4,
+    },
     {'code': 'GB', 'label': 'United Kingdom', 'name': 'NI Number', 'digits': 9},
     {'code': 'OTHER', 'label': 'Other', 'name': 'Government ID', 'digits': 0},
   ];
@@ -92,13 +97,19 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
         Navigator.of(context).pop();
       }
     } on RecoverySetupRequiresUnlockException {
-      setState(() => _error = 'App must be unlocked to set up recovery. Please restart and try again.');
+      setState(
+        () => _error =
+            'App must be unlocked to set up recovery. Please restart and try again.',
+      );
     } on CloudBackupException catch (e) {
-      final isSignInFailed = e.message.toLowerCase().contains('sign_in_failed') ||
+      final isSignInFailed =
+          e.message.toLowerCase().contains('sign_in_failed') ||
           e.message.toLowerCase().contains('api_not_available');
-      setState(() => _error = isSignInFailed
-          ? 'Could not sign in to Google Drive.\n\nTo enable recovery backup, your app\'s SHA-1 fingerprint must be registered in Google Cloud Console. Contact support to enable this feature.'
-          : 'Cloud storage error: ${e.message}. Please try again.');
+      setState(
+        () => _error = isSignInFailed
+            ? 'Could not sign in to Google Drive.\n\nTo enable recovery backup, your app\'s SHA-1 fingerprint must be registered in Google Cloud Console. Contact support to enable this feature.'
+            : 'Cloud storage error: ${e.message}. Please try again.',
+      );
     } catch (e) {
       setState(() => _error = 'Something went wrong. Please try again.');
     } finally {
@@ -124,7 +135,10 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -172,10 +186,12 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                     color: zt.textPrimary,
                   ),
                   items: _countries
-                      .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c['label'] as String),
-                          ))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c['label'] as String),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -198,7 +214,11 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                   FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-A-Za-z]')),
                 ],
                 onChanged: (_) => setState(() => _error = null),
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 18, letterSpacing: 2, color: zt.textPrimary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 18,
+                  letterSpacing: 2,
+                  color: zt.textPrimary,
+                ),
                 decoration: InputDecoration(
                   hintText: _hintText,
                   hintStyle: TextStyle(
@@ -235,14 +255,23 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
               if (_selectedCountry['digits'] as int > 0)
                 Text(
                   '${_controller.text.replaceAll(RegExp(r'\s'), '').length} / ${_selectedCountry['digits']} digits',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: _hasExpectedDigits ? zt.accentBright : zt.textSecondary),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: _hasExpectedDigits
+                        ? zt.accentBright
+                        : zt.textSecondary,
+                  ),
                 ),
 
               const SizedBox(height: 8),
               // Privacy note
               Row(
                 children: [
-                  Icon(PhosphorIconsRegular.lockKey, size: 14, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.lockKey,
+                    size: 14,
+                    color: zt.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(

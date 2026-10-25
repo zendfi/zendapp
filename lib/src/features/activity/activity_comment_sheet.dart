@@ -6,6 +6,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import '../../design/zend_modal.dart';
 
 const _kCommentSheetReactionEmojis = [
   '🔥',
@@ -42,7 +43,7 @@ Future<void> showActivityCommentSheet(
   required VoidCallback onViewReceipt,
   VoidCallback? onOpenChat,
 }) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -224,7 +225,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
         .where((r) => r.reactedByMe)
         .map((r) => r.emoji)
         .toSet();
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,

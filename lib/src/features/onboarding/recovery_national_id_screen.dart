@@ -59,7 +59,9 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
 
     try {
       final model = ZendScope.of(context);
-      final keypair = await model.recoveryService.decryptRecoveryPacket(nationalId);
+      final keypair = await model.recoveryService.decryptRecoveryPacket(
+        nationalId,
+      );
 
       if (!mounted) return;
 
@@ -76,7 +78,8 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
       if (_attempts >= _maxAttempts) {
         _lockedUntil = DateTime.now().add(const Duration(minutes: 30));
         setState(() {
-          _error = 'Too many incorrect attempts. Please try again in 30 minutes.';
+          _error =
+              'Too many incorrect attempts. Please try again in 30 minutes.';
           _controller.clear();
         });
         // Best-effort alert
@@ -86,14 +89,17 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
         } catch (_) {}
       } else {
         setState(() {
-          _error = 'Incorrect ID. ${_maxAttempts - _attempts} attempt(s) remaining.';
+          _error =
+              'Incorrect ID. ${_maxAttempts - _attempts} attempt(s) remaining.';
           _controller.clear();
         });
       }
     } on RecoveryPacketNotFoundException {
       if (!mounted) return;
-      setState(() => _error =
-          'No recovery backup found. Make sure you\'re signed into the same Google or iCloud account.');
+      setState(
+        () => _error =
+            'No recovery backup found. Make sure you\'re signed into the same Google or iCloud account.',
+      );
     } on CloudBackupException catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not access cloud storage: ${e.message}');
@@ -125,8 +131,10 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(PhosphorIconsRegular.caretLeft,
-                      color: ZendColors.textOnDeep),
+                  icon: const Icon(
+                    PhosphorIconsRegular.caretLeft,
+                    color: ZendColors.textOnDeep,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -157,11 +165,14 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                 enabled: !_isLockedOut,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[\d\s\-A-Za-z]')),
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-A-Za-z]')),
                 ],
                 autofocus: true,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, letterSpacing: 2, color: ZendColors.textOnDeep),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 20,
+                  letterSpacing: 2,
+                  color: ZendColors.textOnDeep,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Government ID number',
                   hintStyle: const TextStyle(
@@ -201,15 +212,21 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '${_maxAttempts - _attempts} attempt(s) remaining',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: textOnDeepMuted),
+                  style: ZendTextStyles.tabularNumeric.copyWith(
+                    fontSize: 11,
+                    color: textOnDeepMuted,
+                  ),
                 ),
               ],
 
               const SizedBox(height: 8),
               const Row(
                 children: [
-                  Icon(PhosphorIconsRegular.lockKey,
-                      size: 13, color: textOnDeepMuted),
+                  Icon(
+                    PhosphorIconsRegular.lockKey,
+                    size: 13,
+                    color: textOnDeepMuted,
+                  ),
                   SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -227,16 +244,9 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
               const Spacer(),
 
               if (_loading)
-                const Center(
-                  child: ZendLoader(
-                    color: ZendColors.accentPop,
-                  ),
-                )
+                const Center(child: ZendLoader(color: ZendColors.accentPop))
               else if (!_isLockedOut)
-                PrimaryButton(
-                  label: 'Continue',
-                  onPressed: _submit,
-                ),
+                PrimaryButton(label: 'Continue', onPressed: _submit),
 
               const SizedBox(height: 24),
             ],

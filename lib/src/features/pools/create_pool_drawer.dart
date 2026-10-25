@@ -8,12 +8,13 @@ import '../../models/recent_contact.dart';
 import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 Future<void> showCreatePoolDrawer(
   BuildContext context, {
   required double targetAmount,
 }) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -34,16 +35,19 @@ class CreatePoolDrawer extends StatefulWidget {
   State<CreatePoolDrawer> createState() => _CreatePoolDrawerState();
 }
 
-List<PoolParticipant> _buildRecentPoolContacts(
-  List<RecentContact> contacts,
-) {
-  return contacts.take(5).map((c) => PoolParticipant(
-    id: '',
-    displayName: c.name,
-    avatarLabel: c.avatarLabel,
-    zendtag: c.tag,  // carry the zendtag so the API payload is correct
-    isExternal: false,
-  )).toList();
+List<PoolParticipant> _buildRecentPoolContacts(List<RecentContact> contacts) {
+  return contacts
+      .take(5)
+      .map(
+        (c) => PoolParticipant(
+          id: '',
+          displayName: c.name,
+          avatarLabel: c.avatarLabel,
+          zendtag: c.tag, // carry the zendtag so the API payload is correct
+          isExternal: false,
+        ),
+      )
+      .toList();
 }
 
 class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
@@ -72,7 +76,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     super.initState();
     _targetAmount = widget.targetAmount;
     _amountController = TextEditingController(
-      text: widget.targetAmount > 0 ? widget.targetAmount.toStringAsFixed(2) : '',
+      text: widget.targetAmount > 0
+          ? widget.targetAmount.toStringAsFixed(2)
+          : '',
     );
   }
 
@@ -111,17 +117,19 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
       final avatarLabel = displayName.isNotEmpty
           ? displayName[0].toUpperCase()
           : resolved.zendtag.isNotEmpty
-              ? resolved.zendtag[0].toUpperCase()
-              : '?';
+          ? resolved.zendtag[0].toUpperCase()
+          : '?';
 
       setState(() {
-        _participants.add(PoolParticipant(
-          id: '',
-          displayName: displayName,
-          avatarLabel: avatarLabel,
-          zendtag: resolved.zendtag,  // store the resolved zendtag
-          isExternal: false,
-        ));
+        _participants.add(
+          PoolParticipant(
+            id: '',
+            displayName: displayName,
+            avatarLabel: avatarLabel,
+            zendtag: resolved.zendtag, // store the resolved zendtag
+            isExternal: false,
+          ),
+        );
         _participantError = null;
         _zendUserController.clear();
       });
@@ -136,12 +144,14 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return;
     setState(() {
-      _participants.add(PoolParticipant(
-        id: '',
-        displayName: trimmed,
-        avatarLabel: trimmed[0].toUpperCase(),
-        isExternal: true,
-      ));
+      _participants.add(
+        PoolParticipant(
+          id: '',
+          displayName: trimmed,
+          avatarLabel: trimmed[0].toUpperCase(),
+          isExternal: true,
+        ),
+      );
       _participantError = null;
       _externalContactController.clear();
     });
@@ -177,8 +187,18 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -235,9 +255,9 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
           try {
             final requestData = await model.walletService.apiClient
                 .createPaymentRequest(
-              amountUsdc: _targetAmount,
-              description: 'Pool: $trimmedName — ${p.displayName}',
-            );
+                  amountUsdc: _targetAmount,
+                  description: 'Pool: $trimmedName — ${p.displayName}',
+                );
             paymentRequestId = requestData['id'] as String?;
           } catch (_) {
             // Non-fatal — pool can still be created without the link
@@ -250,8 +270,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
           // Use the stored zendtag (set when user was resolved via search or
           // selected from recent contacts). Falls back to stripping '@' from
           // display name for legacy entries.
-          if (p.zendtag != null && p.zendtag!.isNotEmpty)
-            'zendtag': p.zendtag,
+          if (p.zendtag != null && p.zendtag!.isNotEmpty) 'zendtag': p.zendtag,
           'payment_request_id': paymentRequestId,
         });
       }
@@ -272,9 +291,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
 
       // Navigate to the new pool's detail screen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => PoolDetailScreen(pool: pool),
-        ),
+        MaterialPageRoute(builder: (context) => PoolDetailScreen(pool: pool)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -297,349 +314,459 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
     // participant, email/phone) sit underneath the keyboard and can't be
     // scrolled clear of it.
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-      decoration: BoxDecoration(
-        color: zt.bgPrimary,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(ZendRadii.xxl),
-        ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: ZendScrollPage(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const ZendSheetHandle(),
-              const SizedBox(height: ZendSpacing.lg),
+      child: Container(
+        decoration: BoxDecoration(
+          color: zt.bgPrimary,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ZendScrollPage(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const ZendSheetHandle(),
+                const SizedBox(height: ZendSpacing.lg),
 
-              Text(
-                'Create a pool',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: zt.textPrimary,
-                ),
-              ),
-              const SizedBox(height: ZendSpacing.xl),
-
-              // Amount input — editable
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Goal amount',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 12,
-                      color: zt.textSecondary,
-                    ),
+                Text(
+                  'Create a pool',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: zt.textPrimary,
                   ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 36,
-                      color: zt.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      prefixText: '\$',
-                      prefixStyle: TextStyle(
+                ),
+                const SizedBox(height: ZendSpacing.xl),
+
+                // Amount input — editable
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Goal amount',
+                      style: TextStyle(
                         fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
+                        fontSize: 12,
                         color: zt.textSecondary,
                       ),
-                      hintText: '0.00',
-                      hintStyle: TextStyle(
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _amountController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
                         fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
                         fontSize: 36,
-                        color: zt.textSecondary.withValues(alpha: 0.4),
+                        color: zt.textPrimary,
                       ),
-                      errorText: _amountError,
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(color: zt.border),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: zt.accentBright, width: 2),
-                      ),
-                    ),
-                    onChanged: (v) {
-                      final parsed = double.tryParse(v) ?? 0.0;
-                      if (parsed > 0 && _amountError != null) {
-                        setState(() => _amountError = null);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: ZendSpacing.lg),
-
-              TextField(
-                controller: _nameController,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(_nameMaxLength),
-                ],
-                onChanged: (_) => setState(() {
-                  if (_nameError != null) _nameError = null;
-                }),
-                decoration: InputDecoration(
-                  hintText: 'Pool name',
-                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
-                  filled: true,
-                  fillColor: zt.bgSecondary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.pill),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.md,
-                    vertical: ZendSpacing.sm,
-                  ),
-                ),
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary),
-              ),
-              const SizedBox(height: ZendSpacing.xxs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '$nameRemaining remaining',
-                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: nameRemaining < 10 ? ZendColors.destructive : zt.textSecondary),
-                ),
-              ),
-              if (_nameError != null) ...[
-                const SizedBox(height: ZendSpacing.xxs),
-                Text(_nameError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
-              ],
-              const SizedBox(height: ZendSpacing.md),
-
-              Text(
-                'Add participants',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
-              ),
-              const SizedBox(height: ZendSpacing.xs),
-
-              _SectionLabel('Recent Zend users'),
-              const SizedBox(height: ZendSpacing.xxs),
-              if (recentContacts.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'No recent Zend users yet',
-                    style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
-                  ),
-                )
-              else
-                ...recentContacts.map((contact) {
-                  final isSelected = _participants.any(
-                    (p) => p.displayName == contact.displayName && !p.isExternal,
-                  );
-                  return _SelectableContactTile(
-                    participant: contact,
-                    selected: isSelected,
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          _participants.removeWhere(
-                            (p) => p.displayName == contact.displayName && !p.isExternal,
-                          );
-                        } else {
-                          _participants.add(contact);
-                          _participantError = null;
-                        }
-                      });
-                    },
-                  );
-                }),
-              const SizedBox(height: ZendSpacing.xs),
-
-              TextField(
-                controller: _zendUserController,
-                textInputAction: TextInputAction.done,
-                onSubmitted: _addZendUser,
-                decoration: InputDecoration(
-                  hintText: 'Add @username',
-                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(PhosphorIconsRegular.userPlus, size: 18, color: zt.textSecondary),
-                  filled: true,
-                  fillColor: zt.bgSecondary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.pill),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.md,
-                    vertical: ZendSpacing.sm,
-                  ),
-                ),
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-              ),
-              const SizedBox(height: ZendSpacing.md),
-
-              _SectionLabel('Invite via email or phone'),
-              const SizedBox(height: ZendSpacing.xxs),
-              TextField(
-                controller: _externalContactController,
-                textInputAction: TextInputAction.done,
-                keyboardType: TextInputType.emailAddress,
-                onSubmitted: _addExternalContact,
-                decoration: InputDecoration(
-                  hintText: 'Email or phone number',
-                  hintStyle: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
-                  prefixIcon: Icon(PhosphorIconsRegular.mailbox, size: 18, color: zt.textSecondary),
-                  filled: true,
-                  fillColor: zt.bgSecondary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.pill),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: ZendSpacing.md,
-                    vertical: ZendSpacing.sm,
-                  ),
-                ),
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
-              ),
-              const SizedBox(height: ZendSpacing.xs),
-
-              if (_participants.isNotEmpty) ...[
-                Wrap(
-                  spacing: ZendSpacing.xs,
-                  runSpacing: ZendSpacing.xs,
-                  children: List.generate(_participants.length, (index) {
-                    final p = _participants[index];
-                    return Chip(
-                      avatar: CircleAvatar(
-                        radius: 12,
-                        backgroundColor: p.isExternal ? zt.bgSecondary : zt.accent,
-                        child: Text(
-                          p.avatarLabel,
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: p.isExternal ? zt.textPrimary : ZendColors.textOnDeep,
+                      decoration: InputDecoration(
+                        prefixText: '\$',
+                        prefixStyle: TextStyle(
+                          fontFamily: 'Geist',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 24,
+                          color: zt.textSecondary,
+                        ),
+                        hintText: '0.00',
+                        hintStyle: TextStyle(
+                          fontFamily: 'Geist',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 36,
+                          color: zt.textSecondary.withValues(alpha: 0.4),
+                        ),
+                        errorText: _amountError,
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: zt.border),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: zt.accentBright,
+                            width: 2,
                           ),
                         ),
                       ),
-                      label: Text(
-                        p.displayName,
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textPrimary),
+                      onChanged: (v) {
+                        final parsed = double.tryParse(v) ?? 0.0;
+                        if (parsed > 0 && _amountError != null) {
+                          setState(() => _amountError = null);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: ZendSpacing.lg),
+
+                TextField(
+                  controller: _nameController,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(_nameMaxLength),
+                  ],
+                  onChanged: (_) => setState(() {
+                    if (_nameError != null) _nameError = null;
+                  }),
+                  decoration: InputDecoration(
+                    hintText: 'Pool name',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      color: zt.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: zt.bgSecondary,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: ZendSpacing.md,
+                      vertical: ZendSpacing.sm,
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: ZendSpacing.xxs),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$nameRemaining remaining',
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: nameRemaining < 10
+                          ? ZendColors.destructive
+                          : zt.textSecondary,
+                    ),
+                  ),
+                ),
+                if (_nameError != null) ...[
+                  const SizedBox(height: ZendSpacing.xxs),
+                  Text(
+                    _nameError!,
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: ZendSpacing.md),
+
+                Text(
+                  'Add participants',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: ZendSpacing.xs),
+
+                _SectionLabel('Recent Zend users'),
+                const SizedBox(height: ZendSpacing.xxs),
+                if (recentContacts.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'No recent Zend users yet',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
                       ),
-                      deleteIcon: Icon(PhosphorIconsRegular.xCircle, size: 16, color: zt.textSecondary),
-                      onDeleted: () => _removeParticipant(index),
-                      backgroundColor: p.isExternal
-                          ? zt.bgSecondary
-                          : zt.accentPop.withValues(alpha: 0.2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                        side: BorderSide(
-                          color: p.isExternal
-                              ? zt.border
-                              : zt.accentBright.withValues(alpha: 0.3),
-                        ),
-                      ),
+                    ),
+                  )
+                else
+                  ...recentContacts.map((contact) {
+                    final isSelected = _participants.any(
+                      (p) =>
+                          p.displayName == contact.displayName && !p.isExternal,
+                    );
+                    return _SelectableContactTile(
+                      participant: contact,
+                      selected: isSelected,
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _participants.removeWhere(
+                              (p) =>
+                                  p.displayName == contact.displayName &&
+                                  !p.isExternal,
+                            );
+                          } else {
+                            _participants.add(contact);
+                            _participantError = null;
+                          }
+                        });
+                      },
                     );
                   }),
+                const SizedBox(height: ZendSpacing.xs),
+
+                TextField(
+                  controller: _zendUserController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: _addZendUser,
+                  decoration: InputDecoration(
+                    hintText: 'Add @username',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      color: zt.textSecondary,
+                    ),
+                    prefixIcon: Icon(
+                      PhosphorIconsRegular.userPlus,
+                      size: 18,
+                      color: zt.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: zt.bgSecondary,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: ZendSpacing.md,
+                      vertical: ZendSpacing.sm,
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textPrimary,
+                  ),
                 ),
-              ],
-              if (_participantError != null) ...[
+                const SizedBox(height: ZendSpacing.md),
+
+                _SectionLabel('Invite via email or phone'),
                 const SizedBox(height: ZendSpacing.xxs),
-                Text(_participantError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
-              ],
-              const SizedBox(height: ZendSpacing.md),
+                TextField(
+                  controller: _externalContactController,
+                  textInputAction: TextInputAction.done,
+                  keyboardType: TextInputType.emailAddress,
+                  onSubmitted: _addExternalContact,
+                  decoration: InputDecoration(
+                    hintText: 'Email or phone number',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      color: zt.textSecondary,
+                    ),
+                    prefixIcon: Icon(
+                      PhosphorIconsRegular.mailbox,
+                      size: 18,
+                      color: zt.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: zt.bgSecondary,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: ZendSpacing.md,
+                      vertical: ZendSpacing.sm,
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: ZendSpacing.xs),
 
-              _TappableRow(
-                label: _deadline != null
-                    ? 'Deadline: ${_formatDate(_deadline!)}'
-                    : 'Set deadline',
-                trailing: Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
-                onTap: _pickDeadline,
-              ),
-              if (_deadlineError != null) ...[
-                const SizedBox(height: ZendSpacing.xxs),
-                Text(_deadlineError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 12, color: ZendColors.destructive)),
-              ],
-
-              const SizedBox(height: ZendSpacing.md),
-
-              // Allow open contributions toggle
-              Material(
-                color: zt.bgSecondary,
-                borderRadius: BorderRadius.circular(ZendRadii.lg),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(ZendRadii.lg),
-                  onTap: () => setState(() => _allowOpenContributions = !_allowOpenContributions),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Allow anyone to contribute via link',
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: zt.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Share a link so anyone can chip in',
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 12,
-                                  color: zt.textSecondary,
-                                ),
-                              ),
-                            ],
+                if (_participants.isNotEmpty) ...[
+                  Wrap(
+                    spacing: ZendSpacing.xs,
+                    runSpacing: ZendSpacing.xs,
+                    children: List.generate(_participants.length, (index) {
+                      final p = _participants[index];
+                      return Chip(
+                        avatar: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: p.isExternal
+                              ? zt.bgSecondary
+                              : zt.accent,
+                          child: Text(
+                            p.avatarLabel,
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: p.isExternal
+                                  ? zt.textPrimary
+                                  : ZendColors.textOnDeep,
+                            ),
                           ),
                         ),
-                        Switch(
-                          value: _allowOpenContributions,
-                          onChanged: (v) => setState(() => _allowOpenContributions = v),
-                          activeThumbColor: zt.accent,
+                        label: Text(
+                          p.displayName,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            color: zt.textPrimary,
+                          ),
                         ),
-                      ],
+                        deleteIcon: Icon(
+                          PhosphorIconsRegular.xCircle,
+                          size: 16,
+                          color: zt.textSecondary,
+                        ),
+                        onDeleted: () => _removeParticipant(index),
+                        backgroundColor: p.isExternal
+                            ? zt.bgSecondary
+                            : zt.accentPop.withValues(alpha: 0.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                          side: BorderSide(
+                            color: p.isExternal
+                                ? zt.border
+                                : zt.accentBright.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+                if (_participantError != null) ...[
+                  const SizedBox(height: ZendSpacing.xxs),
+                  Text(
+                    _participantError!,
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: ZendSpacing.md),
+
+                _TappableRow(
+                  label: _deadline != null
+                      ? 'Deadline: ${_formatDate(_deadline!)}'
+                      : 'Set deadline',
+                  trailing: Icon(
+                    PhosphorIconsRegular.caretRight,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
+                  onTap: _pickDeadline,
+                ),
+                if (_deadlineError != null) ...[
+                  const SizedBox(height: ZendSpacing.xxs),
+                  Text(
+                    _deadlineError!,
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: ZendSpacing.md),
+
+                // Allow open contributions toggle
+                Material(
+                  color: zt.bgSecondary,
+                  borderRadius: BorderRadius.circular(ZendRadii.lg),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(ZendRadii.lg),
+                    onTap: () => setState(
+                      () => _allowOpenContributions = !_allowOpenContributions,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Allow anyone to contribute via link',
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: zt.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Share a link so anyone can chip in',
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontSize: 12,
+                                    color: zt.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _allowOpenContributions,
+                            onChanged: (v) =>
+                                setState(() => _allowOpenContributions = v),
+                            activeThumbColor: zt.accent,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: ZendSpacing.xxl),
-              const Spacer(),
+                const SizedBox(height: ZendSpacing.xxl),
+                const Spacer(),
 
-              if (_createError != null) ...[
-                Text(_createError!, style: const TextStyle(fontFamily: 'Geist', fontSize: 13, color: ZendColors.destructive)),
-                const SizedBox(height: ZendSpacing.xs),
+                if (_createError != null) ...[
+                  Text(
+                    _createError!,
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: ZendColors.destructive,
+                    ),
+                  ),
+                  const SizedBox(height: ZendSpacing.xs),
+                ],
+
+                PrimaryButton(
+                  label: _creating ? 'Creating...' : 'Create pool',
+                  onPressed: _creating ? null : _onCreatePool,
+                ),
               ],
-
-              PrimaryButton(
-                label: _creating ? 'Creating...' : 'Create pool',
-                onPressed: _creating ? null : _onCreatePool,
-              ),
-            ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
 }
 
 class _TappableRow extends StatelessWidget {
-  const _TappableRow({required this.label, required this.trailing, required this.onTap});
+  const _TappableRow({
+    required this.label,
+    required this.trailing,
+    required this.onTap,
+  });
   final String label;
   final Widget trailing;
   final VoidCallback onTap;
@@ -651,11 +778,26 @@ class _TappableRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(ZendRadii.sm),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: ZendSpacing.md, vertical: ZendSpacing.sm),
-        decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.sm)),
+        padding: const EdgeInsets.symmetric(
+          horizontal: ZendSpacing.md,
+          vertical: ZendSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
+          borderRadius: BorderRadius.circular(ZendRadii.sm),
+        ),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, color: zt.textPrimary))),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ),
             trailing,
           ],
         ),
@@ -673,13 +815,23 @@ class _SectionLabel extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Text(
       label.toUpperCase(),
-      style: TextStyle(fontFamily: 'Geist', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: zt.textSecondary),
+      style: TextStyle(
+        fontFamily: 'Geist',
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.0,
+        color: zt.textSecondary,
+      ),
     );
   }
 }
 
 class _SelectableContactTile extends StatelessWidget {
-  const _SelectableContactTile({required this.participant, required this.selected, required this.onTap});
+  const _SelectableContactTile({
+    required this.participant,
+    required this.selected,
+    required this.onTap,
+  });
   final PoolParticipant participant;
   final bool selected;
   final VoidCallback onTap;
@@ -693,7 +845,9 @@ class _SelectableContactTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
-          color: selected ? zt.accentPop.withValues(alpha: 0.12) : Colors.transparent,
+          color: selected
+              ? zt.accentPop.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(ZendRadii.sm),
         ),
         child: Row(
@@ -703,12 +857,31 @@ class _SelectableContactTile extends StatelessWidget {
               backgroundColor: selected ? zt.accent : zt.bgSecondary,
               child: Text(
                 participant.avatarLabel,
-                style: TextStyle(fontFamily: 'Geist', fontSize: 12, fontWeight: FontWeight.w600, color: selected ? ZendColors.textOnDeep : zt.textPrimary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? ZendColors.textOnDeep : zt.textPrimary,
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(participant.displayName, style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary))),
-            if (selected) Icon(PhosphorIconsRegular.checkCircle, size: 20, color: zt.accentBright),
+            Expanded(
+              child: Text(
+                participant.displayName,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ),
+            if (selected)
+              Icon(
+                PhosphorIconsRegular.checkCircle,
+                size: 20,
+                color: zt.accentBright,
+              ),
           ],
         ),
       ),

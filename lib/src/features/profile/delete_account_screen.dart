@@ -63,8 +63,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     });
     final model = ZendScope.read(context);
     try {
-      final readiness =
-          await model.walletService.apiClient.getDeletionReadiness();
+      final readiness = await model.walletService.apiClient
+          .getDeletionReadiness();
       if (!mounted) return;
       setState(() {
         _readiness = readiness;
@@ -202,9 +202,7 @@ class _BlockedByBalance extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final funded = readiness.holdings
-        .where((h) => h.usdcBalance > 0)
-        .toList();
+    final funded = readiness.holdings.where((h) => h.usdcBalance > 0).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),

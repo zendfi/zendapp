@@ -46,12 +46,20 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   Expanded(
                     child: Text(
                       'Settings',
-                      style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700, fontSize: 24, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -65,23 +73,34 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     _SectionLabel('Account'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.bank,
-                        label: 'Connected banks',
-                        onTap: () => pushZendSlide(context, const ConnectedBanksScreen()),
-                      ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.link,
-                        label: 'Connected apps',
-                        onTap: () => pushZendSlide(context, const ConnectedAppsScreen()),
-                      ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.receipt,
-                        label: 'Payment requests',
-                        onTap: () => pushZendSlide(context, const PaymentRequestsScreen()),
-                      ),
-                    ]),
+                    _TileGroup(
+                      tiles: [
+                        _Tile(
+                          icon: PhosphorIconsRegular.bank,
+                          label: 'Connected banks',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const ConnectedBanksScreen(),
+                          ),
+                        ),
+                        _Tile(
+                          icon: PhosphorIconsRegular.link,
+                          label: 'Connected apps',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const ConnectedAppsScreen(),
+                          ),
+                        ),
+                        _Tile(
+                          icon: PhosphorIconsRegular.receipt,
+                          label: 'Payment requests',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const PaymentRequestsScreen(),
+                          ),
+                        ),
+                      ],
+                    ),
 
                     // Drop is gated off for launch — see [ZendFeatures.drop].
                     // This toggle was the only live Drop surface in the app.
@@ -100,50 +119,62 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _SectionLabel('Appearance'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _ToggleTile(
-                        icon: PhosphorIconsRegular.moon,
-                        label: 'Dark mode',
-                        value: model.isDarkMode,
-                        onChanged: (_) => model.toggleDarkMode(),
-                      ),
-                    ]),
+                    _TileGroup(
+                      tiles: [
+                        _ToggleTile(
+                          icon: PhosphorIconsRegular.moon,
+                          label: 'Dark mode',
+                          value: model.isDarkMode,
+                          onChanged: (_) => model.toggleDarkMode(),
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(height: 24),
                     _SectionLabel('Activity'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _ToggleTile(
-                        icon: PhosphorIconsRegular.bell,
-                        label: 'Notify network when I share',
-                        value: model.notifyMutualsOnShare,
-                        onChanged: (_) => unawaited(model.toggleNotifyMutualsOnShare()),
-                      ),
-                    ]),
+                    _TileGroup(
+                      tiles: [
+                        _ToggleTile(
+                          icon: PhosphorIconsRegular.bell,
+                          label: 'Notify network when I share',
+                          value: model.notifyMutualsOnShare,
+                          onChanged: (_) =>
+                              unawaited(model.toggleNotifyMutualsOnShare()),
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(height: 24),
                     _SectionLabel('Security'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.shieldCheck,
-                        label: 'Security settings',
-                        onTap: () => pushZendSlide(context, const SecuritySettingsScreen()),
-                      ),
-                      // Hidden for zkLogin accounts: they have no PIN, so
-                      // this would open a flow with nothing to change.
-                      if (!model.isZkLoginAccount)
+                    _TileGroup(
+                      tiles: [
                         _Tile(
-                          icon: PhosphorIconsRegular.lockSimple,
-                          label: 'Change PIN',
-                          onTap: () => pushZendSlide(context, const ChangePinScreen()),
+                          icon: PhosphorIconsRegular.shieldCheck,
+                          label: 'Security settings',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const SecuritySettingsScreen(),
+                          ),
                         ),
-                      _Tile(
-                        icon: PhosphorIconsRegular.identificationBadge,
-                        label: 'Identity verification',
-                        onTap: () => pushZendSlide(context, const BridgeKycScreen()),
-                      ),
-                    ]),
+                        // Hidden for zkLogin accounts: they have no PIN, so
+                        // this would open a flow with nothing to change.
+                        if (!model.isZkLoginAccount)
+                          _Tile(
+                            icon: PhosphorIconsRegular.lockSimple,
+                            label: 'Change PIN',
+                            onTap: () =>
+                                pushZendSlide(context, const ChangePinScreen()),
+                          ),
+                        _Tile(
+                          icon: PhosphorIconsRegular.identificationBadge,
+                          label: 'Identity verification',
+                          onTap: () =>
+                              pushZendSlide(context, const BridgeKycScreen()),
+                        ),
+                      ],
+                    ),
 
                     // Google Play's User Data policy requires an app that
                     // offers in-app account creation to also offer a readily
@@ -154,13 +185,18 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _SectionLabel('Account deletion'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _Tile(
-                        icon: PhosphorIconsRegular.trash,
-                        label: 'Delete account',
-                        onTap: () => pushZendSlide(context, const DeleteAccountScreen()),
-                      ),
-                    ]),
+                    _TileGroup(
+                      tiles: [
+                        _Tile(
+                          icon: PhosphorIconsRegular.trash,
+                          label: 'Delete account',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const DeleteAccountScreen(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -190,7 +226,10 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
     super.initState();
     SharedPreferences.getInstance().then((prefs) {
       if (mounted) {
-        setState(() => _visibility = prefs.getString('presence_visibility') ?? 'everyone');
+        setState(
+          () => _visibility =
+              prefs.getString('presence_visibility') ?? 'everyone',
+        );
       }
     });
   }
@@ -227,15 +266,25 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsRegular.eyeClosed, size: 20, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.eyeClosed,
+                    size: 20,
+                    color: zt.textSecondary,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Online status & last seen',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
-                  if (_saving) ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
+                  if (_saving)
+                    ZendLoader(size: 16, strokeWidth: 1.5, color: zt.accent),
                 ],
               ),
             ),
@@ -248,7 +297,10 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
               InkWell(
                 onTap: () => _update(option.$1),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       const SizedBox(width: 32),
@@ -256,13 +308,32 @@ class _PresencePrivacyTileState extends State<_PresencePrivacyTile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(option.$2, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                            Text(option.$3, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+                            Text(
+                              option.$2,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: zt.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              option.$3,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 12,
+                                color: zt.textSecondary,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       if (_visibility == option.$1)
-                        Icon(PhosphorIconsRegular.checkCircle, size: 18, color: zt.accent),
+                        Icon(
+                          PhosphorIconsRegular.checkCircle,
+                          size: 18,
+                          color: zt.accent,
+                        ),
                     ],
                   ),
                 ),
@@ -289,7 +360,12 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         label,
-        style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary),
+        style: TextStyle(
+          fontFamily: 'Geist',
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: zt.textSecondary,
+        ),
       ),
     );
   }
@@ -312,7 +388,8 @@ class _TileGroup extends StatelessWidget {
           children: [
             for (var i = 0; i < tiles.length; i++) ...[
               tiles[i],
-              if (i < tiles.length - 1) Divider(height: 1, thickness: 1, color: zt.border, indent: 48),
+              if (i < tiles.length - 1)
+                Divider(height: 1, thickness: 1, color: zt.border, indent: 48),
             ],
           ],
         ),
@@ -344,9 +421,21 @@ class _Tile extends StatelessWidget {
               Icon(icon, size: 20, color: zt.textSecondary),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
+                ),
               ),
-              Icon(PhosphorIconsRegular.caretRight, size: 16, color: zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 16,
+                color: zt.textSecondary,
+              ),
             ],
           ),
         ),
@@ -380,7 +469,15 @@ class _ToggleTile extends StatelessWidget {
           Icon(icon, size: 20, color: zt.textSecondary),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w500, color: zt.textPrimary)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: zt.textPrimary,
+              ),
+            ),
           ),
           Switch.adaptive(
             value: value,
@@ -428,26 +525,43 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         height: 7,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isOn ? zt.accentBright : zt.textSecondary.withValues(alpha: 0.35),
+                          color: isOn
+                              ? zt.accentBright
+                              : zt.textSecondary.withValues(alpha: 0.35),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Icon(PhosphorIconsRegular.bluetoothConnected, size: 20, color: isOn ? zt.accentBright : zt.textSecondary),
+                      Icon(
+                        PhosphorIconsRegular.bluetoothConnected,
+                        size: 20,
+                        color: isOn ? zt.accentBright : zt.textSecondary,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Be Discoverable',
-                          style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: zt.textPrimary,
+                          ),
                         ),
                       ),
                       if (isLoading)
-                        ZendLoader(size: 20, strokeWidth: 2, color: zt.accentBright)
+                        ZendLoader(
+                          size: 20,
+                          strokeWidth: 2,
+                          color: zt.accentBright,
+                        )
                       else
                         Switch.adaptive(
                           value: isOn,
                           onChanged: (_) => service.toggle(),
                           activeThumbColor: zt.accentBright,
-                          activeTrackColor: zt.accentBright.withValues(alpha: 0.4),
+                          activeTrackColor: zt.accentBright.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                     ],
                   ),
@@ -458,7 +572,12 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       isOn
                           ? 'Broadcasting a secure Bluetooth signal. Nearby Zend users can send you money via Drop automatically.'
                           : 'Let nearby Zend users send you money via Drop — no sharing your zendtag needed.',
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary, height: 1.4),
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                   if (isOn && service.currentPayload != null) ...[
@@ -467,11 +586,18 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 17),
                       child: Row(
                         children: [
-                          Icon(PhosphorIconsRegular.record, size: 10, color: zt.accentBright),
+                          Icon(
+                            PhosphorIconsRegular.record,
+                            size: 10,
+                            color: zt.accentBright,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Broadcasting as @${service.currentPayload!.zendtag}',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.accentBright),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 11,
+                              color: zt.accentBright,
+                            ),
                           ),
                         ],
                       ),
@@ -482,7 +608,10 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 17),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: ZendColors.destructive.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(ZendRadii.md),
@@ -490,12 +619,21 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(PhosphorIconsRegular.warningCircle, size: 14, color: ZendColors.destructive),
+                            Icon(
+                              PhosphorIconsRegular.warningCircle,
+                              size: 14,
+                              color: ZendColors.destructive,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 service.lastError!,
-                                style: const TextStyle(fontFamily: 'Geist', fontSize: 11, color: ZendColors.destructive, height: 1.4),
+                                style: const TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 11,
+                                  color: ZendColors.destructive,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                           ],

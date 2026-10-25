@@ -19,6 +19,7 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 enum SendStage {
   // A brief resting/loading state — the default stage whenever a
@@ -57,7 +58,7 @@ Future<void> showSendFlowSheet(
   String? prefilledRecipient,
   String? prefilledNote,
 }) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

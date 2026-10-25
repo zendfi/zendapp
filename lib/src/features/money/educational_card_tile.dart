@@ -8,7 +8,11 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 /// Tapping opens the Educational_Modal (Req 26.2) via the [onTap] callback
 /// supplied by `CardCarousel`.
 class EducationalCardTile extends StatelessWidget {
-  const EducationalCardTile({super.key, required this.card, required this.onTap});
+  const EducationalCardTile({
+    super.key,
+    required this.card,
+    required this.onTap,
+  });
 
   final CarouselCardModel card;
   final VoidCallback onTap;
@@ -43,7 +47,10 @@ class EducationalCardTile extends StatelessWidget {
             ),
             Text(
               'Tap to learn more',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: zt.textSecondary,
+              ),
             ),
           ],
         ),

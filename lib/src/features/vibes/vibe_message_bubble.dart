@@ -31,6 +31,7 @@ class VibeMessageBubble extends StatefulWidget {
   final bool isMine;
   final DateTime? createdAt;
   final bool isDelivering;
+
   /// True when the send (transaction signing/submission) failed. Renders a
   /// distinct error pill with a retry affordance instead of the normal
   /// hidden/delivering state — mirrors the failed-state treatment already
@@ -38,6 +39,7 @@ class VibeMessageBubble extends StatefulWidget {
   /// mission_room_message.dart's `_DeliveryStatus`), which vibes previously
   /// had no equivalent of.
   final bool isFailed;
+
   /// Called when the user taps the failed pill to retry sending. Only
   /// relevant when [isFailed] and [isMine] are both true.
   final VoidCallback? onRetry;
@@ -57,8 +59,8 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
 
   // Explosion phase
   late final AnimationController _explodeCtrl;
-  late final Animation<double> _explode;   // 0→1, drives everything
-  late final Animation<double> _bgFade;    // screen dim
+  late final Animation<double> _explode; // 0→1, drives everything
+  late final Animation<double> _bgFade; // screen dim
   late final Animation<double> _emojiScale;
   late final Animation<double> _amountFade;
 
@@ -70,12 +72,14 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
     super.initState();
 
     _shimmerCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1800),
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
     _shimmer = CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut);
 
     _explodeCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1600),
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
     );
 
     _explode = CurvedAnimation(parent: _explodeCtrl, curve: Curves.easeOut);
@@ -89,13 +93,19 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
     _emojiScale = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 20),
       TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: 1.4)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 45),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.4,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 45,
+      ),
       TweenSequenceItem(
-          tween: Tween(begin: 1.4, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 35),
+        tween: Tween(
+          begin: 1.4,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 35,
+      ),
     ]).animate(_explodeCtrl);
 
     _amountFade = TweenSequence<double>([
@@ -114,26 +124,31 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
 
   void _onTap() {
     if (_revealed || widget.isMine) return;
-    setState(() { _revealed = true; _exploding = true; });
+    setState(() {
+      _revealed = true;
+      _exploding = true;
+    });
     _shimmerCtrl.stop();
     _fireProgressiveHaptics();
 
     // Show explosion as a true full-screen overlay — no layout offset issues.
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
-    entry = OverlayEntry(builder: (ctx) {
-      final zt = ZendTheme.of(context);
-      return _FullScreenExplosionOverlay(
-        emoji: widget.emoji,
-        amountUsdc: widget.amountUsdc,
-        explodeCtrl: _explodeCtrl,
-        explode: _explode,
-        bgFade: _bgFade,
-        emojiScale: _emojiScale,
-        amountFade: _amountFade,
-        zt: zt,
-      );
-    });
+    entry = OverlayEntry(
+      builder: (ctx) {
+        final zt = ZendTheme.of(context);
+        return _FullScreenExplosionOverlay(
+          emoji: widget.emoji,
+          amountUsdc: widget.amountUsdc,
+          explodeCtrl: _explodeCtrl,
+          explode: _explode,
+          bgFade: _bgFade,
+          emojiScale: _emojiScale,
+          amountFade: _amountFade,
+          zt: zt,
+        );
+      },
+    );
     overlay.insert(entry);
 
     _explodeCtrl.forward().then((_) {
@@ -145,13 +160,13 @@ class _VibeMessageBubbleState extends State<VibeMessageBubble>
   void _fireProgressiveHaptics() {
     // Rapid light clicks building up, then heavy thud at the peak
     const pattern = [
-      (delay: 0,   style: HapticFeedback.lightImpact),
-      (delay: 80,  style: HapticFeedback.lightImpact),
+      (delay: 0, style: HapticFeedback.lightImpact),
+      (delay: 80, style: HapticFeedback.lightImpact),
       (delay: 150, style: HapticFeedback.lightImpact),
       (delay: 210, style: HapticFeedback.mediumImpact),
       (delay: 260, style: HapticFeedback.mediumImpact),
-      (delay: 300, style: HapticFeedback.heavyImpact),  // the thud
-      (delay: 900, style: HapticFeedback.lightImpact),  // settle
+      (delay: 300, style: HapticFeedback.heavyImpact), // the thud
+      (delay: 900, style: HapticFeedback.lightImpact), // settle
     ];
     for (final p in pattern) {
       Future.delayed(Duration(milliseconds: p.delay), p.style);
@@ -248,7 +263,11 @@ class _FailedVibe extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline, size: 12, color: ZendColors.destructive),
+                Icon(
+                  Icons.error_outline,
+                  size: 12,
+                  color: ZendColors.destructive,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   isMine ? 'Failed \u2022 Retry' : 'Vibe failed',
@@ -318,15 +337,19 @@ class _HiddenVibe extends StatelessWidget {
               children: [
                 // Top edge highlight (studio reflection)
                 Positioned(
-                  top: 0, left: 0, right: 0,
+                  top: 0,
+                  left: 0,
+                  right: 0,
                   child: Container(
                     height: 1,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        Colors.white.withValues(alpha: 0.0),
-                        Colors.white.withValues(alpha: 0.18),
-                        Colors.white.withValues(alpha: 0.0),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.18),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -352,7 +375,10 @@ class _HiddenVibe extends StatelessWidget {
                 ),
                 // Content
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
@@ -361,28 +387,44 @@ class _HiddenVibe extends StatelessWidget {
                       const SizedBox(height: 6),
                       if (!isMine) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 0.5,
+                            ),
                           ),
                           child: Text(
                             'Tap to reveal ✨',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ] else ...[
                         Text(
                           'sent a Vibe',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
                         ),
                       ],
                       if (createdAt != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           _timeLabel(createdAt!),
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: Colors.white.withValues(alpha: 0.3)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
                         ),
                       ],
                     ],
@@ -429,7 +471,9 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
           children: [
             // Full screen dim
             Positioned.fill(
-              child: ColoredBox(color: Colors.black.withValues(alpha: bgFade.value)),
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: bgFade.value),
+              ),
             ),
             // Particle canvas — centered on screen
             Positioned.fill(
@@ -447,7 +491,10 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
                 scale: emojiScale.value,
                 child: Text(
                   emoji,
-                  style: const TextStyle(fontSize: 80, decoration: TextDecoration.none),
+                  style: const TextStyle(
+                    fontSize: 80,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
             ),
@@ -458,7 +505,10 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
                 child: Opacity(
                   opacity: amountFade.value.clamp(0.0, 1.0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
@@ -539,7 +589,10 @@ class _RevealedVibe extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               _timeLabel(createdAt!),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: Colors.white.withValues(alpha: 0.3)),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 9,
+                color: Colors.white.withValues(alpha: 0.3),
+              ),
             ),
           ],
         ],
@@ -587,14 +640,15 @@ class _ExplosionPainter extends CustomPainter {
       final y = center.dy + sin(angle) * dist + gravity;
 
       final opacity = (1.0 - easeProgress * 0.3) * fadeOpacity;
-      final size_ = (3.0 + _rng.nextDouble() * 5.0) * (1.0 - easeProgress * 0.5);
+      final size_ =
+          (3.0 + _rng.nextDouble() * 5.0) * (1.0 - easeProgress * 0.5);
 
       // Alternate between accent color and gold/white sparks
       final color = i % 3 == 0
           ? accentColor.withValues(alpha: opacity * 0.9)
           : i % 3 == 1
-              ? const Color(0xFFFFD700).withValues(alpha: opacity * 0.85)
-              : Colors.white.withValues(alpha: opacity * 0.7);
+          ? const Color(0xFFFFD700).withValues(alpha: opacity * 0.85)
+          : Colors.white.withValues(alpha: opacity * 0.7);
 
       particlePaint.color = color;
 
@@ -616,7 +670,9 @@ class _ExplosionPainter extends CustomPainter {
       final angle = (i / lineCount) * 2 * pi;
       final near = maxRadius * 0.15 * easeProgress;
       final far = maxRadius * 0.65 * easeProgress;
-      linePaint.color = accentColor.withValues(alpha: fadeOpacity * 0.4 * (1.0 - easeProgress));
+      linePaint.color = accentColor.withValues(
+        alpha: fadeOpacity * 0.4 * (1.0 - easeProgress),
+      );
       canvas.drawLine(
         Offset(center.dx + cos(angle) * near, center.dy + sin(angle) * near),
         Offset(center.dx + cos(angle) * far, center.dy + sin(angle) * far),
@@ -628,7 +684,9 @@ class _ExplosionPainter extends CustomPainter {
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
-      ..color = accentColor.withValues(alpha: fadeOpacity * (1.0 - easeProgress) * 0.6);
+      ..color = accentColor.withValues(
+        alpha: fadeOpacity * (1.0 - easeProgress) * 0.6,
+      );
     canvas.drawCircle(center, maxRadius * 0.4 * easeProgress, glowPaint);
   }
 

@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 enum DepthTier {
   /// Core of thick strokes — stays close, large, bright.
   near,
+
   /// Mid-weight strokes — standard rendering.
   mid,
+
   /// Thin strokes and edge pixels — recede, smaller, dimmer.
   far,
+
   /// Ambient halo: sparse, very blurred, creates luminous atmosphere.
   halo,
 }
@@ -19,7 +22,7 @@ enum DepthTier {
 /// A sampled particle spawn/target position with depth metadata.
 class SampledParticle {
   const SampledParticle({
-    required this.position,   // logical pixel coordinate in the text bounding box
+    required this.position, // logical pixel coordinate in the text bounding box
     required this.tier,
     required this.edgeNormal, // unit vector pointing away from glyph interior
   });
@@ -27,6 +30,7 @@ class SampledParticle {
   /// Normalised position (0→1) within the text bounding rect, in logical coords.
   final Offset position;
   final DepthTier tier;
+
   /// Direction particles peel off / arrive from. For edge pixels this points
   /// outward from the letterform; for core pixels it's random.
   final Offset edgeNormal;
@@ -48,7 +52,8 @@ class TextSampleResult {
   final List<SampledParticle> halo;
   final Size textSize;
 
-  bool get isEmpty => near.isEmpty && mid.isEmpty && far.isEmpty && halo.isEmpty;
+  bool get isEmpty =>
+      near.isEmpty && mid.isEmpty && far.isEmpty && halo.isEmpty;
   int get totalCount => near.length + mid.length + far.length + halo.length;
 }
 
@@ -59,10 +64,13 @@ class TextSampleResult {
 Future<TextSampleResult> sampleTextParticles(
   String text, {
   required TextStyle style,
+
   /// Oversample ratio — 2.5 gives crisp glyph-edge dust without blocky pixels.
   double pixelRatio = 2.5,
+
   /// Fraction of sampled pixels to keep (0→1). 0.25 → ~1,500 particles for "$20".
   double samplingDensity = 0.25,
+
   /// Target max total particle count (stratified subsample if exceeded).
   int maxParticles = 2200,
 }) async {
@@ -72,25 +80,28 @@ Future<TextSampleResult> sampleTextParticles(
   // which produces off-canvas or NaN X offsets when painting, resulting in
   // an all-transparent bitmap and zero sampled particles.
   // Alignment is irrelevant for single-line text — we only need maxIntrinsicWidth.
-  final pb = ui.ParagraphBuilder(
-    ui.ParagraphStyle(
-      textAlign: TextAlign.left,
-      fontFamily: style.fontFamily,
-      fontSize: style.fontSize,
-      fontStyle: style.fontStyle,
-      fontWeight: style.fontWeight,
-      height: style.height,
-    ),
-  )..pushStyle(
-      ui.TextStyle(
-        color: const Color(0xFFFFFFFF),
-        fontFamily: style.fontFamily,
-        fontSize: style.fontSize,
-        fontStyle: style.fontStyle,
-        fontWeight: style.fontWeight,
-        height: style.height,
-      ),
-    )..addText(text);
+  final pb =
+      ui.ParagraphBuilder(
+          ui.ParagraphStyle(
+            textAlign: TextAlign.left,
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            fontStyle: style.fontStyle,
+            fontWeight: style.fontWeight,
+            height: style.height,
+          ),
+        )
+        ..pushStyle(
+          ui.TextStyle(
+            color: const Color(0xFFFFFFFF),
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            fontStyle: style.fontStyle,
+            fontWeight: style.fontWeight,
+            height: style.height,
+          ),
+        )
+        ..addText(text);
 
   final para = pb.build();
   // Layout at maxIntrinsicWidth so glyphs are fully within the bitmap bounds.
@@ -99,7 +110,10 @@ Future<TextSampleResult> sampleTextParticles(
   final textH = para.height.ceil();
   if (textW <= 0 || textH <= 0) {
     return TextSampleResult(
-      near: [], mid: [], far: [], halo: [],
+      near: [],
+      mid: [],
+      far: [],
+      halo: [],
       textSize: Size(textW.toDouble(), textH.toDouble()),
     );
   }
@@ -124,7 +138,13 @@ Future<TextSampleResult> sampleTextParticles(
   para.dispose();
 
   if (byteData == null) {
-    return TextSampleResult(near: [], mid: [], far: [], halo: [], textSize: Size(textW.toDouble(), textH.toDouble()));
+    return TextSampleResult(
+      near: [],
+      mid: [],
+      far: [],
+      halo: [],
+      textSize: Size(textW.toDouble(), textH.toDouble()),
+    );
   }
 
   final pixels = byteData.buffer.asUint8List();
@@ -196,11 +216,11 @@ Future<TextSampleResult> sampleTextParticles(
 
       final DepthTier tier;
       if (opaqueNeighbours >= 7) {
-        tier = DepthTier.near;   // completely surrounded — thick stroke core
+        tier = DepthTier.near; // completely surrounded — thick stroke core
       } else if (opaqueNeighbours >= 4) {
         tier = DepthTier.mid;
       } else {
-        tier = DepthTier.far;    // edge pixel, isolated, thin stroke
+        tier = DepthTier.far; // edge pixel, isolated, thin stroke
       }
 
       final particle = SampledParticle(
@@ -210,10 +230,14 @@ Future<TextSampleResult> sampleTextParticles(
       );
 
       switch (tier) {
-        case DepthTier.near: near.add(particle);
-        case DepthTier.mid: mid.add(particle);
-        case DepthTier.far: far.add(particle);
-        case DepthTier.halo: halo.add(particle);
+        case DepthTier.near:
+          near.add(particle);
+        case DepthTier.mid:
+          mid.add(particle);
+        case DepthTier.far:
+          far.add(particle);
+        case DepthTier.halo:
+          halo.add(particle);
       }
     }
   }
@@ -232,11 +256,17 @@ Future<TextSampleResult> sampleTextParticles(
   // Halo: ~4% of total, sampled from near tier positions.
   final haloCount = ((near.length + mid.length + far.length) * 0.04).floor();
   final haloSource = [...near, ...mid]..shuffle(rng);
-  halo.addAll(haloSource.take(haloCount).map((p) => SampledParticle(
-    position: p.position,
-    tier: DepthTier.halo,
-    edgeNormal: p.edgeNormal,
-  )));
+  halo.addAll(
+    haloSource
+        .take(haloCount)
+        .map(
+          (p) => SampledParticle(
+            position: p.position,
+            tier: DepthTier.halo,
+            edgeNormal: p.edgeNormal,
+          ),
+        ),
+  );
 
   return TextSampleResult(
     near: near,

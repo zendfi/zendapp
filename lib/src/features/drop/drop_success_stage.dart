@@ -82,9 +82,10 @@ class _DropSuccessStageState extends State<DropSuccessStage>
     return '\$${widget.amount.toStringAsFixed(2)}';
   }
 
-  String get _zendtag => widget.receiver.gattPayload?.zendtag
-      ?? widget.receiver.preview?.zendtag
-      ?? '?';
+  String get _zendtag =>
+      widget.receiver.gattPayload?.zendtag ??
+      widget.receiver.preview?.zendtag ??
+      '?';
 
   @override
   Widget build(BuildContext context) {
@@ -163,14 +164,20 @@ class _DropSuccessStageState extends State<DropSuccessStage>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ZendAvatar(radius: 20, photoUrl: senderAvatarUrl, initials: senderInitial),
+                ZendAvatar(
+                  radius: 20,
+                  photoUrl: senderAvatarUrl,
+                  initials: senderInitial,
+                ),
                 const SizedBox(width: 8),
                 Icon(Icons.arrow_forward, size: 16, color: zt.accentBright),
                 const SizedBox(width: 8),
                 ZendAvatar(
                   radius: 20,
                   photoUrl: widget.receiver.preview?.avatarUrl,
-                  initials: _zendtag.isNotEmpty ? _zendtag[0].toUpperCase() : null,
+                  initials: _zendtag.isNotEmpty
+                      ? _zendtag[0].toUpperCase()
+                      : null,
                 ),
               ],
             ),
@@ -221,7 +228,10 @@ class _DropSuccessStageState extends State<DropSuccessStage>
               Text(
                 '"${widget.note}"',
                 textAlign: TextAlign.center,
-                style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                style: ZendTextStyles.tabularNumeric.copyWith(
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
               ),
             ],
 

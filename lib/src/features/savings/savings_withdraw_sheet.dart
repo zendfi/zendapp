@@ -80,10 +80,9 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
       _parsedAmount > 0 && _parsedAmount <= _availableAmount;
 
   // Amount the user will receive (legacy mode)
-  double get _receiveAmount =>
-      widget.position != null
-          ? widget.position!.principalUsd + widget.position!.netYieldUsd
-          : _availableAmount;
+  double get _receiveAmount => widget.position != null
+      ? widget.position!.principalUsd + widget.position!.netYieldUsd
+      : _availableAmount;
 
   void _onAmountKey(String key) {
     HapticFeedback.lightImpact();
@@ -146,7 +145,10 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
       final cache = WalletSessionCache.instance;
 
       if (cache.hasKeypair) {
-        final valid = await model.signingPolicyService.verifyPinAgainstCache(pin, model.walletService);
+        final valid = await model.signingPolicyService.verifyPinAgainstCache(
+          pin,
+          model.walletService,
+        );
         if (!valid) {
           if (!mounted) return;
           setState(() {
@@ -212,7 +214,9 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
         await pocketService.submitFreeWithdraw(signedTx);
       } else if (_isGoal) {
         final pocketService = model.pocketService;
-        final prepare = await pocketService.prepareGoalWithdraw(widget.pocketId!);
+        final prepare = await pocketService.prepareGoalWithdraw(
+          widget.pocketId!,
+        );
         final signedTx = await signTx(prepare.txBytesB64);
         await pocketService.submitGoalWithdraw(widget.pocketId!, signedTx);
       } else if (_isLock) {
@@ -247,13 +251,13 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
   }
 
   double get _heightFactor => switch (_stage) {
-        _WithdrawStage.confirm => 0.60,
-        _WithdrawStage.amount => 0.82,
-        _WithdrawStage.pin => 0.70,
-        _WithdrawStage.processing => 0.45,
-        _WithdrawStage.success => 0.50,
-        _WithdrawStage.error => 0.55,
-      };
+    _WithdrawStage.confirm => 0.60,
+    _WithdrawStage.amount => 0.82,
+    _WithdrawStage.pin => 0.70,
+    _WithdrawStage.processing => 0.45,
+    _WithdrawStage.success => 0.50,
+    _WithdrawStage.error => 0.55,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -284,81 +288,80 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
   Widget _buildStage() {
     // If goal is locked, show explanation instead of PIN
     if (_stage == _WithdrawStage.confirm && _isGoal && widget.isGoalLocked) {
-      return _GoalLockedStage(
-        onClose: () => Navigator.of(context).pop(),
-      );
+      return _GoalLockedStage(onClose: () => Navigator.of(context).pop());
     }
 
     return switch (_stage) {
-      _WithdrawStage.confirm => _isLegacy
-          ? _ConfirmStage(
-              position: widget.position!,
-              receiveAmount: _receiveAmount,
-              onConfirm: _proceedFromConfirm,
-            )
-          : _isFree
-              ? _FreeConfirmStage(
-                  availableAmount: _availableAmount,
-                  onConfirm: () => setState(() => _stage = _WithdrawStage.amount),
-                )
-              : _isGoal
-                  ? _GoalConfirmStage(
-                      availableAmount: _availableAmount,
-                      mode: 'flexible',
-                      onConfirm: _proceedFromConfirm,
-                    )
-                  : _LockConfirmStage(
-                      availableAmount: _availableAmount,
-                      lockUnlockDate: widget.lockUnlockDate,
-                      onConfirm: _proceedFromConfirm,
-                    ),
+      _WithdrawStage.confirm =>
+        _isLegacy
+            ? _ConfirmStage(
+                position: widget.position!,
+                receiveAmount: _receiveAmount,
+                onConfirm: _proceedFromConfirm,
+              )
+            : _isFree
+            ? _FreeConfirmStage(
+                availableAmount: _availableAmount,
+                onConfirm: () => setState(() => _stage = _WithdrawStage.amount),
+              )
+            : _isGoal
+            ? _GoalConfirmStage(
+                availableAmount: _availableAmount,
+                mode: 'flexible',
+                onConfirm: _proceedFromConfirm,
+              )
+            : _LockConfirmStage(
+                availableAmount: _availableAmount,
+                lockUnlockDate: widget.lockUnlockDate,
+                onConfirm: _proceedFromConfirm,
+              ),
       _WithdrawStage.amount => _FreeAmountStage(
-          amountInput: _amountInput,
-          amountError: _amountError,
-          availableAmount: _availableAmount,
-          amountValid: _amountValid,
-          onKey: _onAmountKey,
-          onConfirm: () {
-            if (!_amountValid) {
-              setState(() {
-                if (_parsedAmount <= 0) {
-                  _amountError = 'Enter an amount';
-                } else {
-                  _amountError =
-                      'Not enough in Stash (\$${_availableAmount.toStringAsFixed(2)})';
-                }
-              });
-              return;
-            }
-            _proceedFromConfirm();
-          },
-          onBack: () => setState(() => _stage = _WithdrawStage.confirm),
-        ),
+        amountInput: _amountInput,
+        amountError: _amountError,
+        availableAmount: _availableAmount,
+        amountValid: _amountValid,
+        onKey: _onAmountKey,
+        onConfirm: () {
+          if (!_amountValid) {
+            setState(() {
+              if (_parsedAmount <= 0) {
+                _amountError = 'Enter an amount';
+              } else {
+                _amountError =
+                    'Not enough in Stash (\$${_availableAmount.toStringAsFixed(2)})';
+              }
+            });
+            return;
+          }
+          _proceedFromConfirm();
+        },
+        onBack: () => setState(() => _stage = _WithdrawStage.confirm),
+      ),
       _WithdrawStage.pin => _PinStage(
-          receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
-          pinDigits: _pinDigits,
-          pinError: _pinError,
-          onKey: _onPinKey,
-          onBack: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _stage = _isFree ? _WithdrawStage.amount : _WithdrawStage.confirm;
-          }),
-        ),
+        receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
+        pinDigits: _pinDigits,
+        pinError: _pinError,
+        onKey: _onPinKey,
+        onBack: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _stage = _isFree ? _WithdrawStage.amount : _WithdrawStage.confirm;
+        }),
+      ),
       _WithdrawStage.processing => const _ProcessingStage(),
       _WithdrawStage.success => _SuccessStage(
-          receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
-          onDone: () => Navigator.of(context).pop(),
-        ),
+        receiveAmount: _parsedAmount > 0 ? _parsedAmount : _receiveAmount,
+        onDone: () => Navigator.of(context).pop(),
+      ),
       _WithdrawStage.error => _ErrorStage(
-          message: _errorMessage ?? 'Something went wrong.',
-          onRetry: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _stage = _WithdrawStage.pin;
-          }),
-          onCancel: () => Navigator.of(context).pop(),
-        ),
+        message: _errorMessage ?? 'Something went wrong.',
+        onRetry: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _stage = _WithdrawStage.pin;
+        }),
+        onCancel: () => Navigator.of(context).pop(),
+      ),
     };
   }
 }
@@ -378,8 +381,11 @@ class _GoalLockedStage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(PhosphorIconsRegular.lockKey,
-                size: 48, color: ZendColors.accentBright),
+            const Icon(
+              PhosphorIconsRegular.lockKey,
+              size: 48,
+              color: ZendColors.accentBright,
+            ),
             const SizedBox(height: ZendSpacing.md),
             Text(
               'Goal is locked',
@@ -478,8 +484,7 @@ class _FreeAmountStage extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onBack;
 
-  String get _displayAmount =>
-      amountInput.isEmpty ? '\$0' : '\$$amountInput';
+  String get _displayAmount => amountInput.isEmpty ? '\$0' : '\$$amountInput';
 
   @override
   Widget build(BuildContext context) {
@@ -493,7 +498,11 @@ class _FreeAmountStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -521,7 +530,8 @@ class _FreeAmountStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.xs),
           Center(
             child: Text(
-              amountError ?? 'Available: \$${availableAmount.toStringAsFixed(2)}',
+              amountError ??
+                  'Available: \$${availableAmount.toStringAsFixed(2)}',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
@@ -615,8 +625,18 @@ class _LockConfirmStage extends StatelessWidget {
     try {
       final d = DateTime.parse(dateStr);
       final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[d.month - 1]} ${d.day}, ${d.year}';
     } catch (_) {
@@ -701,10 +721,7 @@ class _ConfirmStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.lg),
 
           // ── Breakdown rows ─────────────────────────────────────────
-          _BreakdownRow(
-            label: 'Saved',
-            value: _fmt(position.principalUsd),
-          ),
+          _BreakdownRow(label: 'Saved', value: _fmt(position.principalUsd)),
           Divider(color: zt.border, height: 24),
           _BreakdownRow(
             label: 'Money earned',
@@ -713,7 +730,8 @@ class _ConfirmStage extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.xs),
           _BreakdownRow(
-            label: 'ZendFi fee (${(position.feeBps / 100).toStringAsFixed(0)}%)',
+            label:
+                'ZendFi fee (${(position.feeBps / 100).toStringAsFixed(0)}%)',
             value: '−${_fmt(position.feeUsd)}',
             valueColor: zt.textSecondary,
             labelStyle: TextStyle(
@@ -731,10 +749,7 @@ class _ConfirmStage extends StatelessWidget {
 
           const Spacer(),
 
-          PrimaryButton(
-            label: 'Confirm withdrawal',
-            onPressed: onConfirm,
-          ),
+          PrimaryButton(label: 'Confirm withdrawal', onPressed: onConfirm),
         ],
       ),
     );
@@ -764,18 +779,22 @@ class _BreakdownRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: labelStyle ??
+          style:
+              labelStyle ??
               TextStyle(
                 fontFamily: 'Geist',
                 fontSize: bold ? 15 : 14,
-                fontWeight:
-                    bold ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
                 color: zt.textPrimary,
               ),
         ),
         Text(
           value,
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: bold ? 15 : 14, fontWeight: bold ? FontWeight.w600 : FontWeight.w400, color: valueColor ?? zt.textPrimary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: bold ? 15 : 14,
+            fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+            color: valueColor ?? zt.textPrimary,
+          ),
         ),
       ],
     );
@@ -810,7 +829,11 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -912,7 +935,11 @@ class _SuccessStage extends StatelessWidget {
                 color: ZendColors.positive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.checkCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -974,7 +1001,11 @@ class _ErrorStage extends StatelessWidget {
                 color: ZendColors.destructive,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+              child: const Icon(
+                PhosphorIconsRegular.xCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -1000,8 +1031,10 @@ class _ErrorStage extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Cancel',
-                        style: TextStyle(fontFamily: 'Geist')),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontFamily: 'Geist'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: ZendSpacing.md),

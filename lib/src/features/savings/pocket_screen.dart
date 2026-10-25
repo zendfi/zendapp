@@ -15,6 +15,7 @@ import 'lock_creation_sheet.dart';
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 class PocketScreen extends StatefulWidget {
   const PocketScreen({super.key});
@@ -79,23 +80,24 @@ class _PocketScreenState extends State<PocketScreen> {
     return _pockets?.where((p) => p.isLock).firstOrNull;
   }
 
-  Future<void> _openDepositSheet({String? pocketId, String? pocketLabel}) async {
-    await showModalBottomSheet<void>(
+  Future<void> _openDepositSheet({
+    String? pocketId,
+    String? pocketLabel,
+  }) async {
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => SavingsDepositSheet(
-        pocketId: pocketId,
-        pocketLabel: pocketLabel,
-      ),
+      builder: (_) =>
+          SavingsDepositSheet(pocketId: pocketId, pocketLabel: pocketLabel),
     );
     if (mounted) unawaited(_loadData());
   }
 
   Future<void> _openWithdrawSheet(SavingsPocket pocket) async {
-    await showModalBottomSheet<void>(
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -113,7 +115,7 @@ class _PocketScreenState extends State<PocketScreen> {
   }
 
   Future<void> _openGoalCreation() async {
-    final result = await showModalBottomSheet<SavingsPocket>(
+    final result = await showZendModalSheet<SavingsPocket>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -127,13 +129,14 @@ class _PocketScreenState extends State<PocketScreen> {
   Future<void> _openLockCreation() async {
     final freePocket = _freePocket;
     if (freePocket == null) return;
-    final result = await showModalBottomSheet<SavingsPocket>(
+    final result = await showZendModalSheet<SavingsPocket>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => LockCreationSheet(freePocketBalance: freePocket.balanceUsd),
+      builder: (_) =>
+          LockCreationSheet(freePocketBalance: freePocket.balanceUsd),
     );
     if (result != null && mounted) unawaited(_loadData());
   }
@@ -154,7 +157,10 @@ class _PocketScreenState extends State<PocketScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    icon: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(
@@ -173,8 +179,8 @@ class _PocketScreenState extends State<PocketScreen> {
               child: _loading
                   ? _buildSkeleton(zt)
                   : _error != null
-                      ? _buildError(zt)
-                      : _buildContent(zt),
+                  ? _buildError(zt)
+                  : _buildContent(zt),
             ),
           ],
         ),
@@ -208,7 +214,11 @@ class _PocketScreenState extends State<PocketScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(PhosphorIconsRegular.warningCircle, size: 48, color: zt.textSecondary),
+            Icon(
+              PhosphorIconsRegular.warningCircle,
+              size: 48,
+              color: zt.textSecondary,
+            ),
             const SizedBox(height: ZendSpacing.md),
             Text(
               'Something went wrong',
@@ -518,10 +528,7 @@ class _FreeSavingsCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: PrimaryButton(
-                  label: 'Add money',
-                  onPressed: onAddMoney,
-                ),
+                child: PrimaryButton(label: 'Add money', onPressed: onAddMoney),
               ),
               const SizedBox(width: ZendSpacing.sm),
               Expanded(
@@ -661,7 +668,10 @@ class GoalCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '\$${balance.toStringAsFixed(2)} / \$${target.toStringAsFixed(2)}',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 13,
+                          color: zt.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -748,8 +758,18 @@ class LockCard extends StatelessWidget {
     try {
       final d = DateTime.parse(date);
       final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[d.month - 1]} ${d.day}, ${d.year}';
     } catch (_) {
@@ -774,7 +794,9 @@ class LockCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isExpired ? PhosphorIconsRegular.lockKeyOpen : PhosphorIconsRegular.lockKey,
+                isExpired
+                    ? PhosphorIconsRegular.lockKeyOpen
+                    : PhosphorIconsRegular.lockKey,
                 size: 20,
                 color: isExpired ? ZendColors.accentBright : zt.textSecondary,
               ),
@@ -823,10 +845,7 @@ class LockCard extends StatelessWidget {
             const SizedBox(height: ZendSpacing.md),
             SizedBox(
               width: double.infinity,
-              child: PrimaryButton(
-                label: 'Withdraw',
-                onPressed: onWithdraw,
-              ),
+              child: PrimaryButton(label: 'Withdraw', onPressed: onWithdraw),
             ),
           ],
         ],

@@ -3,7 +3,8 @@ import 'dart:convert';
 import '../features/pools/pool.dart';
 import 'dm_message.dart' show DmVibeData;
 
-export '../features/pools/pool.dart' show PoolMessage, PoolMessageType, PoolReactionCount;
+export '../features/pools/pool.dart'
+    show PoolMessage, PoolMessageType, PoolReactionCount;
 export 'dm_message.dart' show DmVibeData;
 
 enum LocalStatus { sending, delivered, failed }
@@ -89,7 +90,9 @@ class PoolMessageLocal {
       voiceNoteUrl: data['voice_note_url'] as String?,
       voiceNoteDurationSeconds: data['voice_note_duration_seconds'] as int?,
       localStatus: LocalStatus.delivered,
-      createdAt: DateTime.tryParse(data['created_at'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(data['created_at'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 

@@ -29,15 +29,20 @@ class ContactSupportScreen extends StatelessWidget {
                     // ── Response time banner ───────────────────────────
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: zt.accentBright.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(ZendRadii.xl),
                       ),
                       child: Row(
                         children: [
-                          Icon(PhosphorIconsRegular.lightning,
-                              size: 16, color: zt.accentBright),
+                          Icon(
+                            PhosphorIconsRegular.lightning,
+                            size: 16,
+                            color: zt.accentBright,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'We respond in under 2 hours',
@@ -56,51 +61,56 @@ class ContactSupportScreen extends StatelessWidget {
                     // ── Contact options ────────────────────────────────
                     _SectionLabel('Get in touch'),
                     const SizedBox(height: 8),
-                    _TileGroup(tiles: [
-                      _ContactTile(
-                        icon: PhosphorIconsRegular.mailbox,
-                        label: 'Email support',
-                        subtitle: 'support@zendfi.com',
-                        onTap: () async {
-                          final uri =
-                              Uri.parse('mailto:support@zendfi.com');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri);
-                          } else {
-                            await Clipboard.setData(const ClipboardData(
-                                text: 'support@zendfi.com'));
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Email copied to clipboard')),
+                    _TileGroup(
+                      tiles: [
+                        _ContactTile(
+                          icon: PhosphorIconsRegular.mailbox,
+                          label: 'Email support',
+                          subtitle: 'support@zendfi.com',
+                          onTap: () async {
+                            final uri = Uri.parse('mailto:support@zendfi.com');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            } else {
+                              await Clipboard.setData(
+                                const ClipboardData(text: 'support@zendfi.com'),
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Email copied to clipboard'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        // Live chat is gated off for launch — see
+                        // [ZendFeatures.liveChatSupport]. Email support and the
+                        // help centre below are real and remain.
+                        if (ZendFeatures.liveChatSupport)
+                          _ContactTile(
+                            icon: PhosphorIconsRegular.chatDots,
+                            label: 'Live chat',
+                            subtitle: 'Start a conversation',
+                            onTap: () {},
+                          ),
+                        _ContactTile(
+                          icon: PhosphorIconsRegular.clipboard,
+                          label: 'Help centre',
+                          subtitle: 'Browse guides and FAQs',
+                          onTap: () async {
+                            final uri = Uri.parse('https://help.zendfi.com');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
                               );
                             }
-                          }
-                        },
-                      ),
-                      // Live chat is gated off for launch — see
-                      // [ZendFeatures.liveChatSupport]. Email support and the
-                      // help centre below are real and remain.
-                      if (ZendFeatures.liveChatSupport)
-                        _ContactTile(
-                          icon: PhosphorIconsRegular.chatDots,
-                          label: 'Live chat',
-                          subtitle: 'Start a conversation',
-                          onTap: () {},
+                          },
                         ),
-                      _ContactTile(
-                        icon: PhosphorIconsRegular.clipboard,
-                        label: 'Help centre',
-                        subtitle: 'Browse guides and FAQs',
-                        onTap: () async {
-                          final uri = Uri.parse('https://help.zendfi.com');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        },
-                      ),
-                    ]),
+                      ],
+                    ),
 
                     // The screen's primary CTA was an empty callback. With
                     // live chat gated off there is no primary action here —
@@ -108,10 +118,7 @@ class ContactSupportScreen extends StatelessWidget {
                     // tiles above.
                     if (ZendFeatures.liveChatSupport) ...[
                       const SizedBox(height: 32),
-                      PrimaryButton(
-                        label: 'Start live chat',
-                        onPressed: () {},
-                      ),
+                      PrimaryButton(label: 'Start live chat', onPressed: () {}),
                     ],
                   ],
                 ),
@@ -174,8 +181,11 @@ class _ContactTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(PhosphorIconsRegular.caretRight,
-                  size: 16, color: zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretRight,
+                size: 16,
+                color: zt.textSecondary,
+              ),
             ],
           ),
         ),
@@ -202,11 +212,7 @@ class _TileGroup extends StatelessWidget {
             for (var i = 0; i < tiles.length; i++) ...[
               tiles[i],
               if (i < tiles.length - 1)
-                Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: zt.border,
-                    indent: 48),
+                Divider(height: 1, thickness: 1, color: zt.border, indent: 48),
             ],
           ],
         ),

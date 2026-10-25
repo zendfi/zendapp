@@ -18,7 +18,10 @@ class DevReturnRedirectService {
     try {
       final parsed = Uri.parse(redirectUrl);
       final uri = parsed.replace(
-        queryParameters: {...parsed.queryParameters, 'zend_return_token': token},
+        queryParameters: {
+          ...parsed.queryParameters,
+          'zend_return_token': token,
+        },
       );
       return await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {

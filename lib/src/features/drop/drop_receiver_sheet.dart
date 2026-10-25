@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../design/zend_avatar.dart';
 import 'drop_glow_effect.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_modal.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -32,7 +33,7 @@ Future<void> showDropReceiverSheet({
   required String? senderAvatarUrl,
   String? note,
 }) {
-  return showModalBottomSheet<void>(
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -69,6 +70,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
     with TickerProviderStateMixin {
   /// Single controller drives the full glow-reform effect.
   late final AnimationController _effectCtrl;
+
   /// Label fade — "from @sender" and note appear after text solidifies.
   late final AnimationController _labelCtrl;
 
@@ -184,7 +186,10 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                       child: Text(
                         'from @${widget.senderZendtag}',
                         textAlign: TextAlign.center,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, color: Color(0x80FFFFFF)),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 14,
+                          color: Color(0x80FFFFFF),
+                        ),
                       ),
                     ),
                   ),
@@ -198,12 +203,19 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                       child: FadeTransition(
                         opacity: CurvedAnimation(
                           parent: _labelCtrl,
-                          curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+                          curve: const Interval(
+                            0.3,
+                            1.0,
+                            curve: Curves.easeOut,
+                          ),
                         ),
                         child: Text(
                           '"${widget.note}"',
                           textAlign: TextAlign.center,
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: Color(0x55FFFFFF)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 13,
+                            color: Color(0x55FFFFFF),
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -218,7 +230,10 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                     child: Text(
                       'Tap to close',
                       textAlign: TextAlign.center,
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Colors.white.withValues(alpha: 0.15)),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                     ),
                   ),
                 ],

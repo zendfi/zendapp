@@ -20,10 +20,7 @@ class ActivityDataService {
 
   ActivityDataService({required ApiClient apiClient}) : _apiClient = apiClient;
 
-  Future<ActivityEdgesResponse> getActivityEdges({
-    String? cursor,
-    int? limit,
-  }) {
+  Future<ActivityEdgesResponse> getActivityEdges({String? cursor, int? limit}) {
     return _apiClient.getActivityEdges(cursor: cursor, limit: limit);
   }
 
@@ -38,7 +35,11 @@ class ActivityDataService {
     String? cursor,
     int? limit,
   }) {
-    return _apiClient.getActivityEdgesForUser(userId, cursor: cursor, limit: limit);
+    return _apiClient.getActivityEdgesForUser(
+      userId,
+      cursor: cursor,
+      limit: limit,
+    );
   }
 
   // ── Reaction counts ─────────────────────────────────────────────────────
@@ -66,9 +67,13 @@ class ActivityDataService {
   /// cheap to be wrong about for a moment, but not for a whole session.
   static const Duration reactionCacheTtl = Duration(seconds: 90);
 
-  static String _reactionKey(String edgeKind, String edgeId) => '$edgeKind:$edgeId';
+  static String _reactionKey(String edgeKind, String edgeId) =>
+      '$edgeKind:$edgeId';
 
-  Future<List<EdgeReactionCount>> getEdgeReactions(String edgeKind, String edgeId) {
+  Future<List<EdgeReactionCount>> getEdgeReactions(
+    String edgeKind,
+    String edgeId,
+  ) {
     final key = _reactionKey(edgeKind, edgeId);
 
     final cachedAt = _reactionCachedAt[key];
@@ -84,11 +89,14 @@ class ActivityDataService {
     final existing = _reactionsInFlight[key];
     if (existing != null) return existing;
 
-    final request = _apiClient.getEdgeReactions(edgeKind, edgeId).then((result) {
-      _reactionCache[key] = result;
-      _reactionCachedAt[key] = DateTime.now();
-      return result;
-    }).whenComplete(() => _reactionsInFlight.remove(key));
+    final request = _apiClient
+        .getEdgeReactions(edgeKind, edgeId)
+        .then((result) {
+          _reactionCache[key] = result;
+          _reactionCachedAt[key] = DateTime.now();
+          return result;
+        })
+        .whenComplete(() => _reactionsInFlight.remove(key));
 
     _reactionsInFlight[key] = request;
     return request;
@@ -104,12 +112,20 @@ class ActivityDataService {
     _reactionCachedAt.remove(key);
   }
 
-  Future<void> addEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+  Future<void> addEdgeReaction(
+    String edgeKind,
+    String edgeId,
+    String emoji,
+  ) async {
     await _apiClient.addEdgeReaction(edgeKind, edgeId, emoji);
     invalidateEdgeReactions(edgeKind, edgeId);
   }
 
-  Future<void> removeEdgeReaction(String edgeKind, String edgeId, String emoji) async {
+  Future<void> removeEdgeReaction(
+    String edgeKind,
+    String edgeId,
+    String emoji,
+  ) async {
     await _apiClient.removeEdgeReaction(edgeKind, edgeId, emoji);
     invalidateEdgeReactions(edgeKind, edgeId);
   }
@@ -122,7 +138,11 @@ class ActivityDataService {
     _reactionsInFlight.clear();
   }
 
-  Future<void> makeEdgePublic(String edgeKind, String edgeId, {String preset = 'share_activity_full'}) {
+  Future<void> makeEdgePublic(
+    String edgeKind,
+    String edgeId, {
+    String preset = 'share_activity_full',
+  }) {
     return _apiClient.makeEdgePublic(edgeKind, edgeId, preset: preset);
   }
 
@@ -134,7 +154,11 @@ class ActivityDataService {
     return _apiClient.addEdgeComment(edgeKind, edgeId, body);
   }
 
-  Future<void> deleteEdgeComment(String edgeKind, String edgeId, String commentId) {
+  Future<void> deleteEdgeComment(
+    String edgeKind,
+    String edgeId,
+    String commentId,
+  ) {
     return _apiClient.deleteEdgeComment(edgeKind, edgeId, commentId);
   }
 }

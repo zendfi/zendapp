@@ -177,14 +177,17 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
           right: 20,
           bottom: safeBottom + 24,
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1.5),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: _cardCtrl,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
-            )),
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 1.5),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _cardCtrl,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  ),
+                ),
             child: GestureDetector(
               onTap: () {
                 _dismissTimer?.cancel();
@@ -196,7 +199,10 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   // Dark surface consistent with Zend's deep green palette
                   color: ZendColors.bgDeep,
@@ -250,11 +256,15 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                               color: Color(0xCCF0F0F0),
                             ),
                           ),
-                          if (widget.note != null && widget.note!.isNotEmpty) ...[
+                          if (widget.note != null &&
+                              widget.note!.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               '"${widget.note}"',
-                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: Color(0x99F0F0F0)),
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 11,
+                                color: Color(0x99F0F0F0),
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

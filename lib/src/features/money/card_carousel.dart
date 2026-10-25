@@ -12,7 +12,12 @@ import 'educational_card_tile.dart';
 /// elsewhere for filter pills (Req 24.4). See design.md's "Carousel
 /// implementation approach" decision for the full tradeoff analysis.
 class CardCarousel extends StatelessWidget {
-  const CardCarousel({super.key, required this.cards, required this.onCardTap, required this.onDismissTeaser});
+  const CardCarousel({
+    super.key,
+    required this.cards,
+    required this.onCardTap,
+    required this.onDismissTeaser,
+  });
 
   final List<CarouselCardModel> cards;
   final void Function(CarouselCardModel card) onCardTap;

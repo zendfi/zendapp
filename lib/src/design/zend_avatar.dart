@@ -29,6 +29,7 @@ class ZendAvatar extends StatelessWidget {
   final String? photoUrl;
   final String? initials;
   final Color? backgroundColor;
+
   /// Presence indicator: true = online (green dot), false = offline (grey dot),
   /// null = no dot shown.
   final bool? isOnline;
@@ -118,16 +119,14 @@ class _FallbackCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = radius * 2;
     final hasInitials = initials != null && initials!.isNotEmpty;
-    final bgColor = backgroundColor ??
+    final bgColor =
+        backgroundColor ??
         (hasInitials ? _colorFromInitials(initials!) : zt.bgSecondary);
 
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: hasInitials
           ? Text(

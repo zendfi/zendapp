@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'payment_request.dart';
+import '../../design/zend_modal.dart';
 
 /// Full-screen modal sheet showing the QR code for a payment request.
 ///
@@ -19,7 +20,7 @@ Future<void> showRequestQrSheet(
   BuildContext context, {
   required PaymentRequest request,
 }) {
-  return showModalBottomSheet(
+  return showZendModalSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,

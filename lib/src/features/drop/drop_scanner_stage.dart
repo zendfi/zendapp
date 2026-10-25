@@ -24,10 +24,14 @@ class _DropScannerStageState extends State<DropScannerStage>
     _wave1 = AnimationController(vsync: this, duration: duration)..repeat();
     _wave2 = AnimationController(vsync: this, duration: duration)
       ..forward(from: 0.33)
-      ..addStatusListener((s) { if (s == AnimationStatus.completed) _wave2.repeat(); });
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _wave2.repeat();
+      });
     _wave3 = AnimationController(vsync: this, duration: duration)
       ..forward(from: 0.66)
-      ..addStatusListener((s) { if (s == AnimationStatus.completed) _wave3.repeat(); });
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _wave3.repeat();
+      });
   }
 
   @override
@@ -87,7 +91,10 @@ class _DropScannerStageState extends State<DropScannerStage>
         const SizedBox(height: 36),
         Text(
           'Scanning for nearby Zend users\u2026',
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 13,
+            color: zt.textSecondary,
+          ),
         ),
         const Spacer(flex: 3),
       ],
@@ -143,7 +150,13 @@ class _FluidRipplePainter extends CustomPainter {
     canvas.drawCircle(Offset(cx, cy), maxRadius * 0.18, staticRingPaint);
   }
 
-  void _drawRing(Canvas canvas, double cx, double cy, double maxRadius, double t) {
+  void _drawRing(
+    Canvas canvas,
+    double cx,
+    double cy,
+    double maxRadius,
+    double t,
+  ) {
     // Use a smooth ease-in-out curve so the ring accelerates gently from
     // centre and decelerates as it reaches the edge — more water-like.
     final easedT = _easeInOutCubic(t);

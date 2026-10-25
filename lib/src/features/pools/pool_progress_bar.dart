@@ -5,6 +5,7 @@ import '../../design/zend_tokens.dart';
 enum PoolProgressBarStyle {
   /// Thin horizontal line — used in compact contexts like the pool list card.
   line,
+
   /// Large circular arc with a percentage label — used on the pool detail
   /// screen and contribute sheet where there's space to breathe.
   circle,
@@ -39,7 +40,11 @@ class PoolProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return style == PoolProgressBarStyle.circle
-        ? _CircleBar(progress: progress, size: circleSize, strokeWidth: strokeWidth)
+        ? _CircleBar(
+            progress: progress,
+            size: circleSize,
+            strokeWidth: strokeWidth,
+          )
         : _LineBar(progress: progress, height: height);
   }
 }
@@ -81,7 +86,11 @@ class _LineBar extends StatelessWidget {
 // ── Circle bar ────────────────────────────────────────────────────────────────
 
 class _CircleBar extends StatelessWidget {
-  const _CircleBar({required this.progress, required this.size, required this.strokeWidth});
+  const _CircleBar({
+    required this.progress,
+    required this.size,
+    required this.strokeWidth,
+  });
   final double progress;
   final double size;
   final double strokeWidth;
@@ -143,7 +152,10 @@ class _CircleBar extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'done!',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: size * 0.10, color: zt.positive),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: size * 0.10,
+                      color: zt.positive,
+                    ),
                   ),
                 ],
               ],

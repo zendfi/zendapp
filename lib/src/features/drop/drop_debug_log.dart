@@ -33,7 +33,11 @@ class DropDebugLog {
   /// method is called once per matching BLE advertisement while scanning in
   /// `AndroidScanMode.lowLatency` with `continuousUpdates: true`, which on
   /// lower-end Android devices contributed to scan-time jank.
-  void add(String tag, String message, {DropLogLevel level = DropLogLevel.info}) {
+  void add(
+    String tag,
+    String message, {
+    DropLogLevel level = DropLogLevel.info,
+  }) {
     if (!kDebugMode) return;
 
     final entry = DropLogEntry(
@@ -48,10 +52,10 @@ class DropDebugLog {
 
     // Also print to console so flutter logs catch it
     final prefix = switch (level) {
-      DropLogLevel.ok    => '✅',
-      DropLogLevel.warn  => '⚠️',
+      DropLogLevel.ok => '✅',
+      DropLogLevel.warn => '⚠️',
       DropLogLevel.error => '❌',
-      DropLogLevel.info  => '🔵',
+      DropLogLevel.info => '🔵',
     };
     debugPrint('DROP[$tag] $prefix $message');
   }
@@ -184,19 +188,19 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
 
   Color _levelColor(DropLogLevel level) {
     return switch (level) {
-      DropLogLevel.ok    => const Color(0xFF52B788),
-      DropLogLevel.warn  => const Color(0xFFFFC107),
+      DropLogLevel.ok => const Color(0xFF52B788),
+      DropLogLevel.warn => const Color(0xFFFFC107),
       DropLogLevel.error => const Color(0xFFFF5252),
-      DropLogLevel.info  => const Color(0xFF90CAF9),
+      DropLogLevel.info => const Color(0xFF90CAF9),
     };
   }
 
   String _levelIcon(DropLogLevel level) {
     return switch (level) {
-      DropLogLevel.ok    => '✓',
-      DropLogLevel.warn  => '!',
+      DropLogLevel.ok => '✓',
+      DropLogLevel.warn => '!',
       DropLogLevel.error => '✗',
-      DropLogLevel.info  => '·',
+      DropLogLevel.info => '·',
     };
   }
 
@@ -213,7 +217,10 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
           decoration: BoxDecoration(
             color: const Color(0xE6050E08), // ~90% opaque dark green
             border: Border(
-              top: BorderSide(color: const Color(0xFF52B788).withValues(alpha: 0.4), width: 1),
+              top: BorderSide(
+                color: const Color(0xFF52B788).withValues(alpha: 0.4),
+                width: 1,
+              ),
             ),
           ),
           child: Column(
@@ -227,24 +234,37 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                   children: [
                     Text(
                       'DROP DEBUG',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: const Color(0xFF52B788), letterSpacing: 1.2),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 10,
+                        color: const Color(0xFF52B788),
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${_entries.length} events',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10, color: Color(0x80F0F0F0)),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 10,
+                        color: Color(0x80F0F0F0),
+                      ),
                     ),
                     const Spacer(),
                     // Pin/unpin auto-scroll
                     GestureDetector(
                       onTap: () => setState(() => _pinned = !_pinned),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         child: Text(
                           _pinned ? '⬇ LIVE' : '⏸ PAUSED',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: _pinned
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            color: _pinned
                                 ? const Color(0xFF52B788)
-                                : const Color(0x80F0F0F0)),
+                                : const Color(0x80F0F0F0),
+                          ),
                         ),
                       ),
                     ),
@@ -252,7 +272,8 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                     GestureDetector(
                       onTap: () async {
                         final combined = [
-                          if (_nativeCrashLog != null) '=== NATIVE CRASH LOG ===\n$_nativeCrashLog\n=== DART LOG ===',
+                          if (_nativeCrashLog != null)
+                            '=== NATIVE CRASH LOG ===\n$_nativeCrashLog\n=== DART LOG ===',
                           DropDebugLog.i.toClipboardText(),
                         ].join('\n');
                         await Clipboard.setData(ClipboardData(text: combined));
@@ -266,10 +287,16 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                         }
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         child: Text(
                           'COPY',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: const Color(0x80F0F0F0)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            color: const Color(0x80F0F0F0),
+                          ),
                         ),
                       ),
                     ),
@@ -280,10 +307,16 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                         setState(() => _entries = []);
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         child: Text(
                           'CLR',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 9, color: const Color(0x80F0F0F0)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 9,
+                            color: const Color(0x80F0F0F0),
+                          ),
                         ),
                       ),
                     ),
@@ -297,13 +330,17 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                     ? Center(
                         child: Text(
                           'Waiting for events…',
-                          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: const Color(0x44F0F0F0)),
+                          style: ZendTextStyles.tabularNumeric.copyWith(
+                            fontSize: 11,
+                            color: const Color(0x44F0F0F0),
+                          ),
                         ),
                       )
                     : NotificationListener<ScrollNotification>(
                         onNotification: (n) {
                           if (n is ScrollUpdateNotification) {
-                            final atBottom = _scrollController.position.pixels >=
+                            final atBottom =
+                                _scrollController.position.pixels >=
                                 _scrollController.position.maxScrollExtent - 16;
                             if (_pinned != atBottom) {
                               setState(() => _pinned = atBottom);
@@ -320,7 +357,9 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                             final hh = e.time.hour.toString().padLeft(2, '0');
                             final mm = e.time.minute.toString().padLeft(2, '0');
                             final ss = e.time.second.toString().padLeft(2, '0');
-                            final ms = (e.time.millisecond ~/ 10).toString().padLeft(2, '0');
+                            final ms = (e.time.millisecond ~/ 10)
+                                .toString()
+                                .padLeft(2, '0');
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -328,7 +367,10 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                               ),
                               child: RichText(
                                 text: TextSpan(
-                                  style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 10.5, height: 1.4),
+                                  style: ZendTextStyles.tabularNumeric.copyWith(
+                                    fontSize: 10.5,
+                                    height: 1.4,
+                                  ),
                                   children: [
                                     TextSpan(
                                       text: '$hh:$mm:$ss.$ms ',
@@ -352,8 +394,9 @@ class _DropDebugPanelState extends State<DropDebugPanel> {
                                     TextSpan(
                                       text: e.message,
                                       style: TextStyle(
-                                        color: _levelColor(e.level)
-                                            .withValues(alpha: 0.9),
+                                        color: _levelColor(
+                                          e.level,
+                                        ).withValues(alpha: 0.9),
                                       ),
                                     ),
                                   ],

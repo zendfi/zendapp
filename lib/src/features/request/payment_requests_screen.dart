@@ -101,7 +101,10 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   // Back button sits left, same weight as activity icons
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    child: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -117,7 +120,10 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    icon: Icon(PhosphorIconsRegular.arrowsClockwise, color: zt.textSecondary),
+                    icon: Icon(
+                      PhosphorIconsRegular.arrowsClockwise,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -129,10 +135,11 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: _filters.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(width: 8),
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   final filter = _filters[i];
                   final active = _activeFilter == filter;
@@ -143,12 +150,10 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: active ? zt.accent : zt.bgSecondary,
-                        borderRadius:
-                            BorderRadius.circular(ZendRadii.pill),
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -173,86 +178,86 @@ class _PaymentRequestsScreenState extends State<PaymentRequestsScreen> {
               child: _loading
                   ? const GroupedListSkeleton(count: 5, rowHeight: 92)
                   : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _error!,
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 14,
-                                  color: zt.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: _load,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ZendScrollPage(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                  16, 8, 16, 24),
-                              child: _requests.isEmpty
-                                  ? Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 48),
-                                      child: Center(
-                                        child: Text(
-                                          _activeFilter == 'all'
-                                              ? 'No payment requests yet'
-                                              : 'No ${_filterLabel(_activeFilter).toLowerCase()} requests',
-                                          style: TextStyle(
-                                            fontFamily: 'Geist',
-                                            fontSize: 14,
-                                            color: zt.textSecondary,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  // Single grouped container — same as activity screen
-                                  : Container(
-                                      decoration: BoxDecoration(
-                                        color: zt.bgSecondary,
-                                        borderRadius:
-                                            BorderRadius.circular(24),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          for (var i = 0;
-                                              i < _requests.length;
-                                              i++) ...[
-                                            _RequestTile(
-                                              request: _requests[i],
-                                              onCopy: () => _copyLink(
-                                                  _requests[i]['link_url']
-                                                          as String? ??
-                                                      ''),
-                                              onCancel: _requests[i]
-                                                          ['status'] ==
-                                                      'pending'
-                                                  ? () => _cancel(
-                                                      _requests[i]['id']
-                                                          as String)
-                                                  : null,
-                                            ),
-                                            if (i < _requests.length - 1)
-                                              Divider(
-                                                  color: zt.border,
-                                                  height: 1),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _error!,
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 14,
+                              color: zt.textSecondary,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ZendScrollPage(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          child: _requests.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 48,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _activeFilter == 'all'
+                                          ? 'No payment requests yet'
+                                          : 'No ${_filterLabel(_activeFilter).toLowerCase()} requests',
+                                      style: TextStyle(
+                                        fontFamily: 'Geist',
+                                        fontSize: 14,
+                                        color: zt.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              // Single grouped container — same as activity screen
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    color: zt.bgSecondary,
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      for (
+                                        var i = 0;
+                                        i < _requests.length;
+                                        i++
+                                      ) ...[
+                                        _RequestTile(
+                                          request: _requests[i],
+                                          onCopy: () => _copyLink(
+                                            _requests[i]['link_url']
+                                                    as String? ??
+                                                '',
+                                          ),
+                                          onCancel:
+                                              _requests[i]['status'] ==
+                                                  'pending'
+                                              ? () => _cancel(
+                                                  _requests[i]['id'] as String,
+                                                )
+                                              : null,
+                                        ),
+                                        if (i < _requests.length - 1)
+                                          Divider(color: zt.border, height: 1),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                         ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -297,9 +302,7 @@ class _RequestTile extends StatelessWidget {
     };
 
     // Amount string — always fixed since we filter out PWYW
-    final amountStr = amount != null
-        ? '\$${amount.toStringAsFixed(2)}'
-        : '';
+    final amountStr = amount != null ? '\$${amount.toStringAsFixed(2)}' : '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -322,7 +325,9 @@ class _RequestTile extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -365,7 +370,10 @@ class _RequestTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     link,
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 11,
+                      color: zt.textSecondary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -380,7 +388,10 @@ class _RequestTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               _formatDate(createdAt),
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: zt.textSecondary),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: zt.textSecondary,
+              ),
             ),
           ],
           if (onCancel != null) ...[
@@ -407,8 +418,18 @@ class _RequestTile extends StatelessWidget {
     try {
       final dt = DateTime.parse(iso).toLocal();
       const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
     } catch (_) {

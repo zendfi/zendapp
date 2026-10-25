@@ -1,4 +1,3 @@
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +13,7 @@ import 'contact_support_screen.dart';
 import 'settings_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_modal.dart';
 
 /// You — ZEND BETA spec §29-30 (LOCKED): "You is deliberately boring.
 /// That's a compliment." Avatar + @tag, then exactly three rows —
@@ -246,7 +246,7 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
     final model = ZendScope.of(context);
     final hasPhoto = model.currentAvatarUrl != null;
 
-    final choice = await showModalBottomSheet<String>(
+    final choice = await showZendModalSheet<String>(
       context: context,
       useRootNavigator: true,
       useSafeArea: true,
@@ -466,7 +466,7 @@ class _PickerRow extends StatelessWidget {
 // ── Logout confirmation (bottom sheet, not AlertDialog) ───────────────────────
 
 Future<void> _confirmLogout(BuildContext context) async {
-  final confirmed = await showModalBottomSheet<bool>(
+  final confirmed = await showZendModalSheet<bool>(
     context: context,
     useRootNavigator: true,
     useSafeArea: true,

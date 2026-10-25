@@ -105,8 +105,9 @@ class _DmListScreenState extends State<DmListScreen> {
     // empty collections rather than branching keeps the identity-guard and
     // merge logic below on one code path.
     final pools = ZendFeatures.pools ? model.pools : const <Pool>[];
-    final unreadPools =
-        ZendFeatures.pools ? model.poolsWithNewMessages : const <String>{};
+    final unreadPools = ZendFeatures.pools
+        ? model.poolsWithNewMessages
+        : const <String>{};
 
     // Skip the merge+sort when none of its three inputs changed. Without this
     // it ran on every notifyListeners(), allocating a wrapper per row and

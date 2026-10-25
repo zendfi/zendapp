@@ -37,7 +37,9 @@ class DebitCardTeaser extends StatelessWidget {
               height: 26,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                gradient: const LinearGradient(colors: [Color(0xFFD4C08A), Color(0xFFA9955F)]),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD4C08A), Color(0xFFA9955F)],
+                ),
               ),
             ),
           ),
@@ -50,7 +52,9 @@ class DebitCardTeaser extends StatelessWidget {
               height: 20,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [Color(0x99FFFFFF), Color(0x33FFFFFF)]),
+                gradient: LinearGradient(
+                  colors: [Color(0x99FFFFFF), Color(0x33FFFFFF)],
+                ),
               ),
             ),
           ),
@@ -63,14 +67,20 @@ class DebitCardTeaser extends StatelessWidget {
                 Container(
                   width: 16,
                   height: 16,
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x55F0F0F0)),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0x55F0F0F0),
+                  ),
                 ),
                 Transform.translate(
                   offset: const Offset(-6, 0),
                   child: Container(
                     width: 16,
                     height: 16,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x33F0F0F0)),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0x33F0F0F0),
+                    ),
                   ),
                 ),
               ],
@@ -82,7 +92,10 @@ class DebitCardTeaser extends StatelessWidget {
             left: 0,
             child: Text(
               'Zend Card — coming soon',
-              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 11, color: const Color(0xD9F0F0F0)),
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 11,
+                color: const Color(0xD9F0F0F0),
+              ),
             ),
           ),
           // Dismiss control (Req 25.5).
@@ -93,7 +106,11 @@ class DebitCardTeaser extends StatelessWidget {
               onTap: onDismiss,
               child: const Padding(
                 padding: EdgeInsets.all(4),
-                child: Icon(PhosphorIconsRegular.xCircle, size: 16, color: Color(0x99F0F0F0)),
+                child: Icon(
+                  PhosphorIconsRegular.xCircle,
+                  size: 16,
+                  color: Color(0x99F0F0F0),
+                ),
               ),
             ),
           ),

@@ -42,6 +42,9 @@ class _ZendShellState extends State<ZendShell> {
   // which no longer exists as a tab at all (Zend is now a floating action).
   int _tabIndex = 0;
   late final PageController _pageController;
+  // One detail navigator per tab (desktop web), so each tab keeps whatever
+  // was open in its right-hand pane while you're on another tab.
+  final _detailKeys = List.generate(4, (_) => GlobalKey<NavigatorState>());
   Timer? _bannerTimer;
   // Tracks the last notification ID so re-arrival of a new request
   // forces the banner widget to rebuild and replay the slide-in animation.
@@ -116,7 +119,8 @@ class _ZendShellState extends State<ZendShell> {
     ZendShellController.reportTab(index);
     // Jump instantly — no slide animation for tab-bar taps.
     // Slide animation only fires when the user physically swipes the PageView.
-    _pageController.jumpToPage(index);
+    // No PageView is attached in the desktop two-pane layout.
+    if (_pageController.hasClients) _pageController.jumpToPage(index);
     // Clear the activity badge when the user actively switches to Feed —
     // Feed is where activity/reaction/comment updates live now, taking
     // over the old Activity tab's role (index 2 previously).
@@ -245,6 +249,16 @@ class _ZendShellState extends State<ZendShell> {
     // sub-widgets that have their own element nodes.
     final model = ZendScope.of(context);
     final webDesktop = ZendWebLayout.isDesktop(context);
+    if (!webDesktop) {
+      // Coming back from the desktop layout (window narrowed): the PageView
+      // was rebuilt at its initial page, so line it up with the current tab.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients &&
+            _pageController.page?.round() != _tabIndex) {
+          _pageController.jumpToPage(_tabIndex);
+        }
+      });
+    }
     final pending = model.pendingPaymentRequest;
     final pendingReaction = model.pendingActivityReaction;
     final pendingComment = model.pendingActivityComment;
@@ -308,7 +322,8 @@ class _ZendShellState extends State<ZendShell> {
     if (pendingFunds != null) {
       // Keyed on the arrival itself, so a second deposit replays the
       // slide-in rather than silently mutating the first one's figures.
-      final key = '${pendingFunds.source}:${pendingFunds.amountUsdc}'
+      final key =
+          '${pendingFunds.source}:${pendingFunds.amountUsdc}'
           ':${pendingFunds.originAmount ?? ''}';
       if (key != _lastFundsBannerKey) {
         _lastFundsBannerKey = key;
@@ -365,29 +380,36 @@ class _ZendShellState extends State<ZendShell> {
       body: RepaintBoundary(
         child: Stack(
           children: [
-            PageView(
-              controller: _pageController,
-              // Keep all pages alive so switching tabs doesn't rebuild heavy
-              // screens (activity feed, DM list) from scratch on every tap.
-              physics: const ClampingScrollPhysics(),
-              onPageChanged: (i) {
-                if (i != _tabIndex) {
-                  setState(() => _tabIndex = i);
-                  ZendShellController.reportTab(i);
-                  if (i == 0) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) ZendScope.of(context).markActivityRead();
-                    });
+            if (webDesktop)
+              _DesktopPanes(
+                tabIndex: _tabIndex,
+                pages: keepAlivePages,
+                detailKeys: _detailKeys,
+              )
+            else
+              PageView(
+                controller: _pageController,
+                // Keep all pages alive so switching tabs doesn't rebuild heavy
+                // screens (activity feed, DM list) from scratch on every tap.
+                physics: const ClampingScrollPhysics(),
+                onPageChanged: (i) {
+                  if (i != _tabIndex) {
+                    setState(() => _tabIndex = i);
+                    ZendShellController.reportTab(i);
+                    if (i == 0) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) ZendScope.of(context).markActivityRead();
+                      });
+                    }
+                    if (i == 2) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
+                      });
+                    }
                   }
-                  if (i == 2) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) ZendScope.of(context).setDmUnreadTotal(0);
-                    });
-                  }
-                }
-              },
-              children: keepAlivePages,
-            ),
+                },
+                children: keepAlivePages,
+              ),
             // ── Banner region ──────────────────────────────────────────────
             //
             // Subscribed to [TransferStatusController] here rather than through
@@ -578,8 +600,7 @@ class _ZendShellState extends State<ZendShell> {
       // In web desktop mode the sidebar outside the app column (ZendWebFrame)
       // carries the tabs and the Zend action, so the in-column copies are
       // dropped rather than shown twice.
-      floatingActionButton:
-          (!webDesktop && (_tabIndex == 0 || _tabIndex == 1))
+      floatingActionButton: (!webDesktop && (_tabIndex == 0 || _tabIndex == 1))
           ? _ZendFab(onTap: () => showZendEntrySheet(context))
           : null,
       bottomNavigationBar: webDesktop
@@ -1604,8 +1625,10 @@ class _FundsArrivedBannerState extends State<_FundsArrivedBanner>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
     // Money arriving is worth feeling, not just seeing.
     HapticFeedback.mediumImpact();
@@ -1624,7 +1647,9 @@ class _FundsArrivedBannerState extends State<_FundsArrivedBanner>
     // actually sent ("₦50,000 arrived") and follow with what they got, since
     // that's the number they're checking against their bank app.
     final origin = n.originLabel;
-    final title = origin != null ? '$origin arrived' : '${n.amountLabel} arrived';
+    final title = origin != null
+        ? '$origin arrived'
+        : '${n.amountLabel} arrived';
     final subtitle = origin != null
         ? '${n.amountLabel} added · ${n.sourceLabel}'
         : 'Added to your balance · ${n.sourceLabel}';
@@ -1794,5 +1819,154 @@ class _KeepAliveState extends State<_KeepAlive>
   Widget build(BuildContext context) {
     super.build(context); // required by AutomaticKeepAliveClientMixin
     return TickerMode(enabled: widget.tickersEnabled, child: widget.child);
+  }
+}
+
+/// Desktop web layout for the shell: the tab's own screen as a list pane on
+/// the left, and a detail pane on the right where anything the list opens
+/// with [pushZendSlide] appears (chat threads, profiles, activity detail,
+/// settings) — instead of covering the list like it does on a phone.
+class _DesktopPanes extends StatelessWidget {
+  const _DesktopPanes({
+    required this.tabIndex,
+    required this.pages,
+    required this.detailKeys,
+  });
+
+  final int tabIndex;
+  final List<Widget> pages;
+  final List<GlobalKey<NavigatorState>> detailKeys;
+
+  static const double listWidth = 400;
+
+  static const _empty = <(IconData, String, String)>[
+    (
+      PhosphorIconsRegular.receipt,
+      'Nothing selected',
+      'Pick something from your feed to see the details here.',
+    ),
+    (
+      PhosphorIconsRegular.usersThree,
+      'Your people',
+      'Choose someone to see their profile.',
+    ),
+    (
+      PhosphorIconsRegular.chatCircleText,
+      'Your chats',
+      'Pick a conversation to open it here.',
+    ),
+    (
+      PhosphorIconsRegular.gearSix,
+      'Settings',
+      'Choose a setting to change it here.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final media = MediaQuery.of(context);
+    final detailWidth = (media.size.width - listWidth - 1).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    return ZendDetailPaneScope(
+      navigatorKey: detailKeys[tabIndex],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: listWidth,
+            // Each pane believes it is a screen of its own width, so phone
+            // layouts that read MediaQuery.size lay out for the pane.
+            child: MediaQuery(
+              data: media.copyWith(size: Size(listWidth, media.size.height)),
+              child: IndexedStack(index: tabIndex, children: pages),
+            ),
+          ),
+          Container(width: 1, color: zt.border),
+          Expanded(
+            child: MediaQuery(
+              data: media.copyWith(size: Size(detailWidth, media.size.height)),
+              child: IndexedStack(
+                index: tabIndex,
+                children: [
+                  for (var i = 0; i < detailKeys.length; i++)
+                    HeroControllerScope.none(
+                      child: Navigator(
+                        key: detailKeys[i],
+                        onGenerateRoute: (_) => PageRouteBuilder<void>(
+                          pageBuilder: (_, _, _) => _EmptyDetail(
+                            icon: _empty[i].$1,
+                            title: _empty[i].$2,
+                            body: _empty[i].$3,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyDetail extends StatelessWidget {
+  const _EmptyDetail({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return ColoredBox(
+      color: zt.bgPrimary,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 40,
+                color: zt.textSecondary.withValues(alpha: 0.6),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: zt.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                body,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  height: 1.4,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

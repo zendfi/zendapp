@@ -18,6 +18,7 @@ import 'search_screen.dart';
 import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed, no thousands separator logic beyond what's already
@@ -125,7 +126,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   /// Overflow menu — niche header actions tucked behind a single ⋮ icon.
   void _showOverflowMenu(BuildContext ctx) {
     final zt = ZendTheme.of(ctx);
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: ctx,
       backgroundColor: Colors.transparent,
       builder: (_) {
@@ -255,7 +256,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   }
 
   void _openPoolContributorSheet(String poolId) {
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -290,7 +291,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   }
 
   void _openRequestsThread(_RequestsGroup group) {
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -950,7 +951,7 @@ class _UserThreadTile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final counterparty = thread.counterparty;
 
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
@@ -1330,7 +1331,7 @@ class _PoolThreadTile extends StatelessWidget {
   final VoidCallback onTap;
 
   void _openContributorSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,

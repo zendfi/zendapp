@@ -48,10 +48,7 @@ const _kRails = [
 // ── Rail Select ───────────────────────────────────────────────────────────────
 
 class _RailSelectStage extends StatelessWidget {
-  const _RailSelectStage({
-    required this.amount,
-    required this.onSelect,
-  });
+  const _RailSelectStage({required this.amount, required this.onSelect});
   final double amount;
   final void Function(_BankSendRail) onSelect;
 
@@ -143,7 +140,11 @@ class _RailTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
+            Icon(
+              PhosphorIconsRegular.caretRight,
+              size: 18,
+              color: zt.textSecondary,
+            ),
           ],
         ),
       ),
@@ -204,7 +205,11 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -223,7 +228,10 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                     if (_fxPreview.isNotEmpty)
                       Text(
                         '$amountStr · $_fxPreview',
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 12, color: zt.textSecondary),
+                        style: ZendTextStyles.tabularNumeric.copyWith(
+                          fontSize: 12,
+                          color: zt.textSecondary,
+                        ),
                       ),
                   ],
                 ),
@@ -298,7 +306,8 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
               elevation: 0,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                borderRadius: BorderRadius.circular(ZendRadii.lg),
+              ),
             ),
             child: const Text(
               'Verify account',
@@ -361,7 +370,11 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -382,7 +395,11 @@ class _BankPickerStageState extends State<_BankPickerStage> {
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               hintText: 'Search banks...',
-              prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, size: 20, color: zt.textSecondary),
+              prefixIcon: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
+                color: zt.textSecondary,
+              ),
               filled: true,
               fillColor: zt.bgSecondary,
               border: OutlineInputBorder(
@@ -413,8 +430,9 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                       final bank = _filtered[i];
                       final name = bank['name'] as String? ?? '';
                       return ListTile(
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                        ),
                         title: Text(
                           name,
                           style: TextStyle(
@@ -423,8 +441,11 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                             color: zt.textPrimary,
                           ),
                         ),
-                        trailing: Icon(PhosphorIconsRegular.caretRight,
-                            size: 18, color: zt.textSecondary),
+                        trailing: Icon(
+                          PhosphorIconsRegular.caretRight,
+                          size: 18,
+                          color: zt.textSecondary,
+                        ),
                         onTap: () => widget.onSelect(bank),
                       );
                     },
@@ -464,7 +485,11 @@ class _IntlAccountStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -485,23 +510,28 @@ class _IntlAccountStage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(PhosphorIconsRegular.bank,
-                        size: 48, color: zt.textSecondary),
+                    Icon(
+                      PhosphorIconsRegular.bank,
+                      size: 48,
+                      color: zt.textSecondary,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'No saved accounts yet',
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 15,
-                          color: zt.textSecondary),
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        color: zt.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Add a bank account to get started',
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          color: zt.textSecondary),
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -511,28 +541,34 @@ class _IntlAccountStage extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: savedAccounts.length,
-                separatorBuilder: (_, i) =>
-                    Divider(height: 1, color: zt.border, indent: 16, endIndent: 16),
+                separatorBuilder: (_, i) => Divider(
+                  height: 1,
+                  color: zt.border,
+                  indent: 16,
+                  endIndent: 16,
+                ),
                 itemBuilder: (context, i) {
                   final acct = savedAccounts[i];
                   final label = acct['label'] as String? ?? 'Bank account';
                   final bankName = acct['bank_name'] as String? ?? '';
                   final last4 = acct['account_last4'] as String?;
-                  final accountOwnerName = acct['account_owner_name'] as String?;
-                  final isNgn = (acct['payment_rail'] as String?) == 'ngn'
-                      || (acct['currency'] as String?) == 'NGN';
+                  final accountOwnerName =
+                      acct['account_owner_name'] as String?;
+                  final isNgn =
+                      (acct['payment_rail'] as String?) == 'ngn' ||
+                      (acct['currency'] as String?) == 'NGN';
 
                   // NGN: show "Account Holder Name" as title, "account_number · Bank Name" as subtitle
                   // Intl: show label as title, "Bank · ••••last4 · currency" as subtitle
-                  final displayTitle = isNgn && accountOwnerName != null && accountOwnerName.isNotEmpty
+                  final displayTitle =
+                      isNgn &&
+                          accountOwnerName != null &&
+                          accountOwnerName.isNotEmpty
                       ? accountOwnerName
                       : label;
 
                   final displaySubtitle = isNgn
-                      ? [
-                          ?last4,
-                          if (bankName.isNotEmpty) bankName,
-                        ].join(' · ')
+                      ? [?last4, if (bankName.isNotEmpty) bankName].join(' · ')
                       : [
                           if (bankName.isNotEmpty) bankName,
                           if (last4 != null) '••••$last4',
@@ -540,8 +576,10 @@ class _IntlAccountStage extends StatelessWidget {
                         ].join(' · ');
 
                   return ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     leading: Container(
                       width: 44,
                       height: 44,
@@ -549,25 +587,33 @@ class _IntlAccountStage extends StatelessWidget {
                         color: zt.bgSecondary,
                         borderRadius: BorderRadius.circular(ZendRadii.md),
                       ),
-                      child: Icon(PhosphorIconsRegular.bank,
-                          size: 20, color: zt.textSecondary),
+                      child: Icon(
+                        PhosphorIconsRegular.bank,
+                        size: 20,
+                        color: zt.textSecondary,
+                      ),
                     ),
                     title: Text(
                       displayTitle,
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: zt.textPrimary),
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
                     ),
                     subtitle: Text(
                       displaySubtitle,
                       style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 12,
-                          color: zt.textSecondary),
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: zt.textSecondary,
+                      ),
                     ),
-                    trailing: Icon(PhosphorIconsRegular.caretRight, color: zt.textSecondary),
+                    trailing: Icon(
+                      PhosphorIconsRegular.caretRight,
+                      color: zt.textSecondary,
+                    ),
                     onTap: () => onSelect(acct),
                   );
                 },
@@ -636,11 +682,11 @@ class _ConfirmationStage extends StatelessWidget {
   final VoidCallback onBack;
 
   String get _fiatSymbol => switch (rail.currency) {
-        'NGN' => '₦',
-        'GBP' => '£',
-        'EUR' => '€',
-        _ => '\$',
-      };
+    'NGN' => '₦',
+    'GBP' => '£',
+    'EUR' => '€',
+    _ => '\$',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -658,7 +704,11 @@ class _ConfirmationStage extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onBack,
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -676,7 +726,9 @@ class _ConfirmationStage extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                if (fiatAmount != null && fiatAmount! > 0 && rail == _BankSendRail.ngn) ...[
+                if (fiatAmount != null &&
+                    fiatAmount! > 0 &&
+                    rail == _BankSendRail.ngn) ...[
                   Text(
                     '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)}',
                     style: TextStyle(
@@ -689,7 +741,10 @@ class _ConfirmationStage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '$amountStr USDC',
-                    style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 13, color: zt.textSecondary),
+                    style: ZendTextStyles.tabularNumeric.copyWith(
+                      fontSize: 13,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ] else ...[
                   Text(
@@ -705,7 +760,10 @@ class _ConfirmationStage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
-                      style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 15, color: zt.textSecondary),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 15,
+                        color: zt.textSecondary,
+                      ),
                     ),
                   ],
                 ],
@@ -726,15 +784,22 @@ class _ConfirmationStage extends StatelessWidget {
                 _DetailRow(label: 'Bank', value: bankName, zt: zt),
                 if (accountNumberMasked.isNotEmpty) ...[
                   Divider(height: 20, color: zt.border),
-                  _DetailRow(label: 'Account', value: accountNumberMasked, zt: zt),
+                  _DetailRow(
+                    label: 'Account',
+                    value: accountNumberMasked,
+                    zt: zt,
+                  ),
                 ],
                 Divider(height: 20, color: zt.border),
                 _DetailRow(label: 'You send', value: '$amountStr USDC', zt: zt),
-                if (fiatAmount != null && fiatAmount! > 0 && rail == _BankSendRail.ngn) ...[
+                if (fiatAmount != null &&
+                    fiatAmount! > 0 &&
+                    rail == _BankSendRail.ngn) ...[
                   Divider(height: 20, color: zt.border),
                   _DetailRow(
                     label: 'They receive',
-                    value: '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
+                    value:
+                        '$_fiatSymbol${_formatFiat(fiatAmount!, rail.currency)} ${rail.currency}',
                     zt: zt,
                     highlight: true,
                   ),
@@ -767,15 +832,23 @@ class _DetailRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary)),
-        Text(value,
-            style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: highlight ? zt.accent : zt.textPrimary)),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14,
+            color: zt.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: highlight ? zt.accent : zt.textPrimary,
+          ),
+        ),
       ],
     );
   }
@@ -825,7 +898,11 @@ class _PinStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -872,10 +949,7 @@ class _PinStage extends StatelessWidget {
                 : null,
           ),
           const Spacer(),
-          _LightPinKeypad(
-            onTap: onKey,
-            keyHeight: compact ? 56 : 64,
-          ),
+          _LightPinKeypad(onTap: onKey, keyHeight: compact ? 56 : 64),
           SizedBox(height: compact ? 4 : 12),
         ],
       ),
@@ -924,12 +998,7 @@ class _LightPinKeypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const keys = [
-      '1', '2', '3',
-      '4', '5', '6',
-      '7', '8', '9',
-      '',  '0', 'del',
-    ];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
     return Column(
       children: [
         for (var row = 0; row < 4; row++) ...[
@@ -1068,7 +1137,9 @@ class _SuccessStageState extends State<_SuccessStage>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
   }
@@ -1080,11 +1151,11 @@ class _SuccessStageState extends State<_SuccessStage>
   }
 
   String get _fiatSymbol => switch (widget.rail.currency) {
-        'NGN' => '₦',
-        'GBP' => '£',
-        'EUR' => '€',
-        _ => '\$',
-      };
+    'NGN' => '₦',
+    'GBP' => '£',
+    'EUR' => '€',
+    _ => '\$',
+  };
 
   String get _subtitle {
     if (widget.fiatAmount != null && widget.fiatAmount! > 0) {
@@ -1118,8 +1189,14 @@ class _SuccessStageState extends State<_SuccessStage>
                 width: 64,
                 height: 64,
                 decoration: const BoxDecoration(
-                    color: ZendColors.positive, shape: BoxShape.circle),
-                child: const Icon(PhosphorIconsRegular.checkCircle, color: Colors.white, size: 36),
+                  color: ZendColors.positive,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  PhosphorIconsRegular.checkCircle,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -1137,7 +1214,10 @@ class _SuccessStageState extends State<_SuccessStage>
               _subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
+                fontFamily: 'Geist',
+                fontSize: 15,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -1186,24 +1266,34 @@ class _ErrorStage extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: const BoxDecoration(
-                  color: ZendColors.destructive, shape: BoxShape.circle),
-              child: const Icon(PhosphorIconsRegular.xCircle, color: Colors.white, size: 36),
+                color: ZendColors.destructive,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                PhosphorIconsRegular.xCircle,
+                color: Colors.white,
+                size: 36,
+              ),
             ),
             const SizedBox(height: 20),
             Text(
               'Oops',
               style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 32,
-                  color: zt.textPrimary),
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w700,
+                fontSize: 32,
+                color: zt.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontFamily: 'Geist', fontSize: 15, color: zt.textSecondary),
+                fontFamily: 'Geist',
+                fontSize: 15,
+                color: zt.textSecondary,
+              ),
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -1287,15 +1377,12 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
             'account_number': _fpAccountController.text.trim(),
           };
         case _BankSendRail.sepa:
-          accountDetails = {
-            'iban': _ibanController.text.trim().toUpperCase(),
-          };
+          accountDetails = {'iban': _ibanController.text.trim().toUpperCase()};
         default:
           accountDetails = {};
       }
       final result = await model.walletService.apiClient.addIntlBankAccount({
-        'label':
-            '${_ownerController.text.trim()} (${widget.rail.currency})',
+        'label': '${_ownerController.text.trim()} (${widget.rail.currency})',
         'currency': widget.rail.bridgeCurrency,
         'payment_rail': widget.rail.bridgeRail,
         'account_owner_name': _ownerController.text.trim(),
@@ -1347,7 +1434,11 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
             children: [
               GestureDetector(
                 onTap: widget.onBack,
-                child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+                child: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -1437,9 +1528,10 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                     Text(
                       _errorMessage!,
                       style: const TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          color: ZendColors.destructive),
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: ZendColors.destructive,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -1459,14 +1551,16 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                 elevation: 0,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.lg)),
+                  borderRadius: BorderRadius.circular(ZendRadii.lg),
+                ),
               ),
               child: const Text(
                 'Save account',
                 style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600),
+                  fontFamily: 'Geist',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
         ],
@@ -1503,10 +1597,11 @@ class _FormField extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: zt.textSecondary),
+            fontFamily: 'Geist',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: zt.textSecondary,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(

@@ -15,7 +15,8 @@ sealed class NotificationDestination {
       // ── Financial ──────────────────────────────────────────────────────────
       case 'transfer_received':
       case 'drop_confirmed':
-        final senderTag = data['sender_zendtag'] as String? ??
+        final senderTag =
+            data['sender_zendtag'] as String? ??
             data['counterparty_zendtag'] as String?;
         final transferId = data['transfer_id'] as String?;
         return NotifActivityFeed(

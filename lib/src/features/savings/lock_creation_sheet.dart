@@ -153,9 +153,9 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
   }
 
   double get _heightFactor => switch (_stage) {
-        _LockStage.amountDate => 0.82,
-        _LockStage.confirm => 0.70,
-      };
+    _LockStage.amountDate => 0.82,
+    _LockStage.confirm => 0.70,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -185,54 +185,54 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
 
   Widget _buildStage() {
     if (_processing) {
-      return const Center(
-        child: ZendLoader(color: ZendColors.accentBright),
-      );
+      return const Center(child: ZendLoader(color: ZendColors.accentBright));
     }
 
     return switch (_stage) {
       _LockStage.amountDate => _AmountDateStage(
-          amountInput: _amountInput,
-          amountError: _amountError,
-          unlockDate: _unlockDate,
-          dateError: _dateError,
-          freePocketBalance: widget.freePocketBalance,
-          canContinue: _canContinue,
-          onKey: _onAmountKey,
-          onPickDate: _pickUnlockDate,
-          onContinue: () {
-            if (!_amountValid) {
-              setState(() {
-                if (_parsedAmount <= 0) {
-                  _amountError = 'Enter an amount to lock';
-                } else if (_parsedAmount > widget.freePocketBalance) {
-                  _amountError =
-                      'Not enough in Stash (\$${widget.freePocketBalance.toStringAsFixed(2)})';
-                }
-              });
-              return;
-            }
-            if (!_dateValid) {
-              setState(() => _dateError = 'Pick an unlock date (minimum tomorrow)');
-              return;
-            }
-            setState(() => _stage = _LockStage.confirm);
-          },
-        ),
+        amountInput: _amountInput,
+        amountError: _amountError,
+        unlockDate: _unlockDate,
+        dateError: _dateError,
+        freePocketBalance: widget.freePocketBalance,
+        canContinue: _canContinue,
+        onKey: _onAmountKey,
+        onPickDate: _pickUnlockDate,
+        onContinue: () {
+          if (!_amountValid) {
+            setState(() {
+              if (_parsedAmount <= 0) {
+                _amountError = 'Enter an amount to lock';
+              } else if (_parsedAmount > widget.freePocketBalance) {
+                _amountError =
+                    'Not enough in Stash (\$${widget.freePocketBalance.toStringAsFixed(2)})';
+              }
+            });
+            return;
+          }
+          if (!_dateValid) {
+            setState(
+              () => _dateError = 'Pick an unlock date (minimum tomorrow)',
+            );
+            return;
+          }
+          setState(() => _stage = _LockStage.confirm);
+        },
+      ),
       _LockStage.confirm => _ConfirmStage(
-          amountUsd: _parsedAmount,
-          unlockDate: _unlockDate!,
-          pinDigits: _pinDigits,
-          pinError: _pinError,
-          errorMessage: _errorMessage,
-          onKey: _onPinKey,
-          onBack: () => setState(() {
-            _pinDigits = '';
-            _pinError = null;
-            _errorMessage = null;
-            _stage = _LockStage.amountDate;
-          }),
-        ),
+        amountUsd: _parsedAmount,
+        unlockDate: _unlockDate!,
+        pinDigits: _pinDigits,
+        pinError: _pinError,
+        errorMessage: _errorMessage,
+        onKey: _onPinKey,
+        onBack: () => setState(() {
+          _pinDigits = '';
+          _pinError = null;
+          _errorMessage = null;
+          _stage = _LockStage.amountDate;
+        }),
+      ),
     };
   }
 }
@@ -262,13 +262,22 @@ class _AmountDateStage extends StatelessWidget {
   final VoidCallback onPickDate;
   final VoidCallback onContinue;
 
-  String get _displayAmount =>
-      amountInput.isEmpty ? '\$0' : '\$$amountInput';
+  String get _displayAmount => amountInput.isEmpty ? '\$0' : '\$$amountInput';
 
   String _formatDate(DateTime d) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -331,7 +340,9 @@ class _AmountDateStage extends StatelessWidget {
             onTap: onPickDate,
             child: Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: ZendSpacing.md, vertical: ZendSpacing.sm),
+                horizontal: ZendSpacing.md,
+                vertical: ZendSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: zt.bgSecondary,
                 borderRadius: BorderRadius.circular(ZendRadii.md),
@@ -341,8 +352,11 @@ class _AmountDateStage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIconsRegular.calendar,
-                      size: 16, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.calendar,
+                    size: 16,
+                    color: zt.textSecondary,
+                  ),
                   const SizedBox(width: ZendSpacing.xs),
                   Expanded(
                     child: Text(
@@ -358,7 +372,11 @@ class _AmountDateStage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Icon(PhosphorIconsRegular.caretRight, size: 18, color: zt.textSecondary),
+                  Icon(
+                    PhosphorIconsRegular.caretRight,
+                    size: 18,
+                    color: zt.textSecondary,
+                  ),
                 ],
               ),
             ),
@@ -412,8 +430,18 @@ class _ConfirmStage extends StatelessWidget {
 
   String _formatDate(DateTime d) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -430,7 +458,11 @@ class _ConfirmStage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: GestureDetector(
               onTap: onBack,
-              child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary, size: 22),
+              child: Icon(
+                PhosphorIconsRegular.caretLeft,
+                color: zt.textPrimary,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -448,8 +480,11 @@ class _ConfirmStage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(PhosphorIconsRegular.lockKey,
-                        size: 18, color: ZendColors.accentBright),
+                    const Icon(
+                      PhosphorIconsRegular.lockKey,
+                      size: 18,
+                      color: ZendColors.accentBright,
+                    ),
                     const SizedBox(width: ZendSpacing.xs),
                     Text(
                       'Locking \$${amountUsd.toStringAsFixed(2)}',

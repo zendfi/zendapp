@@ -10,6 +10,7 @@ import 'pocket_screen.dart' show GoalProgressPainter;
 import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   const GoalDetailScreen({super.key, required this.pocket});
@@ -41,7 +42,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Future<void> _openDepositSheet() async {
-    await showModalBottomSheet<void>(
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -56,7 +57,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Future<void> _openWithdrawSheet() async {
-    await showModalBottomSheet<void>(
+    await showZendModalSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -80,8 +81,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       final now = DateTime.now();
       final diff = date.difference(now).inDays;
       final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       final dateStr = '${months[date.month - 1]} ${date.day}, ${date.year}';
       if (diff < 0) return '$dateStr · Deadline passed';
@@ -112,7 +123,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 8),
               child: IconButton(
-                icon: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                icon: Icon(
+                  PhosphorIconsRegular.caretLeft,
+                  color: zt.textPrimary,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -164,7 +178,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           ),
                           Text(
                             '${(_pocket.goalProgress ?? 0.0).toStringAsFixed(0)}%',
-                            style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary),
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: zt.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -193,11 +211,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   ),
                   if (_pocket.goalDeadline != null) ...[
                     Divider(color: zt.border, height: 24),
-                    _StatRow(
-                      label: 'Deadline',
-                      value: _deadlineLabel,
-                      zt: zt,
-                    ),
+                    _StatRow(label: 'Deadline', value: _deadlineLabel, zt: zt),
                   ],
                   Divider(color: zt.border, height: 24),
                   _StatRow(
@@ -306,7 +320,11 @@ class _StatRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 14, fontWeight: FontWeight.w500, color: valueColor ?? zt.textPrimary),
+          style: ZendTextStyles.tabularNumeric.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: valueColor ?? zt.textPrimary,
+          ),
         ),
       ],
     );

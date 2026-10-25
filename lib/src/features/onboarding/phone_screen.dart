@@ -7,6 +7,7 @@ import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import 'otp_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../design/zend_modal.dart';
 
 /// Entry screen — user can sign in with phone number OR email.
 class PhoneScreen extends StatefulWidget {
@@ -32,7 +33,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
   }
 
   Future<void> _pickCountryCode() async {
-    final selected = await showModalBottomSheet<_CountryOption>(
+    final selected = await showZendModalSheet<_CountryOption>(
       context: context,
       showDragHandle: true,
       builder: (context) {
@@ -43,12 +44,18 @@ class _PhoneScreenState extends State<PhoneScreen> {
             itemBuilder: (context, index) {
               final option = _countryOptions[index];
               return ListTile(
-                title: Text(option.name,
-                    style: const TextStyle(fontFamily: 'Geist')),
-                subtitle: Text(option.isoCode,
-                    style: TextStyle(color: ZendTheme.of(context).textSecondary)),
-                trailing: Text(option.dialCode,
-                    style: ZendTextStyles.tabularNumeric),
+                title: Text(
+                  option.name,
+                  style: const TextStyle(fontFamily: 'Geist'),
+                ),
+                subtitle: Text(
+                  option.isoCode,
+                  style: TextStyle(color: ZendTheme.of(context).textSecondary),
+                ),
+                trailing: Text(
+                  option.dialCode,
+                  style: ZendTextStyles.tabularNumeric,
+                ),
                 onTap: () => Navigator.of(context).pop(option),
               );
             },
@@ -69,8 +76,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
       final rawNumber = _phoneController.text.trim();
       if (rawNumber.isEmpty) return;
       final digitsOnly = rawNumber.replaceAll(RegExp(r'\D'), '');
-      final normalized =
-          digitsOnly.startsWith('0') ? digitsOnly.substring(1) : digitsOnly;
+      final normalized = digitsOnly.startsWith('0')
+          ? digitsOnly.substring(1)
+          : digitsOnly;
       if (normalized.length < 6) {
         messenger.showSnackBar(
           const SnackBar(content: Text('Please enter a valid phone number.')),
@@ -83,9 +91,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
         await model.authService.requestOtp(phoneNumber);
         model.stopLoading();
         if (!mounted) return;
-        navigator.push(zendRoute(
-          page: OtpScreen(contactHint: phoneNumber, isEmail: false),
-        ));
+        navigator.push(
+          zendRoute(page: OtpScreen(contactHint: phoneNumber, isEmail: false)),
+        );
       } on ApiException catch (e) {
         model.stopLoading();
         if (!mounted) return;
@@ -99,7 +107,8 @@ class _PhoneScreenState extends State<PhoneScreen> {
         if (!mounted) return;
         messenger.showSnackBar(
           const SnackBar(
-              content: Text('Something went wrong. Please try again.')),
+            content: Text('Something went wrong. Please try again.'),
+          ),
         );
       }
     } else {
@@ -116,9 +125,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
         await model.authService.requestOtpByEmail(email);
         model.stopLoading();
         if (!mounted) return;
-        navigator.push(zendRoute(
-          page: OtpScreen(contactHint: email, isEmail: true),
-        ));
+        navigator.push(
+          zendRoute(page: OtpScreen(contactHint: email, isEmail: true)),
+        );
       } on ApiException catch (e) {
         model.stopLoading();
         if (!mounted) return;
@@ -132,7 +141,8 @@ class _PhoneScreenState extends State<PhoneScreen> {
         if (!mounted) return;
         messenger.showSnackBar(
           const SnackBar(
-              content: Text('Something went wrong. Please try again.')),
+            content: Text('Something went wrong. Please try again.'),
+          ),
         );
       }
     }
@@ -149,77 +159,111 @@ class _PhoneScreenState extends State<PhoneScreen> {
             const OnboardingProgressBar(step: 1, totalSteps: 6),
             Expanded(
               child: ZendScrollPage(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 48),
-                    Text(
-                      _mode == _InputMode.phone ? "What's your number?" : "What's your email?",
-                      style: TextStyle(fontFamily: 'Geist', fontSize: 32, height: 1.08, fontWeight: FontWeight.w700, color: zt.textPrimary),
-                    ),
-                    const SizedBox(height: 20),
-                    if (_mode == _InputMode.phone) ...[
-                      Row(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _CountryPill(code: _countryCode, onTap: _pickCountryCode),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 24, color: zt.textPrimary),
+                          const SizedBox(height: 48),
+                          Text(
+                            _mode == _InputMode.phone
+                                ? "What's your number?"
+                                : "What's your email?",
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 32,
+                              height: 1.08,
+                              fontWeight: FontWeight.w700,
+                              color: zt.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (_mode == _InputMode.phone) ...[
+                            Row(
+                              children: [
+                                _CountryPill(
+                                  code: _countryCode,
+                                  onTap: _pickCountryCode,
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    style: ZendTextStyles.tabularNumeric
+                                        .copyWith(
+                                          fontSize: 24,
+                                          color: zt.textPrimary,
+                                        ),
+                                    decoration: InputDecoration(
+                                      hintText: '0000 000 000',
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintStyle: TextStyle(
+                                        color: zt.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            TextField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              autocorrect: false,
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 20,
+                                color: zt.textPrimary,
+                              ),
                               decoration: InputDecoration(
-                                hintText: '0000 000 000',
+                                hintText: 'you@example.com',
                                 filled: false,
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                                 hintStyle: TextStyle(color: zt.textSecondary),
                               ),
                             ),
+                          ],
+                          const SizedBox(height: 8),
+                          Divider(color: zt.border),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _mode = _mode == _InputMode.phone
+                                  ? _InputMode.email
+                                  : _InputMode.phone;
+                            }),
+                            child: Text(
+                              _mode == _InputMode.phone
+                                  ? 'Use email instead'
+                                  : 'Use phone number instead',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 14,
+                                color: zt.accent,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
+                          const Spacer(),
+                          PrimaryButton(
+                            label: 'Continue',
+                            onPressed: _onContinue,
+                          ),
+                          const SizedBox(height: 24),
                         ],
                       ),
-                    ] else ...[
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        style: ZendTextStyles.tabularNumeric.copyWith(fontSize: 20, color: zt.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'you@example.com',
-                          filled: false,
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintStyle: TextStyle(color: zt.textSecondary),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Divider(color: zt.border),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _mode = _mode == _InputMode.phone ? _InputMode.email : _InputMode.phone;
-                      }),
-                      child: Text(
-                        _mode == _InputMode.phone ? 'Use email instead' : 'Use phone number instead',
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.accent, fontWeight: FontWeight.w500),
-                      ),
                     ),
-                    const Spacer(),
-                    PrimaryButton(label: 'Continue', onPressed: _onContinue),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
               ),
             ),
           ],
@@ -244,18 +288,45 @@ class _CountryPill extends StatelessWidget {
       child: Container(
         height: 42,
         padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(color: zt.bgSecondary, borderRadius: BorderRadius.circular(ZendRadii.pill)),
+        decoration: BoxDecoration(
+          color: zt.bgSecondary,
+          borderRadius: BorderRadius.circular(ZendRadii.pill),
+        ),
         child: Row(
           children: [
             Container(
-              width: 18, height: 18,
-              decoration: const BoxDecoration(color: ZendColors.bgDeep, shape: BoxShape.circle),
-              child: const Center(child: Text('◉', style: TextStyle(fontSize: 10, color: ZendColors.accentBright))),
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                color: ZendColors.bgDeep,
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text(
+                  '◉',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: ZendColors.accentBright,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 8),
-            Text(code, style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
+            Text(
+              code,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
+            ),
             const SizedBox(width: 4),
-            Icon(PhosphorIconsRegular.caretDown, size: 18, color: zt.textSecondary),
+            Icon(
+              PhosphorIconsRegular.caretDown,
+              size: 18,
+              color: zt.textSecondary,
+            ),
           ],
         ),
       ),

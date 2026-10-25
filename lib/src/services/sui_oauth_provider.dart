@@ -95,7 +95,8 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     Random? random,
   }) : _http = httpClient ?? http.Client(),
        _random = random ?? Random.secure() {
-    if (callbackUrlScheme == 'https' && (httpsHost == null || httpsPath == null)) {
+    if (callbackUrlScheme == 'https' &&
+        (httpsHost == null || httpsPath == null)) {
       // flutter_web_auth_2 5.x requires both on Android when the callback is an
       // App Link; failing here beats failing inside the platform channel.
       throw ArgumentError(
@@ -104,7 +105,8 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     }
   }
 
-  static const _authorizationEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
+  static const _authorizationEndpoint =
+      'https://accounts.google.com/o/oauth2/v2/auth';
   static const _tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
   /// Hidden per-app Drive folder. Non-sensitive per Google's Drive scope
@@ -228,9 +230,7 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     final returned = _parseCallback(callback);
     final error = returned['error'];
     if (error != null) {
-      throw SuiOAuthException(
-        'Google rejected the sign-in request: $error',
-      );
+      throw SuiOAuthException('Google rejected the sign-in request: $error');
     }
     if (returned['state'] != state) {
       throw const SuiOAuthException(
@@ -451,7 +451,10 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
     return merged;
   }
 
-  void _assertNonceMatches({required String idToken, required String expected}) {
+  void _assertNonceMatches({
+    required String idToken,
+    required String expected,
+  }) {
     if (_claims(idToken)['nonce'] != expected) {
       throw const SuiOAuthException(
         'The ID token nonce does not match this sign-in attempt',

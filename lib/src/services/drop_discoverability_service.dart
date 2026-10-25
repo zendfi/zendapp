@@ -30,15 +30,16 @@ class DropDiscoverabilityService extends ChangeNotifier {
   DropDiscoverabilityService({
     required ApiClient apiClient,
     required WalletService walletService,
-  })  : _apiClient = apiClient,
-        _walletService = walletService;
+  }) : _apiClient = apiClient,
+       _walletService = walletService;
 
   final ApiClient _apiClient;
   // ignore: unused_field
   final WalletService _walletService;
 
-  static const MethodChannel _channel =
-      MethodChannel('com.zendfi.app/drop_advertiser');
+  static const MethodChannel _channel = MethodChannel(
+    'com.zendfi.app/drop_advertiser',
+  );
   static const String _prefKey = 'drop_discoverable';
 
   bool _isDiscoverable = false;
@@ -54,10 +55,15 @@ class DropDiscoverabilityService extends ChangeNotifier {
     const callbackChannel = MethodChannel('com.zendfi.app/drop_advertiser');
     callbackChannel.setMethodCallHandler((call) async {
       if (call.method == 'onPermissionDenied') {
-        DropDebugLog.i.add('DISC', 'BLE permission denied by user', level: DropLogLevel.error);
+        DropDebugLog.i.add(
+          'DISC',
+          'BLE permission denied by user',
+          level: DropLogLevel.error,
+        );
         _isLoading = false;
         _isDiscoverable = false;
-        _lastError = 'Bluetooth permission required. '
+        _lastError =
+            'Bluetooth permission required. '
             'Go to Settings → Apps → Zend! App → Permissions → Nearby devices → Allow.';
         notifyListeners();
       }
@@ -86,7 +92,10 @@ class DropDiscoverabilityService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final wasOn = prefs.getBool(_prefKey) ?? false;
     if (wasOn) {
-      DropDebugLog.i.add('DISC', 'Restoring discoverability from saved preference');
+      DropDebugLog.i.add(
+        'DISC',
+        'Restoring discoverability from saved preference',
+      );
       await _startAdvertising(fromInit: true);
     }
   }
@@ -120,7 +129,10 @@ class DropDiscoverabilityService extends ChangeNotifier {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final ttlRemaining = payload.expiresAt - now;
     if (ttlRemaining < 30) {
-      DropDebugLog.i.add('DISC', 'Beacon stale on foreground ($ttlRemaining s) — refreshing immediately');
+      DropDebugLog.i.add(
+        'DISC',
+        'Beacon stale on foreground ($ttlRemaining s) — refreshing immediately',
+      );
       await _startAdvertising(fromInit: true);
     } else {
       // Beacon still valid — just reschedule the refresh timer
@@ -166,7 +178,10 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
   /// Stops advertising and turns off the preference permanently.
   Future<void> _stop({bool userInitiated = false}) async {
-    DropDebugLog.i.add('DISC', 'Stopping discoverability (userInitiated=$userInitiated)');
+    DropDebugLog.i.add(
+      'DISC',
+      'Stopping discoverability (userInitiated=$userInitiated)',
+    );
     _refreshTimer?.cancel();
     _refreshTimer = null;
     _currentPayload = null;
@@ -198,13 +213,15 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
     try {
       final beacon = await _apiClient.generateBeacon();
-      final ttl = beacon.expiresAt -
-          (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+      final ttl =
+          beacon.expiresAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000);
 
       if (ttl < 10) {
-        DropDebugLog.i.add('DISC',
-            'Beacon TTL too short ($ttl s) after fetch — retrying',
-            level: DropLogLevel.warn);
+        DropDebugLog.i.add(
+          'DISC',
+          'Beacon TTL too short ($ttl s) after fetch — retrying',
+          level: DropLogLevel.warn,
+        );
         _isLoading = false;
         notifyListeners();
         await _startAdvertising(fromInit: fromInit);
@@ -219,9 +236,11 @@ class DropDiscoverabilityService extends ChangeNotifier {
         signature: beacon.signature,
       );
 
-      DropDebugLog.i.add('DISC',
-          'Beacon OK: @${beacon.zendtag} TTL=${ttl}s nonce=${beacon.nonce.substring(0, 8)}…',
-          level: DropLogLevel.ok);
+      DropDebugLog.i.add(
+        'DISC',
+        'Beacon OK: @${beacon.zendtag} TTL=${ttl}s nonce=${beacon.nonce.substring(0, 8)}…',
+        level: DropLogLevel.ok,
+      );
 
       await _startNativeService(_currentPayload!);
 
@@ -238,8 +257,11 @@ class DropDiscoverabilityService extends ChangeNotifier {
       _scheduleRefresh(_currentPayload!);
       notifyListeners();
     } catch (e) {
-      DropDebugLog.i.add('DISC', 'Failed to start discoverability: $e',
-          level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'DISC',
+        'Failed to start discoverability: $e',
+        level: DropLogLevel.error,
+      );
       _isLoading = false;
       _isDiscoverable = false;
       // Surface a user-visible error for the FGS_BLOCKED case so the profile
@@ -249,10 +271,12 @@ class DropDiscoverabilityService extends ChangeNotifier {
           // Could be permission denial OR battery restriction — check permissions
           final hasPerms = await _checkBlePermsQuiet();
           if (!hasPerms) {
-            _lastError = 'Nearby devices permission required.\n'
+            _lastError =
+                'Nearby devices permission required.\n'
                 'Go to Settings → Apps → Zend! App → Permissions → Nearby devices → Allow.';
           } else {
-            _lastError = 'Android restricted the background service.\n'
+            _lastError =
+                'Android restricted the background service.\n'
                 'Go to Settings → Battery → Zend! App → set to "Unrestricted".';
           }
         } else {
@@ -267,8 +291,9 @@ class DropDiscoverabilityService extends ChangeNotifier {
 
   void _scheduleRefresh(GattPayload payload) {
     _refreshTimer?.cancel();
-    final expiresAt =
-        DateTime.fromMillisecondsSinceEpoch(payload.expiresAt * 1000);
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+      payload.expiresAt * 1000,
+    );
     // Refresh 30s before expiry — gives enough buffer even with network latency.
     // With the 300s TTL, this fires at ~270s = 4.5 minutes of stable advertising.
     final refreshAt = expiresAt.subtract(const Duration(seconds: 30));
@@ -297,7 +322,10 @@ class DropDiscoverabilityService extends ChangeNotifier {
     if (!Platform.isAndroid) return;
 
     if (!_appInForeground) {
-      DropDebugLog.i.add('DISC', 'App backgrounded — skipping native start (will restart on foreground)');
+      DropDebugLog.i.add(
+        'DISC',
+        'App backgrounded — skipping native start (will restart on foreground)',
+      );
       return;
     }
 
@@ -305,7 +333,8 @@ class DropDiscoverabilityService extends ChangeNotifier {
       // Check permissions first. If not granted, startAdvertising will trigger
       // the system dialog natively — but we MUST NOT do the isServiceRunning
       // check in that case, since the service hasn't had a chance to start yet.
-      final hasPerms = await _channel.invokeMethod<bool>('checkBlePermissions') ?? false;
+      final hasPerms =
+          await _channel.invokeMethod<bool>('checkBlePermissions') ?? false;
 
       await _channel.invokeMethod('startAdvertising', {
         'zendtag': payload.zendtag,
@@ -319,22 +348,41 @@ class DropDiscoverabilityService extends ChangeNotifier {
         // Permission dialog is now showing — return without the isServiceRunning
         // check. The service will start once the user grants permission, and the
         // next beacon refresh cycle will confirm it's running.
-        DropDebugLog.i.add('DISC', 'Permission dialog shown — skipping service confirmation check');
+        DropDebugLog.i.add(
+          'DISC',
+          'Permission dialog shown — skipping service confirmation check',
+        );
         return;
       }
 
-      DropDebugLog.i.add('DISC', 'startService() called — waiting for service to confirm');
+      DropDebugLog.i.add(
+        'DISC',
+        'startService() called — waiting for service to confirm',
+      );
       await Future.delayed(const Duration(milliseconds: 500));
       final running = await _isServiceRunning();
       if (!running) {
-        DropDebugLog.i.add('DISC',
-            'Service not running after start — BLE permission denied or battery restriction',
-            level: DropLogLevel.error);
-        throw PlatformException(code: 'FGS_BLOCKED', message: 'SERVICE_NOT_RUNNING');
+        DropDebugLog.i.add(
+          'DISC',
+          'Service not running after start — BLE permission denied or battery restriction',
+          level: DropLogLevel.error,
+        );
+        throw PlatformException(
+          code: 'FGS_BLOCKED',
+          message: 'SERVICE_NOT_RUNNING',
+        );
       }
-      DropDebugLog.i.add('DISC', 'Android foreground service confirmed running', level: DropLogLevel.ok);
+      DropDebugLog.i.add(
+        'DISC',
+        'Android foreground service confirmed running',
+        level: DropLogLevel.ok,
+      );
     } on PlatformException catch (e) {
-      DropDebugLog.i.add('DISC', 'Service start failed: ${e.message}', level: DropLogLevel.error);
+      DropDebugLog.i.add(
+        'DISC',
+        'Service start failed: ${e.message}',
+        level: DropLogLevel.error,
+      );
       rethrow;
     }
   }

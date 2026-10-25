@@ -79,8 +79,10 @@ class WalletExportService {
       // entropyToMnemonic expects a hex string of entropy bytes.
       // Standard BIP-39 uses 128 bits (16 bytes) for a 12-word mnemonic.
       // We use the first 16 bytes of the 32-byte seed as the entropy source.
-      final entropy16Hex =
-          seed.sublist(0, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      final entropy16Hex = seed
+          .sublist(0, 16)
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
 
       final mnemonic = bip39.entropyToMnemonic(entropy16Hex);
       return mnemonic.split(' ');

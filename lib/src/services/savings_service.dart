@@ -4,11 +4,9 @@ import '../models/savings_models.dart';
 class SavingsService {
   final ApiClient _apiClient;
 
-  const SavingsService({required ApiClient apiClient})
-      : _apiClient = apiClient;
+  const SavingsService({required ApiClient apiClient}) : _apiClient = apiClient;
 
-  Future<SavingsMetrics> getSavingsMetrics() =>
-      _apiClient.getSavingsMetrics();
+  Future<SavingsMetrics> getSavingsMetrics() => _apiClient.getSavingsMetrics();
 
   Future<SavingsPosition> getSavingsPosition() =>
       _apiClient.getSavingsPosition();
@@ -16,19 +14,17 @@ class SavingsService {
   Future<SavingsPrepareResponse> prepareDeposit(
     double amountUsdc, {
     String? pocketId,
-  }) =>
-      _apiClient.prepareSavingsDeposit(amountUsdc, pocketId: pocketId);
+  }) => _apiClient.prepareSavingsDeposit(amountUsdc, pocketId: pocketId);
 
   Future<SavingsSubmitResult> submitDeposit(
     String partiallySignedTxB64, {
     String? pocketId,
     double? amountUsdc,
-  }) =>
-      _apiClient.submitSavingsDeposit(
-        partiallySignedTxB64,
-        pocketId: pocketId,
-        amountUsdc: amountUsdc,
-      );
+  }) => _apiClient.submitSavingsDeposit(
+    partiallySignedTxB64,
+    pocketId: pocketId,
+    amountUsdc: amountUsdc,
+  );
 
   Future<SavingsPrepareResponse> prepareWithdraw() =>
       _apiClient.prepareSavingsWithdraw();

@@ -10,18 +10,15 @@ class _Particle {
     required this.color,
   });
 
-  final double angle;   // radians
-  final double speed;   // px per unit (0→1) of animation
-  final double size;    // radius in logical px
+  final double angle; // radians
+  final double speed; // px per unit (0→1) of animation
+  final double size; // radius in logical px
   final Color color;
 
   Offset position(double t) {
     // Decelerate with ease-out cubic
     final eased = 1 - pow(1 - t, 3).toDouble();
-    return Offset(
-      cos(angle) * speed * eased,
-      sin(angle) * speed * eased,
-    );
+    return Offset(cos(angle) * speed * eased, sin(angle) * speed * eased);
   }
 
   double opacity(double t) {
@@ -50,7 +47,11 @@ class DropParticleBurstPainter extends CustomPainter {
   final Color particleColor;
   final List<_Particle> _particles;
 
-  static List<_Particle> _buildParticles(int count, double maxRadius, Color color) {
+  static List<_Particle> _buildParticles(
+    int count,
+    double maxRadius,
+    Color color,
+  ) {
     final rng = Random(42); // fixed seed for reproducibility
     return List.generate(count, (i) {
       final angle = (i / count) * 2 * pi + rng.nextDouble() * 0.4 - 0.2;
@@ -105,7 +106,11 @@ class DropParticleShowerPainter extends CustomPainter {
   final Color particleColor;
   final List<_ShowerParticle> _particles;
 
-  static List<_ShowerParticle> _buildParticles(int count, Size size, Color color) {
+  static List<_ShowerParticle> _buildParticles(
+    int count,
+    Size size,
+    Color color,
+  ) {
     final rng = Random(17);
     return List.generate(count, (i) {
       final x = rng.nextDouble() * size.width;
@@ -114,8 +119,12 @@ class DropParticleShowerPainter extends CustomPainter {
       final pSize = 2.0 + rng.nextDouble() * 3.0;
       final drift = (rng.nextDouble() - 0.5) * 40;
       return _ShowerParticle(
-        x: x, startT: startT, speed: speed, size: pSize,
-        drift: drift, color: color,
+        x: x,
+        startT: startT,
+        speed: speed,
+        size: pSize,
+        drift: drift,
+        color: color,
       );
     });
   }
