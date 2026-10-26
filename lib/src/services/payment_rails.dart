@@ -582,9 +582,16 @@ class SuiWalletIdentity implements WalletIdentity {
   final PaymentNetwork _network;
   String? _cachedAddress;
 
+  /// [network] is required rather than defaulted.
+  ///
+  /// A default would silently pick a network for any new call site that forgot
+  /// to name one, and the failure mode is badly misleading: the rail policy
+  /// denies the mismatch, the router falls back to Solana, and a zkLogin
+  /// account — which has no Solana wallet — surfaces WALLET_NOT_REGISTERED.
+  /// Being forced to state the network is cheaper than diagnosing that twice.
   SuiWalletIdentity({
     required ApiClient apiClient,
-    PaymentNetwork network = PaymentNetwork.testnet,
+    required PaymentNetwork network,
   }) : _apiClient = apiClient,
        _network = network;
 
@@ -619,9 +626,10 @@ class SuiTransactionSigner implements TransactionSigner {
   final SuiZkLoginService _zkLogin;
   final PaymentNetwork _network;
 
+  /// [network] is required — see [SuiWalletIdentity] for why there is no default.
   SuiTransactionSigner({
     required SuiZkLoginService zkLoginService,
-    PaymentNetwork network = PaymentNetwork.testnet,
+    required PaymentNetwork network,
   }) : _zkLogin = zkLoginService,
        _network = network;
 
@@ -710,9 +718,10 @@ class SuiV2RailClient implements RailClient {
   final ApiClient _apiClient;
   final PaymentNetwork _network;
 
+  /// [network] is required — see [SuiWalletIdentity] for why there is no default.
   SuiV2RailClient({
     required ApiClient apiClient,
-    PaymentNetwork network = PaymentNetwork.testnet,
+    required PaymentNetwork network,
   }) : _apiClient = apiClient,
        _network = network;
 

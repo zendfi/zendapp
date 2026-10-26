@@ -3,6 +3,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import '../../models/handle_label.dart';
+import '../../core/zend_format.dart';
 
 /// Shown when 2+ confirmed receivers are within 8 dBm of each other and the
 /// scanner cannot safely auto-select. The user picks the correct recipient.
@@ -84,9 +85,9 @@ class _DropDisambiguateStageState extends State<DropDisambiguateStage> {
   String get _amountFormatted {
     final amount = widget.amount;
     if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
+      return formatUsd(amount);
     }
-    return '\$${amount.toStringAsFixed(2)}';
+    return formatUsd(amount);
   }
 
   @override

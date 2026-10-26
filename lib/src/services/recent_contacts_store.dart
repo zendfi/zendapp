@@ -6,7 +6,7 @@ import '../models/recent_contact.dart';
 
 class RecentContactsStore {
   RecentContactsStore({required FlutterSecureStorage secureStorage})
-      : _secureStorage = secureStorage;
+    : _secureStorage = secureStorage;
 
   final FlutterSecureStorage _secureStorage;
 

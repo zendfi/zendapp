@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../design/zend_tokens.dart';
+import '../../core/zend_format.dart';
 
 // ── Vibe message bubble ───────────────────────────────────────────────────────
 //
@@ -521,7 +522,7 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
                       ],
                     ),
                     child: Text(
-                      '\$${amountUsdc.toStringAsFixed(2)}',
+                      formatUsd(amountUsdc),
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
@@ -576,7 +577,7 @@ class _RevealedVibe extends StatelessWidget {
           Text(emoji, style: const TextStyle(fontSize: 36)),
           const SizedBox(height: 6),
           Text(
-            '\$${amountUsdc.toStringAsFixed(2)}',
+            formatUsd(amountUsdc),
             style: TextStyle(
               fontFamily: 'Geist',
               fontWeight: FontWeight.w700,

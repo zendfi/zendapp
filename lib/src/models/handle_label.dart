@@ -18,5 +18,6 @@ library;
 String handleLabel(String? handle) {
   final trimmed = handle?.trim() ?? '';
   if (trimmed.isEmpty) return '';
-  return trimmed.contains('@') ? trimmed : '@$trimmed';
+  // Never show an email as someone's identity: use its local part.
+  return trimmed.contains('@') ? trimmed.split('@').first : '@$trimmed';
 }

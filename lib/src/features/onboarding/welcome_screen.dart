@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
+import '../../design/zend_mark.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -128,10 +129,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Brand moment: the Z mark, slowly sweeping.
+                      const ZendMark(size: 88, animate: true),
+                      const SizedBox(height: 28),
                       Text(
                         'Welcome to Zend',
                         style: TextStyle(
-                          fontFamily: 'Geist',
+                          fontFamily: 'SpaceGrotesk',
                           fontSize: 44,
                           height: 1.1,
                           fontWeight: FontWeight.w700,
@@ -140,7 +144,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "The internet's money network.",
+                        "The internet's money network. Send money to your "
+                        'people in seconds, and say it with an emoji.',
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 17,

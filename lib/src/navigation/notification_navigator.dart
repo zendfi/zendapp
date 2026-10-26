@@ -195,9 +195,7 @@ class NotificationNavigator {
       headline: headline,
       avatarUrl: isOutgoing ? model.currentAvatarUrl : edge.senderAvatarUrl,
       avatarInitial: isOutgoing
-          ? (model.currentZendtag?.isNotEmpty == true
-                ? model.currentZendtag![0].toUpperCase()
-                : 'Y')
+          ? model.selfInitial
           : (edge.senderZendtag?.isNotEmpty == true
                 ? edge.senderZendtag![0].toUpperCase()
                 : '?'),

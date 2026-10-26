@@ -8,7 +8,7 @@
 /// `src/activity_data_service.rs` for the authoritative server-side shape.
 library;
 
-import 'handle_label.dart';
+import '../core/zend_format.dart';
 
 enum ActivityEdgeKind { zendTransfer, poolContribution, requestFulfillment }
 
@@ -76,8 +76,12 @@ class ActivityCounterparty {
   /// resort (a legacy response missing both) falls back to a short id
   /// fragment. Never renders a bare full UUID.
   String get displayLabel {
-    if (zendtag != null && zendtag!.isNotEmpty) return handleLabel(zendtag);
-    if (displayName != null && displayName!.isNotEmpty) return displayName!;
+    if (poolName != null && poolName!.isNotEmpty && zendtag == null) {
+      return poolName!;
+    }
+    if ((zendtag?.isNotEmpty ?? false) || (displayName?.isNotEmpty ?? false)) {
+      return personName(displayName: displayName, handle: zendtag);
+    }
     if (poolName != null && poolName!.isNotEmpty) return poolName!;
     return id.length > 6 ? id.substring(0, 6) : id;
   }
@@ -86,6 +90,9 @@ class ActivityCounterparty {
   /// identity field is actually available, in the same preference order as
   /// [displayLabel].
   String get initialLetter {
+    if ((zendtag?.isNotEmpty ?? false) || (displayName?.isNotEmpty ?? false)) {
+      return personInitial(displayName: displayName, handle: zendtag);
+    }
     final source = zendtag?.isNotEmpty == true
         ? zendtag!
         : displayName?.isNotEmpty == true
@@ -149,6 +156,14 @@ class ActivityEdge {
   final String? recipientDisplayName;
   final String? recipientAvatarUrl;
 
+  /// Comments on this edge, excluding deleted ones.
+  ///
+  /// Carried on the edge so the feed can render a count on every row without
+  /// fetching comment bodies it never displays. Defaults to 0 rather than being
+  /// nullable: a backend that has not sent the field yet, and an edge with no
+  /// comments, should render identically.
+  final int commentCount;
+
   const ActivityEdge({
     required this.edgeId,
     required this.edgeKind,
@@ -168,6 +183,7 @@ class ActivityEdge {
     this.recipientZendtag,
     this.recipientDisplayName,
     this.recipientAvatarUrl,
+    this.commentCount = 0,
   });
 
   bool get isOutgoing => direction == 'outgoing';
@@ -179,8 +195,12 @@ class ActivityEdge {
   /// literal `'Hidden'` when withheld, rendering "+Hidden" — a signed direction on
   /// a quantity that was never disclosed. Returning null forces each site to decide
   /// whether to show the chip at all, which is the real question.
-  String? get signedAmountLabel =>
-      amountHidden ? null : '${isOutgoing ? '-' : '+'}\$${amountUsdc ?? '0'}';
+  String? get signedAmountLabel => amountHidden
+      ? null
+      : formatUsd(
+          (double.tryParse(amountUsdc ?? '') ?? 0) * (isOutgoing ? -1 : 1),
+          signed: true,
+        );
 
   factory ActivityEdge.fromJson(Map<String, dynamic> json) {
     return ActivityEdge(
@@ -204,6 +224,9 @@ class ActivityEdge {
       recipientZendtag: json['recipient_zendtag'] as String?,
       recipientDisplayName: json['recipient_display_name'] as String?,
       recipientAvatarUrl: json['recipient_avatar_url'] as String?,
+      // `num` rather than `int`: the field crosses as a JSON number and a
+      // cached snapshot written by an older build may hold it as a double.
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -230,6 +253,9 @@ class ActivityEdge {
         'recipient_display_name': recipientDisplayName,
       if (recipientAvatarUrl != null)
         'recipient_avatar_url': recipientAvatarUrl,
+      // Written unconditionally so a cached feed page restores the count it was
+      // displaying rather than briefly showing every row as uncommented.
+      'comment_count': commentCount,
     };
   }
 }

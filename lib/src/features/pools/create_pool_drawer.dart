@@ -9,6 +9,7 @@ import 'pool.dart';
 import 'pool_detail_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../models/handle_label.dart';
 
 Future<void> showCreatePoolDrawer(
   BuildContext context, {
@@ -112,7 +113,7 @@ class _CreatePoolDrawerState extends State<CreatePoolDrawer> {
       final resolved = await model.zendtagService.resolve(searchTag);
 
       final displayName = resolved.displayName.trim().isEmpty
-          ? '@${resolved.zendtag}'
+          ? handleLabel(resolved.zendtag)
           : resolved.displayName;
       final avatarLabel = displayName.isNotEmpty
           ? displayName[0].toUpperCase()

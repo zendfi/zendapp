@@ -14,17 +14,9 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 part 'bank_send_stages.dart';
-
-/// Network the NGN Sui bank-send path operates on. This must match the ramp
-/// backend's Sui network, which settles Paj offramp deposits in **mainnet** USDC.
-///
-/// NOTE: the app-wide P2P `suiNetwork` in main.dart is currently
-/// `PaymentNetwork.testnet`. Bank-send pins mainnet here independently so the
-/// coin-object deposit step runs on the same network the ramp transfer was built
-/// for. Keep these in sync when the P2P rail is promoted to mainnet.
-const PaymentNetwork _suiBankSendNetwork = PaymentNetwork.mainnet;
 
 Future<void> showBankSendSheet(BuildContext context, {required double amount}) {
   return showZendModalSheet<void>(
@@ -275,7 +267,7 @@ class _BankSendSheetState extends State<BankSendSheet>
       if (e.errorCode != 'SUI_ADDRESS_BALANCE_INSUFFICIENT') rethrow;
       await model.zkLoginService.depositCoinObjectsToAddressBalance(
         rail: PaymentRail.sui,
-        network: _suiBankSendNetwork,
+        network: kSuiNetwork,
       );
       return runPrepare();
     }

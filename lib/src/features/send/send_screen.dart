@@ -12,6 +12,7 @@ import '../profile/profile_screen.dart';
 import '../request/request_drawer_sheet.dart';
 import 'qr_scanner_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
 
 enum _InputMode { usd, ngn }
 
@@ -68,8 +69,8 @@ class _SendScreenState extends State<SendScreen>
       // We'll render whole and decimal parts separately in the widget,
       // so just return the full string here for the secondary display logic.
       return _parsedRaw == _parsedRaw.roundToDouble()
-          ? '\$${_parsedRaw.toStringAsFixed(0)}'
-          : '\$${_parsedRaw.toStringAsFixed(2)}';
+          ? formatUsd(_parsedRaw)
+          : formatUsd(_parsedRaw);
     } else {
       // Show the quantized NGN (what they'll actually receive)
       final ngn = _quantizedNgn;

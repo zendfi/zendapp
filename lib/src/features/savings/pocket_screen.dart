@@ -16,6 +16,7 @@ import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 class PocketScreen extends StatefulWidget {
   const PocketScreen({super.key});
@@ -277,7 +278,7 @@ class _PocketScreenState extends State<PocketScreen> {
 
         // ── Total balance ─────────────────────────────────────────────
         Text(
-          '\$${_totalBalance.toStringAsFixed(2)}',
+          formatUsd(_totalBalance),
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 48,
@@ -507,7 +508,7 @@ class _FreeSavingsCard extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.sm),
           Text(
-            '\$${balance.toStringAsFixed(2)}',
+            formatUsd(balance),
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 28,
@@ -814,7 +815,7 @@ class LockCard extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.sm),
           Text(
-            '\$${pocket.balanceUsd.toStringAsFixed(2)}',
+            formatUsd(pocket.balanceUsd),
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 28,

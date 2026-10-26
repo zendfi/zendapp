@@ -3,6 +3,8 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Tier 1 (≤$50) confirmation stage.
 ///
@@ -61,9 +63,9 @@ class _DropCountdownStageState extends State<DropCountdownStage>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   String get _zendtag =>
@@ -76,9 +78,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final senderAvatarUrl = model.currentAvatarUrl;
-    final senderInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : 'Y';
+    final senderInitial = model.selfInitial;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -115,7 +115,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
         ),
         const SizedBox(height: 6),
         Text(
-          'to @$_zendtag',
+          'to ${handleLabel(_zendtag)}',
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 16,

@@ -1,3 +1,5 @@
+import '../core/zend_format.dart';
+
 /// A payment request that was sent *to* the current user by another Zend user.
 class InboundPaymentRequest {
   const InboundPaymentRequest({
@@ -28,9 +30,9 @@ class InboundPaymentRequest {
 
   String get formattedAmount {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return '\$${amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(amountUsdc);
     }
-    return '\$${amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(amountUsdc);
   }
 
   factory InboundPaymentRequest.fromJson(Map<String, dynamic> json) {

@@ -11,6 +11,7 @@ import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   const GoalDetailScreen({super.key, required this.pocket});
@@ -191,21 +192,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   const SizedBox(height: ZendSpacing.xl),
 
                   // ── Stats ─────────────────────────────────────────────
-                  _StatRow(
-                    label: 'Saved',
-                    value: '\$${balance.toStringAsFixed(2)}',
-                    zt: zt,
-                  ),
+                  _StatRow(label: 'Saved', value: formatUsd(balance), zt: zt),
                   Divider(color: zt.border, height: 24),
-                  _StatRow(
-                    label: 'Target',
-                    value: '\$${target.toStringAsFixed(2)}',
-                    zt: zt,
-                  ),
+                  _StatRow(label: 'Target', value: formatUsd(target), zt: zt),
                   Divider(color: zt.border, height: 24),
                   _StatRow(
                     label: 'Earned',
-                    value: '\$${yield_.toStringAsFixed(2)}',
+                    value: formatUsd(yield_),
                     valueColor: ZendColors.accentBright,
                     zt: zt,
                   ),

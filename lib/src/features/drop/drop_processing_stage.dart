@@ -4,6 +4,7 @@ import '../../models/drop_models.dart';
 import 'drop_glow_effect.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/handle_label.dart';
+import '../../core/zend_format.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -54,9 +55,9 @@ class _DropProcessingStageState extends State<DropProcessingStage>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   String get _receiverZendtag =>

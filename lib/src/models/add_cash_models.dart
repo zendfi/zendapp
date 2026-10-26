@@ -6,6 +6,8 @@
 /// in the app rather than on a hosted page.
 library;
 
+import '../core/zend_format.dart';
+
 /// One fundable chain, from `GET /api/v1/public/chains`.
 class DepositChain {
   const DepositChain({
@@ -27,12 +29,12 @@ class DepositChain {
   final bool isStablecoin;
 
   factory DepositChain.fromJson(Map<String, dynamic> json) => DepositChain(
-        chainId: (json['chain_id'] as num).toInt(),
-        symbol: json['symbol'] as String? ?? '',
-        blockchainName: json['blockchain_name'] as String? ?? '',
-        displayName: json['display_name'] as String? ?? '',
-        isStablecoin: json['is_stablecoin'] as bool? ?? false,
-      );
+    chainId: (json['chain_id'] as num).toInt(),
+    symbol: json['symbol'] as String? ?? '',
+    blockchainName: json['blockchain_name'] as String? ?? '',
+    displayName: json['display_name'] as String? ?? '',
+    isStablecoin: json['is_stablecoin'] as bool? ?? false,
+  );
 }
 
 /// A deposit address for one chain, from
@@ -60,15 +62,15 @@ class DepositAddress {
   final DateTime? expiresAt;
 
   factory DepositAddress.fromJson(Map<String, dynamic> json) => DepositAddress(
-        depositAddress: json['deposit_address'] as String,
-        symbol: json['symbol'] as String? ?? '',
-        blockchainName: json['blockchain_name'] as String? ?? '',
-        displayName: json['display_name'] as String? ?? '',
-        isStatic: json['is_static'] as bool? ?? false,
-        expiresAt: (json['expires_at'] as String?) != null
-            ? DateTime.tryParse(json['expires_at'] as String)
-            : null,
-      );
+    depositAddress: json['deposit_address'] as String,
+    symbol: json['symbol'] as String? ?? '',
+    blockchainName: json['blockchain_name'] as String? ?? '',
+    displayName: json['display_name'] as String? ?? '',
+    isStatic: json['is_static'] as bool? ?? false,
+    expiresAt: (json['expires_at'] as String?) != null
+        ? DateTime.tryParse(json['expires_at'] as String)
+        : null,
+  );
 }
 
 /// Money that arrived from outside Zend, from the `funds_added` SSE event.
@@ -102,7 +104,7 @@ class FundsArrivedNotification {
   bool get isBankTransfer => source == 'bank_transfer';
 
   /// "$32.40", the amount added to the balance.
-  String get amountLabel => '\$${amountUsdc.toStringAsFixed(2)}';
+  String get amountLabel => formatUsd(amountUsdc);
 
   /// "₦50,000" when the deposit came in another currency, else null.
   String? get originLabel {
@@ -129,10 +131,10 @@ class FundsArrivedNotification {
 
   factory FundsArrivedNotification.fromJson(Map<String, dynamic> json) {
     double? parse(Object? v) => switch (v) {
-          num n => n.toDouble(),
-          String s => double.tryParse(s),
-          _ => null,
-        };
+      num n => n.toDouble(),
+      String s => double.tryParse(s),
+      _ => null,
+    };
     return FundsArrivedNotification(
       amountUsdc: parse(json['amount_usdc']) ?? 0,
       source: json['source'] as String? ?? '',

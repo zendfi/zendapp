@@ -27,6 +27,8 @@ import 'drop_success_stage.dart';
 import '../send/send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 enum DropStage {
   scanning,
@@ -297,7 +299,7 @@ class _DropSheetState extends State<DropSheet>
         // Top device is clearly closest — auto-select silently.
         DropDebugLog.i.add(
           'SHEET',
-          'Auto-selecting @${best.gattPayload?.zendtag} (RSSI gap=${gap}dBm > ${_kAutoSelectRssiGap}dBm threshold)',
+          'Auto-selecting ${handleLabel(best.gattPayload?.zendtag)} (RSSI gap=${gap}dBm > ${_kAutoSelectRssiGap}dBm threshold)',
           level: DropLogLevel.ok,
         );
         _onReceiverConfirmed(best);
@@ -368,7 +370,7 @@ class _DropSheetState extends State<DropSheet>
         receiver.gattPayload?.zendtag ?? receiver.preview?.zendtag ?? '?';
     DropDebugLog.i.add(
       'SHEET',
-      'Receiver confirmed: @$tag — routing to tier stage',
+      'Receiver confirmed: ${handleLabel(tag)} — routing to tier stage',
       level: DropLogLevel.ok,
     );
     setState(() => _confirmedReceiver = receiver);
@@ -854,8 +856,8 @@ class _DropSheetState extends State<DropSheet>
         return SendPinStage(
           key: const ValueKey('drop-pin'),
           amountFormatted: widget.amount == widget.amount.roundToDouble()
-              ? '\$${widget.amount.toStringAsFixed(0)}'
-              : '\$${widget.amount.toStringAsFixed(2)}',
+              ? formatUsd(widget.amount)
+              : formatUsd(widget.amount),
           recipientZendtag:
               _confirmedReceiver?.gattPayload?.zendtag ??
               _confirmedReceiver?.preview?.zendtag ??
@@ -876,11 +878,7 @@ class _DropSheetState extends State<DropSheet>
           amount: widget.amount,
           receiver: _confirmedReceiver!,
           senderAvatarUrl: model.currentAvatarUrl,
-          senderInitial: model.currentZendtag?.isNotEmpty == true
-              ? model.currentZendtag![0].toUpperCase()
-              : (model.currentDisplayName?.isNotEmpty == true
-                    ? model.currentDisplayName![0].toUpperCase()
-                    : 'Y'),
+          senderInitial: model.selfInitial,
         );
 
       case DropStage.success:

@@ -11,6 +11,8 @@ import '../../services/payment_rails.dart' show RailUnavailableException;
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import '../request/payment_request.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// How this account is allowed to authorise a transfer of a given amount.
 ///
@@ -140,14 +142,13 @@ class TransferStatus {
   /// [request]: a placeholder while in flight, the real one once created.
   bool get isRequest => request != null;
 
-  String get amountLabel => amount == amount.roundToDouble()
-      ? '\$${amount.toStringAsFixed(0)}'
-      : '\$${amount.toStringAsFixed(2)}';
+  String get amountLabel =>
+      amount == amount.roundToDouble() ? formatUsd(amount) : formatUsd(amount);
 
   /// "@omooba", or the email for a non-Zend recipient.
   String get recipientLabel {
     if (recipientZendtag != null && recipientZendtag!.isNotEmpty) {
-      return '@$recipientZendtag';
+      return handleLabel(recipientZendtag);
     }
     return recipientEmail ?? 'them';
   }

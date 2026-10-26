@@ -6,6 +6,8 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 class DropSuccessStage extends StatefulWidget {
   const DropSuccessStage({
@@ -77,9 +79,9 @@ class _DropSuccessStageState extends State<DropSuccessStage>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   String get _zendtag =>
@@ -92,9 +94,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final senderAvatarUrl = model.currentAvatarUrl;
-    final senderInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : 'Y';
+    final senderInitial = model.selfInitial;
 
     return ScaleTransition(
       scale: CurvedAnimation(parent: _scaleCtrl, curve: Curves.easeOutBack),
@@ -195,8 +195,8 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                 // Count down from widget.amount → 0
                 final displayed = widget.amount * (1 - t);
                 final formatted = displayed == displayed.roundToDouble()
-                    ? '\$${displayed.toStringAsFixed(0)}'
-                    : '\$${displayed.toStringAsFixed(2)}';
+                    ? formatUsd(displayed)
+                    : formatUsd(displayed);
                 return Text(
                   t < 0.98 ? formatted : _amountStr,
                   textAlign: TextAlign.center,
@@ -214,7 +214,7 @@ class _DropSuccessStageState extends State<DropSuccessStage>
             const SizedBox(height: 4),
 
             Text(
-              'dropped to @$_zendtag',
+              'dropped to ${handleLabel(_zendtag)}',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',

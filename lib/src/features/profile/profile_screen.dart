@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../receive/receive_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/zend_state.dart';
@@ -115,6 +116,17 @@ class ProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: _TileGroup(
                       tiles: [
+                        // Share-my-handle QR (design revamp: give You real
+                        // content). Reuses the Receive screen's QR card.
+                        _Tile(
+                          label: 'Share my Zend tag',
+                          onTap: () => pushZendSlide(
+                            context,
+                            ReceiveScreen(
+                              username: ZendScope.of(context).username,
+                            ),
+                          ),
+                        ),
                         _Tile(
                           label: 'Settings',
                           onTap: () =>

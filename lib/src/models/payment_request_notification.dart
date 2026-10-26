@@ -1,3 +1,5 @@
+import '../core/zend_format.dart';
+
 class PaymentRequestNotification {
   const PaymentRequestNotification({
     required this.requestId,
@@ -27,8 +29,8 @@ class PaymentRequestNotification {
 
   String get formattedAmount {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return '\$${amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(amountUsdc);
     }
-    return '\$${amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(amountUsdc);
   }
 }

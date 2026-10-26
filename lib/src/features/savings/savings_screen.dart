@@ -11,6 +11,7 @@ import 'savings_deposit_sheet.dart';
 import 'savings_withdraw_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -302,7 +303,7 @@ class _ActiveState extends StatelessWidget {
   }
 
   String _formatUsd(double value) {
-    return '\$${value.toStringAsFixed(2)}';
+    return formatUsd(value);
   }
 
   @override

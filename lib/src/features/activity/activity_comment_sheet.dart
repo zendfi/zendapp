@@ -7,6 +7,8 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 const _kCommentSheetReactionEmojis = [
   '🔥',
@@ -346,14 +348,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
     }
   }
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -704,11 +699,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                     child: ZendAvatar(
                       radius: 16,
                       photoUrl: model.currentAvatarUrl,
-                      initials: model.currentZendtag?.isNotEmpty == true
-                          ? model.currentZendtag![0].toUpperCase()
-                          : (model.currentDisplayName?.isNotEmpty == true
-                                ? model.currentDisplayName![0].toUpperCase()
-                                : 'Y'),
+                      initials: model.selfInitial,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -852,7 +843,7 @@ class _CommentRow extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '@${comment.authorZendtag}',
+                      handleLabel(comment.authorZendtag),
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 13,

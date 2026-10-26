@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../core/zend_format.dart';
 
 const _base62Chars =
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -133,10 +134,10 @@ class Pool {
       targetAmount <= 0 ? 0.0 : (gathered / targetAmount).clamp(0.0, 1.0);
 
   /// Formatted gathered amount as a dollar string.
-  String get formattedGathered => '\$${gathered.toStringAsFixed(2)}';
+  String get formattedGathered => formatUsd(gathered);
 
   /// Formatted target amount as a dollar string.
-  String get formattedTarget => '\$${targetAmount.toStringAsFixed(2)}';
+  String get formattedTarget => formatUsd(targetAmount);
 
   factory Pool.fromJson(Map<String, dynamic> json) {
     final participantsJson =

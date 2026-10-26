@@ -13,10 +13,10 @@ class VibeSticker {
   final String label;
 
   factory VibeSticker.fromJson(Map<String, dynamic> json) => VibeSticker(
-        id: json['id'] as String? ?? '',
-        emoji: json['emoji'] as String? ?? '✨',
-        label: json['label'] as String? ?? '',
-      );
+    id: json['id'] as String? ?? '',
+    emoji: json['emoji'] as String? ?? '✨',
+    label: json['label'] as String? ?? '',
+  );
 }
 
 /// Singleton catalog — fetches stickers once per session then caches.

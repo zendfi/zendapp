@@ -12,6 +12,8 @@ import 'payment_request.dart';
 import 'request_qr_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Requesting money — visually mirrors [SendFlowSheet]'s identity-first,
 /// amount-entry design (redesign.md §12-13: "Same structure" as Send, just
@@ -104,9 +106,9 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
 
   String get _amountFormatted {
     if (_amount == _amount.roundToDouble()) {
-      return '\$${_amount.toStringAsFixed(0)}';
+      return formatUsd(_amount);
     }
-    return '\$${_amount.toStringAsFixed(2)}';
+    return formatUsd(_amount);
   }
 
   bool get _canCreate => _amount > 0;
@@ -308,7 +310,7 @@ class _RequestAmountStage extends StatelessWidget {
                     Text(
                       recipientLabel!.startsWith('@')
                           ? recipientLabel!
-                          : '@$recipientLabel',
+                          : handleLabel(recipientLabel),
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,
@@ -480,8 +482,8 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
     final zt = ZendTheme.of(context);
     final amount = widget.request.amount;
     final amountStr = amount == amount.roundToDouble()
-        ? '\$${amount.toStringAsFixed(0)}'
-        : '\$${amount.toStringAsFixed(2)}';
+        ? formatUsd(amount)
+        : formatUsd(amount);
     final tag = widget.request.recipientZendtag;
     final note = widget.request.description;
 
@@ -532,7 +534,7 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
           const SizedBox(height: 8),
           if (tag != null)
             Text(
-              'from @$tag',
+              'from ${handleLabel(tag)}',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 15,

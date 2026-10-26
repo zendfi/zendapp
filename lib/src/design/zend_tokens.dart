@@ -121,7 +121,8 @@ class ZendTheme {
     chatBg: Color(0xFFEDE8DC),
     bubbleReceived: Color(0xFFFFFFFF),
     textPrimary: Color(0xFF1A1A1A),
-    textSecondary: Color(0xFF8C8C86),
+    // Darkened from #8C8C86 (~3.3:1) to pass 4.5:1 on bgPrimary.
+    textSecondary: Color(0xFF6B6B66),
     border: Color(0xFFECECE8),
     accent: Color(0xFF16A34A),
     accentBright: Color(0xFF22C55E),
@@ -131,42 +132,39 @@ class ZendTheme {
     isDark: false,
   );
 
+  // Design revamp palette: green-tinted black with three layers (base,
+  // surface 1, surface 2) instead of flat neutral gray. Green only ever means
+  // money arriving or the primary action.
   static const _dark = ZendTheme._(
-    // Off-black, not pure black — true #000000 causes light-text halation
-    // on OLED and reads harsher than it needs to for a screen people look
-    // at for minutes at a time.
-    bgPrimary: Color(0xFF101010),
-    bgSecondary: Color(0xFF161616),
-    bgCard: Color(0xFF1E1E1E),
-    bgElevated: Color(0xFF252525),
-    bgAccentSurface: Color(0xFF0A1A0D),
-    // A step lighter than bgPrimary — same "canvas distinct from scaffold"
-    // logic as light mode, just compressed since dark-mode luminance steps
-    // are smaller to begin with.
-    chatBg: Color(0xFF141414),
-    bubbleReceived: Color(0xFF262626),
-    // Off-white, not pure white — mirrors the bgPrimary reasoning: full
-    // #FFFFFF text on a near-black surface glows/smears for a lot of eyes.
-    textPrimary: Color(0xFFF0F0F0),
-    // Slightly darker/more muted than before, matching the light-mode shift
-    // to true neutral gray now that it also has to work as a hairline row
-    // divider color's dark counterpart.
-    textSecondary: Color(0xFF7A7A7A),
-    // Lightened from #2A2A2A to work as an unobtrusive divider, not just an
-    // outlined-button stroke — same reasoning as the light-mode change.
-    border: Color(0xFF1F1F1F),
-    // Brighter than the light-mode accent on purpose — dark surfaces can
-    // carry more saturated color before it feels aggressive, so this still
-    // reads calm rather than muted-to-the-point-of-invisible.
-    accent: Color(0xFF22C55E),
-    accentBright: Color(0xFF4ADE80),
-    // Dark, low-chroma wash rather than a pale one — a light mint chip would
-    // float awkwardly bright against a near-black card.
-    accentPop: Color(0xFF14532D),
-    positive: Color(0xFF4ADE80),
-    destructive: Color(0xFFE05C3A),
+    bgPrimary: Color(0xFF0A110E), // Base
+    bgSecondary: Color(0xFF111B16), // Surface 1
+    bgCard: Color(0xFF111B16), // Surface 1 — cards and rows
+    bgElevated: Color(0xFF182621), // Surface 2 — sheets, raised, selected
+    bgAccentSurface: Color(0xFF0C1A12),
+    chatBg: Color(0xFF0D1511),
+    bubbleReceived: Color(0xFF182621),
+    textPrimary: Color(0xFFF2F5F3),
+    // Replaces #7A7A7A, which failed 4.5:1 on dark; #A3B1AA passes on Base.
+    textSecondary: Color(0xFFA3B1AA),
+    border: Color(0xFF1E2C26),
+    accent: Color(0xFF1FD16A), // Zend green
+    accentBright: Color(0xFF1FD16A),
+    accentPop: Color(0xFF0F3D24),
+    positive: Color(0xFF1FD16A),
+    destructive: Color(0xFFFF5A5F),
     isDark: true,
   );
+
+  /// Payment in progress.
+  Color get pending =>
+      isDark ? const Color(0xFFF5B83D) : const Color(0xFFB7791F);
+
+  /// Sent amounts stay neutral, never red.
+  Color get moneyOut => textPrimary;
+
+  /// Received amounts and the primary action.
+  Color get moneyIn =>
+      isDark ? const Color(0xFF1FD16A) : const Color(0xFF15803D);
 
   static ZendTheme of(BuildContext context) {
     final brightness = Theme.of(context).brightness;
@@ -175,6 +173,11 @@ class ZendTheme {
 }
 
 class ZendRadii {
+  // Revamp scale: chips 8, cards 16, sheets/buttons 24, avatars full.
+  static const double chip = 8;
+  static const double card = 16;
+  static const double sheet = 24;
+  static const double button = 24;
   static const double xs = 8;
   static const double sm = 10;
   static const double md = 12;
@@ -185,6 +188,11 @@ class ZendRadii {
 }
 
 class ZendSpacing {
+  // Revamp rules on the 4px grid: gutter 16, between cards 12, sections 24.
+  static const double gutter = 16;
+  static const double betweenCards = 12;
+  static const double section = 24;
+  static const double s48 = 48;
   static const double xxs = 4;
   static const double xs = 8;
   static const double sm = 12;
@@ -195,6 +203,16 @@ class ZendSpacing {
 }
 
 class ZendMotion {
+  // Named presets — reuse these, don't tune curves per screen.
+  static const Curve springSoft = Curves.easeOutBack;
+  static const Curve springSnappy = Curves.easeOutCubic;
+  static const Duration quick = Duration(milliseconds: 180);
+  static const Duration standard = Duration(milliseconds: 280);
+  static const Duration celebrate = Duration(milliseconds: 700);
+
+  /// True when the OS asks for reduced motion; animations become fades.
+  static bool reduced(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   static const Duration tabSwitch = Duration(milliseconds: 240);
   static const Duration amountTick = Duration(milliseconds: 60);
   static const Duration keypadPress = Duration(milliseconds: 80);
@@ -203,6 +221,67 @@ class ZendMotion {
 }
 
 class ZendTextStyles {
+  static const _display = 'SpaceGrotesk';
+  static const _tabular = [FontFeature.tabularFigures()];
+
+  /// 56/60 heavy — Home balance.
+  static const displayXl = TextStyle(
+    fontFamily: _display,
+    fontSize: 56,
+    height: 60 / 56,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -1.5,
+    fontVariations: [FontVariation('wght', 700)],
+    fontFeatures: _tabular,
+  );
+
+  /// 40/44 heavy — Receipt and send amount.
+  static const displayL = TextStyle(
+    fontFamily: _display,
+    fontSize: 40,
+    height: 44 / 40,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -1,
+    fontVariations: [FontVariation('wght', 700)],
+    fontFeatures: _tabular,
+  );
+
+  /// 24/28 bold — Feed card amounts.
+  static const amountM = TextStyle(
+    fontFamily: _display,
+    fontSize: 24,
+    height: 28 / 24,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.5,
+    fontVariations: [FontVariation('wght', 650)],
+    fontFeatures: _tabular,
+  );
+
+  static const title = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 20,
+    height: 26 / 20,
+    fontWeight: FontWeight.w600,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 16,
+    height: 22 / 16,
+    fontWeight: FontWeight.w400,
+  );
+  static const caption = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 13,
+    height: 18 / 13,
+    fontWeight: FontWeight.w400,
+  );
+  static const micro = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 11,
+    height: 14 / 11,
+    fontWeight: FontWeight.w500,
+  );
+
   /// Use anywhere digits need to stay a fixed width — OTP boxes, PIN dots,
   /// balances, phone number input. Replaces the old DMMono usage.
   static const TextStyle tabularNumeric = TextStyle(

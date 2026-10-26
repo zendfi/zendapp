@@ -11,6 +11,7 @@ import '../../models/savings_models.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
 
 enum _WithdrawStage { confirm, amount, pin, processing, success, error }
 
@@ -586,7 +587,7 @@ class _GoalConfirmStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.lg),
           _BreakdownRow(
             label: "You'll receive",
-            value: '\$${availableAmount.toStringAsFixed(2)}',
+            value: formatUsd(availableAmount),
             bold: true,
           ),
           const SizedBox(height: ZendSpacing.sm),
@@ -664,7 +665,7 @@ class _LockConfirmStage extends StatelessWidget {
           const SizedBox(height: ZendSpacing.lg),
           _BreakdownRow(
             label: "You'll receive",
-            value: '\$${availableAmount.toStringAsFixed(2)}',
+            value: formatUsd(availableAmount),
             bold: true,
           ),
           const SizedBox(height: ZendSpacing.sm),
@@ -699,7 +700,7 @@ class _ConfirmStage extends StatelessWidget {
   final double receiveAmount;
   final VoidCallback onConfirm;
 
-  String _fmt(double v) => '\$${v.toStringAsFixed(2)}';
+  String _fmt(double v) => formatUsd(v);
 
   @override
   Widget build(BuildContext context) {

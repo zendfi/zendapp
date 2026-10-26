@@ -7,6 +7,8 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 class DropConfirmStage extends StatefulWidget {
   const DropConfirmStage({
@@ -65,9 +67,9 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   String get _zendtag =>
@@ -81,7 +83,8 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
       try {
         final auth = LocalAuthentication();
         final authenticated = await auth.authenticate(
-          localizedReason: 'Confirm sending $_amountFormatted to @$_zendtag',
+          localizedReason:
+              'Confirm sending $_amountFormatted to ${handleLabel(_zendtag)}',
           options: const AuthenticationOptions(biometricOnly: true),
         );
         if (!mounted) return;
@@ -104,9 +107,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final senderAvatarUrl = model.currentAvatarUrl;
-    final senderInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : 'Y';
+    final senderInitial = model.selfInitial;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -148,7 +149,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'to @$_zendtag',
+            'to ${handleLabel(_zendtag)}',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Geist',

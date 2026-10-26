@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/pool_message_local.dart';
 import '../vibes/vibe_message_bubble.dart';
+import '../../models/handle_label.dart';
 
 // ── Corner radius constants (mirrors dm_message_bubble.dart) ─────────────────
 
@@ -347,7 +348,7 @@ class _TextMessageRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 40, bottom: 2),
             child: Text(
-              '@$sender',
+              handleLabel(sender),
               style: ZendTextStyles.tabularNumeric.copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -757,7 +758,7 @@ class _VoiceNoteRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 40, bottom: 2),
             child: Text(
-              '@$sender',
+              handleLabel(sender),
               style: ZendTextStyles.tabularNumeric.copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,

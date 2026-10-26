@@ -17,6 +17,8 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Stage machine for the "Pay with Zend" Payment Modal Sheet — the dedicated
 /// native UI shown when a `zdfi.me` deep link resolves to a Developer-
@@ -191,9 +193,7 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
     }
   }
 
-  String _formatAmount(double amount) => amount == amount.roundToDouble()
-      ? '\$${amount.toStringAsFixed(0)}'
-      : '\$${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) => formatUsd(amount);
 
   /// Re-fetches the request's current status immediately before invoking
   /// the signing flow (Requirement 4.8). If it's no longer payable, aborts
@@ -528,8 +528,7 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
           children: [
             Expanded(
               child: SendSuccessStage(
-                amountFormattedExact:
-                    '\$${(_amountUsdc ?? 0.0).toStringAsFixed(2)}',
+                amountFormattedExact: formatUsd((_amountUsdc ?? 0.0)),
                 recipientZendtag: _requesterZendtag ?? widget.zendtag,
                 onDone: _dismiss,
               ),
@@ -609,9 +608,7 @@ class _DevConfirmStage extends StatelessWidget {
   final String requesterZendtag;
   final VoidCallback onConfirm;
 
-  String _formatAmount(double amount) => amount == amount.roundToDouble()
-      ? '\$${amount.toStringAsFixed(0)}'
-      : '\$${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) => formatUsd(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -628,7 +625,7 @@ class _DevConfirmStage extends StatelessWidget {
           Text(
             requesterDisplayName?.isNotEmpty == true
                 ? 'Pay $requesterDisplayName'
-                : 'Pay @$requesterZendtag',
+                : 'Pay ${handleLabel(requesterZendtag)}',
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 22,
@@ -638,7 +635,7 @@ class _DevConfirmStage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '@$requesterZendtag',
+            handleLabel(requesterZendtag),
             style: ZendTextStyles.tabularNumeric.copyWith(
               fontSize: 13,
               color: zt.textSecondary,

@@ -117,27 +117,40 @@ class DmListSkeleton extends StatelessWidget {
 class DmThreadSkeleton extends StatelessWidget {
   const DmThreadSkeleton({super.key});
 
+  /// The silhouette of a conversation: alternating bubbles of varying width and
+  /// height, and nothing else.
+  ///
+  /// Deliberately plainer than the screen it stands in for. An earlier version
+  /// drew line placeholders *inside* each bubble plus a date separator, which
+  /// read as a loading grid rather than a chat — the detail competed with the
+  /// shape instead of supporting it. A skeleton only has to say "messages are
+  /// coming", and the left/right rhythm with a ragged right edge says that on
+  /// its own.
+  ///
+  /// Two things are kept because they are what make it read as a *DM* and not a
+  /// generic list: the tail corner on the last bubble of each run, and the
+  /// avatar slot on received runs. Both mirror `DmThreadScreen`.
   @override
   Widget build(BuildContext context) {
-    // Alternating bubble pattern mirroring a real conversation
+    // Widths are fractions of screen width. The variation is the point: equal
+    // widths look like a table, and a chat never does.
     const bubbles = [
-      (isMe: false, width: 0.55, lines: 1),
-      (isMe: true, width: 0.45, lines: 1),
-      (isMe: false, width: 0.65, lines: 2),
-      (isMe: true, width: 0.55, lines: 1),
-      (isMe: true, width: 0.38, lines: 1),
-      (isMe: false, width: 0.48, lines: 1),
-      (isMe: false, width: 0.72, lines: 2),
-      (isMe: true, width: 0.60, lines: 1),
+      (isMe: false, width: 0.52, tall: false),
+      (isMe: true, width: 0.40, tall: false),
+      (isMe: false, width: 0.66, tall: true),
+      (isMe: true, width: 0.50, tall: false),
+      (isMe: true, width: 0.34, tall: false),
+      (isMe: false, width: 0.44, tall: false),
+      (isMe: false, width: 0.70, tall: true),
+      (isMe: true, width: 0.56, tall: false),
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Decide which bubbles in the sequence are the last in a received run
-    // (i.e. the one that gets the avatar slot). In our fixed list, mark a
-    // received bubble as "last" when the *next* bubble (index+1 in the
-    // reversed list) is either sent or doesn't exist.
-    final reversedBubbles = bubbles.reversed.toList();
+    // Reversed to match the real thread, which is a reversed list anchored at
+    // the bottom. Without this the skeleton fills from the top and the first
+    // real frame visibly jumps.
+    final ordered = bubbles.reversed.toList();
 
     return _Shimmer(
       child: Padding(
@@ -145,23 +158,31 @@ class DmThreadSkeleton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // Date separator placeholder
-            Center(child: _SkeletonBox(width: 60, height: 10, radius: 5)),
-            const SizedBox(height: 16),
-            // Bubble rows — received bubbles include a 26px avatar circle slot
-            // on the left, matching the real DmThreadScreen layout exactly.
-            for (var idx = 0; idx < reversedBubbles.length; idx++) ...[
+            for (var i = 0; i < ordered.length; i++) ...[
               _SkeletonBubbleRow(
-                bubbleWidth: screenWidth * reversedBubbles[idx].width,
-                lines: reversedBubbles[idx].lines,
-                isMe: reversedBubbles[idx].isMe,
-                // Show avatar circle only on the last bubble in a received run
+                bubbleWidth: screenWidth * ordered[i].width,
+                height: ordered[i].tall ? 54 : 36,
+                isMe: ordered[i].isMe,
+                // The tail sits on the last bubble of a run. In this reversed
+                // list that is the one whose next entry is from the other side,
+                // or the final entry.
+                hasTail:
+                    i == ordered.length - 1 ||
+                    ordered[i + 1].isMe != ordered[i].isMe,
+                // Only a received run's last bubble gets the avatar.
                 showAvatar:
-                    !reversedBubbles[idx].isMe &&
-                    (idx == reversedBubbles.length - 1 ||
-                        reversedBubbles[idx + 1].isMe),
+                    !ordered[i].isMe &&
+                    (i == ordered.length - 1 || ordered[i + 1].isMe),
               ),
-              const SizedBox(height: 8),
+              SizedBox(
+                // Tighter inside a run than between speakers, which is the
+                // grouping rhythm the real thread uses.
+                height:
+                    i < ordered.length - 1 &&
+                        ordered[i + 1].isMe == ordered[i].isMe
+                    ? 4
+                    : 10,
+              ),
             ],
           ],
         ),
@@ -177,14 +198,19 @@ class DmThreadSkeleton extends StatelessWidget {
 class _SkeletonBubbleRow extends StatelessWidget {
   const _SkeletonBubbleRow({
     required this.bubbleWidth,
-    required this.lines,
+    required this.height,
     required this.isMe,
+    this.hasTail = true,
     this.showAvatar = false,
   });
 
   final double bubbleWidth;
-  final int lines;
+  final double height;
   final bool isMe;
+
+  /// Squares off the bottom corner on the speaker's side, as the real thread
+  /// does for the last bubble of a run. Mid-run bubbles stay fully rounded.
+  final bool hasTail;
 
   /// When true, renders an avatar circle on the left (last in a received run).
   final bool showAvatar;
@@ -192,47 +218,24 @@ class _SkeletonBubbleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final tail = Radius.circular(hasTail ? 4 : 18);
     final radius = BorderRadius.only(
       topLeft: const Radius.circular(18),
       topRight: const Radius.circular(18),
-      bottomLeft: Radius.circular(isMe ? 18 : 4),
-      bottomRight: Radius.circular(isMe ? 4 : 18),
+      bottomLeft: isMe ? const Radius.circular(18) : tail,
+      bottomRight: isMe ? tail : const Radius.circular(18),
     );
 
+    // A solid block, not a bubble containing placeholder text. The sent side
+    // keeps a faint accent tint because that colour difference is the clearest
+    // structural signal in the real thread; it is dropped to a low alpha so the
+    // skeleton still reads as absent content rather than as a rendered message.
     final bubble = Container(
       width: bubbleWidth,
-      padding: EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: lines == 1 ? 10 : 12,
-      ),
+      height: height,
       decoration: BoxDecoration(
-        color: isMe ? zt.accent.withValues(alpha: 0.25) : zt.bgSecondary,
+        color: isMe ? zt.accent.withValues(alpha: 0.16) : zt.bgSecondary,
         borderRadius: radius,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 12,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: zt.border,
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-          if (lines > 1) ...[
-            const SizedBox(height: 5),
-            Container(
-              height: 12,
-              width: bubbleWidth * 0.6,
-              decoration: BoxDecoration(
-                color: zt.border,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ],
-        ],
       ),
     );
 

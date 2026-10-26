@@ -18,6 +18,7 @@ import '../send/withdraw_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 /// Wallet — ZEND BETA spec §7-9: reached only by tapping the balance on
 /// Feed. "The one place Zend can comfortably become a financial dashboard,
@@ -154,7 +155,7 @@ class _WalletSheetState extends State<WalletSheet> {
                             child: Text(
                               model.balanceHidden
                                   ? '••••••'
-                                  : '\$${model.sendableBalance.toStringAsFixed(2)}',
+                                  : formatUsd(model.sendableBalance),
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontSize: 40,

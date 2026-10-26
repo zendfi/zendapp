@@ -1,4 +1,5 @@
 import 'handle_label.dart';
+import '../core/zend_format.dart';
 
 /// Represents a payment request in the activity feed.
 /// Used for both inbound (sent *to* the current user) and outbound
@@ -69,9 +70,9 @@ class PaymentRequestItem {
 
   String get formattedAmount {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return '\$${amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(amountUsdc);
     }
-    return '\$${amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(amountUsdc);
   }
 
   factory PaymentRequestItem.fromOutboundJson(Map<String, dynamic> json) {

@@ -92,6 +92,6 @@ const CarouselCardModel kDebitCardTeaserCard = CarouselCardModel(
 /// in their fixed order — that relative order never changes between the
 /// two cases (Property 25).
 List<CarouselCardModel> buildCarouselCards({required bool teaserDismissed}) => [
-      if (!teaserDismissed) kDebitCardTeaserCard,
-      ...kEducationalCards,
-    ];
+  if (!teaserDismissed) kDebitCardTeaserCard,
+  ...kEducationalCards,
+];

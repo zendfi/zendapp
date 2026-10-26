@@ -1,3 +1,5 @@
+import '../core/zend_format.dart';
+
 class EmailIntent {
   final String id;
   final double amountUsdc;
@@ -49,9 +51,9 @@ class EmailIntent {
   /// Formatted amount string, e.g. "$5.00"
   String get amountFormatted {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return '\$${amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(amountUsdc);
     }
-    return '\$${amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(amountUsdc);
   }
 
   /// Days remaining before expiry (0 if already expired).
@@ -127,8 +129,8 @@ class IntentPreview {
 
   String get amountFormatted {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return '\$${amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(amountUsdc);
     }
-    return '\$${amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(amountUsdc);
   }
 }

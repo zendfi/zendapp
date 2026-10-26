@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_format.dart';
+import '../../design/zend_money.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -948,8 +950,6 @@ class DmPaymentBubble extends StatelessWidget {
     final pd = message.paymentData;
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
-    final amountFormatted =
-        '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
 
     // Monochromatic: sent uses the accent surface with a hairline accent border,
     // received uses the same elevated bubbleReceived fill as text bubbles so
@@ -960,7 +960,6 @@ class DmPaymentBubble extends StatelessWidget {
     final sentBorder = isMe
         ? Border.all(color: zt.accent.withValues(alpha: 0.25), width: 0.8)
         : null;
-    final amountColor = zt.textPrimary;
     final labelColor = zt.textSecondary;
     final noteColor = zt.textPrimary.withValues(alpha: 0.75);
     final iconColor = isMe ? zt.accent : zt.textSecondary;
@@ -1013,18 +1012,23 @@ class DmPaymentBubble extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      amountFormatted,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 28,
-                        color: amountColor,
-                        height: 1.0,
-                      ),
+                    if (isEmojiNote(note)) ...[
+                      const SizedBox(height: 8),
+                      ZendEmojiTile(note!.trim(), size: 52, burst: !isMe),
+                      const SizedBox(height: 8),
+                    ] else
+                      const SizedBox(height: 2),
+                    ZendAmount(
+                      double.tryParse(amountStr) ?? 0,
+                      style: ZendTextStyles.amountM.copyWith(fontSize: 28),
+                      direction: isMe
+                          ? MoneyDirection.outgoing
+                          : MoneyDirection.incoming,
                     ),
-                    if (note != null && note.isNotEmpty && note != 'vibe') ...[
+                    if (note != null &&
+                        note.isNotEmpty &&
+                        note != 'vibe' &&
+                        !isEmojiNote(note)) ...[
                       const SizedBox(height: 3),
                       Text(
                         note,
@@ -1086,8 +1090,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final rd = message.paymentRequestData;
     final amountStr = rd?.amountUsdc ?? '0.00';
-    final amountFormatted =
-        '\$${double.tryParse(amountStr)?.toStringAsFixed(2) ?? amountStr}';
+    final amountFormatted = formatUsd(double.tryParse(amountStr) ?? 0);
     final isPending = rd?.isPending ?? true;
 
     final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;

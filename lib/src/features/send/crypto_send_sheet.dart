@@ -9,11 +9,13 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/crypto_send_models.dart';
+import '../../services/payment_rail_models.dart';
 import '../../services/signing_policy_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 Future<void> showCryptoSendSheet(
   BuildContext context, {
@@ -151,12 +153,12 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
-  String get _amountFormattedExact => '\$${widget.amount.toStringAsFixed(2)}';
+  String get _amountFormattedExact => formatUsd(widget.amount);
 
   String _truncateAddress(String address) {
     if (address.length <= 16) return address;
@@ -167,11 +169,29 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
     setState(() => _stage = CryptoSendStage.processing);
     try {
       final model = ZendScope.of(context);
-      final quote = await model.walletService.apiClient.getCryptoSendQuote(
-        chainId: _selectedChain!['chain_id'] as int,
-        destinationAddress: _addressController.text.trim(),
-        amountUsdc: widget.amount,
-      );
+
+      Future<CryptoSendQuote> runQuote() =>
+          model.walletService.apiClient.getCryptoSendQuote(
+            chainId: _selectedChain!['chain_id'] as int,
+            destinationAddress: _addressController.text.trim(),
+            amountUsdc: widget.amount,
+          );
+
+      CryptoSendQuote quote;
+      try {
+        quote = await runQuote();
+      } on ApiException catch (e) {
+        // Sui gasless rail: the USDC sits in coin objects, not the spendable
+        // address-balance accumulator. Deposit it, then retry once — invisible
+        // to the user (the zkLogin proof is cached for the session).
+        if (e.errorCode != 'SUI_ADDRESS_BALANCE_INSUFFICIENT') rethrow;
+        await model.zkLoginService.depositCoinObjectsToAddressBalance(
+          rail: PaymentRail.sui,
+          network: kSuiNetwork,
+        );
+        quote = await runQuote();
+      }
+
       if (!mounted) return;
       setState(() {
         _quote = quote;
@@ -180,7 +200,9 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Could not get quote. Please try again.';
+        _errorMessage = e is ApiException
+            ? e.userMessage
+            : 'Could not get quote. Please try again.';
         _stage = CryptoSendStage.error;
       });
     }
@@ -205,6 +227,14 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
   }
 
   Future<void> _proceedFromQuote() async {
+    // Sui gasless rail signs with the in-memory zkLogin ephemeral key — there is
+    // no PIN or stored keypair to gate on, so skip the PIN policy entirely.
+    if (_quote?.isSui ?? false) {
+      setState(() => _stage = CryptoSendStage.processing);
+      await _runCryptoSendSui();
+      return;
+    }
+
     final policy = SigningPolicyService();
     final cache = WalletSessionCache.instance;
     final needsPin = await policy.requiresPinForAmount(widget.amount);
@@ -215,6 +245,65 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       await _runCryptoSend(pin: null, keypairBytes: cache.keypair);
     } else {
       setState(() => _stage = CryptoSendStage.pin);
+    }
+  }
+
+  /// Sui gasless crypto send: sign the prepared transfer envelope with zkLogin
+  /// and submit it. No PIN/keypair — the ephemeral key and cached proof do it.
+  Future<void> _runCryptoSendSui() async {
+    try {
+      final model = ZendScope.of(context);
+      final quote = _quote!;
+      final envelope = quote.envelope;
+      if (envelope == null) {
+        throw StateError('Missing Sui transfer envelope');
+      }
+      final transactionDataBcs =
+          envelope.payload['transaction_data_bcs'] as String?;
+      if (transactionDataBcs == null || transactionDataBcs.isEmpty) {
+        throw StateError('Sui envelope carries no transaction bytes');
+      }
+
+      final signature = await model.zkLoginService.signPreparedTransaction(
+        transactionDataBcsBase64: transactionDataBcs,
+      );
+
+      final signedEnvelope = RailEnvelope(
+        type: 'sui_signed_transaction',
+        version: 1,
+        // `kind`/`version` repeated inside the payload on purpose — the Sui rail
+        // deserializes this payload itself and requires an inner `kind`.
+        payload: {
+          'kind': 'sui_signed_transaction',
+          'version': 1,
+          'transaction_data_bcs': transactionDataBcs,
+          'signatures': [signature],
+        },
+      );
+
+      await model.walletService.apiClient.executeCryptoSend(
+        quoteId: quote.quoteId,
+        envelope: signedEnvelope,
+      );
+
+      if (!mounted) return;
+      setState(() => _stage = CryptoSendStage.success);
+      HapticFeedback.mediumImpact();
+      unawaited(SoundService.playZentSuccess());
+      unawaited(model.fetchBalance());
+      unawaited(model.fetchHistory());
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.userMessage;
+        _stage = CryptoSendStage.error;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Transfer failed. Please try again.';
+        _stage = CryptoSendStage.error;
+      });
     }
   }
 
@@ -285,6 +374,12 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       final model = ZendScope.of(context);
       final quote = _quote!;
 
+      // This path only runs for the Solana rail, where the quote always carries
+      // the blockhash and fee-payer. (The Sui rail is handled by
+      // `_runCryptoSendSui`, which signs an envelope instead.)
+      final blockhash = quote.blockhash!;
+      final feePayer = quote.feePayer!;
+
       // Build and sign the USDC transfer from the user's wallet to the
       // Dextopus deposit address. This matches the pattern used by bank-send
       // and zend-to-zend transfers: user signs, server co-signs as fee-payer.
@@ -295,16 +390,16 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               keypairBytes: keypairBytes,
               amountUsdc: widget.amount,
               destinationAddress: quote.dextopusDepositAddress,
-              blockhash: quote.blockhash,
-              feePayerAddress: quote.feePayer,
+              blockhash: blockhash,
+              feePayerAddress: feePayer,
             );
       } else {
         signedTx = await model.walletService.buildAndSignTransactionToAddress(
           pin: pin!,
           amountUsdc: widget.amount,
           destinationAddress: quote.dextopusDepositAddress,
-          blockhash: quote.blockhash,
-          feePayerAddress: quote.feePayer,
+          blockhash: blockhash,
+          feePayerAddress: feePayer,
         );
       }
 

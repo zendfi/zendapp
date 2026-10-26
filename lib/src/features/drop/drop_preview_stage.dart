@@ -3,6 +3,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import '../../models/handle_label.dart';
+import '../../core/zend_format.dart';
 
 class DropPreviewStage extends StatefulWidget {
   const DropPreviewStage({
@@ -41,9 +42,9 @@ class _DropPreviewStageState extends State<DropPreviewStage>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   String get _displayName {

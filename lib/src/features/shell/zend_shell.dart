@@ -27,6 +27,7 @@ import 'people_screen.dart';
 import 'wallet_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 class ZendShell extends StatefulWidget {
   const ZendShell({super.key});
@@ -597,10 +598,12 @@ class _ZendShellState extends State<ZendShell> {
       // only. Not present on Chats (Zend is reachable contextually from
       // inside a conversation instead — spec §27) or You (not an action
       // screen — spec §29's "this is me, manage me").
+      // Feed carries Zend as its primary button under the balance (design
+      // revamp), so the floating Z only remains on People.
       // In web desktop mode the sidebar outside the app column (ZendWebFrame)
       // carries the tabs and the Zend action, so the in-column copies are
       // dropped rather than shown twice.
-      floatingActionButton: (!webDesktop && (_tabIndex == 0 || _tabIndex == 1))
+      floatingActionButton: (!webDesktop && _tabIndex == 1)
           ? _ZendFab(onTap: () => showZendEntrySheet(context))
           : null,
       bottomNavigationBar: webDesktop
@@ -939,7 +942,7 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '@${n.requesterZendtag} is requesting ${n.formattedAmount}',
+                          '${handleLabel(n.requesterZendtag)} is requesting ${n.formattedAmount}',
                           style: const TextStyle(
                             fontFamily: 'Geist',
                             fontSize: 13,
@@ -1080,7 +1083,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner>
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '@${n.reactorZendtag} reacted ${n.emoji} to your activity',
+                      '${handleLabel(n.reactorZendtag)} reacted ${n.emoji} to your activity',
                       style: const TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 13,
@@ -1187,7 +1190,7 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '@${n.authorZendtag} commented on your activity',
+                          '${handleLabel(n.authorZendtag)} commented on your activity',
                           style: const TextStyle(
                             fontFamily: 'Geist',
                             fontSize: 13,
@@ -1310,7 +1313,7 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '@${widget.senderZendtag}',
+                            handleLabel(widget.senderZendtag),
                             style: const TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 13,

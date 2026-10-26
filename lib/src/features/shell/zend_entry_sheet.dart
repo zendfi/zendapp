@@ -1,3 +1,6 @@
+import '../../core/zend_format.dart';
+import '../../design/zend_money.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -16,6 +19,7 @@ import '../send/send_shared_widgets.dart' show VisibilityPill;
 import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../models/handle_label.dart';
 
 /// The Zend entry point — identity-first, per redesign.md §10-16, merged
 /// with §12-13 (Send/Request) into a single consolidated screen.
@@ -152,9 +156,41 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
   double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
-  String get _amountLabel => _amount == _amount.roundToDouble()
-      ? '\$${_amount.toStringAsFixed(0)}'
-      : '\$${_amount.toStringAsFixed(2)}';
+  String get _amountLabel => formatUsd(_amount);
+
+  /// Keypad entry (Cash App lesson: the keypad is the product). Max two
+  /// decimals, one dot, no leading zeros.
+  void _onKey(String key) {
+    ZendFeel.keypadTap();
+    final t = _amountController.text;
+    String next;
+    if (key == '<') {
+      next = t.isEmpty ? t : t.substring(0, t.length - 1);
+    } else if (key == '.') {
+      next = t.contains('.') ? t : (t.isEmpty ? '0.' : '$t.');
+    } else {
+      final dot = t.indexOf('.');
+      if (dot >= 0 && t.length - dot > 2) return;
+      if (t.replaceAll('.', '').length >= 7) return;
+      next = t == '0' ? key : '$t$key';
+    }
+    _amountController.text = next;
+    setState(() => _confirmingZend = false);
+  }
+
+  /// Emoji suggestions for the note: the user's own recent emoji notes first,
+  /// then a default set.
+  List<String> _emojiChoices(ZendAppModel model) {
+    final seen = <String>{};
+    for (final e in model.threadedActivityEdges) {
+      if (isEmojiNote(e.note) && e.isOutgoing) seen.add(e.note!.trim());
+      if (seen.length >= 4) break;
+    }
+    for (final d in const ['🍕', '🍣', '🎂', '☕', '🚕', '🎉', '🏠', '❤️']) {
+      seen.add(d);
+    }
+    return seen.take(8).toList();
+  }
 
   /// Single owner of stage transitions, so focus is always handed to
   /// exactly one field per stage — never contested between the outgoing
@@ -267,7 +303,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _zendtag = resolved.zendtag;
         _displayName = resolved.displayName.trim().isNotEmpty
             ? resolved.displayName
-            : '@${resolved.zendtag}';
+            : handleLabel(resolved.zendtag);
         _avatarUrl = resolved.avatarUrl;
         _email = null;
         _searching = false;
@@ -310,7 +346,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             ? resolved.displayName
             : (resolved.zendtag.contains('@')
                   ? resolved.zendtag
-                  : '@${resolved.zendtag}');
+                  : handleLabel(resolved.zendtag));
         _avatarUrl = resolved.avatarUrl;
         // Cleared deliberately: `_commitZend` branches to the email-intent flow on
         // a non-null `_email`, and this recipient is a normal Zend send.
@@ -358,7 +394,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       _zendtag = tag;
       _displayName = (u['display_name'] as String?)?.trim().isNotEmpty == true
           ? u['display_name'] as String
-          : '@$tag';
+          : handleLabel(tag);
       _avatarUrl = u['avatar_url'] as String?;
       _email = null;
     });
@@ -403,6 +439,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   Future<void> _commitZend() async {
     final amount = _amount;
     if (amount <= 0 || _preflighting) return;
+    unawaited(ZendFeel.sendConfirmed());
 
     final model = ZendScope.of(context);
     final note = _note;
@@ -668,7 +705,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               : tag;
           return _IdentityRow(
             displayName: name,
-            subtitle: '@$tag',
+            subtitle: handleLabel(tag),
             avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
             avatarUrl: u['avatar_url'] as String?,
             onTap: () => _pickSearchResult(u),
@@ -699,7 +736,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         final c = recent[i - 1];
         return _IdentityRow(
           displayName: c.name.isNotEmpty ? c.name : c.tag,
-          subtitle: '@${c.tag}',
+          subtitle: handleLabel(c.tag),
           avatarLabel: c.avatarLabel,
           avatarUrl: c.avatarUrl,
           onTap: () => _pickContact(c),
@@ -785,7 +822,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                         const SizedBox(height: 10),
                         Text(
                           _zendtag != null
-                              ? '@$_zendtag'
+                              ? handleLabel(_zendtag)
                               : (_displayName ?? _email ?? ''),
                           style: TextStyle(
                             fontFamily: 'Geist',
@@ -821,8 +858,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                       Text(
                         '\$',
                         style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 28,
+                          fontFamily: 'SpaceGrotesk',
+                          fontSize: 32,
                           fontWeight: FontWeight.w700,
                           color: zt.textPrimary,
                         ),
@@ -832,22 +869,20 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                         child: TextField(
                           controller: _amountController,
                           focusNode: _amountFocus,
+                          // Phones use the on-screen keypad below; on the web
+                          // the physical keyboard types straight in.
+                          readOnly: !kIsWeb,
+                          showCursor: kIsWeb,
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
                           textAlign: TextAlign.left,
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 48,
-                            fontWeight: FontWeight.w700,
+                          style: ZendTextStyles.displayXl.copyWith(
                             color: zt.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: '0',
-                            hintStyle: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 48,
-                              fontWeight: FontWeight.w700,
+                            hintStyle: ZendTextStyles.displayXl.copyWith(
                               color: zt.textSecondary,
                             ),
                             // Explicitly borderless/unfilled — the global
@@ -907,6 +942,50 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           // Swapped for the visibility control while confirming: the note has
           // moved up under the amount by then, and this is where a choice about
           // the payment belongs — immediately above the button that commits it.
+          if (!_confirmingZend) ...[
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final e in _emojiChoices(ZendScope.of(context)))
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Semantics(
+                        button: true,
+                        label: 'Use $e as the note',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(ZendRadii.chip),
+                          onTap: () {
+                            ZendFeel.reaction();
+                            _noteController.text = e;
+                            _disarmZendConfirm();
+                            setState(() {});
+                          },
+                          child: Container(
+                            width: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _noteController.text.trim() == e
+                                  ? zt.accentPop
+                                  : zt.bgSecondary,
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.chip,
+                              ),
+                            ),
+                            child: Text(
+                              e,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: _confirmingZend
@@ -961,6 +1040,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   ),
           ),
           const SizedBox(height: 12),
+          if (!_confirmingZend && !kIsWeb) ...[
+            _AmountKeypad(onKey: _onKey),
+            const SizedBox(height: 8),
+          ],
           // ── Action area — pinned outside the scroll view ──
           // Fixed 52pt height, so the two states swap without the sheet's
           // pinned bottom region changing size.
@@ -1033,7 +1116,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                 ),
               ),
               child: const Text(
-                'Pay',
+                'Zend',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 15,
@@ -1078,7 +1161,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   /// generic "Send cash" would cost the same tap and tell the user nothing
   /// they haven't already been shown.
   Widget _buildZendConfirm(ZendTheme zt) {
-    final target = _zendtag != null ? '@$_zendtag' : (_email ?? 'them');
+    final target = _zendtag != null
+        ? handleLabel(_zendtag)
+        : (_email ?? 'them');
     return Row(
       key: const ValueKey('confirm'),
       children: [
@@ -1104,7 +1189,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                       color: ZendColors.textOnDeep,
                     )
                   : Text(
-                      'Send $_amountLabel to $target',
+                      'Zend $_amountLabel to $target',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1208,6 +1293,65 @@ class _IdentityRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Numeric keypad for the amount. 44px+ touch targets, light tick per tap.
+class _AmountKeypad extends StatelessWidget {
+  const _AmountKeypad({required this.onKey});
+
+  final ValueChanged<String> onKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    const rows = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['.', '0', '<'],
+    ];
+    return Column(
+      children: [
+        for (final row in rows)
+          Row(
+            children: [
+              for (final k in row)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    label: k == '<'
+                        ? 'Delete'
+                        : k == '.'
+                        ? 'Decimal point'
+                        : k,
+                    excludeSemantics: true,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(ZendRadii.card),
+                      onTap: () => onKey(k),
+                      child: SizedBox(
+                        height: 52,
+                        child: Center(
+                          child: k == '<'
+                              ? Icon(
+                                  PhosphorIconsRegular.backspace,
+                                  color: zt.textPrimary,
+                                )
+                              : Text(
+                                  k,
+                                  style: ZendTextStyles.amountM.copyWith(
+                                    color: zt.textPrimary,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ],
     );
   }
 }

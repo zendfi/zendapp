@@ -21,12 +21,12 @@ extension NotificationCategoryKindX on NotificationCategoryKind {
   /// without a migration on both sides — existing stored values would
   /// silently stop matching.
   String get storageKey => switch (this) {
-        NotificationCategoryKind.transfers => 'transfers',
-        NotificationCategoryKind.chat => 'chat',
-        NotificationCategoryKind.activity => 'activity',
-        NotificationCategoryKind.pools => 'pools',
-        NotificationCategoryKind.savings => 'savings',
-      };
+    NotificationCategoryKind.transfers => 'transfers',
+    NotificationCategoryKind.chat => 'chat',
+    NotificationCategoryKind.activity => 'activity',
+    NotificationCategoryKind.pools => 'pools',
+    NotificationCategoryKind.savings => 'savings',
+  };
 
   /// Android notification channel ID. Must match the channel_id the backend
   /// puts in the FCM payload's `android.notification.channel_id`
@@ -34,31 +34,31 @@ extension NotificationCategoryKindX on NotificationCategoryKind {
   /// — Android routes a background/killed-app notification using whatever
   /// channel_id arrives in the payload, so client and server must agree.
   String get androidChannelId => switch (this) {
-        NotificationCategoryKind.transfers => 'zend_transfers',
-        NotificationCategoryKind.chat => 'zend_chat',
-        NotificationCategoryKind.activity => 'zend_activity',
-        NotificationCategoryKind.pools => 'zend_pools',
-        NotificationCategoryKind.savings => 'zend_savings',
-      };
+    NotificationCategoryKind.transfers => 'zend_transfers',
+    NotificationCategoryKind.chat => 'zend_chat',
+    NotificationCategoryKind.activity => 'zend_activity',
+    NotificationCategoryKind.pools => 'zend_pools',
+    NotificationCategoryKind.savings => 'zend_savings',
+  };
 
   String get androidChannelName => switch (this) {
-        NotificationCategoryKind.transfers => 'Transfers',
-        NotificationCategoryKind.chat => 'Messages',
-        NotificationCategoryKind.activity => 'Activity',
-        NotificationCategoryKind.pools => 'Pools',
-        NotificationCategoryKind.savings => 'Savings',
-      };
+    NotificationCategoryKind.transfers => 'Transfers',
+    NotificationCategoryKind.chat => 'Messages',
+    NotificationCategoryKind.activity => 'Activity',
+    NotificationCategoryKind.pools => 'Pools',
+    NotificationCategoryKind.savings => 'Savings',
+  };
 
   String get androidChannelDescription => switch (this) {
-        NotificationCategoryKind.transfers =>
-          'Incoming and outgoing money: transfers, drops, deposits, bank sends',
-        NotificationCategoryKind.chat => 'Direct messages and pool group chat',
-        NotificationCategoryKind.activity =>
-          'Reactions, comments, streaks and shared activity',
-        NotificationCategoryKind.pools =>
-          'Pool contributions and lifecycle updates',
-        NotificationCategoryKind.savings => 'Savings goal progress',
-      };
+    NotificationCategoryKind.transfers =>
+      'Incoming and outgoing money: transfers, drops, deposits, bank sends',
+    NotificationCategoryKind.chat => 'Direct messages and pool group chat',
+    NotificationCategoryKind.activity =>
+      'Reactions, comments, streaks and shared activity',
+    NotificationCategoryKind.pools =>
+      'Pool contributions and lifecycle updates',
+    NotificationCategoryKind.savings => 'Savings goal progress',
+  };
 
   /// Maps a push notification `type` field to its category. Mirrors
   /// `NotificationCategory::from_type()` in push_notifications.rs exactly —

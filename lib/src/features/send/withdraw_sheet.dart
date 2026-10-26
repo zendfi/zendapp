@@ -8,6 +8,7 @@ import 'bank_send_sheet.dart';
 import 'crypto_send_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 Future<void> showWithdrawSheet(BuildContext context) {
   return showZendModalSheet(
@@ -57,9 +58,9 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
 
   String get _amountFormatted {
     if (_parsedAmount == _parsedAmount.roundToDouble()) {
-      return '\$${_parsedAmount.toStringAsFixed(0)}';
+      return formatUsd(_parsedAmount);
     }
-    return '\$${_parsedAmount.toStringAsFixed(2)}';
+    return formatUsd(_parsedAmount);
   }
 
   void _onKey(String value) {

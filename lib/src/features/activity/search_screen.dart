@@ -16,6 +16,7 @@ import '../profile/user_profile_screen.dart';
 import '../send/qr_payment_sheet.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// App-wide search screen.
 ///
@@ -506,7 +507,9 @@ class _UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final name = displayName.trim().isEmpty ? '@$zendtag' : displayName;
+    final name = displayName.trim().isEmpty
+        ? handleLabel(zendtag)
+        : displayName;
     return _SearchTile(
       leading: ZendAvatar(
         radius: 18,
@@ -514,7 +517,7 @@ class _UserTile extends StatelessWidget {
         photoUrl: avatarUrl,
       ),
       title: name,
-      subtitle: '@$zendtag',
+      subtitle: handleLabel(zendtag),
       trailing: Icon(
         PhosphorIconsRegular.caretRight,
         size: 12,

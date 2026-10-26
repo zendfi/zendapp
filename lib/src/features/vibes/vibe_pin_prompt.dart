@@ -9,6 +9,7 @@ import '../../models/api_exceptions.dart';
 import '../../services/wallet_session_cache.dart';
 import '../send/send_shared_widgets.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 /// Resolves a signing keypair for a Vibe send, prompting for PIN when
 /// required.
@@ -174,9 +175,9 @@ class _VibePinSheetState extends State<_VibePinSheet>
 
   String get _amountFormatted {
     if (widget.amountUsdc == widget.amountUsdc.roundToDouble()) {
-      return '\$${widget.amountUsdc.toStringAsFixed(0)}';
+      return formatUsd(widget.amountUsdc);
     }
-    return '\$${widget.amountUsdc.toStringAsFixed(2)}';
+    return formatUsd(widget.amountUsdc);
   }
 
   @override

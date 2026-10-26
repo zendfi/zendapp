@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'zend_entry_sheet.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
@@ -10,6 +11,7 @@ import '../../navigation/zend_routes.dart';
 import '../activity/activity_grouping.dart';
 import '../profile/user_profile_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// People — the identity/relationship gateway tab (ZEND BETA spec §17).
 ///
@@ -259,7 +261,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
         final avatarUrl = u['avatar_url'] as String?;
         return _PersonRow(
           displayName: name,
-          subtitle: '@$tag',
+          subtitle: handleLabel(tag),
+          zendtag: tag,
           avatarUrl: avatarUrl,
           avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
           onTap: () => _openProfile(
@@ -398,6 +401,7 @@ class _PersonRow extends StatelessWidget {
     required this.avatarLabel,
     required this.onTap,
     this.avatarUrl,
+    this.zendtag,
   });
 
   final String displayName;
@@ -405,6 +409,9 @@ class _PersonRow extends StatelessWidget {
   final String avatarLabel;
   final String? avatarUrl;
   final VoidCallback onTap;
+
+  /// When set, the row gets its own Zend action (design revamp).
+  final String? zendtag;
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +456,23 @@ class _PersonRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (zendtag != null && zendtag!.isNotEmpty)
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    foregroundColor: zt.accent,
+                  ),
+                  onPressed: () =>
+                      showZendEntrySheet(context, prefilledRecipient: zendtag),
+                  child: Text(
+                    'Zend',
+                    semanticsLabel: 'Zend $displayName',
+                    style: const TextStyle(
+                      fontFamily: 'Geist',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

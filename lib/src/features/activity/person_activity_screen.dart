@@ -11,6 +11,7 @@ import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// Opened by tapping a person node in the "Your Mutuals" Graph_View —
 /// shows that person's full authorized activity: the viewer's own edges
@@ -116,7 +117,7 @@ class _PersonActivityScreenState extends State<PersonActivityScreen> {
     if (edge.direction == 'external') {
       // A Shared_Network edge between the target person and someone else —
       // neither party is the viewer.
-      return '${edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone'} $verb ${edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone'}';
+      return '${edge.senderZendtag != null ? handleLabel(edge.senderZendtag) : 'Someone'} $verb ${edge.recipientZendtag != null ? handleLabel(edge.recipientZendtag) : 'someone'}';
     }
     final isSelfSender = edge.direction == 'outgoing';
     return isSelfSender ? 'You $verb ${widget.label}' : '${widget.label} $verb';

@@ -8,6 +8,9 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_money.dart';
+import '../../design/zend_mark.dart';
+import '../request/request_drawer_sheet.dart';
 import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
 import '../dm/dm_thread_screen.dart';
@@ -17,15 +20,12 @@ import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed.
-String _formatBalance(double balance) {
-  if (balance == balance.roundToDouble()) {
-    return '\$${balance.toStringAsFixed(0)}';
-  }
-  return '\$${balance.toStringAsFixed(2)}';
-}
+String _formatBalance(double balance) => formatUsd(balance);
 
 /// Feed — ZEND BETA spec §5-7, §21-24: a single flat, reverse-chronological
 /// timeline mixing the viewer's own private Activities with the
@@ -127,11 +127,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     final model = ZendScope.of(context);
     final source = model.threadedActivityEdges;
 
-    final nextSelfInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : (model.currentDisplayName?.isNotEmpty == true
-              ? model.currentDisplayName![0].toUpperCase()
-              : 'Y');
+    final nextSelfInitial = model.selfInitial;
     final nextSelfAvatarUrl = model.currentAvatarUrl;
     final viewerChanged =
         nextSelfInitial != _selfInitial || nextSelfAvatarUrl != _selfAvatarUrl;
@@ -287,13 +283,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
         final verb = feedVerbFor(edge);
         headline = isOutgoing
             ? 'You $verb ${counterparty.displayLabel}'
-            : '${counterparty.displayLabel} $verb you';
+            : '${counterparty.displayLabel} $verb';
       }
-      final selfInitial = model.currentZendtag?.isNotEmpty == true
-          ? model.currentZendtag![0].toUpperCase()
-          : (model.currentDisplayName?.isNotEmpty == true
-                ? model.currentDisplayName![0].toUpperCase()
-                : 'Y');
+      final selfInitial = model.selfInitial;
       avatarInitial = isOutgoing ? selfInitial : counterparty.initialLetter;
       avatarUrl = isOutgoing ? model.currentAvatarUrl : counterparty.avatarUrl;
     } else {
@@ -301,10 +293,10 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       final senderTag = edge.senderZendtag;
       final recipientTag = edge.recipientZendtag;
       final senderLabel = senderTag != null && senderTag.isNotEmpty
-          ? '@$senderTag'
+          ? handleLabel(senderTag)
           : 'Someone';
       final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
-          ? '@$recipientTag'
+          ? handleLabel(recipientTag)
           : 'someone';
       final verb = feedVerbFor(edge);
       headline = isVibe
@@ -398,15 +390,14 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         onOpenWallet: widget.onOpenWallet,
                         onTapSearch: _expandSearch,
                       )
-                    : _ExpandedSearchBar(
+                    : _HomeHeader(
                         key: const ValueKey('expanded'),
                         controller: _searchController,
                         focusNode: _searchFocus,
                         hasQuery: _searchQuery.isNotEmpty,
                         onClear: () => _searchController.clear(),
-                        balanceLabel: model.balanceHidden
-                            ? '•••'
-                            : _formatBalance(model.sendableBalance),
+                        balance: model.sendableBalance,
+                        balanceHidden: model.balanceHidden,
                         onOpenWallet: widget.onOpenWallet,
                       ),
               ),
@@ -441,8 +432,14 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                           itemCount: visible.length,
                           itemBuilder: (context, i) {
                             final edge = visible[i];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
+                            final day = formatDayGroup(edge.createdAt);
+                            final showDay =
+                                i == 0 ||
+                                formatDayGroup(visible[i - 1].createdAt) != day;
+                            final card = Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: ZendSpacing.betweenCards,
+                              ),
                               // Each card owns an async reaction fetch
                               // that repaints it independently of its
                               // neighbours, so a boundary here stops one
@@ -460,6 +457,14 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                                   onTap: () => _openActivity(edge),
                                 ),
                               ),
+                            );
+                            if (!showDay) return card;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _DayHeader(day, first: i == 0),
+                                card,
+                              ],
                             );
                           },
                         ),
@@ -495,6 +500,8 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const ZendMark(size: 72),
+            const SizedBox(height: 20),
             Text(
               'Nothing here yet.',
               textAlign: TextAlign.center,
@@ -507,7 +514,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Zend someone to get things started.',
+              'Send your first Zend: pick a person, an amount and an emoji.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',
@@ -555,17 +562,18 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   }
 }
 
-/// Feed's header at rest — a fully-formed search bar styled identically to
-/// Chats' persistent search pill (`dm_list_screen.dart`), with the balance
-/// sitting to its right as the one gateway into Wallet (spec §7).
-class _ExpandedSearchBar extends StatelessWidget {
-  const _ExpandedSearchBar({
+/// Home header at rest (design revamp): brand + search icon, then the
+/// balance as the hero with Zend and Request directly beneath it. Replaces
+/// the old small balance pill and the floating Z button on this screen.
+class _HomeHeader extends StatefulWidget {
+  const _HomeHeader({
     super.key,
     required this.controller,
     required this.focusNode,
     required this.hasQuery,
     required this.onClear,
-    required this.balanceLabel,
+    required this.balance,
+    required this.balanceHidden,
     required this.onOpenWallet,
   });
 
@@ -573,73 +581,162 @@ class _ExpandedSearchBar extends StatelessWidget {
   final FocusNode focusNode;
   final bool hasQuery;
   final VoidCallback onClear;
-  final String balanceLabel;
+  final double balance;
+  final bool balanceHidden;
   final VoidCallback onOpenWallet;
+
+  @override
+  State<_HomeHeader> createState() => _HomeHeaderState();
+}
+
+class _HomeHeaderState extends State<_HomeHeader> {
+  late bool _searchOpen = widget.hasQuery;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            focusNode: focusNode,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 14,
-              color: zt.textPrimary,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Search activity',
-              hintStyle: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 14,
-                color: zt.textSecondary.withValues(alpha: 0.7),
+        Row(
+          children: [
+            Text(
+              'Zend!',
+              style: ZendTextStyles.title.copyWith(
+                fontFamily: 'SpaceGrotesk',
+                fontWeight: FontWeight.w700,
+                color: zt.textPrimary,
               ),
-              prefixIcon: Icon(
-                PhosphorIconsRegular.magnifyingGlass,
-                size: 18,
+            ),
+            const Spacer(),
+            IconButton(
+              tooltip: _searchOpen ? 'Close search' : 'Search activity',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              icon: Icon(
+                _searchOpen
+                    ? PhosphorIconsRegular.x
+                    : PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
                 color: zt.textSecondary,
               ),
-              suffixIcon: hasQuery
-                  ? GestureDetector(
-                      onTap: onClear,
-                      child: Icon(
-                        PhosphorIconsRegular.xCircle,
-                        size: 18,
-                        color: zt.textSecondary,
+              onPressed: () {
+                setState(() => _searchOpen = !_searchOpen);
+                if (_searchOpen) {
+                  widget.focusNode.requestFocus();
+                } else {
+                  widget.onClear();
+                  widget.focusNode.unfocus();
+                }
+              },
+            ),
+          ],
+        ),
+        if (_searchOpen)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: TextField(
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              style: ZendTextStyles.body.copyWith(color: zt.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Search activity',
+                hintStyle: ZendTextStyles.body.copyWith(
+                  color: zt.textSecondary,
+                ),
+                prefixIcon: Icon(
+                  PhosphorIconsRegular.magnifyingGlass,
+                  size: 18,
+                  color: zt.textSecondary,
+                ),
+                filled: true,
+                fillColor: zt.bgCard,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          )
+        else ...[
+          const SizedBox(height: 12),
+          Semantics(
+            button: true,
+            label: 'Balance, open wallet',
+            child: GestureDetector(
+              onTap: widget.onOpenWallet,
+              behavior: HitTestBehavior.opaque,
+              child: ZendGlow(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Balance',
+                        style: ZendTextStyles.caption.copyWith(
+                          color: zt.textSecondary,
+                        ),
                       ),
-                    )
-                  : null,
-              filled: true,
-              fillColor: zt.bgSecondary,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ZendRadii.pill),
-                borderSide: BorderSide.none,
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: ZendRollingAmount(
+                          widget.balance,
+                          hidden: widget.balanceHidden,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-        GestureDetector(
-          onTap: onOpenWallet,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Text(
-              balanceLabel,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 19,
-                fontWeight: FontWeight.w600,
-                color: zt.textSecondary,
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Zend',
+                  onPressed: () => showZendEntrySheet(context),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlineActionButton(
+                  label: 'Request',
+                  onPressed: () => showRequestDrawer(context),
+                ),
+              ),
+            ],
           ),
-        ),
+          const SizedBox(height: 8),
+        ],
       ],
+    );
+  }
+}
+
+class _DayHeader extends StatelessWidget {
+  const _DayHeader(this.label, {required this.first});
+
+  final String label;
+  final bool first;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(top: first ? 8 : 16, bottom: 8, left: 4),
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: ZendTextStyles.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: zt.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -791,14 +888,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     }
   }
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -809,7 +899,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     final isVibe = isVibeEdge(edge);
     final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
     final showAmount = !edge.amountHidden && edge.amountUsdc != null;
-    final amountLabel = '\$${edge.amountUsdc ?? '0'}';
+    final amount = double.tryParse(edge.amountUsdc ?? '') ?? 0;
+    final emojiNote = isEmojiNote(edge.note) ? edge.note!.trim() : null;
     final totalReactions = _reactions.fold<int>(0, (sum, r) => sum + r.count);
 
     late final String avatarInitial;
@@ -859,7 +950,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: subject,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  TextSpan(text: isOutgoing ? '' : ' $verb you'),
+                  TextSpan(text: isOutgoing ? '' : ' $verb'),
                 ],
         ),
       );
@@ -869,10 +960,10 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
       final senderTag = edge.senderZendtag;
       final recipientTag = edge.recipientZendtag;
       final senderLabel = senderTag != null && senderTag.isNotEmpty
-          ? '@$senderTag'
+          ? handleLabel(senderTag)
           : 'Someone';
       final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
-          ? '@$recipientTag'
+          ? handleLabel(recipientTag)
           : 'someone';
       avatarInitial = senderTag?.isNotEmpty == true
           ? senderTag![0].toUpperCase()
@@ -924,11 +1015,11 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     }
 
     return Material(
-      color: zt.bgSecondary,
-      borderRadius: BorderRadius.circular(ZendRadii.xl),
+      color: zt.bgCard,
+      borderRadius: BorderRadius.circular(ZendRadii.card),
       child: InkWell(
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(ZendRadii.xl),
+        borderRadius: BorderRadius.circular(ZendRadii.card),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -941,9 +1032,10 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                 // under it. Matches the chat tile.
                 children: [
                   ZendAvatar(
-                    radius: 26,
+                    radius: 24,
                     photoUrl: avatarUrl,
                     initials: avatarInitial,
+                    seed: isDirect && !isOutgoing ? edge.counterparty.id : null,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -954,9 +1046,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                         const SizedBox(height: 2),
                         Text(
                           _relativeTime(edge.createdAt),
-                          style: ZendTextStyles.tabularNumeric.copyWith(
-                            fontSize: 10.5,
-                            color: zt.textSecondary.withValues(alpha: 0.8),
+                          style: ZendTextStyles.caption.copyWith(
+                            color: zt.textSecondary,
                           ),
                         ),
                       ],
@@ -964,19 +1055,29 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   ),
                   if (showAmount && !isVibe) ...[
                     const SizedBox(width: 8),
-                    Text(
-                      amountLabel,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: zt.textPrimary,
-                      ),
+                    ZendAmount(
+                      amount,
+                      direction: !isDirect
+                          ? MoneyDirection.neutral
+                          : isOutgoing
+                          ? MoneyDirection.outgoing
+                          : MoneyDirection.incoming,
                     ),
                   ],
                 ],
               ),
-              if (edge.note?.isNotEmpty == true && !isVibe) ...[
+              if (emojiNote != null && !isVibe) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 62),
+                  child: ZendEmojiTile(
+                    emojiNote,
+                    burst:
+                        !isOutgoing &&
+                        DateTime.now().difference(edge.createdAt).inMinutes < 5,
+                  ),
+                ),
+              ] else if (edge.note?.isNotEmpty == true && !isVibe) ...[
                 const SizedBox(height: 8),
                 Text(
                   edge.note!,
@@ -993,19 +1094,55 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
               const SizedBox(height: 10),
               Row(
                 children: [
+                  // One reaction system: the same emoji set as the Activity
+                  // sheet, shown as counts. Tapping opens the sheet to react.
+                  if (totalReactions == 0)
+                    Icon(
+                      PhosphorIconsRegular.smileyWink,
+                      size: 16,
+                      color: zt.textSecondary,
+                      semanticLabel: 'No reactions yet',
+                    )
+                  else
+                    for (final r in _reactions.take(3))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: r.reactedByMe ? zt.accentPop : zt.bgElevated,
+                            borderRadius: BorderRadius.circular(ZendRadii.chip),
+                          ),
+                          child: Text(
+                            '${r.emoji} ${r.count}',
+                            style: ZendTextStyles.micro.copyWith(
+                              color: zt.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                  // Comment indicator, mirroring the reaction one: filled with
+                  // the accent when there is something to read, outlined and
+                  // muted when there is not. Shown even at zero so the row
+                  // advertises that commenting is possible — the same reason
+                  // the heart is always present.
+                  const SizedBox(width: 14),
                   Icon(
-                    totalReactions > 0
-                        ? PhosphorIconsFill.heart
-                        : PhosphorIconsRegular.heart,
+                    edge.commentCount > 0
+                        ? PhosphorIconsFill.chatCircle
+                        : PhosphorIconsRegular.chatCircle,
                     size: 15,
-                    color: totalReactions > 0
+                    color: edge.commentCount > 0
                         ? zt.accent
                         : zt.textSecondary.withValues(alpha: 0.6),
                   ),
-                  if (totalReactions > 0) ...[
+                  if (edge.commentCount > 0) ...[
                     const SizedBox(width: 4),
                     Text(
-                      '$totalReactions',
+                      '${edge.commentCount}',
                       style: ZendTextStyles.tabularNumeric.copyWith(
                         fontSize: 12,
                         color: zt.textSecondary,

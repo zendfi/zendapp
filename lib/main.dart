@@ -160,16 +160,22 @@ void main() async {
     client: CapabilityGatedSolanaRailClient(apiClient: apiClient),
   );
   // All three components must agree on the network or PaymentRailBinding rejects
-  // the mix. This must also match the backend's SUI_NETWORK: the rail policy
-  // compares the requested network against the cohort's, so a mismatch is denied
-  // rather than silently routed.
-  // Testnet until a funding route onto Sui mainnet exists. Mainnet USDC cannot
-  // currently reach a user's Sui address — there is no native ramp and the
-  // Solana-to-Sui path is unbuilt — so a mainnet rail would be provably correct
-  // and unreachable. Flip this and SUI_NETWORK together; a mismatch is denied by
-  // rail policy, and the client silently falls back to Solana, which for a
-  // zkLogin account surfaces as the wrong error entirely.
-  const suiNetwork = PaymentNetwork.testnet;
+  // the mix. The network itself is the single app-wide source of truth
+  // [kSuiNetwork], which the bank-send and crypto-send sheets also read, so no
+  // call site can drift onto a different network.
+  //
+  // Every funding route now reaches a Sui wallet: `user_payin.rs` resolves the
+  // NGN on-ramp to `chain: "SUI"` with the Circle-issued Sui USDC coin type
+  // delivered to the user's zkLogin address; `user_bank_send.rs` has the
+  // matching Sui off-ramp; and `user_crypto_deposit.rs`/`user_crypto_send.rs`
+  // settle Dextopus swaps in USDC on Sui, preferring the Sui wallet.
+  //
+  // kSuiNetwork must match the backend's SUI_NETWORK. The rail policy compares
+  // the requested network against the cohort's, so a mismatch is denied rather
+  // than silently routed — and because a zkLogin account has no Solana wallet,
+  // the fallback surfaces as WALLET_NOT_REGISTERED, which names nothing about
+  // the real cause. Flip kSuiNetwork and SUI_NETWORK together, never one alone.
+  const suiNetwork = kSuiNetwork;
   final suiRail = PaymentRailBinding(
     identity: SuiWalletIdentity(apiClient: apiClient, network: suiNetwork),
     signer: SuiTransactionSigner(

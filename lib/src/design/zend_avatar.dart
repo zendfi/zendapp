@@ -23,7 +23,13 @@ class ZendAvatar extends StatelessWidget {
     this.initials,
     this.backgroundColor,
     this.isOnline,
+    this.seed,
   });
+
+  /// Stable identity (user id or handle) the generated colour is derived from,
+  /// so two people who share an initial still look different. Falls back to
+  /// [initials] when omitted.
+  final String? seed;
 
   final double radius;
   final String? photoUrl;
@@ -50,12 +56,14 @@ class ZendAvatar extends StatelessWidget {
           fit: BoxFit.cover,
           placeholder: (context, url) => _FallbackCircle(
             radius: radius,
+            seed: seed,
             initials: initials,
             backgroundColor: backgroundColor,
             zt: zt,
           ),
           errorWidget: (context, url, error) => _FallbackCircle(
             radius: radius,
+            seed: seed,
             initials: initials,
             backgroundColor: backgroundColor,
             zt: zt,
@@ -65,6 +73,7 @@ class ZendAvatar extends StatelessWidget {
     } else {
       avatar = _FallbackCircle(
         radius: radius,
+        seed: seed,
         initials: initials,
         backgroundColor: backgroundColor,
         zt: zt,
@@ -108,11 +117,13 @@ class _FallbackCircle extends StatelessWidget {
     required this.zt,
     this.initials,
     this.backgroundColor,
+    this.seed,
   });
 
   final double radius;
   final String? initials;
   final Color? backgroundColor;
+  final String? seed;
   final ZendTheme zt;
 
   @override
@@ -121,12 +132,24 @@ class _FallbackCircle extends StatelessWidget {
     final hasInitials = initials != null && initials!.isNotEmpty;
     final bgColor =
         backgroundColor ??
-        (hasInitials ? _colorFromInitials(initials!) : zt.bgSecondary);
+        (hasInitials ? colorFor(seed ?? initials!) : zt.bgSecondary);
 
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: bgColor,
+        shape: BoxShape.circle,
+        // Generated avatars get a soft two-stop gradient so they read as a
+        // person's mark rather than a flat placeholder disc.
+        gradient: backgroundColor == null && hasInitials
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color.lerp(bgColor, Colors.white, 0.18)!, bgColor],
+              )
+            : null,
+      ),
       alignment: Alignment.center,
       child: hasInitials
           ? Text(
@@ -148,19 +171,26 @@ class _FallbackCircle extends StatelessWidget {
   }
 
   /// Deterministic color from initials — same user always gets the same hue.
-  static Color _colorFromInitials(String initials) {
+  /// Deterministic colour from a stable seed (FNV-1a hash), picked from
+  /// hues spaced far apart so neighbours in a list never look alike.
+  static Color colorFor(String seed) {
     const palette = [
-      Color(0xFF2D6A4F), // forest green
-      Color(0xFF1565C0), // blue
-      Color(0xFF6A1B9A), // purple
-      Color(0xFFC62828), // red
-      Color(0xFF00695C), // teal
-      Color(0xFFE65100), // orange
-      Color(0xFF37474F), // slate
-      Color(0xFF558B2F), // olive
+      Color(0xFF1F8A55), // green
+      Color(0xFF2563EB), // blue
+      Color(0xFF7C3AED), // violet
+      Color(0xFFDB2777), // pink
+      Color(0xFF0891B2), // cyan
+      Color(0xFFEA580C), // orange
+      Color(0xFFCA8A04), // amber
+      Color(0xFFDC2626), // red
+      Color(0xFF4F46E5), // indigo
+      Color(0xFF0D9488), // teal
     ];
-    final code = initials.codeUnitAt(0);
-    return palette[code % palette.length];
+    var h = 0x811c9dc5;
+    for (final c in seed.toLowerCase().codeUnits) {
+      h = ((h ^ c) * 0x01000193) & 0xffffffff;
+    }
+    return palette[h % palette.length];
   }
 
   /// White or dark text depending on background luminance.

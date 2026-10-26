@@ -14,6 +14,7 @@ import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 const _kReactionEmojis = [
   '🔥',
@@ -393,15 +394,11 @@ class _ThreadDetailScreenState extends State<ThreadDetailScreen> {
       final verb = feedVerbFor(edge);
       headline = isOutgoing
           ? 'You $verb ${widget.counterparty.displayLabel}'
-          : '${widget.counterparty.displayLabel} $verb you';
+          : '${widget.counterparty.displayLabel} $verb';
     }
     final model = ZendScope.of(context);
     final selfAvatarUrl = model.currentAvatarUrl;
-    final selfInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : (model.currentDisplayName?.isNotEmpty == true
-              ? model.currentDisplayName![0].toUpperCase()
-              : 'Y');
+    final selfInitial = model.selfInitial;
 
     showActivityCommentSheet(
       context,
@@ -645,14 +642,7 @@ class _FeedPost extends StatelessWidget {
   final VoidCallback onAddReaction;
   final VoidCallback? onMakePublic;
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -665,11 +655,7 @@ class _FeedPost extends StatelessWidget {
     final actionSpan = isOutgoing ? 'You $verb ' : '';
     final trailingSpan = isOutgoing ? '' : ' $verb';
     final selfAvatarUrl = model.currentAvatarUrl;
-    final selfInitial = model.currentZendtag?.isNotEmpty == true
-        ? model.currentZendtag![0].toUpperCase()
-        : (model.currentDisplayName?.isNotEmpty == true
-              ? model.currentDisplayName![0].toUpperCase()
-              : 'Y');
+    final selfInitial = model.selfInitial;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

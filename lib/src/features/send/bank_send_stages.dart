@@ -52,9 +52,8 @@ class _RailSelectStage extends StatelessWidget {
   final double amount;
   final void Function(_BankSendRail) onSelect;
 
-  String get _amountStr => amount == amount.roundToDouble()
-      ? '\$${amount.toStringAsFixed(0)}'
-      : '\$${amount.toStringAsFixed(2)}';
+  String get _amountStr =>
+      amount == amount.roundToDouble() ? formatUsd(amount) : formatUsd(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +192,8 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amountStr = widget.amount == widget.amount.roundToDouble()
-        ? '\$${widget.amount.toStringAsFixed(0)}'
-        : '\$${widget.amount.toStringAsFixed(2)}';
+        ? formatUsd(widget.amount)
+        : formatUsd(widget.amount);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -692,8 +691,8 @@ class _ConfirmationStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amountStr = amountUsdc == amountUsdc.roundToDouble()
-        ? '\$${amountUsdc.toStringAsFixed(0)}'
-        : '\$${amountUsdc.toStringAsFixed(2)}';
+        ? formatUsd(amountUsdc)
+        : formatUsd(amountUsdc);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -882,8 +881,8 @@ class _PinStage extends StatelessWidget {
   final VoidCallback onBack;
 
   String get _amountStr => amountUsdc == amountUsdc.roundToDouble()
-      ? '\$${amountUsdc.toStringAsFixed(0)}'
-      : '\$${amountUsdc.toStringAsFixed(2)}';
+      ? formatUsd(amountUsdc)
+      : formatUsd(amountUsdc);
 
   @override
   Widget build(BuildContext context) {
@@ -1165,8 +1164,8 @@ class _SuccessStageState extends State<_SuccessStage>
       return '$fiatStr on its way to ${widget.bankName}';
     }
     final amtStr = widget.amountUsdc == widget.amountUsdc.roundToDouble()
-        ? '\$${widget.amountUsdc.toStringAsFixed(0)}'
-        : '\$${widget.amountUsdc.toStringAsFixed(2)}';
+        ? formatUsd(widget.amountUsdc)
+        : formatUsd(widget.amountUsdc);
     return '$amtStr on its way to ${widget.bankName}';
   }
 

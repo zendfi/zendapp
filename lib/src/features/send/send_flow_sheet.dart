@@ -20,6 +20,8 @@ import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 enum SendStage {
   // A brief resting/loading state — the default stage whenever a
@@ -196,12 +198,12 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
-  String get _amountFormattedExact => '\$${widget.amount.toStringAsFixed(2)}';
+  String get _amountFormattedExact => formatUsd(widget.amount);
 
   void _goTo(SendStage stage) {
     setState(() => _stage = stage);
@@ -934,7 +936,7 @@ class _RecipientStageState extends State<_RecipientStage> {
         setState(() {
           _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
               ? resolved.displayName
-              : '@${resolved.zendtag}';
+              : handleLabel(resolved.zendtag);
           _resolvedAvatarUrl = resolved.avatarUrl;
           _resolvedZendtag = resolved.zendtag; // store the actual tag
           _resolving = false;
@@ -960,7 +962,7 @@ class _RecipientStageState extends State<_RecipientStage> {
       setState(() {
         _resolvedDisplayName = resolved.displayName.trim().isNotEmpty
             ? resolved.displayName
-            : '@${resolved.zendtag}';
+            : handleLabel(resolved.zendtag);
         _resolvedAvatarUrl = resolved.avatarUrl;
         _resolvedZendtag = null;
         _resolving = false;
@@ -1019,7 +1021,7 @@ class _RecipientStageState extends State<_RecipientStage> {
     if (!_canPay) return;
     // Use resolved zendtag (from email lookup) if available, otherwise derive from input
     final tag = _resolvedZendtag ?? _toValue.trim().replaceAll('@', '');
-    final displayName = _resolvedDisplayName ?? '@$tag';
+    final displayName = _resolvedDisplayName ?? handleLabel(tag);
     widget.onConfirm(tag, displayName);
   }
 
@@ -1360,7 +1362,7 @@ class _ContactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final handle = '@${contact.tag}';
+    final handle = handleLabel(contact.tag);
     // Show name if it's different from just the handle (i.e. a real display name exists)
     final hasRealName =
         contact.name.isNotEmpty &&

@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../vibes/vibe_picker_sheet.dart';
 import '../vibes/vibe_sticker_catalog.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
 
 typedef OnRequestPayment = void Function();
 typedef OnPayRecipient = void Function();
@@ -719,7 +720,7 @@ class _DmInputBarState extends State<DmInputBar>
                               ),
                             ),
                             child: Text(
-                              '\$${v.toStringAsFixed(2)}',
+                              formatUsd(v),
                               style: ZendTextStyles.tabularNumeric.copyWith(
                                 fontSize: 11,
                                 color: _vibeAmount == v
@@ -863,7 +864,7 @@ class _DmInputBarState extends State<DmInputBar>
                 ),
               ),
               Text(
-                '\$${_vibeAmount.toStringAsFixed(2)}',
+                formatUsd(_vibeAmount),
                 style: ZendTextStyles.tabularNumeric.copyWith(
                   fontSize: 13,
                   color: zt.accent,

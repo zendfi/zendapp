@@ -13,6 +13,8 @@ import '../../services/sound_service.dart';
 import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 // ── Stage enum ────────────────────────────────────────────────────────────────
 
@@ -166,14 +168,9 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
   // ── Amount formatting helpers ─────────────────────────────────────────────
 
-  String _formatAmount(double amount) {
-    if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
-    }
-    return '\$${amount.toStringAsFixed(2)}';
-  }
+  String _formatAmount(double amount) => formatUsd(amount);
 
-  String _formatAmountExact(double amount) => '\$${amount.toStringAsFixed(2)}';
+  String _formatAmountExact(double amount) => formatUsd(amount);
 
   // ── Fetch request link ────────────────────────────────────────────────────
 
@@ -390,7 +387,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
       await model.recordTransfer(
         recipientZendtag: intent.zendtag,
-        recipientDisplayName: '@${intent.zendtag}',
+        recipientDisplayName: handleLabel(intent.zendtag),
         amount: amount,
         note: _resolvedNote,
       );
@@ -637,12 +634,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
   // Minimum for an open-intent zdfi.me payment — $0.50 USDC.
   static const double _minOpenIntentUsdc = 0.5;
 
-  String _formatAmount(double amount) {
-    if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
-    }
-    return '\$${amount.toStringAsFixed(2)}';
-  }
+  String _formatAmount(double amount) => formatUsd(amount);
 
   String _formatNgn(double value) {
     final rounded = value.round();
@@ -695,7 +687,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Pay @${widget.intent.zendtag}',
+                'Pay ${handleLabel(widget.intent.zendtag)}',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 22,
@@ -710,7 +702,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                     ZendLoader(size: 12)
                   else
                     Text(
-                      '\$${balance.toStringAsFixed(2)}',
+                      formatUsd(balance),
                       style: ZendTextStyles.tabularNumeric.copyWith(
                         fontSize: 12,
                         color: ZendTheme.of(context).textSecondary,

@@ -22,6 +22,7 @@ import '../vibes/vibe_pin_prompt.dart';
 import 'mission_room_message.dart';
 import 'pool.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 const _curatedEmojis = [
   '🔥',
@@ -1461,8 +1462,10 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   String get _label {
     final users = widget.typingUsers;
-    if (users.length == 1) return '@${users[0]} is typing...';
-    if (users.length == 2) return '@${users[0]} and @${users[1]} are typing...';
+    if (users.length == 1) return '${handleLabel(users[0])} is typing...';
+    if (users.length == 2) {
+      return '${handleLabel(users[0])} and ${handleLabel(users[1])} are typing...';
+    }
     return 'Several people are typing...';
   }
 

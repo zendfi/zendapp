@@ -1,9 +1,21 @@
 enum PaymentRail { solana, sui }
 
 /// Note that `_parseNetwork` below throws on an unrecognised value rather than
-/// guessing, so every network the backend can report must be listed here. Sui
-/// currently runs on testnet, which is why it is not mainnet-only.
+/// guessing, so every network the backend can report must be listed here. Both
+/// networks remain so the enum can still describe a testnet response, even
+/// though the app runs Sui on mainnet (see [kSuiNetwork]).
 enum PaymentNetwork { mainnet, testnet }
+
+/// The single source of truth for which Sui network the app operates on.
+///
+/// Every Sui-touching call site — the rail bindings in `main.dart`, and the
+/// gasless coin-object deposit step in the bank-send and crypto-send sheets —
+/// reads this one constant so they can never drift apart. It mirrors the
+/// backend's single `SUI_NETWORK` env var, and the two MUST be flipped together:
+/// the rail policy compares the requested network against the backend cohort's,
+/// so a mismatch is denied (and, because a zkLogin account has no Solana wallet,
+/// surfaces unhelpfully as `WALLET_NOT_REGISTERED`).
+const PaymentNetwork kSuiNetwork = PaymentNetwork.mainnet;
 
 enum PaymentAsset { usdc, native }
 

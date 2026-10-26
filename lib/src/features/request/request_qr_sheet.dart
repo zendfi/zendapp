@@ -11,6 +11,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'payment_request.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 /// Full-screen modal sheet showing the QR code for a payment request.
 ///
@@ -45,12 +46,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
 
   String get _link => widget.request.link;
 
-  String _formatAmount(double amount) {
-    if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
-    }
-    return '\$${amount.toStringAsFixed(2)}';
-  }
+  String _formatAmount(double amount) => formatUsd(amount);
 
   Future<Uint8List> _captureQr() async {
     await Future<void>.delayed(Duration.zero);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_format.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
@@ -16,6 +17,7 @@ import '../dm/dm_thread_screen.dart';
 import '../shell/zend_entry_sheet.dart';
 import 'account_information_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// Person page — ZEND BETA spec §18-20.
 ///
@@ -55,6 +57,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _identityError;
 
   List<ActivityEdge> _edges = [];
+
+  /// Net money between you and this person: received minus sent, over the
+  /// edges whose amount you can see.
+  double get _runningTotal => _edges.fold(0.0, (sum, e) {
+    final v = double.tryParse(e.amountUsdc ?? '') ?? 0;
+    if (!e.isDirectParticipant) return sum;
+    return e.isOutgoing ? sum - v : sum + v;
+  });
   bool _loadingEdges = true;
   String? _edgesError;
 
@@ -94,7 +104,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _zendtag = profile.zendtag;
           _displayName = profile.displayName.trim().isNotEmpty
               ? profile.displayName
-              : '@${profile.zendtag}';
+              : handleLabel(profile.zendtag);
           _avatarUrl = profile.avatarUrl;
           _loadingIdentity = false;
         });
@@ -154,7 +164,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   String get _label {
-    if (_zendtag != null && _zendtag!.isNotEmpty) return '@$_zendtag';
+    if (_zendtag != null && _zendtag!.isNotEmpty) return handleLabel(_zendtag);
     if (_displayName != null && _displayName!.isNotEmpty) return _displayName!;
     return 'Zend user';
   }
@@ -209,8 +219,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _describeEdge(ActivityEdge edge) {
     final verb = feedVerbFor(edge);
     if (edge.direction == 'external') {
-      return '${edge.senderZendtag != null ? '@${edge.senderZendtag}' : 'Someone'} $verb '
-          '${edge.recipientZendtag != null ? '@${edge.recipientZendtag}' : 'someone'}';
+      return '${edge.senderZendtag != null ? handleLabel(edge.senderZendtag) : 'Someone'} $verb '
+          '${edge.recipientZendtag != null ? handleLabel(edge.recipientZendtag) : 'someone'}';
     }
     final isSelfSender = edge.direction == 'outgoing';
     return isSelfSender ? 'You $verb $_label' : '$_label $verb';
@@ -340,7 +350,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           if (!_loadingEdges) ...[
                             const SizedBox(height: 4),
                             Text(
-                              '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together',
+                              '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together'
+                              '${_edges.any((e) => e.amountUsdc != null) ? ' · net ${formatUsd(_runningTotal, signed: true)}' : ''}',
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontSize: 13,

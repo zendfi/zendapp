@@ -2333,15 +2333,26 @@ class ApiClient {
     }
   }
 
+  /// Executes a crypto send. Two mutually exclusive shapes keyed by the rail the
+  /// quote resolved: Solana co-signs a `partiallySignedTx`; Sui submits a signed
+  /// `sui_signed_transaction` [envelope]. Exactly one must be supplied.
   Future<CryptoSendResult> executeCryptoSend({
     required String quoteId,
-    required String partiallySignedTx,
+    String? partiallySignedTx,
+    RailEnvelope? envelope,
   }) async {
+    assert(
+      (partiallySignedTx == null) != (envelope == null),
+      'executeCryptoSend requires exactly one of partiallySignedTx or envelope',
+    );
     try {
-      final resp = await _dio.post(
-        '/api/zend/crypto/send/execute',
-        data: {'quote_id': quoteId, 'partially_signed_tx': partiallySignedTx},
-      );
+      final data = <String, dynamic>{'quote_id': quoteId};
+      if (envelope != null) {
+        data['envelope'] = envelope.toJson();
+      } else {
+        data['partially_signed_tx'] = partiallySignedTx;
+      }
+      final resp = await _dio.post('/api/zend/crypto/send/execute', data: data);
       return CryptoSendResult.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw e.error ?? e;

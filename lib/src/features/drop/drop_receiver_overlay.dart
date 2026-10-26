@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../design/zend_tokens.dart';
 import 'drop_particle_painter.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Shows the receiver-side Drop animation as an app-level overlay.
 ///
@@ -123,9 +125,9 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '+\$${widget.amount.toStringAsFixed(0)}';
+      return '+${formatUsd(widget.amount)}';
     }
-    return '+\$${widget.amount.toStringAsFixed(2)}';
+    return '+${formatUsd(widget.amount)}';
   }
 
   @override
@@ -249,7 +251,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'from @${widget.senderZendtag}',
+                            'from ${handleLabel(widget.senderZendtag)}',
                             style: const TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 13,

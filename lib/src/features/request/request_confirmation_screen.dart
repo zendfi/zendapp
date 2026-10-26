@@ -9,6 +9,7 @@ import '../../design/zend_tokens.dart';
 import 'payment_request.dart';
 import 'request_utils.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// Full-screen confirmation — used when navigating to a standalone screen.
 class RequestConfirmationScreen extends StatelessWidget {
@@ -126,7 +127,7 @@ class _RequestConfirmationContentState
 
             Text(
               widget.paymentRequest.recipientZendtag != null
-                  ? 'Request sent to @${widget.paymentRequest.recipientZendtag}!'
+                  ? 'Request sent to ${handleLabel(widget.paymentRequest.recipientZendtag)}!'
                   : widget.paymentRequest.recipientEmail != null
                   ? 'Request emailed!'
                   : 'Link created!',

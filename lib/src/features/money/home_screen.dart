@@ -18,6 +18,8 @@ import 'card_dismissal_store.dart';
 import 'carousel_card_model.dart';
 import 'educational_modal.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -237,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: '@${model.username}',
+                                  text: handleLabel(model.username),
                                   style: const TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,
@@ -406,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         model.balanceHidden
                                             ? '••••••'
-                                            : '\$${value.toStringAsFixed(2)}',
+                                            : formatUsd(value),
                                         style: TextStyle(
                                           fontFamily: 'Geist',
                                           color: ZendColors.textOnDeep,
@@ -462,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   model.balanceHidden
                                       ? '••••••'
-                                      : '\$${model.sendableBalance.toStringAsFixed(2)}',
+                                      : formatUsd(model.sendableBalance),
                                   style: TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,
@@ -785,7 +787,7 @@ class _SavingsCard extends StatelessWidget {
         ? '${model.savingsApy.toStringAsFixed(1)}%'
         : '—';
     final balanceStr = model.savingsBalance > 0
-        ? '\$${model.savingsBalance.toStringAsFixed(2)}'
+        ? formatUsd(model.savingsBalance)
         : '\$0.00';
 
     return GestureDetector(
@@ -879,7 +881,7 @@ class _PoolsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final total = model.totalPoolsGathered;
-    final totalStr = '\$${total.toStringAsFixed(2)}';
+    final totalStr = formatUsd(total);
     final participants = model.recentPoolParticipants;
     final displayedCount = participants.length > 2 ? 2 : participants.length;
     final overflow = participants.length - displayedCount;

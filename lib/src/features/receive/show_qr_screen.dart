@@ -10,6 +10,7 @@ import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
 import '../../services/sound_service.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
 
 class ShowQrScreen extends StatefulWidget {
   const ShowQrScreen({
@@ -141,12 +142,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     ZendScope.of(context).fetchHistory();
   }
 
-  String _formatAmount(double amount) {
-    if (amount == amount.roundToDouble()) {
-      return '\$${amount.toStringAsFixed(0)}';
-    }
-    return '\$${amount.toStringAsFixed(2)}';
-  }
+  String _formatAmount(double amount) => formatUsd(amount);
 
   @override
   Widget build(BuildContext context) {

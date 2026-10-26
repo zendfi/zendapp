@@ -14,6 +14,7 @@ import 'pool.dart';
 import 'pool_progress_bar.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
 
 /// The Pool Sheet — ZEND BETA spec §34 (LOCKED wireframe): name,
 /// gathered/target, progress bar, Contribute button, participant list.
@@ -304,7 +305,7 @@ class _PoolSheetState extends State<PoolSheet> {
     final zt = ZendTheme.of(context);
     final contribution = p.contribution == 0
         ? '\$0.00'
-        : '\$${p.contribution.toStringAsFixed(2)}';
+        : formatUsd(p.contribution);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),

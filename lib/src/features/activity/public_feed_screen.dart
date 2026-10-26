@@ -8,6 +8,8 @@ import '../../navigation/zend_routes.dart';
 import '../profile/user_profile_screen.dart';
 import 'activity_grouping.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 const _kPublicFeedEmojis = [
   '🔥',
@@ -486,14 +488,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     overlay.insert(entry);
   }
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   @override
   Widget build(BuildContext context) {
@@ -510,10 +505,10 @@ class _PublicPostRowState extends State<_PublicPostRow> {
     final senderTag = edge.senderZendtag;
     final recipientTag = edge.recipientZendtag;
     final senderLabel = senderTag != null && senderTag.isNotEmpty
-        ? '@$senderTag'
+        ? handleLabel(senderTag)
         : 'Someone';
     final recipientLabel = recipientTag != null && recipientTag.isNotEmpty
-        ? '@$recipientTag'
+        ? handleLabel(recipientTag)
         : 'someone';
     final senderInitial = senderTag?.isNotEmpty == true
         ? senderTag![0].toUpperCase()
@@ -755,7 +750,7 @@ class _SuggestionsStrip extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '@$zendtag',
+                        handleLabel(zendtag),
                         style: ZendTextStyles.tabularNumeric.copyWith(
                           fontSize: 9.5,
                           color: zt.textPrimary,

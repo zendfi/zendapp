@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../core/zend_format.dart';
 
 const _base62Chars =
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -21,7 +22,7 @@ String formatRequestAmount(double amount) {
   if (amount == amount.truncateToDouble()) {
     return '\$${amount.toInt()}';
   }
-  return '\$${amount.toStringAsFixed(2)}';
+  return formatUsd(amount);
 }
 
 double? validateAmountInput(String input) {

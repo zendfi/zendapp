@@ -8,6 +8,7 @@ import '../../models/account_deletion_models.dart';
 import '../../navigation/zend_routes.dart';
 import '../onboarding/welcome_screen.dart';
 import '../send/withdraw_sheet.dart';
+import '../../core/zend_format.dart';
 
 /// Account deletion, required by the Google Play User Data policy for any app
 /// that lets users create an account in-app.
@@ -238,7 +239,7 @@ class _BlockedByBalance extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '\$${holding.usdcBalance.toStringAsFixed(2)}',
+                    formatUsd(holding.usdcBalance),
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 17,

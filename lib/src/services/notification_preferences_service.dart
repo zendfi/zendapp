@@ -22,7 +22,7 @@ import 'api_client.dart';
 /// [load] once (e.g. in initState) before relying on [isMuted]/[mutedSet].
 class NotificationPreferencesService {
   NotificationPreferencesService({required ApiClient apiClient})
-      : _apiClient = apiClient;
+    : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 

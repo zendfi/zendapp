@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 class AccountInformationScreen extends StatelessWidget {
   const AccountInformationScreen({super.key});
@@ -13,7 +14,9 @@ class AccountInformationScreen extends StatelessWidget {
     final displayName = (model.currentDisplayName?.trim().isNotEmpty ?? false)
         ? model.currentDisplayName!
         : (model.username.isNotEmpty ? model.username : 'Zend User');
-    final zendtag = model.username.isNotEmpty ? '@${model.username}' : '—';
+    final zendtag = model.username.isNotEmpty
+        ? handleLabel(model.username)
+        : '—';
     final paymentLink = model.username.isNotEmpty
         ? 'zdfi.me/@${model.username}'
         : '—';

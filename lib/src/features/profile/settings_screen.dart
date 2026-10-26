@@ -16,6 +16,7 @@ import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
 import '../request/payment_requests_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 /// Settings — reached from You (spec §29: "Settings →"). Everything that
 /// was previously mixed into the You tab's own body lives here instead —
@@ -78,6 +79,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.bank,
                           label: 'Connected banks',
+                          subtitle: 'Where your withdrawals go',
                           onTap: () => pushZendSlide(
                             context,
                             const ConnectedBanksScreen(),
@@ -86,6 +88,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.link,
                           label: 'Connected apps',
+                          subtitle: 'Apps you paid with Zend',
                           onTap: () => pushZendSlide(
                             context,
                             const ConnectedAppsScreen(),
@@ -94,6 +97,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.receipt,
                           label: 'Payment requests',
+                          subtitle: 'Requests you sent and received',
                           onTap: () => pushZendSlide(
                             context,
                             const PaymentRequestsScreen(),
@@ -124,8 +128,11 @@ class SettingsScreen extends StatelessWidget {
                         _ToggleTile(
                           icon: PhosphorIconsRegular.moon,
                           label: 'Dark mode',
-                          value: model.isDarkMode,
-                          onChanged: (_) => model.toggleDarkMode(),
+                          // The theme on screen, not the stored flag: when
+                          // following the system the flag is false even in dark.
+                          value:
+                              Theme.of(context).brightness == Brightness.dark,
+                          onChanged: model.setDarkMode,
                         ),
                       ],
                     ),
@@ -153,6 +160,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.shieldCheck,
                           label: 'Security settings',
+                          subtitle: 'PIN, app lock and limits',
                           onTap: () => pushZendSlide(
                             context,
                             const SecuritySettingsScreen(),
@@ -170,6 +178,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.identificationBadge,
                           label: 'Identity verification',
+                          subtitle: 'Verify to raise your limits',
                           onTap: () =>
                               pushZendSlide(context, const BridgeKycScreen()),
                         ),
@@ -190,6 +199,7 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.trash,
                           label: 'Delete account',
+                          subtitle: 'Permanently remove your account',
                           onTap: () => pushZendSlide(
                             context,
                             const DeleteAccountScreen(),
@@ -401,10 +411,16 @@ class _TileGroup extends StatelessWidget {
 // ── Standard nav tile ─────────────────────────────────────────────────────────
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.icon, required this.label, required this.onTap});
+  const _Tile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.subtitle,
+  });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
 
   @override
@@ -421,14 +437,26 @@ class _Tile extends StatelessWidget {
               Icon(icon, size: 20, color: zt.textSecondary),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: zt.textPrimary,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: ZendTextStyles.caption.copyWith(
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Icon(
@@ -593,7 +621,7 @@ class _DropDiscoverabilityTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Broadcasting as @${service.currentPayload!.zendtag}',
+                            'Broadcasting as ${handleLabel(service.currentPayload!.zendtag)}',
                             style: ZendTextStyles.tabularNumeric.copyWith(
                               fontSize: 11,
                               color: zt.accentBright,

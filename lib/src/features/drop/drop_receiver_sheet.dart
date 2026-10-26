@@ -6,6 +6,8 @@ import '../../design/zend_avatar.dart';
 import 'drop_glow_effect.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -118,9 +120,9 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   @override
@@ -184,7 +186,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                     child: FadeTransition(
                       opacity: _labelCtrl,
                       child: Text(
-                        'from @${widget.senderZendtag}',
+                        'from ${handleLabel(widget.senderZendtag)}',
                         textAlign: TextAlign.center,
                         style: ZendTextStyles.tabularNumeric.copyWith(
                           fontSize: 14,

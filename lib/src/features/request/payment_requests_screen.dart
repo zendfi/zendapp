@@ -6,6 +6,7 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../core/zend_format.dart';
 
 class PaymentRequestsScreen extends StatefulWidget {
   const PaymentRequestsScreen({super.key});
@@ -302,7 +303,7 @@ class _RequestTile extends StatelessWidget {
     };
 
     // Amount string — always fixed since we filter out PWYW
-    final amountStr = amount != null ? '\$${amount.toStringAsFixed(2)}' : '';
+    final amountStr = amount != null ? formatUsd(amount) : '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

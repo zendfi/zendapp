@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_money.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/api_models.dart';
 import '../send/send_flow_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
@@ -63,10 +67,10 @@ class _ReceiptSheet extends StatelessWidget {
     final isPending = entry.status == 'pending';
 
     final statusColor = isConfirmed
-        ? ZendColors.positive
+        ? zt.moneyIn
         : isPending
-        ? ZendColors.accentPop
-        : ZendColors.destructive;
+        ? zt.pending
+        : zt.destructive;
     final statusIcon = isConfirmed
         ? PhosphorIconsRegular.checkCircle
         : isPending
@@ -80,7 +84,7 @@ class _ReceiptSheet extends StatelessWidget {
 
     final rawAmount = entry.amountUsdc;
     final amountDouble = double.tryParse(rawAmount) ?? 0.0;
-    final amountStr = '\$${amountDouble.toStringAsFixed(2)}';
+    final amountStr = formatUsd(amountDouble);
     final directionLabel = isSent ? 'Sent to' : 'Received from';
 
     final screenHeight = MediaQuery.of(context).size.height;
@@ -105,30 +109,47 @@ class _ReceiptSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Status icon ──
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+                  if (isEmojiNote(entry.note)) ...[
+                    Center(
+                      child: ZendEmojiTile(
+                        entry.note!.trim(),
+                        size: 72,
+                        burst: !isSent,
                       ),
-                      child: Icon(statusIcon, color: statusColor, size: 30),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  Center(
+                    child: ZendGlow(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            statusIcon,
+                            color: statusColor,
+                            size: 30,
+                            semanticLabel: statusLabel,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // ── Amount ──
                   Center(
-                    child: Text(
-                      amountStr,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 48,
-                        height: 1.0,
-                        color: isSent ? zt.textPrimary : ZendColors.positive,
-                      ),
+                    child: ZendAmount(
+                      amountDouble,
+                      style: ZendTextStyles.displayL,
+                      direction: isSent
+                          ? MoneyDirection.outgoing
+                          : MoneyDirection.incoming,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -136,7 +157,7 @@ class _ReceiptSheet extends StatelessWidget {
                   // ── Direction ──
                   Center(
                     child: Text(
-                      '$directionLabel @$counterparty',
+                      '$directionLabel ${handleLabel(counterparty)}',
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,
@@ -146,7 +167,9 @@ class _ReceiptSheet extends StatelessWidget {
                   ),
 
                   // ── Note ──
-                  if (entry.note != null && entry.note!.isNotEmpty) ...[
+                  if (entry.note != null &&
+                      entry.note!.isNotEmpty &&
+                      !isEmojiNote(entry.note)) ...[
                     const SizedBox(height: 8),
                     Center(
                       child: Container(
@@ -182,19 +205,19 @@ class _ReceiptSheet extends StatelessWidget {
                       children: [
                         _DetailRow(
                           label: 'From',
-                          value: '@${entry.senderZendtag}',
+                          value: handleLabel(entry.senderZendtag),
                           mono: true,
                         ),
                         Divider(color: zt.border, height: 1),
                         _DetailRow(
                           label: 'To',
-                          value: '@${entry.recipientZendtag}',
+                          value: handleLabel(entry.recipientZendtag),
                           mono: true,
                         ),
                         Divider(color: zt.border, height: 1),
                         _DetailRow(
                           label: 'Date',
-                          value: _formatDate(entry.createdAt),
+                          value: formatDateTime(entry.createdAt),
                         ),
                         Divider(color: zt.border, height: 1),
                         _DetailRow(
@@ -210,7 +233,7 @@ class _ReceiptSheet extends StatelessWidget {
 
                   if (isSent) ...[
                     PrimaryButton(
-                      label: 'Send again',
+                      label: 'Repeat payment',
                       onPressed: () {
                         Navigator.of(context).pop();
                         showSendFlowSheet(
@@ -225,6 +248,20 @@ class _ReceiptSheet extends StatelessWidget {
                   ],
 
                   OutlineActionButton(
+                    label: 'Share receipt',
+                    onPressed: () => Share.share(
+                      [
+                        'Zend! receipt',
+                        '${isSent ? 'Sent' : 'Received'} $amountStr '
+                            '${isSent ? 'to' : 'from'} ${handleLabel(counterparty)}',
+                        if (entry.note?.isNotEmpty == true) entry.note!,
+                        formatDateTime(entry.createdAt),
+                        'Status: $statusLabel',
+                      ].join('\n'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlineActionButton(
                     label: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -235,28 +272,6 @@ class _ReceiptSheet extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final minute = local.minute.toString().padLeft(2, '0');
-    final period = local.hour < 12 ? 'AM' : 'PM';
-    return '${months[local.month - 1]} ${local.day}, ${local.year} · $hour:$minute $period';
   }
 }
 
@@ -377,8 +392,8 @@ class _BankSendReceiptSheet extends StatelessWidget {
     };
 
     final amountStr = amountUsdc == amountUsdc.roundToDouble()
-        ? '\$${amountUsdc.toStringAsFixed(0)}'
-        : '\$${amountUsdc.toStringAsFixed(2)}';
+        ? formatUsd(amountUsdc)
+        : formatUsd(amountUsdc);
 
     final fiatSymbol = switch (fiatCurrency) {
       'NGN' => '₦',

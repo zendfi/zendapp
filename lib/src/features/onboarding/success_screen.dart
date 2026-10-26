@@ -7,6 +7,7 @@ import '../../core/zend_state.dart';
 import 'pin_setup_screen.dart';
 import 'username_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../models/handle_label.dart';
 
 class SuccessScreen extends StatefulWidget {
   const SuccessScreen({super.key, required this.username});
@@ -106,7 +107,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          "You're in, @${widget.username}",
+                          "You're in, ${handleLabel(widget.username)}",
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontFamily: 'Geist',

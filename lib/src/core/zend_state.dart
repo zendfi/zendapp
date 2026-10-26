@@ -47,6 +47,7 @@ import '../models/streak_info.dart';
 import '../services/dm_service.dart';
 import '../services/e2ee_service.dart';
 import '../models/handle_label.dart';
+import 'zend_format.dart';
 
 const Map<String, String> _localeGreetings = {
   'yo': 'Ẹ káàbọ̀',
@@ -873,6 +874,11 @@ class ZendAppModel extends ChangeNotifier {
   String? currentDisplayName;
   String? currentAvatarUrl;
 
+  /// The signed-in user's avatar letter, from the same source as the You tab
+  /// (display name first), so it matches on every screen.
+  String get selfInitial =>
+      personInitial(displayName: currentDisplayName, handle: currentZendtag);
+
   String? walletAddress;
   bool hasWallet = false;
   bool hasPinSetup = false;
@@ -1219,6 +1225,15 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets an explicit theme. Used by Settings, whose toggle shows the theme
+  /// actually on screen (which may come from the system) rather than
+  /// [isDarkMode], which is only meaningful once [hasExplicitTheme] is set.
+  void setDarkMode(bool dark) {
+    hasExplicitTheme = true;
+    isDarkMode = dark;
+    notifyListeners();
+  }
+
   void toggleDarkMode() {
     hasExplicitTheme = true;
     isDarkMode = !isDarkMode;
@@ -1504,8 +1519,8 @@ class ZendAppModel extends ChangeNotifier {
             : '→ $bankName';
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '-\$${amountUsdc.toStringAsFixed(0)}'
-            : '-\$${amountUsdc.toStringAsFixed(2)}';
+            ? '-${formatUsd(amountUsdc)}'
+            : '-${formatUsd(amountUsdc)}';
 
         final timeStr = (status == 'pending_payment' || status == 'processing')
             ? 'Processing'
@@ -1575,8 +1590,8 @@ class ZendAppModel extends ChangeNotifier {
             DateTime.tryParse(completedAtStr ?? createdAtStr) ?? DateTime.now();
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '+\$${amountUsdc.toStringAsFixed(0)}'
-            : '+\$${amountUsdc.toStringAsFixed(2)}';
+            ? '+${formatUsd(amountUsdc)}'
+            : '+${formatUsd(amountUsdc)}';
 
         final note = originBlockchain.isNotEmpty
             ? '$originSymbol via $originBlockchain'
@@ -1747,7 +1762,7 @@ class ZendAppModel extends ChangeNotifier {
       ZendTransaction(
         name: handleLabel(recipientZendtag),
         note: note ?? 'Sent from ZendApp',
-        amount: '-\$${amount.toStringAsFixed(2)}',
+        amount: '-${formatUsd(amount)}',
         time: 'Just now',
         avatarLabel: recipientDisplayName.isNotEmpty
             ? recipientDisplayName[0].toUpperCase()

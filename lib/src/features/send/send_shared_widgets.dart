@@ -5,6 +5,7 @@ import '../../design/zend_tokens.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../models/handle_label.dart';
 
 /// Shared PIN entry stage widget, extracted from SendFlowSheet for reuse
 /// in QrPaymentSheet and other payment flows.
@@ -54,7 +55,7 @@ class SendPinStage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$amountFormatted to @$recipientZendtag',
+            '$amountFormatted to ${handleLabel(recipientZendtag)}',
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 15,
@@ -263,7 +264,7 @@ class SendProcessingStage extends StatelessWidget {
           ZendLoader(size: 32),
           const SizedBox(height: 20),
           Text(
-            'Sending $amountFormatted to @$recipientZendtag...',
+            'Sending $amountFormatted to ${handleLabel(recipientZendtag)}...',
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 15,
@@ -370,7 +371,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             ),
             const SizedBox(height: 8),
             Text(
-              'to @${widget.recipientZendtag}',
+              'to ${handleLabel(widget.recipientZendtag)}',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 15,

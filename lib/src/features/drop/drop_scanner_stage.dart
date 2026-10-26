@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../design/zend_tokens.dart';
+import '../../core/zend_format.dart';
 
 class DropScannerStage extends StatefulWidget {
   const DropScannerStage({super.key, required this.amount});
@@ -44,9 +45,9 @@ class _DropScannerStageState extends State<DropScannerStage>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '\$${widget.amount.toStringAsFixed(0)}';
+      return formatUsd(widget.amount);
     }
-    return '\$${widget.amount.toStringAsFixed(2)}';
+    return formatUsd(widget.amount);
   }
 
   @override

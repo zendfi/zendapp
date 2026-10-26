@@ -21,6 +21,7 @@ import 'dm_thread_screen.dart';
 import 'new_chat_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../core/zend_format.dart';
 
 class DmListScreen extends StatefulWidget {
   const DmListScreen({super.key});
@@ -581,14 +582,7 @@ class _DmThreadTile extends StatelessWidget {
   final DmThread thread;
   final VoidCallback onTap;
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   @override
   Widget build(BuildContext context) {

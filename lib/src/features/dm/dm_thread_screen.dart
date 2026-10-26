@@ -1216,7 +1216,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Forwarded to @${target.counterparty.zendtag}',
+            'Forwarded to ${handleLabel(target.counterparty.zendtag)}',
             style: const TextStyle(fontFamily: 'Geist'),
           ),
           duration: const Duration(seconds: 2),
@@ -2237,7 +2237,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             zt,
                             _ChatMenuAction.block,
                             PhosphorIconsRegular.prohibit,
-                            'Block @${cp.zendtag}',
+                            'Block ${handleLabel(cp.zendtag)}',
                             isDestructive: true,
                           ),
                         ],

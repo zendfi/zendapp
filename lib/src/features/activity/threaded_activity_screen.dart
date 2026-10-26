@@ -19,16 +19,13 @@ import 'thread_detail_screen.dart';
 import '../../navigation/zend_routes.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../core/zend_format.dart';
+import '../../models/handle_label.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed, no thousands separator logic beyond what's already
 /// legible at this size (this is a glance-value, not a statement).
-String _formatBalance(double balance) {
-  if (balance == balance.roundToDouble()) {
-    return '\$${balance.toStringAsFixed(0)}';
-  }
-  return '\$${balance.toStringAsFixed(2)}';
-}
+String _formatBalance(double balance) => formatUsd(balance);
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.
@@ -938,14 +935,7 @@ class _UserThreadTile extends StatelessWidget {
   final CounterpartyThread thread;
   final VoidCallback onTap;
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${dt.month}/${dt.day}';
-  }
+  String _relativeTime(DateTime dt) => formatRelativeTime(dt);
 
   void _showContextMenu(BuildContext context) {
     final zt = ZendTheme.of(context);
@@ -992,7 +982,7 @@ class _UserThreadTile extends StatelessWidget {
                   ),
                 ),
                 title: Text(
-                  'Message @${counterparty.displayLabel}',
+                  'Message ${handleLabel(counterparty.displayLabel)}',
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
@@ -1449,7 +1439,7 @@ class _PoolThreadTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
-                  '\$${thread.runningTotal.toStringAsFixed(2)}',
+                  formatUsd(thread.runningTotal),
                   style: ZendTextStyles.tabularNumeric.copyWith(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -1608,7 +1598,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                       switch (contributor.entry) {
                         PoolContributorUser(zendtag: final tag) =>
                           tag != null && tag.isNotEmpty
-                              ? '@$tag'
+                              ? handleLabel(tag)
                               : 'A contributor',
                         PoolContributorExternalAnonymized(
                           aggregateCount: final count,
@@ -1626,7 +1616,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                   Text(
                     switch (contributor.entry) {
                       PoolContributorUser(amountHidden: true) => 'Hidden',
-                      _ => '\$${contributor.totalUsdc.toStringAsFixed(2)}',
+                      _ => formatUsd(contributor.totalUsdc),
                     },
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 13,
