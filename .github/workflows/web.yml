@@ -43,8 +43,16 @@ jobs:
 
       # --wasm emits both builds: WasmGC browsers load main.dart.wasm + skwasm,
       # older ones fall back to main.dart.js automatically.
-      # --no-web-resources-cdn self-hosts the renderer so the CSP can stay at
-      # script-src 'self'.
+      # --no-web-resources-cdn self-hosts the renderer, which keeps CanvasKit
+      # and skwasm off gstatic and out of the CSP.
+      #
+      # That is no longer the whole story: the CSP in vercel.json also allows
+      # https://accounts.google.com/gsi/*, because google_sign_in_web injects
+      # the Google Identity Services script at bootstrap. It arrives via the
+      # google_sign_in dependency, which this app uses for Google Drive (salt
+      # share B and cloud backup) rather than for zkLogin sign-in — that runs
+      # on flutter_web_auth_2 and a plain OAuth redirect. Self-hosting the
+      # renderer does not remove that origin.
       - name: Build web
         run: flutter build web --wasm --release --no-web-resources-cdn
 
