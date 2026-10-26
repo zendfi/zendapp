@@ -53,8 +53,24 @@ jobs:
       # share B and cloud backup) rather than for zkLogin sign-in — that runs
       # on flutter_web_auth_2 and a plain OAuth redirect. Self-hosting the
       # renderer does not remove that origin.
+      #
+      # --pwa-strategy=none disables Flutter's service worker. It was actively
+      # harmful here: a service worker serves navigations from the Cache API,
+      # and a cached response carries the headers it was stored with — so a
+      # client that had the old CSP kept getting the old CSP no matter how many
+      # times this deployed, reporting a policy the server had stopped sending.
+      # index.html is already Cache-Control: no-store, which the service worker
+      # ignores entirely.
+      #
+      # It also caused Safari to hang on load: a cached index.html referencing
+      # hashed build artifacts from a previous deploy waits forever on files
+      # that now 404, which presents as an endless spinner rather than an error.
+      #
+      # Nothing is lost. A wallet needs the API for every meaningful action, so
+      # there was no offline capability to preserve, and Flutter's own build
+      # output notes this service worker is deprecated and due for removal.
       - name: Build web
-        run: flutter build web --wasm --release --no-web-resources-cdn
+        run: flutter build web --wasm --release --no-web-resources-cdn --pwa-strategy=none
 
       # build/web is uploaded as the deployment root, so vercel.json goes in
       # it — minus outputDirectory, which only makes sense from the repo root.
