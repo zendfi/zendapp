@@ -31,6 +31,9 @@ class ZendAvatar extends StatelessWidget {
   /// [initials] when omitted.
   final String? seed;
 
+  /// Generated-avatar colour for [seed]; stable per person.
+  static Color colorFor(String seed) => _FallbackCircle.colorFor(seed);
+
   final double radius;
   final String? photoUrl;
   final String? initials;

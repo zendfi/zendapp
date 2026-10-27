@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../core/zend_format.dart';
+import '../profile/block_report_sheet.dart';
 import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:uuid/uuid.dart';
@@ -1793,15 +1795,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           ),
         );
       case _ChatMenuAction.block:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Block feature coming soon',
-              style: TextStyle(fontFamily: 'Geist'),
-            ),
-            backgroundColor: zt.bgSecondary,
-          ),
-        );
+        final navigator = Navigator.of(context);
+        showBlockReportSheet(
+          context,
+          userId: cp.userId,
+          name: personName(displayName: cp.displayName, handle: cp.zendtag),
+        ).then((blocked) {
+          if (blocked && mounted) navigator.pop();
+        });
     }
   }
 
@@ -2237,7 +2238,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                             zt,
                             _ChatMenuAction.block,
                             PhosphorIconsRegular.prohibit,
-                            'Block ${handleLabel(cp.zendtag)}',
+                            'Block or report',
                             isDestructive: true,
                           ),
                         ],

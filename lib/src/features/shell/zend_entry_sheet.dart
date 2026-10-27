@@ -1,3 +1,5 @@
+import '../../services/zend_analytics.dart';
+import '../../design/zend_motion_widgets.dart';
 import '../../core/zend_format.dart';
 import '../../design/zend_money.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -439,7 +441,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   Future<void> _commitZend() async {
     final amount = _amount;
     if (amount <= 0 || _preflighting) return;
-    unawaited(ZendFeel.sendConfirmed());
 
     final model = ZendScope.of(context);
     final note = _note;
@@ -478,15 +479,37 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
     // Fire and forget: the outcome belongs to the banner now, not to this
     // sheet, which is already gone.
+    ZendAnalytics.track(ZendEvent.sendStarted, {
+      'has_emoji': isEmojiNote(note),
+    });
+    final overlayContext = navigator.context;
     unawaited(
-      model.transferStatus.send(
-        amount: amount,
-        recipientZendtag: tag,
-        auth: auth,
-        recipientDisplayName: _displayName,
-        note: note,
-        visibility: _visibility,
-      ),
+      model.transferStatus
+          .send(
+            amount: amount,
+            recipientZendtag: tag,
+            auth: auth,
+            recipientDisplayName: _displayName,
+            note: note,
+            visibility: _visibility,
+          )
+          .then((_) {
+            final ok =
+                model.transferStatus.status?.kind == TransferStatusKind.sent;
+            ZendAnalytics.track(
+              ok ? ZendEvent.sendCompleted : ZendEvent.sendFailed,
+            );
+            // The send moment: only once it actually landed.
+            if (ok && overlayContext.mounted) {
+              unawaited(
+                showSendCelebration(
+                  overlayContext,
+                  amount: amount,
+                  emoji: isEmojiNote(note) ? note!.trim() : null,
+                ),
+              );
+            }
+          }),
     );
   }
 
@@ -958,6 +981,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           borderRadius: BorderRadius.circular(ZendRadii.chip),
                           onTap: () {
                             ZendFeel.reaction();
+                            ZendAnalytics.track(ZendEvent.emojiAdded);
                             _noteController.text = e;
                             _disarmZendConfirm();
                             setState(() {});
@@ -975,7 +999,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             ),
                             child: Text(
                               e,
-                              style: const TextStyle(fontSize: 22),
+                              style: ZendTextStyles.emoji.copyWith(
+                                fontSize: 22,
+                              ),
                             ),
                           ),
                         ),

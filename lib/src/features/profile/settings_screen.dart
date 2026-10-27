@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../design/zend_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/zend_features.dart';
@@ -142,6 +143,12 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(
                       tiles: [
+                        _Tile(
+                          icon: PhosphorIconsRegular.eye,
+                          label: 'Who sees my payments',
+                          subtitle: 'Default for new payments in the Feed',
+                          onTap: () => _pickDefaultVisibility(context),
+                        ),
                         _ToggleTile(
                           icon: PhosphorIconsRegular.bell,
                           label: 'Notify network when I share',
@@ -676,5 +683,58 @@ class _DropDiscoverabilityTile extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Profile-level default for payment visibility (design revamp: make
+/// visibility explicit and changeable). Per-payment choice still exists on
+/// the send confirm step.
+Future<void> _pickDefaultVisibility(BuildContext context) async {
+  const options = [
+    ('private', 'Only you and them', 'Nobody else sees the payment'),
+    (
+      'share_activity_amount_hidden',
+      'Your network, no amount',
+      'Mutuals see who and the note, not how much',
+    ),
+    ('share_activity_full', 'Your network', 'Mutuals see the whole payment'),
+  ];
+  final model = ZendScope.read(context);
+  final picked = await showZendModalSheet<String>(
+    context: context,
+    builder: (ctx) {
+      final zt = ZendTheme.of(ctx);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Who sees my payments',
+                style: ZendTextStyles.title.copyWith(color: zt.textPrimary),
+              ),
+              const SizedBox(height: 12),
+              for (final o in options)
+                ListTile(
+                  title: Text(o.$2),
+                  subtitle: Text(o.$3),
+                  onTap: () => Navigator.of(ctx).pop(o.$1),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+  if (picked == null) return;
+  await model.walletService.apiClient.updateVisibilitySettings(
+    defaultPreset: picked,
+  );
+  if (context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Default visibility updated')));
   }
 }

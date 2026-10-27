@@ -120,7 +120,7 @@ class ZendEmojiTile extends StatelessWidget {
       ),
       child: Text(
         emoji,
-        style: TextStyle(fontSize: size * 0.6, height: 1),
+        style: ZendTextStyles.emoji.copyWith(fontSize: size * 0.6),
         semanticsLabel: 'Note: $emoji',
       ),
     );

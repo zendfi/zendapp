@@ -221,6 +221,17 @@ class ZendMotion {
 }
 
 class ZendTextStyles {
+  /// Emoji in notes, tiles and reactions: the bundled set first so a 🍕
+  /// looks the same on Android, iOS and the web.
+  static const emoji = TextStyle(
+    fontFamily: 'ZendEmoji',
+    fontFamilyFallback: [
+      'Apple Color Emoji',
+      'Noto Color Emoji',
+      'Segoe UI Emoji',
+    ],
+    height: 1,
+  );
   static const _display = 'SpaceGrotesk';
   static const _tabular = [FontFeature.tabularFigures()];
 

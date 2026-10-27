@@ -1,3 +1,5 @@
+import '../../services/favorites_store.dart';
+import 'package:flutter/foundation.dart' show mergeSort;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -226,7 +228,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
             Expanded(
               child: isSearching
                   ? _buildSearchResults(zt)
-                  : _buildDefault(zt, model, threads),
+                  : ListenableBuilder(
+                      listenable: FavoritesStore.instance,
+                      builder: (context, _) =>
+                          _buildDefault(zt, model, threads),
+                    ),
             ),
           ],
         ),
@@ -280,6 +286,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
     ZendAppModel model,
     List<CounterpartyThread> threads,
   ) {
+    unawaited(FavoritesStore.instance.load());
     if (threads.isEmpty) {
       return Center(
         child: Padding(
@@ -297,6 +304,21 @@ class _PeopleScreenState extends State<PeopleScreen> {
       );
     }
 
+    final favs = FavoritesStore.instance;
+    // Favorites float to the top (stable sort keeps recency within each group).
+    final sorted = [...threads];
+    mergeSort<CounterpartyThread>(
+      sorted,
+      compare: (a, b) {
+        int f(CounterpartyThread t) =>
+            favs.isFavorite(t.counterparty.zendtag ?? '') ? 0 : 1;
+        return f(a) - f(b);
+      },
+    );
+    threads = sorted;
+    final hasFavorites = threads.any(
+      (t) => favs.isFavorite(t.counterparty.zendtag ?? ''),
+    );
     final suggestions = model.suggestedConnections.take(5).toList();
 
     // Lazy, not eager. This was a `ListView(children: [...])` with an
@@ -317,7 +339,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8, top: 4),
             child: Text(
-              'Recent',
+              hasFavorites ? 'Favorites and recent' : 'Recent',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
@@ -336,6 +358,11 @@ class _PeopleScreenState extends State<PeopleScreen> {
                 'activit${thread.edges.length == 1 ? 'y' : 'ies'} together',
             avatarUrl: thread.counterparty.avatarUrl,
             avatarLabel: thread.counterparty.initialLetter,
+            zendtag: thread.counterparty.zendtag,
+            isFavorite: favs.isFavorite(thread.counterparty.zendtag ?? ''),
+            onToggleFavorite: thread.counterparty.zendtag == null
+                ? null
+                : () => favs.toggle(thread.counterparty.zendtag!),
             onTap: () => _openProfile(
               zendtag: thread.counterparty.zendtag,
               userId: thread.counterparty.id,
@@ -402,6 +429,8 @@ class _PersonRow extends StatelessWidget {
     required this.onTap,
     this.avatarUrl,
     this.zendtag,
+    this.isFavorite = false,
+    this.onToggleFavorite,
   });
 
   final String displayName;
@@ -412,6 +441,8 @@ class _PersonRow extends StatelessWidget {
 
   /// When set, the row gets its own Zend action (design revamp).
   final String? zendtag;
+  final bool isFavorite;
+  final VoidCallback? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -456,6 +487,24 @@ class _PersonRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onToggleFavorite != null)
+                IconButton(
+                  tooltip: isFavorite
+                      ? 'Remove from favorites'
+                      : 'Add to favorites',
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  onPressed: onToggleFavorite,
+                  icon: Icon(
+                    isFavorite
+                        ? PhosphorIconsFill.star
+                        : PhosphorIconsRegular.star,
+                    size: 18,
+                    color: isFavorite ? zt.pending : zt.textSecondary,
+                  ),
+                ),
               if (zendtag != null && zendtag!.isNotEmpty)
                 TextButton(
                   style: TextButton.styleFrom(

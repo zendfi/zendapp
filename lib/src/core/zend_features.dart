@@ -105,7 +105,9 @@ abstract final class ZendFeatures {
   ///
   /// Turn on when: there's a real block endpoint and the blocked party can
   /// no longer open a room or deliver messages.
-  static const bool blockUser = false;
+  // On: block/report endpoints exist and block is enforced on DM rooms,
+  // DM messages (HTTP + WS) and Sui transfers.
+  static const bool blockUser = true;
 
   /// "Search in chat" and "Disappearing messages" in the DM overflow menu.
   /// Both were rendered greyed-out with no-op handlers.

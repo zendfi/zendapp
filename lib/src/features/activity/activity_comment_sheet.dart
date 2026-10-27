@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../design/zend_money.dart';
+import '../../services/zend_analytics.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
@@ -153,6 +155,8 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
   }
 
   Future<void> _toggleReaction(String emoji) async {
+    ZendFeel.reaction();
+    ZendAnalytics.track(ZendEvent.reactionAdded);
     final model = ZendScope.of(context);
     final existing = _reactions.where((r) => r.emoji == emoji).firstOrNull;
     final alreadyReacted = existing?.reactedByMe ?? false;

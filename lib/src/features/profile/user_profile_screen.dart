@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'block_report_sheet.dart';
 import '../../core/zend_format.dart';
 
 import '../../core/zend_state.dart';
@@ -389,6 +390,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     onPressed: _openZend,
                                   ),
                                 ),
+                                if (_userId != null)
+                                  IconButton(
+                                    tooltip: 'Block or report',
+                                    constraints: const BoxConstraints(
+                                      minWidth: 44,
+                                      minHeight: 44,
+                                    ),
+                                    icon: Icon(
+                                      Icons.more_horiz,
+                                      color: zt.textSecondary,
+                                    ),
+                                    onPressed: () => showBlockReportSheet(
+                                      context,
+                                      userId: _userId!,
+                                      name: _label,
+                                    ),
+                                  ),
                               ],
                             ),
                     ),

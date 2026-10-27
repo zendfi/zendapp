@@ -1699,11 +1699,42 @@ class ApiClient {
     }
   }
 
+  Future<void> blockUser(String userId) async {
+    try {
+      await _dio.post('/api/zend/users/$userId/block');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> unblockUser(String userId) async {
+    try {
+      await _dio.delete('/api/zend/users/$userId/block');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> reportUser(String userId, {required String reason}) async {
+    try {
+      await _dio.post(
+        '/api/zend/users/$userId/report',
+        data: {'reason': reason},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Syncs user visibility preferences to the server.
   /// Currently only `notifyMutualsOnShare` — extend as needed.
-  Future<void> updateVisibilitySettings({bool? notifyMutualsOnShare}) async {
+  Future<void> updateVisibilitySettings({
+    bool? notifyMutualsOnShare,
+    String? defaultPreset,
+  }) async {
     try {
       final body = <String, dynamic>{};
+      if (defaultPreset != null) body['default_preset'] = defaultPreset;
       if (notifyMutualsOnShare != null) {
         body['notify_mutuals_on_share'] = notifyMutualsOnShare;
       }
