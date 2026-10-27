@@ -70,7 +70,7 @@ jobs:
       # there was no offline capability to preserve, and Flutter's own build
       # output notes this service worker is deprecated and due for removal.
       - name: Build web
-        run: flutter build web --wasm --release --no-web-resources-cdn --pwa-strategy=none
+        run: flutter build web --wasm --release --no-web-resources-cdn --pwa-strategy=none --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }}
 
       # build/web is uploaded as the deployment root, so vercel.json goes in
       # it — minus outputDirectory, which only makes sense from the repo root.

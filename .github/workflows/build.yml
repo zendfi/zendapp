@@ -64,7 +64,7 @@ jobs:
 
       # ── Build ─────────────────────────────────────────────────────────────────
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_ANDROID }}
 
       # Rename APK to include build number for clarity
       - name: Rename APK
