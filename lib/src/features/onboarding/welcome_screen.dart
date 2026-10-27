@@ -135,7 +135,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Text(
                         'Welcome to Zend',
                         style: TextStyle(
-                          fontFamily: 'SpaceGrotesk',
+                          fontFamily: 'Geist',
                           fontSize: 44,
                           height: 1.1,
                           fontWeight: FontWeight.w700,

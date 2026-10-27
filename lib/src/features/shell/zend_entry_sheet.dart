@@ -881,7 +881,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                       Text(
                         '\$',
                         style: TextStyle(
-                          fontFamily: 'SpaceGrotesk',
+                          fontFamily: 'Geist',
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
                           color: zt.textPrimary,

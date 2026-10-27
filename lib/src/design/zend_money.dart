@@ -111,17 +111,23 @@ class ZendEmojiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final tile = Container(
-      width: size,
       height: size,
+      constraints: BoxConstraints(minWidth: size),
+      padding: EdgeInsets.symmetric(horizontal: size * 0.18),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: zt.bgElevated,
         borderRadius: BorderRadius.circular(ZendRadii.card),
       ),
-      child: Text(
-        emoji,
-        style: ZendTextStyles.emoji.copyWith(fontSize: size * 0.6),
-        semanticsLabel: 'Note: $emoji',
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          emoji,
+          maxLines: 1,
+          softWrap: false,
+          style: ZendTextStyles.emoji.copyWith(fontSize: size * 0.55),
+          semanticsLabel: 'Note: $emoji',
+        ),
       ),
     );
     if (!burst || ZendMotion.reduced(context)) return tile;
@@ -168,7 +174,7 @@ class ZendGlow extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
-          radius: 0.9,
+          radius: 0.5,
           colors: [
             zt.moneyIn.withValues(alpha: zt.isDark ? 0.16 : 0.10),
             zt.moneyIn.withValues(alpha: 0),

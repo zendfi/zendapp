@@ -606,7 +606,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
             Text(
               'Zend!',
               style: ZendTextStyles.title.copyWith(
-                fontFamily: 'SpaceGrotesk',
+                fontFamily: 'Geist',
                 fontWeight: FontWeight.w700,
                 color: zt.textPrimary,
               ),
@@ -901,8 +901,6 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     final isOutgoing = edge.isOutgoing;
     final isVibe = isVibeEdge(edge);
     final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
-    final showAmount = !edge.amountHidden && edge.amountUsdc != null;
-    final amount = double.tryParse(edge.amountUsdc ?? '') ?? 0;
     final emojiNote = isEmojiNote(edge.note) ? edge.note!.trim() : null;
     final totalReactions = _reactions.fold<int>(0, (sum, r) => sum + r.count);
 
@@ -1059,17 +1057,6 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                         ],
                       ),
                     ),
-                    if (showAmount && !isVibe) ...[
-                      const SizedBox(width: 8),
-                      ZendAmount(
-                        amount,
-                        direction: !isDirect
-                            ? MoneyDirection.neutral
-                            : isOutgoing
-                            ? MoneyDirection.outgoing
-                            : MoneyDirection.incoming,
-                      ),
-                    ],
                   ],
                 ),
                 if (emojiNote != null && !isVibe) ...[

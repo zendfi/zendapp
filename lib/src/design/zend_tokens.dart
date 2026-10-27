@@ -135,21 +135,22 @@ class ZendTheme {
   // Design revamp palette: green-tinted black with three layers (base,
   // surface 1, surface 2) instead of flat neutral gray. Green only ever means
   // money arriving or the primary action.
+  // Neutral near-black layers; green is reserved for money in and the
+  // primary action so it reads as a signal, not a wash.
   static const _dark = ZendTheme._(
-    bgPrimary: Color(0xFF0A110E), // Base
-    bgSecondary: Color(0xFF111B16), // Surface 1
-    bgCard: Color(0xFF111B16), // Surface 1 — cards and rows
-    bgElevated: Color(0xFF182621), // Surface 2 — sheets, raised, selected
-    bgAccentSurface: Color(0xFF0C1A12),
-    chatBg: Color(0xFF0D1511),
-    bubbleReceived: Color(0xFF182621),
-    textPrimary: Color(0xFFF2F5F3),
-    // Replaces #7A7A7A, which failed 4.5:1 on dark; #A3B1AA passes on Base.
-    textSecondary: Color(0xFFA3B1AA),
-    border: Color(0xFF1E2C26),
-    accent: Color(0xFF1FD16A), // Zend green
+    bgPrimary: Color(0xFF0E0F10), // Base
+    bgSecondary: Color(0xFF17181A), // Surface 1
+    bgCard: Color(0xFF17181A),
+    bgElevated: Color(0xFF212327), // Surface 2
+    bgAccentSurface: Color(0xFF13261A),
+    chatBg: Color(0xFF121314),
+    bubbleReceived: Color(0xFF212327),
+    textPrimary: Color(0xFFF2F3F4),
+    textSecondary: Color(0xFFA1A1AA), // passes 4.5:1 on Base
+    border: Color(0xFF26282C),
+    accent: Color(0xFF1FD16A),
     accentBright: Color(0xFF1FD16A),
-    accentPop: Color(0xFF0F3D24),
+    accentPop: Color(0xFF123A22),
     positive: Color(0xFF1FD16A),
     destructive: Color(0xFFFF5A5F),
     isDark: true,
@@ -230,9 +231,9 @@ class ZendTextStyles {
       'Noto Color Emoji',
       'Segoe UI Emoji',
     ],
-    height: 1,
+    height: 1.2,
   );
-  static const _display = 'SpaceGrotesk';
+  static const _display = 'Geist';
   static const _tabular = [FontFeature.tabularFigures()];
 
   /// 56/60 heavy — Home balance.
@@ -242,7 +243,6 @@ class ZendTextStyles {
     height: 60 / 56,
     fontWeight: FontWeight.w700,
     letterSpacing: -1.5,
-    fontVariations: [FontVariation('wght', 700)],
     fontFeatures: _tabular,
   );
 
@@ -253,7 +253,6 @@ class ZendTextStyles {
     height: 44 / 40,
     fontWeight: FontWeight.w700,
     letterSpacing: -1,
-    fontVariations: [FontVariation('wght', 700)],
     fontFeatures: _tabular,
   );
 
@@ -264,7 +263,6 @@ class ZendTextStyles {
     height: 28 / 24,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.5,
-    fontVariations: [FontVariation('wght', 650)],
     fontFeatures: _tabular,
   );
 

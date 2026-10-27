@@ -257,17 +257,6 @@ flutter:
     # requests fall back to the nearest lighter registered weight (700)
     # since Geist's heaviest cuts (Black/UltraBlack) are intentionally not
     # bundled — the redesign's brand voice avoids 900-weight emphasis.
-    # Display face for money (design revamp): amounts and the balance.
-    # Variable font (wght 300-700), SIL OFL — see assets/fonts/space_grotesk/OFL.txt.
-    # Bundled emoji (design revamp): Noto Color Emoji, subset to the
-    # ~700 most common payment-note emoji (4MB) so notes look the same on
-    # every platform; others fall back to the OS. SIL OFL, see OFL.txt.
-    - family: ZendEmoji
-      fonts:
-        - asset: assets/fonts/emoji/ZendEmoji.ttf
-    - family: SpaceGrotesk
-      fonts:
-        - asset: assets/fonts/space_grotesk/SpaceGrotesk.ttf
     - family: Geist
       fonts:
         - asset: assets/fonts/geist/Geist-Light.ttf
