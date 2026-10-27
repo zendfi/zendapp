@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // kIsWeb and debugPrint live in foundation.dart; material.dart does not
 // re-export them.
 import 'package:flutter/foundation.dart';
@@ -10,6 +12,7 @@ import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/sui_oauth_provider.dart';
 import '../../services/sui_zklogin_models.dart';
+import '../../services/sui_zklogin_service.dart';
 import '../shell/zend_shell.dart';
 import 'zendtag_prompt_sheet.dart';
 
@@ -34,6 +37,53 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool _busy = false;
   String? _error;
 
+  /// A zkLogin session minted before the user taps, so the OAuth popup opens
+  /// with the tap's user activation still intact.
+  ///
+  /// Web only, and not an optimisation. `flutter_web_auth_2` opens a popup on
+  /// web, browsers only allow that while the triggering gesture is active, and
+  /// minting the session is a network round-trip that outlives the gesture.
+  /// Doing it inside the handler meant the popup opened unattributed: Chrome on
+  /// Android permitted it (it opens a tab, not a popup), Chrome on desktop
+  /// blocked it, and Safari blocked it without ever settling the future — a
+  /// permanent spinner. Preparing ahead of time leaves nothing to await
+  /// between the tap and `window.open`.
+  PreparedZkLoginSignIn? _prepared;
+
+  @override
+  void initState() {
+    super.initState();
+    // ZendScope.read rather than .of: .of throws from initState, which
+    // zend_scope_read_test.dart pins down explicitly.
+    if (kIsWeb) unawaited(_prepareSession());
+  }
+
+  @override
+  void dispose() {
+    // Holds live key material, so it is never just dropped.
+    _prepared?.dispose();
+    _prepared = null;
+    super.dispose();
+  }
+
+  Future<void> _prepareSession() async {
+    final model = ZendScope.read(context);
+    try {
+      final prepared = await model.zkLoginService.preparePublicSignIn();
+      if (!mounted) {
+        prepared.dispose();
+        return;
+      }
+      _prepared?.dispose();
+      _prepared = prepared;
+    } catch (error) {
+      // Not surfaced. A failed pre-warm only costs the popup its activation;
+      // the tap still falls back to minting a session inline, which is exactly
+      // the old behaviour rather than a new failure.
+      debugPrint('zkLogin session pre-warm failed: $error');
+    }
+  }
+
   Future<void> _continueWithGoogle() async {
     if (_busy) return;
     setState(() {
@@ -44,9 +94,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final model = ZendScope.of(context);
     final navigator = Navigator.of(context);
 
+    // Consumed here: completePublicSignIn takes ownership on success and
+    // disposes on failure, so the field must not keep pointing at it.
+    final prepared = _prepared;
+    _prepared = null;
+    final usable = prepared != null && prepared.isUsable;
+    if (prepared != null && !usable) prepared.dispose();
+
     try {
       final result = await model.authService.signInWithGoogle(
         model.zkLoginService,
+        prepared: usable ? prepared : null,
       );
       if (!mounted) return;
 
@@ -139,6 +197,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       setState(() => _error = "Couldn't sign you in. Please try again.");
     } finally {
       if (mounted) setState(() => _busy = false);
+      // The prepared session was consumed either way, and its nonce is
+      // single-use. Mint another so a retry is not stuck re-creating one inside
+      // the tap handler — which is the condition that breaks the popup.
+      if (mounted && kIsWeb && _prepared == null) {
+        unawaited(_prepareSession());
+      }
     }
   }
 

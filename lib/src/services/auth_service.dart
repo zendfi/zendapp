@@ -103,10 +103,18 @@ class AuthService {
   /// [zkLoginService] is injected rather than held as a field so this service
   /// keeps no dependency on the Sui stack when zkLogin is not in use, which keeps
   /// the OTP path above completely unaffected.
+  /// [prepared] lets the caller supply a session minted before the user's tap.
+  /// On web that is not an optimisation but a requirement: the popup must open
+  /// while the tap's user activation is still live, and minting the session is
+  /// a network round-trip that outlives it. See
+  /// [SuiZkLoginService.preparePublicSignIn].
   Future<SuiZkLoginPublicSignIn> signInWithGoogle(
-    SuiZkLoginService zkLoginService,
-  ) async {
-    final result = await zkLoginService.signInPublic();
+    SuiZkLoginService zkLoginService, {
+    PreparedZkLoginSignIn? prepared,
+  }) async {
+    final result = prepared != null
+        ? await zkLoginService.completePublicSignIn(prepared)
+        : await zkLoginService.signInPublic();
     await _secureStorage.write(key: _tokenKey, value: result.sessionToken);
     await _secureStorage.write(key: _userIdKey, value: result.userId);
     await _secureStorage.write(key: _zendtagKey, value: result.zendtag);

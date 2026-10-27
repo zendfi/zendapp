@@ -123,6 +123,40 @@ class _ActiveSession {
   }
 }
 
+/// A zkLogin session minted before the user taps "Continue with Google".
+///
+/// Holds live ephemeral key material, so it must be either passed to
+/// [SuiZkLoginService.completePublicSignIn] — which takes ownership — or
+/// disposed. Dropping it on the floor leaks a private key into memory for the
+/// lifetime of the isolate.
+class PreparedZkLoginSignIn {
+  PreparedZkLoginSignIn._({
+    required this.keyPair,
+    required this.randomness,
+    required this.init,
+  });
+
+  final SuiEphemeralKeyPair keyPair;
+  final String randomness;
+  final SuiZkLoginSessionInit init;
+
+  /// Margin against the session expiring part-way through the OAuth round-trip.
+  /// A user can sit on the sign-in screen for a while, and a nonce that lapses
+  /// between the tap and the callback fails at the very end of the flow, which
+  /// is the most confusing place for it to happen.
+  static const _expiryMargin = Duration(minutes: 2);
+
+  /// False once the session is too close to expiry to be worth starting with.
+  /// Callers should re-prepare rather than proceed.
+  bool get isUsable =>
+      DateTime.now().toUtc().isBefore(
+        init.expiresAt.toUtc().subtract(_expiryMargin),
+      );
+
+  /// Zeroizes the key material. Safe to call more than once.
+  void dispose() => keyPair.zeroize();
+}
+
 /// Orchestrates the Sui zkLogin session lifecycle.
 ///
 /// Ordering is dictated by the protocol: the session (and therefore the nonce)
@@ -212,15 +246,61 @@ class SuiZkLoginService {
   /// [SuiZkLoginPublicSignIn.sessionToken]; this service deliberately holds no
   /// storage handle, so it cannot leave a credential behind on disk.
   Future<SuiZkLoginPublicSignIn> signInPublic() async {
+    final prepared = await preparePublicSignIn();
+    return completePublicSignIn(prepared);
+  }
+
+  /// Mints the session and nonce, stopping short of the OAuth round-trip.
+  ///
+  /// Split out for a browser constraint rather than a protocol one, and the two
+  /// requirements are in direct conflict on web:
+  ///
+  ///   * The protocol needs the nonce to exist *before* the OAuth request,
+  ///     because it binds the ID token to this ephemeral key and epoch window.
+  ///   * Browsers only permit `window.open` while the user gesture that
+  ///     triggered it is still active, and `flutter_web_auth_2` opens a popup
+  ///     on web.
+  ///
+  /// Minting the nonce is a network round-trip, and transient activation does
+  /// not survive one. Doing both inside the tap handler therefore means the
+  /// popup opens with no activation left, which browsers treat very differently:
+  /// Chrome on Android opens a tab and allows it, Chrome on desktop blocks it,
+  /// and Safari blocks it without settling the future at all — which is why
+  /// sign-in appeared to work on exactly one platform and hang on Safari.
+  ///
+  /// Calling this ahead of the tap leaves the handler with nothing to await
+  /// before opening the window.
+  ///
+  /// The caller owns the result and must pass it to [completePublicSignIn] or
+  /// call [PreparedZkLoginSignIn.dispose] on it; it holds live key material.
+  Future<PreparedZkLoginSignIn> preparePublicSignIn() async {
     final keyPair = await _signing.generateEphemeralKeyPair();
     final randomness = _generateRandomness();
-
     try {
       final init = await _api.createPublicSuiZkLoginSession(
         extendedEphemeralPublicKey: keyPair.extendedPublicKeyBase64,
         jwtRandomness: randomness,
       );
+      return PreparedZkLoginSignIn._(
+        keyPair: keyPair,
+        randomness: randomness,
+        init: init,
+      );
+    } catch (_) {
+      keyPair.zeroize();
+      rethrow;
+    }
+  }
 
+  /// Runs the OAuth round-trip against an already-minted session.
+  ///
+  /// Must be reached from a tap handler without an intervening `await`, or the
+  /// popup loses its user activation — see [preparePublicSignIn].
+  Future<SuiZkLoginPublicSignIn> completePublicSignIn(
+    PreparedZkLoginSignIn prepared,
+  ) async {
+    final init = prepared.init;
+    try {
       final tokens = await _oauth.signInForIdToken(nonce: init.nonce);
 
       final result = await _api.publicSuiZkLoginSignIn(
@@ -229,12 +309,13 @@ class SuiZkLoginService {
       );
 
       // Retain the signing session so the first transfer after sign-in does not
-      // need another OAuth round-trip.
+      // need another OAuth round-trip. Ownership of the key pair transfers here,
+      // which is why it is not zeroized on the success path.
       _replaceSession(
         _ActiveSession(
           sessionId: init.sessionId,
-          keyPair: keyPair,
-          jwtRandomness: randomness,
+          keyPair: prepared.keyPair,
+          jwtRandomness: prepared.randomness,
           idToken: tokens.idToken,
           accessToken: tokens.accessToken,
           maxEpoch: init.maxEpoch,
@@ -244,7 +325,7 @@ class SuiZkLoginService {
       );
       return result;
     } catch (error) {
-      keyPair.zeroize();
+      prepared.dispose();
       rethrow;
     }
   }
