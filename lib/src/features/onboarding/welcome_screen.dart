@@ -144,8 +144,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "The internet's money network. Send money to your "
-                        'people in seconds, and say it with an emoji.',
+                        "The internet's social money network",
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 17,
