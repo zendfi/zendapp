@@ -11,6 +11,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_gif.dart';
 
 /// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
@@ -109,11 +110,19 @@ class _ReceiptSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Status icon ──
-                  if (isEmojiNote(entry.note)) ...[
+                  if (gifIdFromNote(entry.note) != null) ...[
+                    Center(
+                      child: ZendGifTile(
+                        gifIdFromNote(entry.note)!,
+                        height: 160,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else if (isEmojiNote(entry.note)) ...[
                     Center(
                       child: ZendEmojiTile(
                         entry.note!.trim(),
-                        size: 72,
+                        size: 64,
                         burst: !isSent,
                       ),
                     ),
@@ -169,7 +178,7 @@ class _ReceiptSheet extends StatelessWidget {
                   // ── Note ──
                   if (entry.note != null &&
                       entry.note!.isNotEmpty &&
-                      !isEmojiNote(entry.note)) ...[
+                      !isMediaNote(entry.note)) ...[
                     const SizedBox(height: 8),
                     Center(
                       child: Container(
@@ -254,7 +263,10 @@ class _ReceiptSheet extends StatelessWidget {
                         'Zend! receipt',
                         '${isSent ? 'Sent' : 'Received'} $amountStr '
                             '${isSent ? 'to' : 'from'} ${handleLabel(counterparty)}',
-                        if (entry.note?.isNotEmpty == true) entry.note!,
+                        if (entry.note?.isNotEmpty == true)
+                          gifIdFromNote(entry.note) != null
+                              ? '(GIF)'
+                              : entry.note!,
                         formatDateTime(entry.createdAt),
                         'Status: $statusLabel',
                       ].join('\n'),

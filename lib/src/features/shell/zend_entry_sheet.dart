@@ -22,6 +22,7 @@ import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_gif.dart';
 
 /// The Zend entry point — identity-first, per redesign.md §10-16, merged
 /// with §12-13 (Send/Request) into a single consolidated screen.
@@ -940,7 +941,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   // read. The editable field below hides at the same time,
                   // so the note appears in exactly one place per state
                   // rather than twice.
-                  if (_confirmingZend && _note != null)
+                  if (gifIdFromNote(_note) != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: ZendGifTile(gifIdFromNote(_note)!, height: 96),
+                    )
+                  else if (_confirmingZend && _note != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
@@ -971,6 +977,41 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
+                  if (gifSearchEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(ZendRadii.chip),
+                        onTap: () async {
+                          final id = await showGifPicker(context);
+                          if (id == null || !mounted) return;
+                          ZendAnalytics.track(ZendEvent.emojiAdded, {
+                            'kind': 'gif',
+                          });
+                          _noteController.text = gifNote(id);
+                          _disarmZendConfirm();
+                          setState(() {});
+                        },
+                        child: Container(
+                          width: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: gifIdFromNote(_noteController.text) != null
+                                ? zt.accentPop
+                                : zt.bgSecondary,
+                            borderRadius: BorderRadius.circular(ZendRadii.chip),
+                          ),
+                          child: Text(
+                            'GIF',
+                            semanticsLabel: 'Add a GIF',
+                            style: ZendTextStyles.micro.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: zt.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   for (final e in _emojiChoices(ZendScope.of(context)))
                     Padding(
                       padding: const EdgeInsets.only(right: 8),

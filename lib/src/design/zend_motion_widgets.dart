@@ -7,121 +7,21 @@ import 'zend_mark.dart';
 import 'zend_money.dart';
 import 'zend_tokens.dart';
 
-/// Pull-to-refresh with the Z mark as the indicator (design revamp motion
-/// table): the Z rotates with the pull, ticks a light haptic at the
-/// threshold, and spins while refreshing. The stock spinner is kept for its
-/// gesture handling but drawn invisibly.
-class ZendRefresh extends StatefulWidget {
+/// Pull-to-refresh: the stock spinner in Zend green for now.
+class ZendRefresh extends StatelessWidget {
   const ZendRefresh({super.key, required this.onRefresh, required this.child});
 
   final Future<void> Function() onRefresh;
   final Widget child;
 
   @override
-  State<ZendRefresh> createState() => _ZendRefreshState();
-}
-
-class _ZendRefreshState extends State<ZendRefresh>
-    with SingleTickerProviderStateMixin {
-  static const _threshold = 80.0;
-  double _pull = 0;
-  bool _ticked = false;
-  bool _refreshing = false;
-  late final AnimationController _spin = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  );
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  bool _onScroll(ScrollNotification n) {
-    if (n.depth != 0 || _refreshing) return false;
-    double next = _pull;
-    if (n is OverscrollNotification &&
-        n.overscroll < 0 &&
-        n.dragDetails != null) {
-      next = _pull - n.overscroll;
-    } else if (n is ScrollUpdateNotification && n.metrics.pixels < 0) {
-      next = -n.metrics.pixels;
-    } else if (n is ScrollUpdateNotification &&
-        _pull > 0 &&
-        n.metrics.pixels >= 0) {
-      next = (_pull - (n.scrollDelta ?? 0).abs()).clamp(0, 200);
-    } else if (n is ScrollEndNotification) {
-      next = 0;
-    }
-    if (next >= _threshold && !_ticked) {
-      _ticked = true;
-      ZendFeel.keypadTap();
-    } else if (next < _threshold) {
-      _ticked = false;
-    }
-    if (next != _pull) setState(() => _pull = next.clamp(0, 200));
-    return false;
-  }
-
-  Future<void> _run() async {
-    setState(() => _refreshing = true);
-    if (!ZendMotion.reduced(context)) _spin.repeat();
-    try {
-      await widget.onRefresh();
-    } finally {
-      _spin.stop();
-      if (mounted) {
-        setState(() {
-          _refreshing = false;
-          _pull = 0;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final progress = (_pull / _threshold).clamp(0.0, 1.0);
-    final visible = _refreshing || progress > 0.05;
-    return Stack(
-      children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: _onScroll,
-          child: RefreshIndicator(
-            onRefresh: _run,
-            color: Colors.transparent,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            child: widget.child,
-          ),
-        ),
-        if (visible)
-          Positioned(
-            top: 12 + (_refreshing ? 24 : 36 * progress),
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: Opacity(
-                  opacity: _refreshing ? 1 : progress,
-                  child: AnimatedBuilder(
-                    animation: _spin,
-                    builder: (context, child) => Transform.rotate(
-                      angle:
-                          (_refreshing ? _spin.value : progress) * 2 * 3.14159,
-                      child: child,
-                    ),
-                    child: Semantics(
-                      label: _refreshing ? 'Refreshing' : null,
-                      child: const ZendMark(size: 36),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
+    final zt = ZendTheme.of(context);
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: zt.moneyIn,
+      backgroundColor: zt.bgElevated,
+      child: child,
     );
   }
 }

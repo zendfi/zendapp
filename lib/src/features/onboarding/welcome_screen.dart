@@ -1,3 +1,6 @@
+// kIsWeb and debugPrint live in foundation.dart; material.dart does not
+// re-export them.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_mark.dart';
@@ -97,7 +100,41 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.userMessage);
-    } catch (_) {
+    } catch (error) {
+      // Anything reaching here is not one of the typed failures above, so it
+      // carries no user-facing message of its own. It used to be swallowed
+      // entirely, which made the single most common web failure mode
+      // undiagnosable: the user saw "Please try again" and the console showed
+      // only a bare `Uncaught Exception {}`.
+      //
+      // The usual cause on web is an unregistered redirect URI.
+      // `kZkLoginWebRedirectUri` is derived from `Uri.base.origin`, while
+      // Google only accepts redirect URIs registered on the OAuth client —
+      // currently just https://app.usezend.app/auth.html and
+      // https://zdfi.me/auth/callback. From a preview deployment, localhost,
+      // or the apex/www host, Google answers redirect_uri_mismatch *inside the
+      // popup*, so auth.js never posts back and `authenticate()` either throws
+      // when the popup is closed or never completes at all.
+      //
+      // The message stays generic for the user; the detail goes to the console,
+      // where it is the difference between a five-minute fix and a day of
+      // bisecting CSP headers. The thrown object is logged rather than
+      // interpolated into the UI because an OAuth error can echo request
+      // parameters back.
+      if (kIsWeb) {
+        // Recomputed rather than imported from main.dart: importing the entry
+        // point from a feature file would close a cycle back through app.dart.
+        // This mirrors kZkLoginWebRedirectUri exactly.
+        debugPrint(
+          'Google sign-in failed on web. Origin: ${Uri.base.origin}. '
+          'Redirect URI sent: ${Uri.base.origin}/auth.html. '
+          'If that origin is not registered on the OAuth client, Google '
+          'rejects it inside the popup and the callback never returns. '
+          'Underlying error: $error',
+        );
+      } else {
+        debugPrint('Google sign-in failed: $error');
+      }
       if (!mounted) return;
       setState(() => _error = "Couldn't sign you in. Please try again.");
     } finally {
@@ -144,7 +181,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "The internet's social money network",
+                        "The internet's social money network.",
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 17,

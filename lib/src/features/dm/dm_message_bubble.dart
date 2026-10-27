@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_gif.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 //
@@ -1012,9 +1013,13 @@ class DmPaymentBubble extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (isEmojiNote(note)) ...[
+                    if (gifIdFromNote(note) != null) ...[
                       const SizedBox(height: 8),
-                      ZendEmojiTile(note!.trim(), size: 52, burst: !isMe),
+                      ZendGifTile(gifIdFromNote(note)!, height: 110),
+                      const SizedBox(height: 8),
+                    ] else if (isEmojiNote(note)) ...[
+                      const SizedBox(height: 8),
+                      ZendEmojiTile(note!.trim(), size: 44, burst: !isMe),
                       const SizedBox(height: 8),
                     ] else
                       const SizedBox(height: 2),
@@ -1028,7 +1033,7 @@ class DmPaymentBubble extends StatelessWidget {
                     if (note != null &&
                         note.isNotEmpty &&
                         note != 'vibe' &&
-                        !isEmojiNote(note)) ...[
+                        !isMediaNote(note)) ...[
                       const SizedBox(height: 3),
                       Text(
                         note,

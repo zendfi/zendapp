@@ -89,17 +89,23 @@ class ZendRollingAmount extends StatelessWidget {
 /// True when a note is (only) emoji — those get the big tile.
 bool isEmojiNote(String? note) {
   final n = note?.trim() ?? '';
+  if (n.startsWith('gif:')) return false;
   if (n.isEmpty || n.runes.length > 8) return false;
   return !RegExp(r'[A-Za-z0-9]').hasMatch(n);
 }
 
-/// A payment's emoji note, shown large (about 48px) on a tinted tile.
-/// [burst] plays a one-off pop when the tile first appears (received notes).
+/// A payment's emoji note, shown as animated stickers.
+///
+/// Each emoji maps to its Noto Animated Emoji sticker (Google, free under
+/// CC BY 4.0), loaded from Google's CDN. Combinations render as a tight row
+/// of stickers that pop in one after another (the "sticker action"). If a
+/// sticker doesn't exist or can't load, the static emoji glyph shows instead.
+/// No container: stickers sit directly on the card, sized to content.
 class ZendEmojiTile extends StatelessWidget {
   const ZendEmojiTile(
     this.emoji, {
     super.key,
-    this.size = 56,
+    this.size = 48,
     this.burst = false,
   });
 
@@ -109,34 +115,116 @@ class ZendEmojiTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    final tile = Container(
-      height: size,
-      constraints: BoxConstraints(minWidth: size),
-      padding: EdgeInsets.symmetric(horizontal: size * 0.18),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: zt.bgElevated,
-        borderRadius: BorderRadius.circular(ZendRadii.card),
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          emoji,
-          maxLines: 1,
-          softWrap: false,
-          style: ZendTextStyles.emoji.copyWith(fontSize: size * 0.55),
-          semanticsLabel: 'Note: $emoji',
-        ),
+    final parts = splitEmoji(emoji).take(5).toList();
+    // Shrink stickers as the combination grows so a row never sprawls.
+    final each = parts.length <= 1
+        ? size
+        : size * (parts.length <= 3 ? 0.8 : 0.65);
+    final reduced = ZendMotion.reduced(context);
+    return Semantics(
+      label: 'Note: $emoji',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < parts.length; i++)
+            _Popped(
+              enabled: burst && !reduced,
+              delay: Duration(milliseconds: 90 * i),
+              child: ZendSticker(parts[i], size: each),
+            ),
+        ],
       ),
     );
-    if (!burst || ZendMotion.reduced(context)) return tile;
+  }
+}
+
+/// Splits a note into emoji clusters, keeping ZWJ sequences and
+/// variation selectors attached (👨‍👩‍👧, ❤️).
+List<String> splitEmoji(String s) {
+  final out = <String>[];
+  final runes = s.trim().runes.toList();
+  var cur = StringBuffer();
+  for (var i = 0; i < runes.length; i++) {
+    final r = runes[i];
+    if (r == 0x20) continue;
+    final joins = r == 0x200D || r == 0xFE0F || (r >= 0x1F3FB && r <= 0x1F3FF);
+    final prevZwj = cur.isNotEmpty && cur.toString().runes.last == 0x200D;
+    if (cur.isNotEmpty && !joins && !prevZwj) {
+      out.add(cur.toString());
+      cur = StringBuffer();
+    }
+    cur.writeCharCode(r);
+  }
+  if (cur.isNotEmpty) out.add(cur.toString());
+  return out;
+}
+
+/// One animated sticker for one emoji.
+class ZendSticker extends StatelessWidget {
+  const ZendSticker(this.emoji, {super.key, this.size = 48});
+
+  final String emoji;
+  final double size;
+
+  static String urlFor(String emoji) {
+    final code = emoji.runes
+        .where((r) => r != 0xFE0F)
+        .map((r) => r.toRadixString(16))
+        .join('_');
+    return 'https://fonts.gstatic.com/s/e/notoemoji/latest/$code/512.webp';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final glyph = Center(
+      child: Text(
+        emoji,
+        style: ZendTextStyles.emoji.copyWith(fontSize: size * 0.8),
+      ),
+    );
+    return SizedBox.square(
+      dimension: size,
+      child: Image.network(
+        urlFor(emoji),
+        width: size,
+        height: size,
+        gaplessPlayback: true,
+        // Static glyph while loading and on any failure.
+        frameBuilder: (_, child, frame, _) => frame == null ? glyph : child,
+        errorBuilder: (_, _, _) => glyph,
+      ),
+    );
+  }
+}
+
+class _Popped extends StatelessWidget {
+  const _Popped({
+    required this.enabled,
+    required this.delay,
+    required this.child,
+  });
+
+  final bool enabled;
+  final Duration delay;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    final total = ZendMotion.celebrate + delay;
+    final start = delay.inMilliseconds / total.inMilliseconds;
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.4, end: 1),
-      duration: ZendMotion.celebrate,
-      curve: Curves.elasticOut,
-      builder: (context, v, child) => Transform.scale(scale: v, child: child),
-      child: tile,
+      tween: Tween(begin: 0, end: 1),
+      duration: total,
+      builder: (context, t, child) {
+        final local = ((t - start) / (1 - start)).clamp(0.0, 1.0);
+        return Transform.scale(
+          scale: 0.4 + 0.6 * Curves.elasticOut.transform(local),
+          child: child,
+        );
+      },
+      child: child,
     );
   }
 }
@@ -185,3 +273,7 @@ class ZendGlow extends StatelessWidget {
     );
   }
 }
+
+/// True for notes shown as a tile (emoji or GIF), never as plain text.
+bool isMediaNote(String? note) =>
+    isEmojiNote(note) || (note?.trim().startsWith('gif:') ?? false);

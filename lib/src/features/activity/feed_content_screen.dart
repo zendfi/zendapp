@@ -24,6 +24,7 @@ import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_gif.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed.
@@ -1059,7 +1060,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     ),
                   ],
                 ),
-                if (emojiNote != null && !isVibe) ...[
+                if (gifIdFromNote(edge.note) != null && !isVibe) ...[
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 62),
+                    child: ZendGifTile(gifIdFromNote(edge.note)!),
+                  ),
+                ] else if (emojiNote != null && !isVibe) ...[
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.only(left: 62),
@@ -1071,7 +1078,9 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                               5,
                     ),
                   ),
-                ] else if (edge.note?.isNotEmpty == true && !isVibe) ...[
+                ] else if (edge.note?.isNotEmpty == true &&
+                    !isVibe &&
+                    !isMediaNote(edge.note)) ...[
                   const SizedBox(height: 8),
                   Text(
                     edge.note!,
