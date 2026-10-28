@@ -788,74 +788,78 @@ class _BottomNavIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = active ? activeColor : inactiveColor;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 34,
-              height: 34,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Center(
-                    child: Icon(
-                      active ? activeIcon : icon,
-                      color: color,
-                      size: 24,
-                    ),
-                  ),
-                  if (badgeCount > 0 && !active)
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: ZendColors.destructive,
-                          borderRadius: BorderRadius.circular(ZendRadii.pill),
-                          border: Border.all(
-                            color: badgeBorderColor,
-                            width: 1.5,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          badgeCount > 99 ? '99+' : '$badgeCount',
-                          style: ZendTextStyles.tabularNumeric.copyWith(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            height: 1.0,
-                          ),
+    // Icon-only bar: the label is kept for screen readers and as a
+    // long-press tooltip, just not drawn.
+    return Semantics(
+      label: label,
+      button: true,
+      selected: active,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: 72,
+            height: 48,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Center(
+                        child: Icon(
+                          active ? activeIcon : icon,
+                          color: color,
+                          size: 24,
                         ),
                       ),
-                    ),
-                ],
-              ),
+                      if (badgeCount > 0 && !active)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ZendColors.destructive,
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
+                              border: Border.all(
+                                color: badgeBorderColor,
+                                width: 1.5,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              badgeCount > 99 ? '99+' : '$badgeCount',
+                              style: ZendTextStyles.tabularNumeric.copyWith(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                height: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 11,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
