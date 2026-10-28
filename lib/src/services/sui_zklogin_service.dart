@@ -148,10 +148,9 @@ class PreparedZkLoginSignIn {
 
   /// False once the session is too close to expiry to be worth starting with.
   /// Callers should re-prepare rather than proceed.
-  bool get isUsable =>
-      DateTime.now().toUtc().isBefore(
-        init.expiresAt.toUtc().subtract(_expiryMargin),
-      );
+  bool get isUsable => DateTime.now().toUtc().isBefore(
+    init.expiresAt.toUtc().subtract(_expiryMargin),
+  );
 
   /// Zeroizes the key material. Safe to call more than once.
   void dispose() => keyPair.zeroize();
