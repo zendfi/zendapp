@@ -12,7 +12,7 @@ import '../../design/zend_money.dart';
 import '../../design/zend_mark.dart';
 import '../../design/zend_motion_widgets.dart';
 import '../../services/zend_analytics.dart';
-import '../request/request_drawer_sheet.dart';
+import '../send/qr_scanner_screen.dart';
 import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
 import '../dm/dm_thread_screen.dart';
@@ -704,11 +704,14 @@ class _HomeHeaderState extends State<_HomeHeader> {
                   onPressed: () => showZendEntrySheet(context),
                 ),
               ),
+              // Send and Request both live inside Zend; Scan pays someone
+              // by their QR code (camera, or an uploaded image on web).
               const SizedBox(width: 12),
               Expanded(
                 child: OutlineActionButton(
-                  label: 'Request',
-                  onPressed: () => showRequestDrawer(context),
+                  label: 'Scan',
+                  onPressed: () =>
+                      pushZendSlide(context, const QrScannerScreen()),
                 ),
               ),
             ],

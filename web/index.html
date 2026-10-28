@@ -41,6 +41,9 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- QR decoding on web (mobile_scanner + upload). Self-hosted, pinned
+       @zxing/library 0.21.3; the id makes mobile_scanner skip its unpkg load. -->
+  <script id="mobile-scanner-barcode-reader" src="zxing-0.21.3.min.js" defer></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import '../../services/qr_image_decoder.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -67,7 +71,24 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     final rawValue = capture.barcodes.firstOrNull?.rawValue;
     if (rawValue == null) return;
+    _handleRaw(rawValue);
+  }
 
+  /// Web: decode a QR from an uploaded image (laptop webcams are awkward to
+  /// point at a phone).
+  Future<void> _uploadImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null || !mounted) return;
+    final text = await decodeQrFromImageUrl(picked.path);
+    if (!mounted) return;
+    if (text == null) {
+      _showErrorSnackBar('No QR code found in that image.');
+      return;
+    }
+    _handleRaw(text);
+  }
+
+  void _handleRaw(String rawValue) {
     Uri uri;
     try {
       uri = Uri.parse(rawValue);
@@ -89,7 +110,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         uri.pathSegments[1].isNotEmpty) {
       _hasScanned = true;
       HapticFeedback.mediumImpact();
-      _controller.stop();
+      unawaited(_controller.stop());
       if (!mounted) return;
       Navigator.of(context).pop();
       showPairingApprovalSheet(context, pairingCode: uri.pathSegments[1]);
@@ -227,7 +248,25 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: _TorchButton(torchOn: _torchOn, onTap: _toggleTorch),
+              child: kIsWeb
+                  ? TextButton.icon(
+                      onPressed: _uploadImage,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white24,
+                        minimumSize: const Size(44, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                        ),
+                      ),
+                      icon: const Icon(PhosphorIconsRegular.image),
+                      label: const Text(
+                        'Upload a QR image',
+                        style: TextStyle(fontFamily: 'Geist'),
+                      ),
+                    )
+                  : _TorchButton(torchOn: _torchOn, onTap: _toggleTorch),
             ),
           ),
         ],
@@ -359,8 +398,11 @@ class _PermissionDeniedOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'To scan QR codes, Zend! needs access to your camera. '
-              'Please enable camera access in your device settings.',
+              kIsWeb
+                  ? 'To scan QR codes, allow camera access for this site in '
+                        "your browser's settings, or upload a photo of the code."
+                  : 'To scan QR codes, Zend! needs access to your camera. '
+                        'Please enable camera access in your device settings.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',
@@ -382,8 +424,8 @@ class _PermissionDeniedOverlay extends StatelessWidget {
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                   ),
                 ),
-                child: const Text(
-                  'Enable Camera in Settings',
+                child: Text(
+                  kIsWeb ? 'Try again' : 'Enable Camera in Settings',
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 15,
