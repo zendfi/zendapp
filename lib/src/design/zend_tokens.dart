@@ -156,6 +156,10 @@ class ZendTheme {
     isDark: true,
   );
 
+  /// Sent chat bubble fill. Darker than [accent] in dark mode so a long
+  /// thread of your own messages doesn't glare; light mode unchanged.
+  Color get bubbleSent => isDark ? const Color(0xFF15934B) : accent;
+
   /// Payment in progress.
   Color get pending =>
       isDark ? const Color(0xFFF5B83D) : const Color(0xFFB7791F);

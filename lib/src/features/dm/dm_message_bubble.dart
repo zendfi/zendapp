@@ -607,7 +607,7 @@ class _TextBubble extends StatelessWidget {
               isMe: isMe,
               isFirst: isFirst,
               isLast: isLast,
-              color: isMe ? zt.accent : zt.bubbleReceived,
+              color: isMe ? zt.bubbleSent : zt.bubbleReceived,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
