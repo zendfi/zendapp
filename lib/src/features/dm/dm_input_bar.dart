@@ -540,13 +540,15 @@ class _DmInputBarState extends State<DmInputBar>
           const SizedBox(height: 18),
           Row(
             children: [
+              // Zend opens the Zend sheet for this person, which does both
+              // send and request, so there's no separate Request tile.
               _MonoActionTile(
-                icon: PhosphorIconsRegular.arrowSquareDown,
-                label: 'Request',
+                icon: PhosphorIconsRegular.currencyDollar,
+                label: 'Zend',
                 zt: zt,
                 onTap: () {
                   _closePanel();
-                  widget.onRequestPayment?.call();
+                  widget.onPayRecipient?.call();
                 },
               ),
               if (widget.onPickGif != null) ...[

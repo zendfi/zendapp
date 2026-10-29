@@ -46,26 +46,13 @@ class ZendGifTile extends StatelessWidget {
       label: 'GIF note',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(ZendRadii.card),
+        // Fixed size: a browser <img> has no size until it loads, which
+        // left an unconstrained tile collapsed or empty.
         child: Container(
           height: height,
-          constraints: BoxConstraints(maxWidth: height * 1.8),
+          width: height * 4 / 3,
           color: zt.bgElevated,
-          // Image.network, not CachedNetworkImage: on web the latter decodes
-          // via an HTML <img> (ImageRenderMethodForWeb.HtmlImage), which
-          // yields only the first frame, so GIFs sat frozen. Image.network
-          // fetches the bytes and builds a multi-frame codec on every
-          // platform. TickerMode is forced on so an ancestor that pauses
-          // animations (kept-alive tabs, offstage routes) can't freeze a GIF
-          // that is actually on screen.
-          child: TickerMode(
-            enabled: true,
-            child: Image.network(
-              _media(id, small: height <= 170),
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
-          ),
+          child: _GifImage(_media(id, small: height <= 170)),
         ),
       ),
     );
@@ -168,11 +155,7 @@ class _GifPickerState extends State<_GifPicker> {
                           onTap: () => Navigator.of(context).pop(_ids[i]),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(ZendRadii.chip),
-                            child: Image.network(
-                              _media(_ids[i], small: true),
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
-                            ),
+                            child: _GifImage(_media(_ids[i], small: true)),
                           ),
                         ),
                       ),
@@ -182,6 +165,42 @@ class _GifPickerState extends State<_GifPicker> {
                 style: ZendTextStyles.micro.copyWith(color: zt.textSecondary),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws an animated GIF.
+///
+/// Web: rendered as the browser's own <img> element
+/// (WebHtmlElementStrategy.prefer). The browser animates it natively, and it
+/// only needs `img-src`, so the CSP's `connect-src` list doesn't matter.
+/// Decoding the bytes in Flutter instead needs a CORS fetch through
+/// `connect-src`, and when that fails the tile was left blank.
+/// Mobile: Flutter decodes every frame and animates it.
+class _GifImage extends StatelessWidget {
+  const _GifImage(this.url);
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return TickerMode(
+      enabled: true,
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+        // A visible marker instead of an empty dark box if a GIF can't load.
+        errorBuilder: (_, _, _) => Center(
+          child: Icon(
+            Icons.gif_box_outlined,
+            color: zt.textSecondary,
+            size: 32,
           ),
         ),
       ),
