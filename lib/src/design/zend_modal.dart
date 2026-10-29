@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'zend_tokens.dart';
 import 'zend_web_frame.dart';
+import '../navigation/zend_routes.dart';
 
 /// Drop-in replacement for [showModalBottomSheet] used across the app.
 ///
@@ -23,7 +24,27 @@ Future<T?> showZendModalSheet<T>({
   bool enableDrag = true,
   bool? showDragHandle,
   bool useSafeArea = false,
+  bool inDetailPane = false,
 }) {
+  // Desktop: content that belongs to a list item opens in the right-hand
+  // detail pane rather than as a dialog over everything.
+  if (inDetailPane) {
+    final pane = ZendDetailPaneScope.navigatorOf(context);
+    if (pane != null) {
+      return pane.push<T>(
+        PageRouteBuilder<T>(
+          transitionDuration: ZendMotion.quick,
+          reverseTransitionDuration: ZendMotion.stageOut,
+          pageBuilder: (ctx, _, _) => Material(
+            color: ZendTheme.of(ctx).bgPrimary,
+            child: SafeArea(child: builder(ctx)),
+          ),
+          transitionsBuilder: (_, a, _, child) =>
+              FadeTransition(opacity: a, child: child),
+        ),
+      );
+    }
+  }
   if (!ZendWebLayout.isWide(context)) {
     return showModalBottomSheet<T>(
       context: context,

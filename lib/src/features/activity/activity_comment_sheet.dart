@@ -52,6 +52,7 @@ Future<void> showActivityCommentSheet(
     isScrollControlled: true,
     useRootNavigator: true,
     useSafeArea: true,
+    inDetailPane: true,
     backgroundColor: Colors.transparent,
     builder: (_) => _ActivityCommentSheet(
       edge: edge,
@@ -236,6 +237,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
       isScrollControlled: true,
       useRootNavigator: true,
       useSafeArea: true,
+      inDetailPane: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         final zt = ZendTheme.of(sheetContext);

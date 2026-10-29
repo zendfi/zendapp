@@ -1861,6 +1861,9 @@ class _DesktopPanes extends StatelessWidget {
 
   static const double listWidth = 400;
 
+  /// Phone layouts read as a column, not a banner, at this width.
+  static const double detailMaxWidth = 560;
+
   static const _empty = <(IconData, String, String)>[
     (
       PhosphorIconsRegular.receipt,
@@ -1909,25 +1912,38 @@ class _DesktopPanes extends StatelessWidget {
           ),
           Container(width: 1, color: zt.border),
           Expanded(
-            child: MediaQuery(
-              data: media.copyWith(size: Size(detailWidth, media.size.height)),
-              child: IndexedStack(
-                index: tabIndex,
-                children: [
-                  for (var i = 0; i < detailKeys.length; i++)
-                    HeroControllerScope.none(
-                      child: Navigator(
-                        key: detailKeys[i],
-                        onGenerateRoute: (_) => PageRouteBuilder<void>(
-                          pageBuilder: (_, _, _) => _EmptyDetail(
-                            icon: _empty[i].$1,
-                            title: _empty[i].$2,
-                            body: _empty[i].$3,
-                          ),
-                        ),
+            child: ColoredBox(
+              color: zt.bgPrimary,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: detailMaxWidth),
+                  child: MediaQuery(
+                    data: media.copyWith(
+                      size: Size(
+                        detailWidth.clamp(0.0, detailMaxWidth),
+                        media.size.height,
                       ),
                     ),
-                ],
+                    child: IndexedStack(
+                      index: tabIndex,
+                      children: [
+                        for (var i = 0; i < detailKeys.length; i++)
+                          HeroControllerScope.none(
+                            child: Navigator(
+                              key: detailKeys[i],
+                              onGenerateRoute: (_) => PageRouteBuilder<void>(
+                                pageBuilder: (_, _, _) => _EmptyDetail(
+                                  icon: _empty[i].$1,
+                                  title: _empty[i].$2,
+                                  body: _empty[i].$3,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

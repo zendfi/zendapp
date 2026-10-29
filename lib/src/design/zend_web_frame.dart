@@ -58,6 +58,10 @@ class ZendWebFrame extends StatelessWidget {
 
   static const double desktopBreakpoint = 900;
   static const double sidebarWidth = 240;
+  static const double sidebarCollapsedWidth = 76;
+
+  /// Remembered for the session; toggled from the sidebar.
+  static final ValueNotifier<bool> sidebarCollapsed = ValueNotifier(false);
 
   @override
   Widget build(BuildContext context) {
@@ -86,35 +90,51 @@ class ZendWebFrame extends StatelessWidget {
               child: ZendWebLayout(desktop: false, wide: true, child: child),
             );
           }
-          final contentWidth = size.width - sidebarWidth - 1;
-          return CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.keyN): () =>
-                  _Sidebar.openZend(navigatorKey),
-            },
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: sidebarWidth,
-                  child: _Sidebar(navigatorKey: navigatorKey, currentTab: tab),
-                ),
-                Container(width: 1, color: zt.border),
-                Expanded(
-                  child: MediaQuery(
-                    data: flat.copyWith(size: Size(contentWidth, size.height)),
-                    child: ColoredBox(
-                      color: zt.bgPrimary,
-                      child: ZendWebLayout(
-                        desktop: true,
-                        wide: true,
-                        child: child,
+          return ValueListenableBuilder<bool>(
+            valueListenable: sidebarCollapsed,
+            builder: (context, collapsed, _) {
+              final railWidth = collapsed
+                  ? sidebarCollapsedWidth
+                  : sidebarWidth;
+              final contentWidth = size.width - railWidth - 1;
+              return CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.keyN): () =>
+                      _Sidebar.openZend(navigatorKey),
+                },
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AnimatedContainer(
+                      duration: ZendMotion.quick,
+                      curve: ZendMotion.springSnappy,
+                      width: railWidth,
+                      child: _Sidebar(
+                        navigatorKey: navigatorKey,
+                        currentTab: tab,
+                        collapsed: collapsed,
                       ),
                     ),
-                  ),
+                    Container(width: 1, color: zt.border),
+                    Expanded(
+                      child: MediaQuery(
+                        data: flat.copyWith(
+                          size: Size(contentWidth, size.height),
+                        ),
+                        child: ColoredBox(
+                          color: zt.bgPrimary,
+                          child: ZendWebLayout(
+                            desktop: true,
+                            wide: true,
+                            child: child,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -181,10 +201,15 @@ class _SignedOutPage extends StatelessWidget {
 /// Full-height desktop navigation, mirrored from [ZendShell] through
 /// [ZendShellController].
 class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.navigatorKey, required this.currentTab});
+  const _Sidebar({
+    required this.navigatorKey,
+    required this.currentTab,
+    required this.collapsed,
+  });
 
   final GlobalKey<NavigatorState> navigatorKey;
   final int currentTab;
+  final bool collapsed;
 
   void _goToTab(int index) {
     navigatorKey.currentState?.popUntil((route) => route.isFirst);
@@ -209,13 +234,33 @@ class _Sidebar extends StatelessWidget {
     return ColoredBox(
       color: zt.bgSecondary,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),
+        padding: EdgeInsets.fromLTRB(
+          collapsed ? 12 : 16,
+          16,
+          collapsed ? 12 : 16,
+          20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _Wordmark(),
-            const SizedBox(height: 28),
+            Align(
+              alignment: collapsed ? Alignment.center : Alignment.centerRight,
+              child: IconButton(
+                tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+                icon: Icon(
+                  collapsed
+                      ? PhosphorIconsRegular.sidebarSimple
+                      : PhosphorIconsRegular.caretDoubleLeft,
+                  size: 20,
+                  color: zt.textSecondary,
+                ),
+                onPressed: () =>
+                    ZendWebFrame.sidebarCollapsed.value = !collapsed,
+              ),
+            ),
+            const SizedBox(height: 12),
             _NavItem(
+              collapsed: collapsed,
               icon: PhosphorIconsRegular.houseLine,
               activeIcon: PhosphorIconsFill.houseLine,
               label: 'Feed',
@@ -224,6 +269,7 @@ class _Sidebar extends StatelessWidget {
               onTap: () => _goToTab(0),
             ),
             _NavItem(
+              collapsed: collapsed,
               icon: PhosphorIconsRegular.usersThree,
               activeIcon: PhosphorIconsFill.usersThree,
               label: 'People',
@@ -231,6 +277,7 @@ class _Sidebar extends StatelessWidget {
               onTap: () => _goToTab(1),
             ),
             _NavItem(
+              collapsed: collapsed,
               icon: PhosphorIconsRegular.chatCircleText,
               activeIcon: PhosphorIconsFill.chatCircleText,
               label: 'Chats',
@@ -239,14 +286,20 @@ class _Sidebar extends StatelessWidget {
               onTap: () => _goToTab(2),
             ),
             const SizedBox(height: 20),
-            Tooltip(
-              message: 'Zend money (N)',
+            Semantics(
+              button: true,
+              label: 'Zend money (N)',
               child: Material(
                 color: ZendColors.bgDeep,
                 borderRadius: BorderRadius.circular(ZendRadii.pill),
+                clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
                   mouseCursor: SystemMouseCursors.click,
+                  // Explicit, subtle hover: the theme default painted a
+                  // near-white overlay across the whole button.
+                  hoverColor: Colors.white.withValues(alpha: 0.06),
+                  splashColor: Colors.white.withValues(alpha: 0.10),
+                  highlightColor: Colors.transparent,
                   onTap: () => openZend(navigatorKey),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 13),
@@ -264,16 +317,18 @@ class _Sidebar extends StatelessWidget {
                             height: 18,
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Zend',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: ZendColors.accentPop,
+                        if (!collapsed) ...[
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Zend',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: ZendColors.accentPop,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -292,6 +347,9 @@ class _Sidebar extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
+                    mainAxisAlignment: collapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.start,
                     children: [
                       CircleAvatar(
                         radius: 16,
@@ -306,39 +364,41 @@ class _Sidebar extends StatelessWidget {
                               )
                             : null,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: zt.textPrimary,
-                              ),
-                            ),
-                            if (tag != null)
+                      if (!collapsed) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                '@$tag',
+                                name,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontFamily: 'Geist',
-                                  fontSize: 12,
-                                  color: zt.textSecondary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: zt.textPrimary,
                                 ),
                               ),
-                          ],
+                              if (tag != null)
+                                Text(
+                                  '@$tag',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontSize: 12,
+                                    color: zt.textSecondary,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Icon(
-                        PhosphorIconsRegular.gearSix,
-                        size: 18,
-                        color: zt.textSecondary,
-                      ),
+                        Icon(
+                          PhosphorIconsRegular.gearSix,
+                          size: 18,
+                          color: zt.textSecondary,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -353,6 +413,7 @@ class _Sidebar extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
+    this.collapsed = false,
     required this.icon,
     required this.activeIcon,
     required this.label,
@@ -361,6 +422,7 @@ class _NavItem extends StatelessWidget {
     this.badge = 0,
   });
 
+  final bool collapsed;
   final IconData icon;
   final IconData activeIcon;
   final String label;
@@ -375,55 +437,68 @@ class _NavItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
-      child: Semantics(
-        selected: active,
-        button: true,
-        child: Material(
-          color: active ? zt.bgCard : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
+      child: Tooltip(
+        message: collapsed ? label : '',
+        child: Semantics(
+          selected: active,
+          button: true,
+          child: Material(
+            color: active ? zt.bgCard : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            mouseCursor: SystemMouseCursors.click,
-            hoverColor: zt.bgCard.withValues(alpha: 0.6),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              child: Row(
-                children: [
-                  Icon(active ? activeIcon : icon, color: color, size: 21),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 15,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                        color: color,
-                      ),
-                    ),
-                  ),
-                  if (badge > 0 && !active)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ZendColors.destructive,
-                        borderRadius: BorderRadius.circular(ZendRadii.pill),
-                      ),
-                      child: Text(
-                        badge > 99 ? '99+' : '$badge',
-                        style: const TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              mouseCursor: SystemMouseCursors.click,
+              hoverColor: zt.bgCard.withValues(alpha: 0.6),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+                child: Row(
+                  mainAxisAlignment: collapsed
+                      ? MainAxisAlignment.center
+                      : MainAxisAlignment.start,
+                  children: [
+                    Icon(active ? activeIcon : icon, color: color, size: 21),
+                    if (!collapsed) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 15,
+                            fontWeight: active
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: color,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                    ],
+                    if (badge > 0 && !active && !collapsed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ZendColors.destructive,
+                          borderRadius: BorderRadius.circular(ZendRadii.pill),
+                        ),
+                        child: Text(
+                          badge > 99 ? '99+' : '$badge',
+                          style: const TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

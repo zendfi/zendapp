@@ -33,6 +33,7 @@ Future<void> showTransactionReceipt(
       isScrollControlled: true,
       useRootNavigator: true,
       useSafeArea: true,
+      inDetailPane: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ReceiptSheet(tx: tx, entry: tx.entry!),
     );
@@ -44,6 +45,7 @@ Future<void> showTransactionReceipt(
       isScrollControlled: true,
       useRootNavigator: true,
       useSafeArea: true,
+      inDetailPane: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BankSendReceiptSheet(tx: tx, order: tx.bankOrder!),
     );

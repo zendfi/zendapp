@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Singleton controller that allows code outside the widget tree (e.g. app.dart)
 /// to switch the [ZendShell] tab index. [ZendShell]'s state registers itself
@@ -29,7 +29,13 @@ class ZendShellController {
     final ctrl = _instance ?? ZendShellController._();
     _instance = ctrl;
     ctrl._switchTab = switchTab;
-    currentTab.value = initialTab;
+    // Deferred: activate runs inside ZendShell.initState, i.e. during a build.
+    // Setting the notifier there could leave the web frame (an ancestor that
+    // already built this pass) on its signed-out layout until a resize forced
+    // a rebuild. A post-frame update always lands.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_instance == ctrl) currentTab.value = initialTab;
+    });
     return ctrl;
   }
 
