@@ -147,14 +147,51 @@ class ApiClient {
           }
         }
 
+        // No response at all. This used to fall through to
+        // `ApiException(response?.statusCode ?? 500, 'UNKNOWN_ERROR')`, which
+        // invented a 500 the server never sent — and that cost real debugging
+        // time: `ApiException(500, UNKNOWN_ERROR)` in a console sends you
+        // hunting for a server fault that does not exist, while the backend
+        // logs are silent because no request ever arrived.
+        //
+        // The common cause on web is the request being aborted rather than
+        // failing. Opening the OAuth popup moves focus, Chrome throttles the
+        // backgrounded opener, and an in-flight XHR is cancelled — which is
+        // why this reproduced on desktop (popup) and never on mobile Chrome
+        // (new tab, page stays live).
+        //
+        // Reporting the Dio type is what makes the distinction visible.
+        if (response == null) {
+          final detail =
+              'Request did not complete (${error.type.name})'
+              '${error.message == null ? '' : ': ${error.message}'}';
+          debugPrint('ApiClient: $detail');
+          handler.reject(
+            DioException(
+              requestOptions: error.requestOptions,
+              error: _DetailedNetworkException(
+                'Connection interrupted. Please try again.',
+                detail,
+              ),
+              type: error.type,
+            ),
+          );
+          return;
+        }
+
+        // A real response, but not in our error envelope — a proxy or load
+        // balancer page rather than the API. The status is the server's own,
+        // never a fabricated one.
         handler.reject(
           DioException(
             requestOptions: error.requestOptions,
             response: response,
             error: ApiException(
-              statusCode: response?.statusCode ?? 500,
-              errorCode: 'UNKNOWN_ERROR',
-              rawMessage: error.message ?? 'An unknown error occurred',
+              statusCode: response.statusCode ?? 502,
+              errorCode: 'UNEXPECTED_RESPONSE',
+              rawMessage:
+                  error.message ??
+                  'Server returned ${response.statusCode} without an error body',
             ),
             type: error.type,
           ),

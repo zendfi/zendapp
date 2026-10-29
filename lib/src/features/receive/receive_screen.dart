@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/zend_features.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../design/zend_primitives.dart';
@@ -64,38 +65,41 @@ class ReceiveScreen extends StatelessWidget {
                       const SizedBox(height: 12),
 
                       PrimaryButton(
-                        label: 'Share payment link',
+                        label: 'Share your Zend',
                         onPressed: _shareLink,
                       ),
-                      const SizedBox(height: 12),
+                      // Gated, see [ZendFeatures.receiveExtras].
+                      if (ZendFeatures.receiveExtras) ...[
+                        const SizedBox(height: 12),
 
-                      OutlineActionButton(
-                        label: 'Write NFC tag',
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                NfcWriteScreen(paymentUrl: _paymentLink),
+                        OutlineActionButton(
+                          label: 'Write NFC tag',
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  NfcWriteScreen(paymentUrl: _paymentLink),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                      OutlineActionButton(
-                        label: 'Create payment request',
-                        onPressed: () => Navigator.of(context).pop(true),
-                      ),
-                      const SizedBox(height: 22),
+                        OutlineActionButton(
+                          label: 'Create payment request',
+                          onPressed: () => Navigator.of(context).pop(true),
+                        ),
+                        const SizedBox(height: 22),
 
-                      Center(
-                        child: Text(
-                          'Customise your page',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            color: zt.accent,
-                            fontSize: 15,
+                        Center(
+                          child: Text(
+                            'Customise your page',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              color: zt.accent,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

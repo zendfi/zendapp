@@ -197,10 +197,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       setState(() => _error = "Couldn't sign you in. Please try again.");
     } finally {
       if (mounted) setState(() => _busy = false);
-      // The prepared session was consumed either way, and its nonce is
-      // single-use. Mint another so a retry is not stuck re-creating one inside
-      // the tap handler — which is the condition that breaks the popup.
-      if (mounted && kIsWeb && _prepared == null) {
+      // Re-warm only after a failure, and only while still on this screen.
+      //
+      // The nonce is single-use, so a retry does need a fresh session — but
+      // re-warming unconditionally minted one on success too, moments before
+      // the app navigates away and discards it. That showed up as seven
+      // `session_requested` rows for two actual sign-ins, and each wasted
+      // request is another one the browser can abort mid-flight while the
+      // OAuth popup has focus.
+      if (mounted && kIsWeb && _error != null && _prepared == null) {
         unawaited(_prepareSession());
       }
     }

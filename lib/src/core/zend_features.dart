@@ -139,4 +139,10 @@ abstract final class ZendFeatures {
   /// Turn on when: E2EE uses a per-device key that every account type has,
   /// with key verification and no plaintext fallbacks.
   static const bool dmE2ee = false;
+
+  /// Receive screen extras: "Write NFC tag", "Create payment request" and
+  /// "Customise your page" (the last never had a handler).
+  ///
+  /// Turn on when: each one is verified end-to-end on the current rails.
+  static const bool receiveExtras = false;
 }

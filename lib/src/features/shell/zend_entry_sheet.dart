@@ -1,3 +1,4 @@
+import '../../design/zend_keypad.dart';
 import '../../services/zend_analytics.dart';
 import '../../design/zend_motion_widgets.dart';
 import '../../core/zend_format.dart';
@@ -164,19 +165,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   /// Keypad entry (Cash App lesson: the keypad is the product). Max two
   /// decimals, one dot, no leading zeros.
   void _onKey(String key) {
+    final next = applyAmountKey(_amountController.text, key);
+    if (next == null) return;
     ZendFeel.keypadTap();
-    final t = _amountController.text;
-    String next;
-    if (key == '<') {
-      next = t.isEmpty ? t : t.substring(0, t.length - 1);
-    } else if (key == '.') {
-      next = t.contains('.') ? t : (t.isEmpty ? '0.' : '$t.');
-    } else {
-      final dot = t.indexOf('.');
-      if (dot >= 0 && t.length - dot > 2) return;
-      if (t.replaceAll('.', '').length >= 7) return;
-      next = t == '0' ? key : '$t$key';
-    }
     _amountController.text = next;
     setState(() => _confirmingZend = false);
   }
@@ -1108,7 +1099,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           ),
           const SizedBox(height: 12),
           if (!_confirmingZend && !kIsWeb) ...[
-            _AmountKeypad(onKey: _onKey),
+            ZendAmountKeypad(onKey: _onKey),
             const SizedBox(height: 8),
           ],
           // ── Action area — pinned outside the scroll view ──
@@ -1360,65 +1351,6 @@ class _IdentityRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Numeric keypad for the amount. 44px+ touch targets, light tick per tap.
-class _AmountKeypad extends StatelessWidget {
-  const _AmountKeypad({required this.onKey});
-
-  final ValueChanged<String> onKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    const rows = [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['.', '0', '<'],
-    ];
-    return Column(
-      children: [
-        for (final row in rows)
-          Row(
-            children: [
-              for (final k in row)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: k == '<'
-                        ? 'Delete'
-                        : k == '.'
-                        ? 'Decimal point'
-                        : k,
-                    excludeSemantics: true,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(ZendRadii.card),
-                      onTap: () => onKey(k),
-                      child: SizedBox(
-                        height: 52,
-                        child: Center(
-                          child: k == '<'
-                              ? Icon(
-                                  PhosphorIconsRegular.backspace,
-                                  color: zt.textPrimary,
-                                )
-                              : Text(
-                                  k,
-                                  style: ZendTextStyles.amountM.copyWith(
-                                    color: zt.textPrimary,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-      ],
     );
   }
 }

@@ -1,3 +1,6 @@
+import '../../design/zend_money.dart';
+import '../../design/zend_keypad.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -584,45 +587,52 @@ class _AddCashSheetState extends State<AddCashSheet> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: _amountController,
-                  focusNode: _amountFocus,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 44,
-                    fontWeight: FontWeight.w700,
-                    color: zt.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    prefixText: '\$',
-                    prefixStyle: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 34,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textPrimary,
+                // Modelled on the Zend send sheet: a smaller "\$" hugging
+                // the figure, and the on-screen keypad on phones.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '\$',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: zt.textPrimary,
+                      ),
                     ),
-                    hintText: '0',
-                    hintStyle: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 44,
-                      fontWeight: FontWeight.w700,
-                      color: zt.textSecondary,
+                    const SizedBox(width: 2),
+                    IntrinsicWidth(
+                      child: TextField(
+                        controller: _amountController,
+                        focusNode: _amountFocus,
+                        readOnly: !kIsWeb,
+                        showCursor: kIsWeb,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: ZendTextStyles.displayXl.copyWith(
+                          color: zt.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          hintStyle: ZendTextStyles.displayXl.copyWith(
+                            color: zt.textSecondary,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                          ),
+                        ),
+                        onChanged: (_) => setState(() => _ngnError = null),
+                      ),
                     ),
-                    // Explicitly borderless — the global InputDecorationTheme
-                    // fills and pill-rounds inputs, which would draw a capsule
-                    // around the big figure.
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    filled: false,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                  ),
-                  onChanged: (_) => setState(() => _ngnError = null),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 if (tooSmall)
@@ -644,6 +654,19 @@ class _AddCashSheetState extends State<AddCashSheet> {
             ),
           ),
         ),
+        if (!kIsWeb)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: ZendAmountKeypad(
+              onKey: (k) {
+                final next = applyAmountKey(_amountController.text, k);
+                if (next == null) return;
+                ZendFeel.keypadTap();
+                _amountController.text = next;
+                setState(() => _ngnError = null);
+              },
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: SizedBox(
