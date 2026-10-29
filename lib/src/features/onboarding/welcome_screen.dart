@@ -193,8 +193,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         // Origin is recomputed rather than imported from main.dart, because
         // importing the entry point from a feature file would close a cycle
         // back through app.dart. It mirrors kZkLoginWebRedirectUri exactly.
-        final transportFailed = error is NetworkException ||
-            error is RequestTimeoutException;
+        final transportFailed =
+            error is NetworkException || error is RequestTimeoutException;
         final hint = transportFailed
             ? 'The request did not reach the server, so this is transport, not '
                   'OAuth configuration. Usual causes: a deploy rolling over '

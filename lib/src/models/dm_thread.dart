@@ -87,6 +87,8 @@ class DmThread {
       case DmMessageType.text:
         final content = lastMessage!.content ?? '';
         if (content.startsWith(kE2eePrefix)) return _lockedPreviewFallback;
+        // GIF messages are stored as `gif:<id>`; never show the raw id.
+        if (content.trim().startsWith('gif:')) return '🖼️ GIF';
         return content.length > 40 ? '${content.substring(0, 40)}…' : content;
       case DmMessageType.payment:
         // paymentData is parsed from the message's metadata JSON — see

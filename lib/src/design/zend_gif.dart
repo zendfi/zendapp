@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -51,10 +50,21 @@ class ZendGifTile extends StatelessWidget {
           height: height,
           constraints: BoxConstraints(maxWidth: height * 1.8),
           color: zt.bgElevated,
-          child: CachedNetworkImage(
-            imageUrl: _media(id, small: height <= 140),
-            fit: BoxFit.cover,
-            errorWidget: (_, _, _) => const SizedBox.shrink(),
+          // Image.network, not CachedNetworkImage: on web the latter decodes
+          // via an HTML <img> (ImageRenderMethodForWeb.HtmlImage), which
+          // yields only the first frame, so GIFs sat frozen. Image.network
+          // fetches the bytes and builds a multi-frame codec on every
+          // platform. TickerMode is forced on so an ancestor that pauses
+          // animations (kept-alive tabs, offstage routes) can't freeze a GIF
+          // that is actually on screen.
+          child: TickerMode(
+            enabled: true,
+            child: Image.network(
+              _media(id, small: height <= 170),
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           ),
         ),
       ),
@@ -158,9 +168,10 @@ class _GifPickerState extends State<_GifPicker> {
                           onTap: () => Navigator.of(context).pop(_ids[i]),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(ZendRadii.chip),
-                            child: CachedNetworkImage(
-                              imageUrl: _media(_ids[i], small: true),
+                            child: Image.network(
+                              _media(_ids[i], small: true),
                               fit: BoxFit.cover,
+                              gaplessPlayback: true,
                             ),
                           ),
                         ),

@@ -298,7 +298,16 @@ class _AddCashSheetState extends State<AddCashSheet> {
               ),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: ZendMotion.sheetEnter,
+                  duration: ZendMotion.stageIn,
+                  reverseDuration: ZendMotion.stageOut,
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  // Top-aligned so steps of different heights don't jump to
+                  // the centre mid-fade.
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.topCenter,
+                    children: [...previous, ?current],
+                  ),
                   child: switch (_stage) {
                     _Stage.method => _buildMethod(zt),
                     _Stage.cryptoChain => _buildChainPicker(zt),

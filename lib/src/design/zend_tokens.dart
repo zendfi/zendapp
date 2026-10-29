@@ -222,6 +222,12 @@ class ZendMotion {
   static const Duration amountTick = Duration(milliseconds: 60);
   static const Duration keypadPress = Duration(milliseconds: 80);
   static const Duration sheetEnter = Duration(milliseconds: 380);
+
+  /// Switching between steps inside one sheet (Add Cash, Zend entry).
+  /// Fast in, faster out, so the old step is gone before the new one is
+  /// noticed, instead of both sitting half-faded for 380ms.
+  static const Duration stageIn = Duration(milliseconds: 160);
+  static const Duration stageOut = Duration(milliseconds: 90);
   static const Duration splash = Duration(milliseconds: 1400);
 }
 
