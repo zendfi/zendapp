@@ -126,4 +126,17 @@ abstract final class ZendFeatures {
   /// button were empty callbacks. Email support and the help centre link are
   /// real and remain.
   static const bool liveChatSupport = false;
+
+  /// End-to-end encryption for DM text.
+  ///
+  /// Off by decision: the E2EE key is the Solana wallet keypair, which
+  /// zkLogin (Sui) accounts don't have, so for current users messages were
+  /// silently going out as plaintext while the UI implied otherwise, and
+  /// forwards and reply quotes leaked plaintext anyway. New messages are sent
+  /// as plaintext on purpose. Old `e2ee:` history still decrypts where a
+  /// Solana key is available; elsewhere it shows a clear placeholder.
+  ///
+  /// Turn on when: E2EE uses a per-device key that every account type has,
+  /// with key verification and no plaintext fallbacks.
+  static const bool dmE2ee = false;
 }

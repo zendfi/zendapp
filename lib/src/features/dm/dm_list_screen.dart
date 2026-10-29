@@ -605,6 +605,7 @@ class _DmThreadTile extends StatelessWidget {
                   final dmService = ZendScope.of(ctx).dmService;
                   final isOnline = dmService.presenceCache[cp.userId];
                   return ZendAvatar(
+                    seed: cp.userId,
                     radius: 26,
                     photoUrl: cp.avatarUrl,
                     initials: cp.initialLetter,

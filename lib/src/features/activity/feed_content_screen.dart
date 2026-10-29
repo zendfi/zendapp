@@ -63,8 +63,10 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   // scrolled past this offset — the bar starts fully formed (spec-styled
   // like Chats' search bar) at rest, then collapses down to an icon
   // alongside the balance as the user scrolls into the feed.
-  static const _morphThreshold = 24.0;
+  static const _collapseAbove = 180.0;
+  static const _expandBelow = 120.0;
   bool _collapsed = false;
+  bool _searchOpen = false;
 
   // ── Derived feed state, computed off the build path ────────────────────
   //
@@ -177,19 +179,23 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   }
 
   void _onScroll() {
-    final offset = _listScrollController.hasClients
-        ? _listScrollController.offset
-        : 0.0;
-    final shouldCollapse = offset > _morphThreshold;
-    if (shouldCollapse != _collapsed) {
-      // Collapsing while the field is focused/has text would rip focus
-      // away and orphan the query — expand back out instead so the user
-      // never loses an in-progress search just by scrolling.
-      if (shouldCollapse &&
-          (_searchFocus.hasFocus || _searchQuery.isNotEmpty)) {
-        return;
-      }
-      setState(() => _collapsed = shouldCollapse);
+    if (!_listScrollController.hasClients) return;
+    final offset = _listScrollController.offset;
+    // Hysteresis: collapse once the hero is mostly off-screen, expand only
+    // after scrolling clearly back, so hovering at the edge can't flicker.
+    final next = _collapsed ? offset > _expandBelow : offset > _collapseAbove;
+    if (next != _collapsed) setState(() => _collapsed = next);
+  }
+
+  void _toggleSearch() {
+    setState(() => _searchOpen = !_searchOpen);
+    if (_searchOpen) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _searchFocus.requestFocus(),
+      );
+    } else {
+      _searchController.clear();
+      _searchFocus.unfocus();
     }
   }
 
@@ -201,14 +207,6 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     _listScrollController.removeListener(_onScroll);
     _listScrollController.dispose();
     super.dispose();
-  }
-
-  void _expandSearch() {
-    if (!_collapsed) return;
-    setState(() => _collapsed = false);
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _searchFocus.requestFocus(),
-    );
   }
 
   Future<void> _openDm(ActivityCounterparty counterparty) async {
@@ -379,33 +377,42 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             // than become a dominant module" holds at both ends of that
             // morph, just expressed differently once there's content to
             // scroll past.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: _collapsed
-                    ? _CollapsedSearchAndBalance(
-                        key: const ValueKey('collapsed'),
-                        balanceLabel: model.balanceHidden
-                            ? '•••'
-                            : _formatBalance(model.sendableBalance),
-                        onOpenWallet: widget.onOpenWallet,
-                        onTapSearch: _expandSearch,
-                      )
-                    : _HomeHeader(
-                        key: const ValueKey('expanded'),
-                        controller: _searchController,
-                        focusNode: _searchFocus,
-                        hasQuery: _searchQuery.isNotEmpty,
-                        onClear: () => _searchController.clear(),
-                        balance: model.sendableBalance,
-                        balanceHidden: model.balanceHidden,
-                        onOpenWallet: widget.onOpenWallet,
-                      ),
-              ),
+            // Fixed-height bar: it never changes size, so scrolling can't
+            // resize the list underneath it. The compact balance only fades
+            // in once the hero (which scrolls with the feed) is gone.
+            _FeedTopBar(
+              collapsed: _collapsed,
+              searchOpen: _searchOpen,
+              balanceLabel: model.balanceHidden
+                  ? '•••'
+                  : _formatBalance(model.sendableBalance),
+              onOpenWallet: widget.onOpenWallet,
+              onToggleSearch: _toggleSearch,
             ),
+            if (_searchOpen)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocus,
+                  style: ZendTextStyles.body.copyWith(color: zt.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Search activity',
+                    prefixIcon: Icon(
+                      PhosphorIconsRegular.magnifyingGlass,
+                      size: 18,
+                      color: zt.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: zt.bgCard,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Content ──
             Expanded(
@@ -413,10 +420,26 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                 onRefresh: () => model.fetchThreadedActivity(),
                 child: isLoading
                     ? const ActivityFeedSkeleton()
-                    : isNewUser
-                    ? _buildNewUserState(zt)
-                    : edges.isEmpty
-                    ? _buildEmptyOrNoMatch(zt)
+                    : isNewUser || edges.isEmpty
+                    ? ListView(
+                        controller: _listScrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                        children: [
+                          if (!_searchOpen)
+                            _BalanceHero(
+                              balance: model.sendableBalance,
+                              hidden: model.balanceHidden,
+                              onOpenWallet: widget.onOpenWallet,
+                            ),
+                          SizedBox(
+                            height: 320,
+                            child: isNewUser
+                                ? _buildNewUserState(zt)
+                                : _buildEmptyOrNoMatch(zt),
+                          ),
+                        ],
+                      )
                     // The card list is the expensive part of this
                     // screen, and it depends on exactly one thing:
                     // which edges are visible. Selecting on the list's
@@ -432,9 +455,20 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         builder: (context, visible, _) => ListView.builder(
                           controller: _listScrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                          itemCount: visible.length,
-                          itemBuilder: (context, i) {
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                          // Slot 0 is the hero; it scrolls away naturally.
+                          itemCount: visible.length + 1,
+                          itemBuilder: (context, slot) {
+                            if (slot == 0) {
+                              return _searchOpen
+                                  ? const SizedBox(height: 4)
+                                  : _BalanceHero(
+                                      balance: model.sendableBalance,
+                                      hidden: model.balanceHidden,
+                                      onOpenWallet: widget.onOpenWallet,
+                                    );
+                            }
+                            final i = slot - 1;
                             final edge = visible[i];
                             final day = formatDayGroup(edge.createdAt);
                             final showDay =
@@ -545,130 +579,45 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     if (_searchQuery.isEmpty) {
       return const SizedBox.shrink();
     }
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(
-          height: 200,
-          child: Center(
-            child: Text(
-              'No matches for "$_searchQuery"',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 14,
-                color: zt.textSecondary,
-              ),
-            ),
-          ),
+    return Center(
+      child: Text(
+        'No matches for "$_searchQuery"',
+        style: TextStyle(
+          fontFamily: 'Geist',
+          fontSize: 14,
+          color: zt.textSecondary,
         ),
-      ],
+      ),
     );
   }
 }
 
-/// Home header at rest (design revamp): brand + search icon, then the
-/// balance as the hero with Zend and Request directly beneath it. Replaces
-/// the old small balance pill and the floating Z button on this screen.
-class _HomeHeader extends StatefulWidget {
-  const _HomeHeader({
-    super.key,
-    required this.controller,
-    required this.focusNode,
-    required this.hasQuery,
-    required this.onClear,
+/// The balance as the hero, with Zend and Scan beneath it. Lives inside
+/// the feed's scroll view so it scrolls away with the content.
+class _BalanceHero extends StatelessWidget {
+  const _BalanceHero({
     required this.balance,
-    required this.balanceHidden,
+    required this.hidden,
     required this.onOpenWallet,
   });
 
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool hasQuery;
-  final VoidCallback onClear;
   final double balance;
-  final bool balanceHidden;
+  final bool hidden;
   final VoidCallback onOpenWallet;
-
-  @override
-  State<_HomeHeader> createState() => _HomeHeaderState();
-}
-
-class _HomeHeaderState extends State<_HomeHeader> {
-  late bool _searchOpen = widget.hasQuery;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Zend!',
-              style: ZendTextStyles.title.copyWith(
-                fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
-                color: zt.textPrimary,
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              tooltip: _searchOpen ? 'Close search' : 'Search activity',
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              icon: Icon(
-                _searchOpen
-                    ? PhosphorIconsRegular.x
-                    : PhosphorIconsRegular.magnifyingGlass,
-                size: 20,
-                color: zt.textSecondary,
-              ),
-              onPressed: () {
-                setState(() => _searchOpen = !_searchOpen);
-                if (_searchOpen) {
-                  widget.focusNode.requestFocus();
-                } else {
-                  widget.onClear();
-                  widget.focusNode.unfocus();
-                }
-              },
-            ),
-          ],
-        ),
-        if (_searchOpen)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 8),
-            child: TextField(
-              controller: widget.controller,
-              focusNode: widget.focusNode,
-              style: ZendTextStyles.body.copyWith(color: zt.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Search activity',
-                hintStyle: ZendTextStyles.body.copyWith(
-                  color: zt.textSecondary,
-                ),
-                prefixIcon: Icon(
-                  PhosphorIconsRegular.magnifyingGlass,
-                  size: 18,
-                  color: zt.textSecondary,
-                ),
-                filled: true,
-                fillColor: zt.bgCard,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(ZendRadii.pill),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          )
-        else ...[
-          const SizedBox(height: 12),
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Semantics(
             button: true,
             label: 'Balance, open wallet',
             child: GestureDetector(
-              onTap: widget.onOpenWallet,
+              onTap: onOpenWallet,
               behavior: HitTestBehavior.opaque,
               child: ZendGlow(
                 child: Padding(
@@ -684,10 +633,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
                       const SizedBox(height: 4),
                       FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: ZendRollingAmount(
-                          widget.balance,
-                          hidden: widget.balanceHidden,
-                        ),
+                        child: ZendRollingAmount(balance, hidden: hidden),
                       ),
                     ],
                   ),
@@ -704,8 +650,6 @@ class _HomeHeaderState extends State<_HomeHeader> {
                   onPressed: () => showZendEntrySheet(context),
                 ),
               ),
-              // Send and Request both live inside Zend; Scan pays someone
-              // by their QR code (camera, or an uploaded image on web).
               const SizedBox(width: 12),
               Expanded(
                 child: OutlineActionButton(
@@ -716,9 +660,95 @@ class _HomeHeaderState extends State<_HomeHeader> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
         ],
-      ],
+      ),
+    );
+  }
+}
+
+/// Fixed 52px bar: brand, a compact balance that fades in once the hero has
+/// scrolled away, and search. Its size never changes.
+class _FeedTopBar extends StatelessWidget {
+  const _FeedTopBar({
+    required this.collapsed,
+    required this.searchOpen,
+    required this.balanceLabel,
+    required this.onOpenWallet,
+    required this.onToggleSearch,
+  });
+
+  final bool collapsed;
+  final bool searchOpen;
+  final String balanceLabel;
+  final VoidCallback onOpenWallet;
+  final VoidCallback onToggleSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final showBalance = collapsed || searchOpen;
+    return SizedBox(
+      height: 52,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+        child: Row(
+          children: [
+            Text(
+              'Zend!',
+              style: ZendTextStyles.title.copyWith(
+                fontWeight: FontWeight.w700,
+                color: zt.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            IgnorePointer(
+              ignoring: !showBalance,
+              child: AnimatedOpacity(
+                opacity: showBalance ? 1 : 0,
+                duration: ZendMotion.quick,
+                child: AnimatedSlide(
+                  offset: showBalance ? Offset.zero : const Offset(0, 0.3),
+                  duration: ZendMotion.quick,
+                  curve: ZendMotion.springSnappy,
+                  child: GestureDetector(
+                    onTap: onOpenWallet,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: zt.bgCard,
+                        borderRadius: BorderRadius.circular(ZendRadii.pill),
+                      ),
+                      child: Text(
+                        balanceLabel,
+                        style: ZendTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: zt.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: searchOpen ? 'Close search' : 'Search activity',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              icon: Icon(
+                searchOpen
+                    ? PhosphorIconsRegular.x
+                    : PhosphorIconsRegular.magnifyingGlass,
+                size: 20,
+                color: zt.textSecondary,
+              ),
+              onPressed: onToggleSearch,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -744,69 +774,6 @@ class _DayHeader extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Feed's header once scrolled — the search bar collapses down to a plain
-/// icon sitting in its own pill, alongside a second pill holding the
-/// balance. Tapping the search icon re-expands back to [_ExpandedSearchBar].
-class _CollapsedSearchAndBalance extends StatelessWidget {
-  const _CollapsedSearchAndBalance({
-    super.key,
-    required this.balanceLabel,
-    required this.onOpenWallet,
-    required this.onTapSearch,
-  });
-
-  final String balanceLabel;
-  final VoidCallback onOpenWallet;
-  final VoidCallback onTapSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: onTapSearch,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              PhosphorIconsRegular.magnifyingGlass,
-              size: 18,
-              color: zt.textSecondary,
-            ),
-          ),
-        ),
-        const Spacer(),
-        GestureDetector(
-          onTap: onOpenWallet,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: zt.bgSecondary,
-              borderRadius: BorderRadius.circular(ZendRadii.pill),
-            ),
-            child: Text(
-              balanceLabel,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: zt.textPrimary,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

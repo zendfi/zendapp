@@ -348,6 +348,7 @@ class ZendAppModel extends ChangeNotifier {
   /// No-ops if the wallet address can't be read yet; safe to call multiple
   /// times per session (see [E2eeService.registerPubkey] dedup/cache).
   Future<void> bootstrapE2ee() async {
+    if (!ZendFeatures.dmE2ee) return; // no key publishing while E2EE is off
     try {
       final walletAddress = await walletService.getWalletAddress();
       if (walletAddress == null) return;

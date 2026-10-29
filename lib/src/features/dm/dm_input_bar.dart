@@ -26,6 +26,7 @@ class DmInputBar extends StatefulWidget {
     this.onSendVibe,
     this.onRequestPayment,
     this.onPayRecipient,
+    this.onPickGif,
     this.initialDraft = '',
     this.onDraftChanged,
   });
@@ -36,6 +37,9 @@ class DmInputBar extends StatefulWidget {
   final ValueChanged<VibeSendResult>? onSendVibe;
   final OnRequestPayment? onRequestPayment;
   final OnPayRecipient? onPayRecipient;
+
+  /// Opens the GIF picker; null hides the GIF tile (no GIPHY key).
+  final VoidCallback? onPickGif;
 
   /// Draft text to restore into the composer when this room is (re)opened —
   /// e.g. from [DmService.getDraft], so a message typed but not sent
@@ -350,6 +354,26 @@ class _DmInputBarState extends State<DmInputBar>
                   ),
                 ),
               ),
+              // Paying is the main action in a money chat, so Zend sits in
+              // the composer itself rather than behind the + panel.
+              if (widget.onPayRecipient != null)
+                Tooltip(
+                  message: 'Zend',
+                  child: GestureDetector(
+                    onTap: widget.onPayRecipient,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 40,
+                      height: 44,
+                      child: Icon(
+                        PhosphorIconsFill.currencyCircleDollar,
+                        size: 24,
+                        color: zt.accent,
+                        semanticLabel: 'Zend',
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(width: 6),
 
               // ── Input pill — stretches end-to-end ──────────────────
@@ -560,6 +584,18 @@ class _DmInputBarState extends State<DmInputBar>
                   widget.onPayRecipient?.call();
                 },
               ),
+              if (widget.onPickGif != null) ...[
+                const SizedBox(width: 10),
+                _MonoActionTile(
+                  icon: PhosphorIconsRegular.gif,
+                  label: 'GIF',
+                  zt: zt,
+                  onTap: () {
+                    _closePanel();
+                    widget.onPickGif!.call();
+                  },
+                ),
+              ],
               // Vibes are gated off for launch — see [ZendFeatures.vibes].
               // This path *was* working end-to-end; it's off for consistency
               // with the rest of the app, not because it's broken.

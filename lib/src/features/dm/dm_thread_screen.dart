@@ -33,6 +33,9 @@ import 'dm_message_info_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_modal.dart';
+import '../../design/zend_gif.dart';
+import '../../design/zend_money.dart';
+import '../shell/zend_entry_sheet.dart';
 
 /// State of the E2EE key exchange for the currently open room.
 enum _E2eeStatus {
@@ -160,7 +163,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       // this is a no-op network-wise: bootstrapE2ee() already ran at unlock,
       // and E2eeService.registerPubkey() short-circuits once registered.
       final walletAddress = await model.walletService.getWalletAddress();
-      if (walletAddress != null) {
+      if (ZendFeatures.dmE2ee && walletAddress != null) {
         await model.e2eeService.registerPubkey(walletAddress);
       }
 
@@ -194,6 +197,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   /// indefinitely — after the timeout we proceed with whatever state we have
   /// (ready or unavailable), matching [_encryptForSend]'s existing fallback.
   Future<void> _awaitE2eeResolution() {
+    // E2EE off: nothing to wait for, sends go out immediately.
+    if (!ZendFeatures.dmE2ee) return Future.value();
     return _e2eeResolution.future.timeout(
       const Duration(seconds: 6),
       onTimeout: () {},
@@ -887,10 +892,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
 
   // ── E2EE helpers ────────────────────────────────────────────────────────────
 
+  /// Shown for old encrypted messages this device can't read.
+  static const _kOldEncrypted =
+      '🔒 Encrypted message. Open on the device that sent it.';
+
   /// Encrypts [plaintext] for sending. Returns the `e2ee:…` wire string,
   /// or the original plaintext if E2EE is not ready (counterparty has no pubkey).
   Future<String> _encryptForSend(String plaintext) async {
-    if (!_e2eeReady) return plaintext;
+    if (!ZendFeatures.dmE2ee || !_e2eeReady) return plaintext;
     final model = ZendScope.of(context);
     final cached = WalletSessionCache.instance.keypair;
     if (cached == null) return plaintext;
@@ -912,19 +921,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     if (!content.startsWith('e2ee:')) return content;
     // Need seed — try session cache first, then fall back to null
     final cached = WalletSessionCache.instance.keypair;
-    if (cached == null) return '🔒 (unlock to decrypt)';
+    if (cached == null) return _kOldEncrypted;
     final seed = cached.length >= 32 ? cached.sublist(0, 32) : cached;
     final model = ZendScope.of(context);
     // For decryption we need the other party's pubkey — could be sender or recipient
     final pubkey = _counterpartyPubkey;
-    if (pubkey == null) return '🔒 (key unavailable)';
+    if (pubkey == null) return _kOldEncrypted;
     final decrypted = await model.e2eeService.decrypt(
       wireContent: content,
       mySeed32: seed,
       counterpartyPubkeyB58: pubkey,
       roomId: widget.roomId,
     );
-    return decrypted ?? '🔒 (decryption failed)';
+    return decrypted ?? _kOldEncrypted;
   }
 
   /// Applies E2EE decryption in-place on a loaded message list.
@@ -1047,6 +1056,32 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     } finally {
       _resolvingReplyJump = false;
     }
+  }
+
+  /// Search loaded messages (plaintext now that E2EE is off) and jump to
+  /// the chosen one, flashing it the same way reply jumps do.
+  Future<void> _searchInChat() async {
+    final picked = await showZendModalSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _ChatSearchSheet(messages: List.of(_messages)),
+    );
+    if (picked == null || !mounted) return;
+    final displayIdx = _buildDisplayList().indexWhere(
+      (item) => item is _DmMessageItem && item.message.id == picked,
+    );
+    if (displayIdx == -1 || !_itemScrollController.isAttached) return;
+    await _itemScrollController.scrollTo(
+      index: displayIdx,
+      alignment: 0.3,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
+    if (!mounted) return;
+    setState(() => _flashingMsgId = picked);
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) setState(() => _flashingMsgId = null);
+    });
   }
 
   String _formatLastSeen(DateTime dt) {
@@ -1457,6 +1492,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     child: Row(
                       children: [
                         ZendAvatar(
+                          seed: widget.counterparty.userId,
                           radius: 18,
                           photoUrl: widget.counterparty.avatarUrl,
                           initials: widget.counterparty.initialLetter,
@@ -1719,11 +1755,18 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   }
 
   void _onPayRecipient() {
-    // Pay this counterparty directly
-    showQrPaymentSheet(
+    // The Zend sheet, already pointed at this person: pay or request.
+    showZendEntrySheet(
       context,
-      intent: QrPaymentIntent(zendtag: widget.counterparty.zendtag),
+      prefilledRecipient: widget.counterparty.zendtag,
     );
+  }
+
+  /// Sends a GIF as a chat message (`gif:<id>`), same format as GIF notes.
+  Future<void> _onPickGif() async {
+    final id = await showGifPicker(context);
+    if (id == null || !mounted) return;
+    _onSend(gifNote(id));
   }
 
   PopupMenuItem<_ChatMenuAction> _popupItem(
@@ -1770,7 +1813,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       case _ChatMenuAction.viewContact:
         pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
       case _ChatMenuAction.searchInChat:
-        break; // coming soon
+        _searchInChat();
       case _ChatMenuAction.disappearing:
         break; // coming soon
       case _ChatMenuAction.clearChat:
@@ -2126,6 +2169,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         UserProfileScreen(zendtag: cp.zendtag),
                       ),
                       child: ZendAvatar(
+                        seed: cp.userId,
                         radius: 20,
                         photoUrl: cp.avatarUrl,
                         initials: cp.initialLetter,
@@ -2159,7 +2203,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (_e2eeReady) ...[
+                                if (ZendFeatures.dmE2ee && _e2eeReady) ...[
                                   const SizedBox(width: 5),
                                   Icon(
                                     PhosphorIconsRegular.lockSimple,
@@ -2201,15 +2245,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         ),
                         // Both of these were rendered greyed-out with no-op
                         // handlers — see [ZendFeatures.dmChatExtras].
+                        _popupItem(
+                          ctx,
+                          zt,
+                          _ChatMenuAction.searchInChat,
+                          PhosphorIconsRegular.magnifyingGlass,
+                          'Search in chat',
+                        ),
                         if (ZendFeatures.dmChatExtras) ...[
-                          _popupItem(
-                            ctx,
-                            zt,
-                            _ChatMenuAction.searchInChat,
-                            PhosphorIconsRegular.magnifyingGlass,
-                            'Search in chat',
-                            disabled: true,
-                          ),
                           _popupItem(
                             ctx,
                             zt,
@@ -2426,6 +2469,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                                     alignment:
                                                         Alignment.bottomCenter,
                                                     child: ZendAvatar(
+                                                      seed: cp.userId,
                                                       radius: 13,
                                                       photoUrl: cp.avatarUrl,
                                                       initials:
@@ -2523,7 +2567,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
               // window still wait for resolution (see _awaitE2eeResolution),
               // this is purely informational so the user isn't left guessing
               // why the lock icon in the AppBar hasn't appeared yet.
-              if (_e2eeStatus == _E2eeStatus.resolving)
+              if (ZendFeatures.dmE2ee && _e2eeStatus == _E2eeStatus.resolving)
                 _SecuringChatStrip(zt: zt),
 
               // ── Input ─────────────────────────────────────────────────────
@@ -2545,6 +2589,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 onSendVibe: _onSendVibe,
                 onRequestPayment: _onRequestPayment,
                 onPayRecipient: _onPayRecipient,
+                onPickGif: gifSearchEnabled ? _onPickGif : null,
                 initialDraft: model.dmService.getDraft(widget.roomId),
                 onDraftChanged: (text) =>
                     model.dmService.setDraft(widget.roomId, text),
@@ -2992,30 +3037,7 @@ class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.date});
   final DateTime date;
 
-  String _label() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final d = DateTime(date.year, date.month, date.day);
-    if (d == today) return 'Today';
-    if (d == yesterday) return 'Yesterday';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    if (date.year == now.year) return '${months[date.month - 1]} ${date.day}';
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
+  String _label() => formatDayGroup(date);
 
   @override
   Widget build(BuildContext context) {
@@ -3041,6 +3063,101 @@ class _DateSeparator extends StatelessWidget {
                   ? zt.textSecondary
                   : zt.textPrimary.withValues(alpha: 0.75),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatSearchSheet extends StatefulWidget {
+  const _ChatSearchSheet({required this.messages});
+
+  final List<DmMessage> messages;
+
+  @override
+  State<_ChatSearchSheet> createState() => _ChatSearchSheetState();
+}
+
+class _ChatSearchSheetState extends State<_ChatSearchSheet> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final q = _q.trim().toLowerCase();
+    final hits = q.isEmpty
+        ? const <DmMessage>[]
+        : widget.messages
+              .where(
+                (m) =>
+                    m.type == DmMessageType.text &&
+                    !m.isDeleted &&
+                    !isMediaNote(m.content) &&
+                    (m.displayContent ?? '').toLowerCase().contains(q),
+              )
+              .toList();
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.7,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            children: [
+              TextField(
+                autofocus: true,
+                onChanged: (v) => setState(() => _q = v),
+                decoration: InputDecoration(
+                  hintText: 'Search this chat',
+                  prefixIcon: const Icon(PhosphorIconsRegular.magnifyingGlass),
+                  filled: true,
+                  fillColor: zt.bgSecondary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: q.isNotEmpty && hits.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No messages match "$_q"',
+                          style: ZendTextStyles.body.copyWith(
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: hits.length,
+                        itemBuilder: (context, i) {
+                          final m = hits[i];
+                          return ListTile(
+                            title: Text(
+                              m.displayContent ?? '',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(formatRelativeTime(m.createdAt)),
+                            onTap: () => Navigator.of(context).pop(m.id),
+                          );
+                        },
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Searches messages loaded in this chat',
+                  style: ZendTextStyles.micro.copyWith(color: zt.textSecondary),
+                ),
+              ),
+            ],
           ),
         ),
       ),

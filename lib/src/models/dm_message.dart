@@ -221,7 +221,7 @@ class DmMessage {
     if (isDeleted) return null; // bubble renders its own placeholder text
     final c = content;
     if (c != null && c.startsWith('e2ee:')) {
-      return '🔒 (decrypting…)';
+      return '🔒 Encrypted message';
     }
     return c;
   }

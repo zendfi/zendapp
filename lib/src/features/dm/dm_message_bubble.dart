@@ -9,6 +9,7 @@ import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_gif.dart';
+import '../../core/zend_features.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 //
@@ -322,6 +323,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
                   widget.onPayRequest?.call(widget.message.paymentRequestData!)
             : null,
       ),
+      _
+          when !widget.message.isDeleted &&
+              isMediaNote(widget.message.displayContent) =>
+        _MediaMessage(message: widget.message, isMe: widget.isMe),
       _ => _TextBubble(
         message: widget.message,
         isMe: widget.isMe,
@@ -577,6 +582,8 @@ class _TextBubble extends StatelessWidget {
   ///    key-fetch/history-load race — same one `displayContent` guards
   ///    against). Showing "Not encrypted" here would be actively wrong.
   bool get _showNotEncryptedBadge =>
+      // With E2EE off every message is plaintext; badging all of them is noise.
+      ZendFeatures.dmE2ee &&
       !message.isEncrypted &&
       message.localStatus != DmLocalStatus.sending &&
       !(message.content?.startsWith('e2ee:') ?? false);
@@ -1480,6 +1487,53 @@ class _HeartPopupState extends State<_HeartPopup>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// An emoji-only or GIF text message: shown as animated stickers or the GIF,
+/// with no bubble behind it, like stickers in other chat apps.
+class _MediaMessage extends StatelessWidget {
+  const _MediaMessage({required this.message, required this.isMe});
+
+  final DmMessage message;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final content = message.displayContent!.trim();
+    final gif = gifIdFromNote(content);
+    final fresh = DateTime.now().difference(message.createdAt).inSeconds < 10;
+    return Row(
+      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: Column(
+            crossAxisAlignment: isMe
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              if (gif != null)
+                ZendGifTile(gif, height: 150)
+              else
+                ZendEmojiTile(content, size: 64, burst: !isMe && fresh),
+              const SizedBox(height: 2),
+              Text(
+                message.localStatus == DmLocalStatus.failed
+                    ? 'Not sent'
+                    : formatRelativeTime(message.createdAt),
+                style: ZendTextStyles.micro.copyWith(
+                  color: message.localStatus == DmLocalStatus.failed
+                      ? zt.destructive
+                      : zt.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
