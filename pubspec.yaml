@@ -36,7 +36,18 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Networking
-  dio: 5.4.3+1
+  #
+  # Must stay >= 5.9.x while the web build uses --wasm. Dio 5.4.3+1's
+  # browser adapter imports `dart:html`, which does not exist under dart2wasm,
+  # so every HTTP request from the main.dart.wasm bundle failed with no
+  # response (DioExceptionType.unknown). 5.9+ moved the adapter to
+  # `package:web`.
+  #
+  # This is what made sign-in fail on desktop Chrome and Safari while working
+  # on mobile Chrome: WasmGC browsers load main.dart.wasm, mobile Chrome fell
+  # back to main.dart.js where dart:html genuinely exists. Same code, two
+  # compilation targets.
+  dio: 5.9.2
 
   # WebSocket client for pool real-time messaging
   web_socket_channel: ^2.4.0
