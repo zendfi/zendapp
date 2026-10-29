@@ -17,6 +17,10 @@ class ZendShellController {
   /// only once the user is actually inside the app.
   static final ValueNotifier<int?> currentTab = ValueNotifier<int?>(null);
 
+  /// True once the Feed's balance hero has scrolled off screen; the shell
+  /// then shows the floating Zend button on Feed too.
+  static final ValueNotifier<bool> feedHeroHidden = ValueNotifier(false);
+
   /// Called by [ZendShell]'s initState to register the tab-switch callback.
   static ZendShellController activate(
     void Function(int) switchTab, {

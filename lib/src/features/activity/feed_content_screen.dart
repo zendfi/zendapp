@@ -15,6 +15,7 @@ import '../../services/zend_analytics.dart';
 import '../send/qr_scanner_screen.dart';
 import '../../models/activity_edge.dart';
 import '../../navigation/zend_routes.dart';
+import '../../navigation/zend_shell_controller.dart';
 import '../dm/dm_thread_screen.dart';
 import '../shell/zend_entry_sheet.dart';
 import 'activity_comment_sheet.dart';
@@ -184,7 +185,10 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
     // Hysteresis: collapse once the hero is mostly off-screen, expand only
     // after scrolling clearly back, so hovering at the edge can't flicker.
     final next = _collapsed ? offset > _expandBelow : offset > _collapseAbove;
-    if (next != _collapsed) setState(() => _collapsed = next);
+    if (next != _collapsed) {
+      setState(() => _collapsed = next);
+      ZendShellController.feedHeroHidden.value = next;
+    }
   }
 
   void _toggleSearch() {

@@ -354,26 +354,6 @@ class _DmInputBarState extends State<DmInputBar>
                   ),
                 ),
               ),
-              // Paying is the main action in a money chat, so Zend sits in
-              // the composer itself rather than behind the + panel.
-              if (widget.onPayRecipient != null)
-                Tooltip(
-                  message: 'Zend',
-                  child: GestureDetector(
-                    onTap: widget.onPayRecipient,
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: 40,
-                      height: 44,
-                      child: Icon(
-                        PhosphorIconsFill.currencyCircleDollar,
-                        size: 24,
-                        color: zt.accent,
-                        semanticLabel: 'Zend',
-                      ),
-                    ),
-                  ),
-                ),
               const SizedBox(width: 6),
 
               // ── Input pill — stretches end-to-end ──────────────────
@@ -567,21 +547,6 @@ class _DmInputBarState extends State<DmInputBar>
                 onTap: () {
                   _closePanel();
                   widget.onRequestPayment?.call();
-                },
-              ),
-              const SizedBox(width: 10),
-              _MonoActionTile(
-                // "Zend" — the product's one verb (spec §4/§55), not
-                // "Pay"/"Send"/"Transfer". Contextual here: identity is
-                // already established by the open thread, so this hands
-                // off straight to payment — spec §27's "context should
-                // remove work, not remove control."
-                icon: PhosphorIconsRegular.currencyDollar,
-                label: 'Zend',
-                zt: zt,
-                onTap: () {
-                  _closePanel();
-                  widget.onPayRecipient?.call();
                 },
               ),
               if (widget.onPickGif != null) ...[

@@ -180,15 +180,32 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       // interpolated into the UI because an OAuth error can echo request
       // parameters back.
       if (kIsWeb) {
-        // Recomputed rather than imported from main.dart: importing the entry
-        // point from a feature file would close a cycle back through app.dart.
-        // This mirrors kZkLoginWebRedirectUri exactly.
+        // The redirect-URI hint is conditional on purpose.
+        //
+        // It used to print unconditionally, which made every web failure look
+        // like an unregistered origin and cost real time chasing the wrong
+        // cause. The two failures are distinguishable: an unregistered
+        // redirect URI means Google *answers* and rejects inside the popup, so
+        // a response exists. A NetworkException means no response arrived at
+        // all — nothing reached Google, so its OAuth config cannot be the
+        // reason.
+        //
+        // Origin is recomputed rather than imported from main.dart, because
+        // importing the entry point from a feature file would close a cycle
+        // back through app.dart. It mirrors kZkLoginWebRedirectUri exactly.
+        final transportFailed = error is NetworkException ||
+            error is RequestTimeoutException;
+        final hint = transportFailed
+            ? 'The request did not reach the server, so this is transport, not '
+                  'OAuth configuration. Usual causes: a deploy rolling over '
+                  '(a single-task service has no healthy target mid-rollout), '
+                  'or a browser extension intercepting fetch.'
+            : 'If this origin is not registered on the OAuth client, Google '
+                  'rejects it inside the popup and the callback never returns.';
         debugPrint(
           'Google sign-in failed on web. Origin: ${Uri.base.origin}. '
           'Redirect URI sent: ${Uri.base.origin}/auth.html. '
-          'If that origin is not registered on the OAuth client, Google '
-          'rejects it inside the popup and the callback never returns. '
-          'Underlying error: $error',
+          '$hint Underlying error: $error',
         );
       } else {
         debugPrint('Google sign-in failed: $error');

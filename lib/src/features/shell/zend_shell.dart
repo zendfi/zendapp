@@ -603,9 +603,24 @@ class _ZendShellState extends State<ZendShell> {
       // In web desktop mode the sidebar outside the app column (ZendWebFrame)
       // carries the tabs and the Zend action, so the in-column copies are
       // dropped rather than shown twice.
-      floatingActionButton: (!webDesktop && _tabIndex == 1)
-          ? _ZendFab(onTap: () => showZendEntrySheet(context))
-          : null,
+      // People always; Feed only once the balance hero (which has its own
+      // Zend button) has scrolled away.
+      floatingActionButton: webDesktop
+          ? null
+          : ValueListenableBuilder<bool>(
+              valueListenable: ZendShellController.feedHeroHidden,
+              builder: (context, heroHidden, _) {
+                final show = _tabIndex == 1 || (_tabIndex == 0 && heroHidden);
+                return AnimatedScale(
+                  scale: show ? 1 : 0,
+                  duration: ZendMotion.quick,
+                  curve: ZendMotion.springSnappy,
+                  child: _ZendFab(
+                    onTap: show ? () => showZendEntrySheet(context) : () {},
+                  ),
+                );
+              },
+            ),
       bottomNavigationBar: webDesktop
           ? null
           : ZendBottomBar(
