@@ -88,6 +88,28 @@ ThemeData buildZendTheme() {
       );
 
   return ThemeData(
+    // Desktop/web hover: the defaults were a near-white tooltip box popping
+    // over the hovered control (covering it) and a strong hover wash. Small,
+    // dark, offset tooltips and faint overlays keep buttons clickable.
+    tooltipTheme: TooltipThemeData(
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      verticalOffset: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      textStyle: const TextStyle(
+        fontFamily: 'Geist',
+        fontSize: 12,
+        color: Colors.white,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    hoverColor: const Color(0x0A000000),
+    highlightColor: Colors.transparent,
+    splashColor: const Color(0x14000000),
+    focusColor: const Color(0x0A000000),
     useMaterial3: true,
     fontFamily: 'Geist',
     colorScheme: const ColorScheme.light(
@@ -210,6 +232,28 @@ ThemeData buildZendDarkTheme() {
       );
 
   return ThemeData(
+    // Desktop/web hover: the defaults were a near-white tooltip box popping
+    // over the hovered control (covering it) and a strong hover wash. Small,
+    // dark, offset tooltips and faint overlays keep buttons clickable.
+    tooltipTheme: TooltipThemeData(
+      waitDuration: const Duration(milliseconds: 500),
+      preferBelow: false,
+      verticalOffset: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      textStyle: const TextStyle(
+        fontFamily: 'Geist',
+        fontSize: 12,
+        color: Colors.white,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2C30),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    hoverColor: const Color(0x0FFFFFFF),
+    highlightColor: Colors.transparent,
+    splashColor: const Color(0x1AFFFFFF),
+    focusColor: const Color(0x0FFFFFFF),
     useMaterial3: true,
     fontFamily: 'Geist',
     colorScheme: const ColorScheme.dark(
