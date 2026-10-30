@@ -79,64 +79,70 @@ class ZendWebFrame extends StatelessWidget {
       viewPadding: EdgeInsets.zero,
     );
 
-    return Material(
-      color: zt.bgSecondary,
-      child: ValueListenableBuilder<int?>(
-        valueListenable: ZendShellController.currentTab,
-        builder: (context, tab, _) {
-          if (tab == null) {
-            return _SignedOutPage(
-              media: flat,
-              child: ZendWebLayout(desktop: false, wide: true, child: child),
-            );
-          }
-          return ValueListenableBuilder<bool>(
-            valueListenable: sidebarCollapsed,
-            builder: (context, collapsed, _) {
-              final railWidth = collapsed
-                  ? sidebarCollapsedWidth
-                  : sidebarWidth;
-              final contentWidth = size.width - railWidth - 1;
-              return CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.keyN): () =>
-                      _Sidebar.openZend(navigatorKey),
-                },
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AnimatedContainer(
-                      duration: ZendMotion.quick,
-                      curve: ZendMotion.springSnappy,
-                      width: railWidth,
-                      child: _Sidebar(
-                        navigatorKey: navigatorKey,
-                        currentTab: tab,
-                        collapsed: collapsed,
-                      ),
-                    ),
-                    Container(width: 1, color: zt.border),
-                    Expanded(
-                      child: MediaQuery(
-                        data: flat.copyWith(
-                          size: Size(contentWidth, size.height),
+    // The sidebar sits outside the app's Navigator, so it has no Overlay of
+    // its own. Tooltips (and any other popup) need one; without it hovering
+    // a sidebar button threw "No Overlay widget found" and the follow-on
+    // errors broke rendering. Overlay.wrap gives the whole desktop frame one.
+    return Overlay.wrap(
+      child: Material(
+        color: zt.bgSecondary,
+        child: ValueListenableBuilder<int?>(
+          valueListenable: ZendShellController.currentTab,
+          builder: (context, tab, _) {
+            if (tab == null) {
+              return _SignedOutPage(
+                media: flat,
+                child: ZendWebLayout(desktop: false, wide: true, child: child),
+              );
+            }
+            return ValueListenableBuilder<bool>(
+              valueListenable: sidebarCollapsed,
+              builder: (context, collapsed, _) {
+                final railWidth = collapsed
+                    ? sidebarCollapsedWidth
+                    : sidebarWidth;
+                final contentWidth = size.width - railWidth - 1;
+                return CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.keyN): () =>
+                        _Sidebar.openZend(navigatorKey),
+                  },
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AnimatedContainer(
+                        duration: ZendMotion.quick,
+                        curve: ZendMotion.springSnappy,
+                        width: railWidth,
+                        child: _Sidebar(
+                          navigatorKey: navigatorKey,
+                          currentTab: tab,
+                          collapsed: collapsed,
                         ),
-                        child: ColoredBox(
-                          color: zt.bgPrimary,
-                          child: ZendWebLayout(
-                            desktop: true,
-                            wide: true,
-                            child: child,
+                      ),
+                      Container(width: 1, color: zt.border),
+                      Expanded(
+                        child: MediaQuery(
+                          data: flat.copyWith(
+                            size: Size(contentWidth, size.height),
+                          ),
+                          child: ColoredBox(
+                            color: zt.bgPrimary,
+                            child: ZendWebLayout(
+                              desktop: true,
+                              wide: true,
+                              child: child,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
