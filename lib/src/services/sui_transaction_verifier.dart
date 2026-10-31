@@ -16,7 +16,9 @@
 ///   * the sender is this wallet, not some other address,
 ///   * the withdrawal amount equals the amount the user entered,
 ///   * the funds come from the *sender's* accumulator, not a sponsor's,
-///   * there is exactly one command, a call to `0x2::balance::send_funds`,
+///   * there are exactly two commands — `0x2::balance::redeem_funds` then
+///     `0x2::balance::send_funds` — wired withdrawal → redeemed balance →
+///     recipient, and nothing else is appended,
 ///   * there are exactly two inputs and nothing else is smuggled in,
 ///   * gas is zero-priced, zero-budget and unfunded, so no coin is drained,
 ///   * the transaction is epoch-bounded,
@@ -51,6 +53,7 @@ const _kBalancePackage =
     '0x0000000000000000000000000000000000000000000000000000000000000002';
 const _kBalanceModule = 'balance';
 const _kSendFundsFunction = 'send_funds';
+const _kRedeemFundsFunction = 'redeem_funds';
 
 /// Raised when the bytes do not match what the user asked for.
 ///
@@ -203,54 +206,105 @@ SuiVerifiedTransfer verifyGaslessUsdcTransfer({
   }
 
   // ── Commands ──
-  // Exactly one. This is the check that stops a second command being appended
-  // to an otherwise correct transfer.
-  if (transaction.commands.length != 1) {
+  // A gasless address-balance transfer is exactly two commands, in order:
+  //   0. `0x2::balance::redeem_funds<T>(withdrawal)` → a `Balance<T>`,
+  //   1. `0x2::balance::send_funds<T>(that balance, recipient)`.
+  // Both are on the protocol's gasless allowlist. Pinning the count at two and
+  // the wiring between them (withdrawal → redeem result → send) is what stops
+  // any *other* command being appended to an otherwise correct transfer.
+  if (transaction.commands.length != 2) {
     throw SuiTransactionVerificationException(
-      'Expected exactly 1 command, found ${transaction.commands.length}: '
+      'Expected exactly 2 commands, found ${transaction.commands.length}: '
       '${transaction.commands.map((c) => c.label).join(', ')}',
     );
   }
-  final command = transaction.commands.single;
-  if (command is! SuiMoveCallCommand) {
+
+  // Command 0: redeem_funds<T>(input 0).
+  final redeemCommand = transaction.commands[0];
+  if (redeemCommand is! SuiMoveCallCommand) {
     throw SuiTransactionVerificationException(
-      'Expected a Move call, found ${command.label}',
+      'Command 0 is not a Move call, found ${redeemCommand.label}',
     );
   }
-  if (normaliseSuiAddress(command.package) != _kBalancePackage ||
-      command.module != _kBalanceModule ||
-      command.function != _kSendFundsFunction) {
+  if (normaliseSuiAddress(redeemCommand.package) != _kBalancePackage ||
+      redeemCommand.module != _kBalanceModule ||
+      redeemCommand.function != _kRedeemFundsFunction) {
+    throw SuiTransactionVerificationException(
+      'Expected $_kBalancePackage::$_kBalanceModule::$_kRedeemFundsFunction, '
+      'found ${redeemCommand.target}',
+    );
+  }
+  if (redeemCommand.typeArguments.length != 1) {
+    throw SuiTransactionVerificationException(
+      'redeem_funds: expected 1 type argument, found '
+      '${redeemCommand.typeArguments.length}',
+    );
+  }
+  if (redeemCommand.arguments.length != 1) {
+    throw SuiTransactionVerificationException(
+      'redeem_funds: expected 1 argument, found '
+      '${redeemCommand.arguments.length}',
+    );
+  }
+  {
+    final arg = redeemCommand.arguments.single;
+    if (arg.kind != SuiArgumentKind.input || arg.index != 0) {
+      throw SuiTransactionVerificationException(
+        'redeem_funds argument does not reference input 0',
+      );
+    }
+  }
+
+  // Command 1: send_funds<T>(result of command 0, input 1).
+  final sendCommand = transaction.commands[1];
+  if (sendCommand is! SuiMoveCallCommand) {
+    throw SuiTransactionVerificationException(
+      'Command 1 is not a Move call, found ${sendCommand.label}',
+    );
+  }
+  if (normaliseSuiAddress(sendCommand.package) != _kBalancePackage ||
+      sendCommand.module != _kBalanceModule ||
+      sendCommand.function != _kSendFundsFunction) {
     throw SuiTransactionVerificationException(
       'Expected $_kBalancePackage::$_kBalanceModule::$_kSendFundsFunction, '
-      'found ${command.target}',
+      'found ${sendCommand.target}',
     );
   }
-  if (command.typeArguments.length != 1) {
+  if (sendCommand.typeArguments.length != 1) {
     throw SuiTransactionVerificationException(
-      'Expected 1 type argument, found ${command.typeArguments.length}',
+      'send_funds: expected 1 type argument, found '
+      '${sendCommand.typeArguments.length}',
     );
+  }
+  if (sendCommand.arguments.length != 2) {
+    throw SuiTransactionVerificationException(
+      'send_funds: expected 2 arguments, found '
+      '${sendCommand.arguments.length}',
+    );
+  }
+  {
+    // First argument must be the result of command 0 (the redeemed balance),
+    // not a smuggled-in object; second must be recipient input 1.
+    final balanceArg = sendCommand.arguments[0];
+    if (balanceArg.kind != SuiArgumentKind.result || balanceArg.index != 0) {
+      throw SuiTransactionVerificationException(
+        'send_funds first argument does not reference the redeem_funds result',
+      );
+    }
+    final recipientArg = sendCommand.arguments[1];
+    if (recipientArg.kind != SuiArgumentKind.input || recipientArg.index != 1) {
+      throw SuiTransactionVerificationException(
+        'send_funds second argument does not reference input 1',
+      );
+    }
   }
 
   // ── Inputs ──
-  // Exactly two, in the order the call takes them: the withdrawn balance, then
-  // the recipient.
+  // Exactly two: the withdrawn balance, then the recipient. Nothing else.
   if (transaction.inputs.length != 2) {
     throw SuiTransactionVerificationException(
       'Expected exactly 2 inputs, found ${transaction.inputs.length}',
     );
-  }
-  if (command.arguments.length != 2) {
-    throw SuiTransactionVerificationException(
-      'Expected 2 call arguments, found ${command.arguments.length}',
-    );
-  }
-  for (var i = 0; i < 2; i++) {
-    final argument = command.arguments[i];
-    if (argument.kind != SuiArgumentKind.input || argument.index != i) {
-      throw SuiTransactionVerificationException(
-        'Call argument $i does not reference input $i',
-      );
-    }
   }
 
   final withdrawal = transaction.inputs[0];
@@ -273,13 +327,16 @@ SuiVerifiedTransfer verifyGaslessUsdcTransfer({
     );
   }
 
-  // The withdrawn type and the call's type argument must agree, or the
+  // The withdrawn type and both calls' type argument must agree, or the
   // transfer moves a different asset than it withdraws.
   final coinType = withdrawal.coinType.canonical;
-  if (command.typeArguments.single.canonical != coinType) {
+  if (redeemCommand.typeArguments.single.canonical != coinType ||
+      sendCommand.typeArguments.single.canonical != coinType) {
     throw SuiTransactionVerificationException(
-      'Call type argument ${command.typeArguments.single.canonical} '
-      'does not match withdrawn type $coinType',
+      'Call type arguments (redeem '
+      '${redeemCommand.typeArguments.single.canonical}, send '
+      '${sendCommand.typeArguments.single.canonical}) do not both match '
+      'withdrawn type $coinType',
     );
   }
   if (expectation.expectedCoinType != null &&
