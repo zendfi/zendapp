@@ -21,6 +21,8 @@ import 'send_shared_widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../services/zlink_service.dart';
 import '../../models/handle_label.dart';
 
 enum SendStage {
@@ -511,6 +513,12 @@ class _SendFlowSheetState extends State<SendFlowSheet>
   }
 
   Future<void> _proceedFromEmailIntentRecipient(String email) async {
+    // Sui accounts: send as a Zlink. The money goes into the escrow, and the
+    // sender shares the link themselves (WhatsApp, their own email, etc.).
+    if (ZendScope.of(context).isZkLoginAccount) {
+      await _sendAsGiveLink(email);
+      return;
+    }
     final policy = SigningPolicyService();
     final cache = WalletSessionCache.instance;
     final needsPin = await policy.requiresPinForAmount(widget.amount);
@@ -525,6 +533,49 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       );
     } else {
       _goTo(SendStage.emailIntent);
+    }
+  }
+
+  bool _creatingLink = false;
+
+  Future<void> _sendAsGiveLink(String email) async {
+    if (_creatingLink) return;
+    final model = ZendScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final service = ZlinkService(
+      api: model.walletService.apiClient,
+      zkLogin: model.zkLoginService,
+    );
+    setState(() => _creatingLink = true);
+    try {
+      final at = email.indexOf('@');
+      final hint = at > 0
+          ? '${email.substring(0, at.clamp(0, 2))}***${email.substring(at)}'
+          : null;
+      final link = await service.createGiveLink(
+        amountUsd: widget.amount,
+        recipientHint: hint,
+      );
+      model.fetchBalance();
+      await Share.share(
+        'I sent you \$${widget.amount.toStringAsFixed(2)} on Zend. '
+        'Tap to collect it: ${link.url}',
+        subject: 'I sent you money on Zend',
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Link ready. You can re-share it from My Links.')),
+      );
+      _dismiss();
+    } catch (e) {
+      final message = e is ZlinkException
+          ? e.message
+          : e is ApiException
+          ? e.userMessage
+          : "Couldn't create the link. Try again.";
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _creatingLink = false);
     }
   }
 

@@ -76,6 +76,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="zdfi.me" android:pathPrefix="/u/" />
             </intent-filter>
+            <!-- Zlinks: give (/z/) and ask (/a/) links open the app -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/z/" />
+                <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/a/" />
+            </intent-filter>
 
             <!-- Android App Links: zdfi.me/@{tag} payment QR links -->
             <!-- No autoVerify — prevents OS from intercepting URLs decoded by the

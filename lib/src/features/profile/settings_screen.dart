@@ -15,7 +15,7 @@ import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
 import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
-import '../request/payment_requests_screen.dart';
+import '../links/my_links_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 
@@ -96,12 +96,12 @@ class SettingsScreen extends StatelessWidget {
                           ),
                         ),
                         _Tile(
-                          icon: PhosphorIconsRegular.receipt,
-                          label: 'Payment requests',
-                          subtitle: 'Requests you sent and received',
+                          icon: PhosphorIconsRegular.link,
+                          label: 'My Links',
+                          subtitle: 'Money you sent as links and links you\'re collecting on',
                           onTap: () => pushZendSlide(
                             context,
-                            const PaymentRequestsScreen(),
+                            const MyLinksScreen(),
                           ),
                         ),
                       ],

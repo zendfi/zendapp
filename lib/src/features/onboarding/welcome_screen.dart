@@ -2,6 +2,7 @@ import 'dart:async';
 
 // kIsWeb and debugPrint live in foundation.dart; material.dart does not
 // re-export them.
+import '../links/zlink_sheets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
@@ -290,6 +291,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // "Tolu sent you ₦8,000" when opened from a Zlink.
+                      const ZlinkWelcomeLine(),
                       PrimaryButton(
                         label: 'Continue with Google',
                         isLoading: _busy,

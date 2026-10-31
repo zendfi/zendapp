@@ -652,7 +652,7 @@ class _RequestsThreadTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Requests',
+                      'Links',
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 14.5,
@@ -662,7 +662,7 @@ class _RequestsThreadTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Money asks between you and others',
+                      'Money links between you and others',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -780,7 +780,7 @@ class _RequestsThreadSheet extends StatelessWidget {
               ),
             ),
             Text(
-              'Requests',
+              'Links',
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 18,

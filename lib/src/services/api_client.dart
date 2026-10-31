@@ -839,6 +839,37 @@ class ApiClient {
     }
   }
 
+  // ── Zlinks ────────────────────────────────────────────────────────────────
+  // Give links (escrow) and ask links. No method here ever carries a link key:
+  // only the link's public key (create) and a link-key signature (claim).
+
+  /// POST to a Zlinks endpoint and return the decoded JSON body.
+  Future<Map<String, dynamic>> zlinkPost(
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/v2/zlinks$path',
+        data: body ?? const <String, dynamic>{},
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// GET a Zlinks endpoint (list, or a public preview).
+  Future<Map<String, dynamic>> zlinkGet(String path) async {
+    try {
+      final response = await _dio.get('/api/zend/v2/zlinks$path');
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<PreparedRailTransfer> prepareP2pTransfer({
     required PaymentRail rail,
     required PaymentNetwork network,

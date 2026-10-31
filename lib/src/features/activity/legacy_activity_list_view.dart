@@ -64,7 +64,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
   String _activeFilter = 'All';
   bool _notificationsMuted = false;
 
-  static const _filters = ['All', 'Received', 'Sent', 'Pending', 'Requests'];
+  static const _filters = ['All', 'Received', 'Sent', 'Pending', 'Links'];
 
   @override
   void initState() {
@@ -147,7 +147,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
           ...pendingTxs,
           ...renderableIntents.map<_ActivityItem>((i) => _IntentItem(i)),
         ];
-      case 'Requests':
+      case 'Links':
         // Show all inbound (pending only) + all outbound requests
         items = [
           ...inbound
@@ -386,8 +386,8 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
 
   String get _emptyLabel {
     switch (_activeFilter) {
-      case 'Requests':
-        return 'No payment requests';
+      case 'Links':
+        return 'No links';
       case 'All':
         return 'No transactions yet';
       default:

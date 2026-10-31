@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'url_fragment_stub.dart'
+    if (dart.library.js_interop) 'url_fragment_web.dart';
+
 /// Handles incoming deep links for ZendApp.
 ///
 /// Supported patterns:
@@ -36,6 +39,8 @@ class DeepLinkHandler {
       final base = Uri.base;
       if (base.pathSegments.isNotEmpty) {
         _initialLink = _parse(base.replace(host: 'zdfi.me').toString());
+        // A give link carries its key in the fragment; never leave it visible.
+        if (_initialLink?.isZlink == true) stripUrlFragment();
       }
       return;
     }
@@ -66,6 +71,24 @@ class DeepLinkHandler {
   static DeepLinkPayload? _parse(String url) {
     try {
       final uri = Uri.parse(url);
+
+      // https://app.usezend.app/z/{id}#{key} — give link (claim).
+      // https://app.usezend.app/a/{id}      — ask link (pay).
+      // Web rewrites the host to zdfi.me before parsing, so accept both.
+      const zlinkHosts = {'app.usezend.app', 'zdfi.me'};
+      if (zlinkHosts.contains(uri.host) && uri.pathSegments.length == 2) {
+        final id = uri.pathSegments[1];
+        if (uri.pathSegments[0] == 'z' && id.isNotEmpty) {
+          return DeepLinkPayload(
+            zendtag: '',
+            zlinkGiveId: id,
+            zlinkKey: uri.fragment,
+          );
+        }
+        if (uri.pathSegments[0] == 'a' && id.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', zlinkAskId: id);
+        }
+      }
 
       // https://zdfi.me/cli-auth/{code} — "Pay with Zend" CLI device
       // pairing approval link. Parsed here as a distinct payload type;
@@ -148,6 +171,14 @@ class DeepLinkPayload {
   /// Non-null only for `zdfi.me/pool/{code}` links — pool discovery deep link.
   final String? poolShortCode;
 
+  /// Give link object id, and the link key from the URL fragment (base64url).
+  /// The key is a bearer secret: never log or persist it outside secure storage.
+  final String? zlinkGiveId;
+  final String? zlinkKey;
+
+  /// Ask link id (`zl_...`).
+  final String? zlinkAskId;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
@@ -155,7 +186,14 @@ class DeepLinkPayload {
     this.note,
     this.cliPairingCode,
     this.poolShortCode,
+    this.zlinkGiveId,
+    this.zlinkKey,
+    this.zlinkAskId,
   });
+
+  bool get isZlinkGive => zlinkGiveId != null;
+  bool get isZlinkAsk => zlinkAskId != null;
+  bool get isZlink => isZlinkGive || isZlinkAsk;
 
   bool get isCliPairing => cliPairingCode != null;
   bool get isPoolLink => poolShortCode != null;
@@ -164,5 +202,6 @@ class DeepLinkPayload {
   String toString() =>
       'DeepLinkPayload(zendtag: $zendtag, requestId: $requestId, '
       'amountUsdc: $amountUsdc, note: $note, cliPairingCode: $cliPairingCode, '
-      'poolShortCode: $poolShortCode)';
+      'poolShortCode: $poolShortCode, zlinkGiveId: $zlinkGiveId, '
+      'zlinkAskId: $zlinkAskId)';
 }

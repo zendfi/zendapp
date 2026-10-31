@@ -344,7 +344,15 @@ class TransferStatusController extends ChangeNotifier {
         "We couldn't unlock your wallet to sign this.",
         canRetry: false,
       );
-    } catch (_) {
+    } catch (e, st) {
+      // Anything reaching here is a non-API, non-rail, non-PIN failure —
+      // typically a client-side signing/deposit error (zkLogin, the Sui signer
+      // rejecting the envelope, funds-spendable conversion, etc.). These never
+      // touch the backend, so they leave no server log; without this line the
+      // user sees only "Couldn't complete that" with no cause. Log the real
+      // error + stack so it's visible in device logs (flutter logs / logcat /
+      // Console) when a send fails.
+      debugPrint('[transfer] send failed (unclassified): $e\n$st');
       _fail(pending, "Couldn't complete that. Try again.");
     }
   }

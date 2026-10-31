@@ -12,6 +12,7 @@ import 'src/design/zend_theme.dart';
 import 'src/design/zend_tokens.dart';
 
 import 'src/features/deeplink/deep_link_handler.dart';
+import 'src/features/links/zlink_sheets.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
@@ -85,6 +86,17 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     // Register authentication hook to dispatch pending notification destinations
     // that were parked before auth completed (covers device OS-lock path).
     widget.model.onAuthenticated = () {
+      final pendingZlink = PendingZlink.consume();
+      if (pendingZlink != null) {
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          final ctx = _navigatorKey.currentContext;
+          if (!mounted || ctx == null || !ctx.mounted) {
+            PendingZlink.store(pendingZlink);
+            return;
+          }
+          openZlink(ctx, pendingZlink); // ignore: use_build_context_synchronously
+        });
+      }
       final pendingDest = PendingNotificationService.consume();
       if (pendingDest == null) return;
       Future<void>.delayed(const Duration(milliseconds: 400), () {
@@ -354,6 +366,21 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   }
 
   void _handleDeepLink(DeepLinkPayload payload) {
+    // Zlinks — app.usezend.app/z/{id}#{key} (claim) and /a/{id} (pay).
+    // Signed out: the welcome screen shows "X sent you ₦…" and the link opens
+    // right after Continue with Google (see onAuthenticated).
+    if (payload.isZlink) {
+      final context = _navigatorKey.currentContext;
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked ||
+          context == null) {
+        PendingZlink.store(payload);
+        return;
+      }
+      openZlink(context, payload);
+      return;
+    }
+
     // "Pay with Zend" CLI device pairing — zdfi.me/cli-auth/{code}.
     if (payload.isCliPairing) {
       if (!widget.model.isAuthenticated ||

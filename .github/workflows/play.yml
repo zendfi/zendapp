@@ -1,0 +1,91 @@
+name: Play Store (internal testing)
+
+# Every push to main uploads a signed App Bundle to the Play internal
+# testing track. Run it by hand to push any branch.
+#
+# Secrets: KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD (the same
+# upload key build.yml uses), GIPHY_API_KEY_ANDROID, and
+# PLAY_SERVICE_ACCOUNT_JSON (the service account's JSON key).
+#
+# The very first bundle must be uploaded by hand in Play Console; the API
+# can't create the app.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Play track"
+        type: choice
+        options: [internal, alpha, beta]
+        default: internal
+
+concurrency:
+  group: play-release
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: Build and upload AAB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.3"
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Signing setup
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/zend.jks
+          cat > android/key.properties << EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=zend.jks
+          EOF
+
+      # Play rejects any versionCode it has seen before. The run number only
+      # goes up; the offset keeps it above builds already uploaded by hand.
+      - name: Build App Bundle
+        run: >
+          flutter build appbundle --release
+          --build-number=$((1000 + ${{ github.run_number }}))
+          --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_ANDROID }}
+
+      # Saved before the upload so the bundle is downloadable even when the
+      # upload fails (e.g. the first run, before the app exists in Play).
+      - name: Keep the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: zendapp-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload to Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.zendfi.zendapp
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track || 'internal' }}
+          # Internal builds go straight to testers; no review step.
+          status: completed
+          releaseName: "${{ github.run_number }} (${{ github.sha }})"
+

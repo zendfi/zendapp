@@ -284,7 +284,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         // Payment requests
                         if (outboundReqs.isNotEmpty ||
                             inboundReqs.isNotEmpty) ...[
-                          _SectionHeader(label: 'Payment Requests', zt: zt),
+                          _SectionHeader(label: 'Links', zt: zt),
                           ...[...inboundReqs, ...outboundReqs].map(
                             (r) => _SearchTile(
                               leading: ZendAvatar(
