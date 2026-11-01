@@ -69,7 +69,7 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
 
   Future<void> _load() async {
     final p = PendingZlink.peek;
-    if (p == null) return;
+    if (p == null || !p.isZlink) return;
     try {
       final service = zlinkServiceOf(context);
       if (p.isZlinkGive) {
@@ -112,7 +112,12 @@ String _closedText(String? status) => switch (status) {
 };
 
 class _SheetFrame extends StatelessWidget {
-  const _SheetFrame({required this.icon, required this.title, this.body, this.action});
+  const _SheetFrame({
+    required this.icon,
+    required this.title,
+    this.body,
+    this.action,
+  });
   final IconData icon;
   final String title;
   final String? body;
@@ -132,11 +137,20 @@ class _SheetFrame extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 22, fontWeight: FontWeight.w700, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: zt.textPrimary,
+              ),
             ),
             if (body != null) ...[
               const SizedBox(height: 8),
-              Text(body!, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary)),
+              Text(
+                body!,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary),
+              ),
             ],
             if (action != null) ...[const SizedBox(height: 24), action!],
           ],
@@ -172,16 +186,28 @@ class _ClaimSheetState extends State<_ClaimSheet> {
     final service = zlinkServiceOf(context);
     final key = parseZlinkKey(widget.keyFragment);
     try {
-      if (key == null) throw const ZlinkException('This link is incomplete. Ask the sender to share it again.');
+      if (key == null) {
+        throw const ZlinkException(
+          'This link is incomplete. Ask the sender to share it again.',
+        );
+      }
       final preview = await service.previewGive(widget.id);
-      if (preview['status'] != 'active') throw ZlinkException(_closedText(preview['status'] as String?));
+      if (preview['status'] != 'active') {
+        throw ZlinkException(_closedText(preview['status'] as String?));
+      }
       await service.claim(linkId: widget.id, linkKey: key);
       model.fetchBalance();
-      _set(PhosphorIconsRegular.checkCircle, '${zlinkAmountLabel(preview)} is in your balance',
-          'From ${preview['sender_name']}');
+      _set(
+        PhosphorIconsRegular.checkCircle,
+        '${zlinkAmountLabel(preview)} is in your balance',
+        'From ${preview['sender_name']}',
+      );
     } catch (e) {
-      _set(PhosphorIconsRegular.warningCircle, "Couldn't collect this link",
-          e is ZlinkException ? e.message : 'Something went wrong. Try again.');
+      _set(
+        PhosphorIconsRegular.warningCircle,
+        "Couldn't collect this link",
+        e is ZlinkException ? e.message : 'Something went wrong. Try again.',
+      );
     }
   }
 
@@ -201,7 +227,10 @@ class _ClaimSheetState extends State<_ClaimSheet> {
     title: _title,
     body: _body,
     action: _done
-        ? PrimaryButton(label: 'Done', onPressed: () => Navigator.of(context).pop())
+        ? PrimaryButton(
+            label: 'Done',
+            onPressed: () => Navigator.of(context).pop(),
+          )
         : const CircularProgressIndicator(),
   );
 }
@@ -259,7 +288,13 @@ class _AskPaySheetState extends State<_AskPaySheet> {
       model.fetchBalance();
       if (mounted) setState(() => _paid = true);
     } catch (e) {
-      if (mounted) setState(() => _error = e is ZlinkException ? e.message : "Payment didn't go through. Try again.");
+      if (mounted) {
+        setState(
+          () => _error = e is ZlinkException
+              ? e.message
+              : "Payment didn't go through. Try again.",
+        );
+      }
     } finally {
       if (mounted) setState(() => _paying = false);
     }
@@ -279,19 +314,32 @@ class _AskPaySheetState extends State<_AskPaySheet> {
       return _SheetFrame(
         icon: PhosphorIconsRegular.checkCircle,
         title: 'Paid ${v['payee_name']}',
-        action: PrimaryButton(label: 'Done', onPressed: () => Navigator.of(context).pop()),
+        action: PrimaryButton(
+          label: 'Done',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       );
     }
     if (v['status'] != 'active') {
-      return const _SheetFrame(icon: PhosphorIconsRegular.warningCircle, title: 'This link is no longer collecting');
+      return const _SheetFrame(
+        icon: PhosphorIconsRegular.warningCircle,
+        title: 'This link is no longer collecting',
+      );
     }
     final fixed = v['amount_usd'] != null;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _SheetFrame(
         icon: PhosphorIconsRegular.handCoins,
-        title: fixed ? 'Pay ${v['payee_name']} ${zlinkAmountLabel(v)}' : 'Pay ${v['payee_name']}',
-        body: [v['memo'] as String?, _error].whereType<String>().join('\n').ifEmpty,
+        title: fixed
+            ? 'Pay ${v['payee_name']} ${zlinkAmountLabel(v)}'
+            : 'Pay ${v['payee_name']}',
+        body: [
+          v['memo'] as String?,
+          _error,
+        ].whereType<String>().join('\n').ifEmpty,
         action: Column(
           children: [
             if (!fixed)
@@ -299,11 +347,17 @@ class _AskPaySheetState extends State<_AskPaySheet> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: TextField(
                   controller: _amount,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(hintText: 'Amount'),
                 ),
               ),
-            PrimaryButton(label: 'Pay', isLoading: _paying, onPressed: _paying ? null : _pay),
+            PrimaryButton(
+              label: 'Pay',
+              isLoading: _paying,
+              onPressed: _paying ? null : _pay,
+            ),
           ],
         ),
       ),

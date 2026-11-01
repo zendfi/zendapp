@@ -181,6 +181,7 @@ dependencies:
   # at runtime, not just as a build-time asset generator.
   flutter_native_splash: ^2.4.7
   scrollable_positioned_list: ^0.3.8
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

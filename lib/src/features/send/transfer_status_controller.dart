@@ -5,7 +5,11 @@ import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart'
-    show ApiException, PinDecryptionException, RequestTimeoutException;
+    show
+        ApiException,
+        PinDecryptionException,
+        RequestTimeoutException,
+        friendlyError;
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import '../../services/payment_rails.dart' show RailUnavailableException;
 import '../../services/sound_service.dart';
@@ -341,7 +345,7 @@ class TransferStatusController extends ChangeNotifier {
       // cached keypair is somehow unusable, retrying won't help.
       _fail(
         pending,
-        "We couldn't unlock your wallet to sign this.",
+        "We couldn't confirm it's you. Try again.",
         canRetry: false,
       );
     } catch (e, st) {
@@ -353,7 +357,7 @@ class TransferStatusController extends ChangeNotifier {
       // error + stack so it's visible in device logs (flutter logs / logcat /
       // Console) when a send fails.
       debugPrint('[transfer] send failed (unclassified): $e\n$st');
-      _fail(pending, "Couldn't complete that. Try again.");
+      _fail(pending, friendlyError(e));
     }
   }
 

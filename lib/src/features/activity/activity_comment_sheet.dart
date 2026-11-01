@@ -11,6 +11,7 @@ import '../../models/activity_edge.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 const _kCommentSheetReactionEmojis = [
   '🔥',
@@ -467,15 +468,8 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       const SizedBox(height: 6),
                       // Note (payment memo) rendered as post body copy
                       if (edge.note?.isNotEmpty == true) ...[
-                        Text(
-                          edge.note!,
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 15,
-                            height: 1.45,
-                            color: zt.textPrimary.withValues(alpha: 0.88),
-                          ),
-                        ),
+                        // Sticker, GIF or quoted text; never the raw note.
+                        ZendNote(edge.note!, stickerSize: 48, gifHeight: 150),
                         const SizedBox(height: 10),
                       ],
                       // Amount + timestamp on the same row. The amount chip is

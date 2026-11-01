@@ -5,6 +5,7 @@ import 'drop_particle_painter.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Shows the receiver-side Drop animation as an app-level overlay.
 ///
@@ -262,7 +263,7 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
                               widget.note!.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '"${widget.note}"',
+                              '"${noteText(widget.note)}"',
                               style: ZendTextStyles.tabularNumeric.copyWith(
                                 fontSize: 11,
                                 color: Color(0x99F0F0F0),

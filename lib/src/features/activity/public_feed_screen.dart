@@ -10,6 +10,7 @@ import 'activity_grouping.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 const _kPublicFeedEmojis = [
   '🔥',
@@ -624,7 +625,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                   if (edge.note?.isNotEmpty == true && !isVibe) ...[
                     const SizedBox(height: 4),
                     Text(
-                      edge.note!,
+                      noteText(edge.note),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

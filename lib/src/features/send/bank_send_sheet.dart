@@ -443,9 +443,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is ApiException
-            ? e.userMessage
-            : 'Something went wrong. Please try again.';
+        _errorMessage = e is ApiException ? e.userMessage : friendlyError(e);
         _stage = _BankSendStage.error;
       });
     }
@@ -473,7 +471,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _BankSendStage.error;
       });
     }
@@ -503,7 +501,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _BankSendStage.error;
       });
     }
@@ -572,7 +570,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _BankSendStage.error;
       });
     }
@@ -601,9 +599,7 @@ class _BankSendSheetState extends State<BankSendSheet>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is ApiException
-            ? e.userMessage
-            : 'Something went wrong. Please try again.';
+        _errorMessage = e is ApiException ? e.userMessage : friendlyError(e);
         _stage = _BankSendStage.error;
       });
     }
@@ -770,7 +766,7 @@ class _BankSendSheetState extends State<BankSendSheet>
         );
       case _BankSendStage.error:
         return _ErrorStage(
-          message: _errorMessage ?? 'Something went wrong.',
+          message: _errorMessage ?? "That didn't go through. Try again.",
           onRetry: () {
             setState(() {
               _errorMessage = null;

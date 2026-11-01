@@ -24,7 +24,7 @@ class DmReaction {
   );
 }
 
-enum DmMessageType { text, payment, vibe, paymentRequest }
+enum DmMessageType { text, payment, vibe, paymentRequest, appCard }
 
 /// Delivery/read status for the current user's own outgoing messages.
 /// `read` is a strict upgrade from `delivered` — set once a `readReceipt`
@@ -160,6 +160,7 @@ class DmMessage {
     this.vibeData,
     this.paymentRequestData,
     this.clientId,
+    this.appCardData,
     required this.createdAt,
     this.localStatus = DmLocalStatus.delivered,
     this.reactions = const [],
@@ -180,6 +181,9 @@ class DmMessage {
   final DmVibeData? vibeData;
   final DmPaymentRequestData? paymentRequestData;
   final String? clientId;
+
+  /// Raw metadata for `app_card` messages (template, slots, interaction_id, app).
+  final Map<String, dynamic>? appCardData;
   final DateTime createdAt;
   DmLocalStatus localStatus;
 
@@ -232,6 +236,7 @@ class DmMessage {
       'payment' => DmMessageType.payment,
       'vibe' => DmMessageType.vibe,
       'payment_request' => DmMessageType.paymentRequest,
+      'app_card' => DmMessageType.appCard,
       _ => DmMessageType.text,
     };
 
@@ -260,6 +265,7 @@ class DmMessage {
       vibeData: vibeData,
       paymentRequestData: paymentRequestData,
       clientId: json['client_id'] as String?,
+      appCardData: type == DmMessageType.appCard ? meta : null,
       createdAt:
           (DateTime.tryParse(json['created_at'] as String? ?? '') ??
                   DateTime.now())

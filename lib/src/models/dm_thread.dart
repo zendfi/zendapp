@@ -109,6 +109,9 @@ class DmThread {
             ) ??
             0.0;
         return '💬 Payment request · \$${amt.toStringAsFixed(2)}';
+      case DmMessageType.appCard:
+        final d = lastMessage!.appCardData ?? const {};
+        return '${d['app_name'] ?? 'App'}: ${(d['slots'] as Map?)?['title'] ?? ''}';
     }
   }
 }

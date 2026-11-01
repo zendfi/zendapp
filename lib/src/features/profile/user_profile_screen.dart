@@ -19,6 +19,7 @@ import '../shell/zend_entry_sheet.dart';
 import 'account_information_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Person page — ZEND BETA spec §18-20.
 ///
@@ -504,7 +505,7 @@ class _PersonActivityRow extends StatelessWidget {
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
                       Text(
-                        edge.note!,
+                        noteText(edge.note),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

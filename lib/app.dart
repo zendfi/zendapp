@@ -13,6 +13,7 @@ import 'src/design/zend_tokens.dart';
 
 import 'src/features/deeplink/deep_link_handler.dart';
 import 'src/features/links/zlink_sheets.dart';
+import 'src/features/zapps/zapp_sheet.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
 import 'src/features/loading/loading_overlay.dart';
 import 'src/features/lock/app_lock_overlay.dart';
@@ -94,7 +95,10 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
             PendingZlink.store(pendingZlink);
             return;
           }
-          openZlink(ctx, pendingZlink); // ignore: use_build_context_synchronously
+          // ignore: use_build_context_synchronously
+          pendingZlink.isZApp
+              ? openZAppLink(ctx, pendingZlink)
+              : openZlink(ctx, pendingZlink);
         });
       }
       final pendingDest = PendingNotificationService.consume();
@@ -369,7 +373,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     // Zlinks — app.usezend.app/z/{id}#{key} (claim) and /a/{id} (pay).
     // Signed out: the welcome screen shows "X sent you ₦…" and the link opens
     // right after Continue with Google (see onAuthenticated).
-    if (payload.isZlink) {
+    if (payload.isZlink || payload.isZApp) {
       final context = _navigatorKey.currentContext;
       if (!widget.model.isAuthenticated ||
           widget.model.appLockService.isLocked ||
@@ -377,7 +381,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         PendingZlink.store(payload);
         return;
       }
-      openZlink(context, payload);
+      payload.isZApp ? openZAppLink(context, payload) : openZlink(context, payload);
       return;
     }
 

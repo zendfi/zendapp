@@ -564,7 +564,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       );
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Link ready. You can re-share it from My Links.')),
+        const SnackBar(
+          content: Text('Link ready. You can re-share it from My Links.'),
+        ),
       );
       _dismiss();
     } catch (e) {

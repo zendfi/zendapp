@@ -79,11 +79,13 @@ class ZendWebFrame extends StatelessWidget {
       viewPadding: EdgeInsets.zero,
     );
 
-    // The sidebar sits outside the app's Navigator, so it has no Overlay of
-    // its own. Tooltips (and any other popup) need one; without it hovering
-    // a sidebar button threw "No Overlay widget found" and the follow-on
-    // errors broke rendering. Overlay.wrap gives the whole desktop frame one.
-    return Overlay.wrap(
+    // The sidebar sits outside the app's Navigator, so it needs its own
+    // Overlay for tooltips. A plain Overlay with one opaque entry, not
+    // Overlay.wrap: Overlay.wrap's child is laid out lazily, and on web the
+    // focus system measured it before layout ("Null check operator used on a
+    // null value" from RenderSemanticsAnnotations.size, on every browser
+    // focus change).
+    return _FrameOverlay(
       child: Material(
         color: zt.bgSecondary,
         child: ValueListenableBuilder<int?>(
@@ -534,4 +536,40 @@ class _Wordmark extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One-entry Overlay hosting the desktop frame, so popups (tooltips) shown
+/// from the sidebar have somewhere to go.
+class _FrameOverlay extends StatefulWidget {
+  const _FrameOverlay({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FrameOverlay> createState() => _FrameOverlayState();
+}
+
+class _FrameOverlayState extends State<_FrameOverlay> {
+  late final OverlayEntry _entry = OverlayEntry(
+    opaque: true,
+    maintainState: true,
+    builder: (_) => widget.child,
+  );
+
+  @override
+  void didUpdateWidget(_FrameOverlay old) {
+    super.didUpdateWidget(old);
+    // Rebuild the entry when the frame rebuilds (window resize, tab change).
+    _entry.markNeedsBuild();
+  }
+
+  @override
+  void dispose() {
+    _entry.remove();
+    _entry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Overlay(initialEntries: [_entry]);
 }

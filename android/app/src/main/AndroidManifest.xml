@@ -83,6 +83,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/z/" />
                 <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/a/" />
+                <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/apps/" />
+                <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/i/" />
             </intent-filter>
 
             <!-- Android App Links: zdfi.me/@{tag} payment QR links -->

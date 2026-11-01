@@ -35,6 +35,7 @@ import '../../models/handle_label.dart';
 import '../../design/zend_modal.dart';
 import '../../design/zend_gif.dart';
 import '../../design/zend_money.dart';
+import '../zapps/zapp_tray.dart';
 import '../shell/zend_entry_sheet.dart';
 
 /// State of the E2EE key exchange for the currently open room.
@@ -737,6 +738,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
       DmMessageType.paymentRequest =>
         '💬 Payment request · \$${(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+      DmMessageType.appCard =>
+        '${quotedMsg.appCardData?['app_name'] ?? 'App'}: ${(quotedMsg.appCardData?['slots'] as Map?)?['title'] ?? ''}',
       // Use displayContent, not content — if the quoted message hasn't
       // finished decrypting yet, content still holds the raw `e2ee:` blob
       // and we must never let that leak into the reply-quote metadata.
@@ -2590,6 +2593,10 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 onRequestPayment: _onRequestPayment,
                 onPayRecipient: _onPayRecipient,
                 onPickGif: gifSearchEnabled ? _onPickGif : null,
+                onOpenApps: () => showZAppTray(
+                  context,
+                  counterpartyZendtag: widget.counterparty.zendtag,
+                ),
                 initialDraft: model.dmService.getDraft(widget.roomId),
                 onDraftChanged: (text) =>
                     model.dmService.setDraft(widget.roomId, text),

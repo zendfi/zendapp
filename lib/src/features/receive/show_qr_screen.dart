@@ -11,6 +11,7 @@ import '../../services/sse_service.dart';
 import '../../services/sound_service.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
+import '../../design/zend_note.dart';
 
 class ShowQrScreen extends StatefulWidget {
   const ShowQrScreen({
@@ -271,7 +272,7 @@ class _ShowingView extends StatelessWidget {
         if (note != null && note!.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text(
-            note!,
+            noteText(note),
             style: const TextStyle(
               fontFamily: 'Geist',
               fontSize: 15,
@@ -442,7 +443,7 @@ class _ReceivedViewState extends State<_ReceivedView>
             if (widget.note != null && widget.note!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                widget.note!,
+                noteText(widget.note),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Geist',

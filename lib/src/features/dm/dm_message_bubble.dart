@@ -9,7 +9,9 @@ import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_gif.dart';
+import '../zapps/zapp_card.dart';
 import '../../core/zend_features.dart';
+import '../../design/zend_note.dart';
 
 // ── Corner radius constants ─────────────────────────────────────────────────
 //
@@ -313,6 +315,10 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         isLast: widget.isLast,
       ),
       DmMessageType.vibe => _buildVibeBubble(),
+      DmMessageType.appCard when widget.message.appCardData != null => Align(
+        alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: ZAppCard(card: widget.message.appCardData!),
+      ),
       DmMessageType.paymentRequest => DmPaymentRequestBubble(
         message: widget.message,
         isMe: widget.isMe,
@@ -1172,7 +1178,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
                     if (rd?.note != null && rd!.note!.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
-                        rd.note!,
+                        noteText(rd.note),
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 12,

@@ -176,10 +176,10 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
         _errorMessage = e.userMessage;
         _stage = _WithdrawStage.error;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _WithdrawStage.error;
       });
     }
@@ -242,10 +242,10 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
         _errorMessage = e.userMessage;
         _stage = _WithdrawStage.error;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _WithdrawStage.error;
       });
     }
@@ -355,7 +355,7 @@ class _SavingsWithdrawSheetState extends State<SavingsWithdrawSheet> {
         onDone: () => Navigator.of(context).pop(),
       ),
       _WithdrawStage.error => _ErrorStage(
-        message: _errorMessage ?? 'Something went wrong.',
+        message: _errorMessage ?? "That didn't go through. Try again.",
         onRetry: () => setState(() {
           _pinDigits = '';
           _pinError = null;

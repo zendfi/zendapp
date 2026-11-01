@@ -92,6 +92,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   late _EntryStage _stage;
   final _searchController = TextEditingController();
   final _amountController = TextEditingController();
+
+  /// Shown under the amount when it can't be sent (over balance).
+  String? _amountError;
   final _noteController = TextEditingController();
   // Explicit focus nodes instead of `autofocus: true` on both the search
   // and amount fields. AnimatedSwitcher keeps the outgoing stage mounted
@@ -169,7 +172,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     if (next == null) return;
     ZendFeel.keypadTap();
     _amountController.text = next;
-    setState(() => _confirmingZend = false);
+    setState(() {
+      _confirmingZend = false;
+      _amountError = null;
+    });
   }
 
   /// Emoji suggestions for the note: the user's own recent emoji notes first,
@@ -409,6 +415,17 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   /// money. This makes the irreversible action the only one that costs two
   /// taps, without adding a screen to back out of.
   void _armZendConfirm() {
+    // Catch an over-balance send here, with the real numbers, instead of
+    // after the round trip as a failed banner.
+    final available = ZendScope.of(context).sendableBalance;
+    if (_amount > available + 0.000001) {
+      ZendFeel.error();
+      setState(
+        () => _amountError =
+            "You only have ${formatUsd(available)}. Add money or send less.",
+      );
+      return;
+    }
     if (_amount <= 0) return;
     // Drop the keyboard so the confirm button isn't competing with it for
     // the user's attention or the bottom of the screen.
@@ -926,8 +943,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           // confirmation — confirming $20 and then sending
                           // $200 is exactly what the confirmation exists
                           // to prevent.
-                          onChanged: (_) =>
-                              setState(() => _confirmingZend = false),
+                          onChanged: (_) => setState(() {
+                            _confirmingZend = false;
+                            _amountError = null;
+                          }),
                         ),
                       ),
                     ],
@@ -941,6 +960,17 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   // read. The editable field below hides at the same time,
                   // so the note appears in exactly one place per state
                   // rather than twice.
+                  if (_amountError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _amountError!,
+                        textAlign: TextAlign.center,
+                        style: ZendTextStyles.caption.copyWith(
+                          color: zt.destructive,
+                        ),
+                      ),
+                    ),
                   if (gifIdFromNote(_note) != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),

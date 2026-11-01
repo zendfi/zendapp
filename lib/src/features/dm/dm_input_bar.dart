@@ -27,6 +27,7 @@ class DmInputBar extends StatefulWidget {
     this.onRequestPayment,
     this.onPayRecipient,
     this.onPickGif,
+    this.onOpenApps,
     this.initialDraft = '',
     this.onDraftChanged,
   });
@@ -40,6 +41,9 @@ class DmInputBar extends StatefulWidget {
 
   /// Opens the GIF picker; null hides the GIF tile (no GIPHY key).
   final VoidCallback? onPickGif;
+
+  /// Opens the ZApp tray; null hides the Apps tile.
+  final VoidCallback? onOpenApps;
 
   /// Draft text to restore into the composer when this room is (re)opened —
   /// e.g. from [DmService.getDraft], so a message typed but not sent
@@ -560,6 +564,18 @@ class _DmInputBarState extends State<DmInputBar>
                   onTap: () {
                     _closePanel();
                     widget.onPickGif!.call();
+                  },
+                ),
+              ],
+              if (widget.onOpenApps != null) ...[
+                const SizedBox(width: 10),
+                _MonoActionTile(
+                  icon: PhosphorIconsRegular.squaresFour,
+                  label: 'Apps',
+                  zt: zt,
+                  onTap: () {
+                    _closePanel();
+                    widget.onOpenApps!.call();
                   },
                 ),
               ],

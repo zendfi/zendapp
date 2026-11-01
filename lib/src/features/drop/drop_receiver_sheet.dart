@@ -8,6 +8,7 @@ import '../../design/zend_tokens.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 const _kDropBackground = Color(0xFF080808);
 
@@ -212,7 +213,7 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
                           ),
                         ),
                         child: Text(
-                          '"${widget.note}"',
+                          '"${noteText(widget.note)}"',
                           textAlign: TextAlign.center,
                           style: ZendTextStyles.tabularNumeric.copyWith(
                             fontSize: 13,

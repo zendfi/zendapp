@@ -88,6 +88,13 @@ class DeepLinkHandler {
         if (uri.pathSegments[0] == 'a' && id.isNotEmpty) {
           return DeepLinkPayload(zendtag: '', zlinkAskId: id);
         }
+        // app.usezend.app/apps/{slug} — open a ZApp; /i/{id} — open an interaction.
+        if (uri.pathSegments[0] == 'apps' && id.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', zappSlug: id);
+        }
+        if (uri.pathSegments[0] == 'i' && id.startsWith('int_')) {
+          return DeepLinkPayload(zendtag: '', interactionId: id);
+        }
       }
 
       // https://zdfi.me/cli-auth/{code} — "Pay with Zend" CLI device
@@ -179,6 +186,10 @@ class DeepLinkPayload {
   /// Ask link id (`zl_...`).
   final String? zlinkAskId;
 
+  /// ZApp slug (`/apps/{slug}`) or interaction id (`/i/{id}`).
+  final String? zappSlug;
+  final String? interactionId;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
@@ -189,7 +200,11 @@ class DeepLinkPayload {
     this.zlinkGiveId,
     this.zlinkKey,
     this.zlinkAskId,
+    this.zappSlug,
+    this.interactionId,
   });
+
+  bool get isZApp => zappSlug != null || interactionId != null;
 
   bool get isZlinkGive => zlinkGiveId != null;
   bool get isZlinkAsk => zlinkAskId != null;

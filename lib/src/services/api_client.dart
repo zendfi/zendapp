@@ -139,6 +139,7 @@ class ApiClient {
                   statusCode: response.statusCode ?? 500,
                   errorCode: body['error'] as String,
                   rawMessage: body['message'] as String,
+                  retryable: body['retryable'] as bool?,
                 ),
                 type: error.type,
               ),
@@ -853,6 +854,24 @@ class ApiClient {
         '/api/zend/v2/zlinks$path',
         data: body ?? const <String, dynamic>{},
         options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// ZendAppKit endpoints under `/api/zend/v2`.
+  Future<Map<String, dynamic>> appkit(
+    String method,
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
+    try {
+      final response = await _dio.request(
+        '/api/zend/v2$path',
+        data: body,
+        options: Options(method: method),
       );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {

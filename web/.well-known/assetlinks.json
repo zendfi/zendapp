@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.zendfi.zendapp",
+      "sha256_cert_fingerprints": [
+        "8D:A1:78:3C:4D:30:0F:61:64:1F:91:7D:58:F9:01:2E:E8:BA:5A:6F:36:BC:9B:4D:58:F4:FB:63:41:B8:5C:18"
+      ]
+    }
+  }
+]

@@ -9,7 +9,6 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_money.dart';
-import '../../design/zend_mark.dart';
 import '../../design/zend_motion_widgets.dart';
 import '../../services/zend_analytics.dart';
 import '../send/qr_scanner_screen.dart';
@@ -542,8 +541,6 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ZendMark(size: 72),
-            const SizedBox(height: 20),
             Text(
               'Nothing here yet.',
               textAlign: TextAlign.center,
@@ -556,18 +553,13 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Send your first Zend: pick a person, an amount and an emoji.',
+              'Send your first Zend: pick a person, an amount and an emoji or a GIF.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 14,
                 color: zt.textSecondary,
               ),
-            ),
-            const SizedBox(height: 20),
-            PrimaryButton(
-              label: 'Zend',
-              onPressed: () => showZendEntrySheet(context),
             ),
           ],
         ),

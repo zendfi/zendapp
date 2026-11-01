@@ -1,3 +1,8 @@
+import '../../design/zend_mark.dart';
+import '../../design/zend_avatar.dart';
+import '../../design/zend_note.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
@@ -10,8 +15,6 @@ import '../send/send_flow_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
-import '../../models/handle_label.dart';
-import '../../design/zend_gif.dart';
 
 /// Opens the transaction receipt as a full-screen bottom sheet.
 /// Handles both zend-to-zend transfers (entry != null) and bank sends (bankOrder != null).
@@ -54,236 +57,438 @@ Future<void> showTransactionReceipt(
   return Future.value();
 }
 
-class _ReceiptSheet extends StatelessWidget {
+class _ReceiptSheet extends StatefulWidget {
   const _ReceiptSheet({required this.tx, required this.entry});
 
   final ZendTransaction tx;
   final TransferHistoryEntry entry;
 
   @override
+  State<_ReceiptSheet> createState() => _ReceiptSheetState();
+}
+
+/// The receipt as a Zend moment rather than a bank statement: the note
+/// (sticker, GIF or words) leads, then who paid whom as one sentence, the
+/// amount, the two people, and the record tucked behind "Details".
+class _ReceiptSheetState extends State<_ReceiptSheet> {
+  final _cardKey = GlobalKey();
+  bool _showDetails = false;
+  bool _sharing = false;
+
+  TransferHistoryEntry get entry => widget.entry;
+
+  Future<void> _share(String fallbackText) async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      // Let the share card's images settle, then capture it as a PNG.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      final boundary =
+          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final image = await boundary?.toImage(pixelRatio: 3);
+      final data = await image?.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) throw StateError('capture failed');
+      await Share.shareXFiles([
+        XFile.fromData(
+          data.buffer.asUint8List(),
+          mimeType: 'image/png',
+          name: 'zend-receipt.png',
+        ),
+      ], text: fallbackText);
+    } catch (_) {
+      // Image share unavailable (some browsers): share the words instead.
+      await Share.share(fallbackText);
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     final isSent = entry.senderZendtag == model.currentZendtag;
-    final counterparty = isSent ? entry.recipientZendtag : entry.senderZendtag;
-    final isConfirmed = entry.status == 'confirmed';
-    final isPending = entry.status == 'pending';
+    final status = entry.status;
+    final isDone = status == 'confirmed';
+    final isPending = status == 'pending';
+    final amount = double.tryParse(entry.amountUsdc) ?? 0.0;
 
-    final statusColor = isConfirmed
-        ? zt.moneyIn
-        : isPending
-        ? zt.pending
-        : zt.destructive;
-    final statusIcon = isConfirmed
-        ? PhosphorIconsRegular.checkCircle
-        : isPending
-        ? PhosphorIconsRegular.hourglass
-        : PhosphorIconsRegular.xCircle;
-    final statusLabel = isConfirmed
-        ? 'Confirmed'
-        : isPending
-        ? 'Processing'
-        : 'Failed';
+    final me = personName(
+      displayName: model.currentDisplayName,
+      handle: model.currentZendtag,
+    );
+    final them = personName(
+      displayName: isSent
+          ? entry.recipientDisplayName
+          : entry.senderDisplayName,
+      handle: isSent ? entry.recipientZendtag : entry.senderZendtag,
+    );
+    final themTag = isSent ? entry.recipientZendtag : entry.senderZendtag;
+    final themAvatar = isSent
+        ? entry.recipientAvatarUrl
+        : entry.senderAvatarUrl;
+    final sentence = isSent ? 'You paid $them' : '$them paid you';
+    final note = entry.note?.trim() ?? '';
+    final hasNote = note.isNotEmpty;
 
-    final rawAmount = entry.amountUsdc;
-    final amountDouble = double.tryParse(rawAmount) ?? 0.0;
-    final amountStr = formatUsd(amountDouble);
-    final directionLabel = isSent ? 'Sent to' : 'Received from';
+    final statusLine = isDone
+        ? null
+        : isPending
+        ? ('Still on its way', zt.pending)
+        : ("That didn't go through. Try again.", zt.destructive);
 
-    final screenHeight = MediaQuery.of(context).size.height;
+    final shareText = [
+      '$sentence ${formatUsd(amount)} on Zend',
+      if (hasNote) noteText(note),
+    ].join(' · ');
 
     return Container(
-      // Full screen height
-      height: screenHeight,
+      height: MediaQuery.of(context).size.height,
       decoration: BoxDecoration(
         color: zt.bgPrimary,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(ZendRadii.xxl),
+          top: Radius.circular(ZendRadii.sheet),
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          const SizedBox(height: 14),
-          const ZendSheetHandle(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── Status icon ──
-                  if (gifIdFromNote(entry.note) != null) ...[
-                    Center(
-                      child: ZendGifTile(
-                        gifIdFromNote(entry.note)!,
-                        height: 160,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ] else if (isEmojiNote(entry.note)) ...[
-                    Center(
-                      child: ZendEmojiTile(
-                        entry.note!.trim(),
-                        size: 64,
-                        burst: !isSent,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  Center(
-                    child: ZendGlow(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            statusIcon,
-                            color: statusColor,
-                            size: 30,
-                            semanticLabel: statusLabel,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Amount ──
-                  Center(
-                    child: ZendAmount(
-                      amountDouble,
-                      style: ZendTextStyles.displayL,
-                      direction: isSent
-                          ? MoneyDirection.outgoing
-                          : MoneyDirection.incoming,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-
-                  // ── Direction ──
-                  Center(
-                    child: Text(
-                      '$directionLabel ${handleLabel(counterparty)}',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 15,
-                        color: zt.textSecondary,
-                      ),
-                    ),
-                  ),
-
-                  // ── Note ──
-                  if (entry.note != null &&
-                      entry.note!.isNotEmpty &&
-                      !isMediaNote(entry.note)) ...[
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: zt.bgSecondary,
-                          borderRadius: BorderRadius.circular(ZendRadii.pill),
-                        ),
-                        child: Text(
-                          '"${entry.note}"',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 13,
-                            color: zt.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 28),
-
-                  // ── Details card ──
-                  Container(
-                    decoration: BoxDecoration(
-                      color: zt.bgSecondary,
-                      borderRadius: BorderRadius.circular(ZendRadii.xxl),
-                    ),
-                    child: Column(
-                      children: [
-                        _DetailRow(
-                          label: 'From',
-                          value: handleLabel(entry.senderZendtag),
-                          mono: true,
-                        ),
-                        Divider(color: zt.border, height: 1),
-                        _DetailRow(
-                          label: 'To',
-                          value: handleLabel(entry.recipientZendtag),
-                          mono: true,
-                        ),
-                        Divider(color: zt.border, height: 1),
-                        _DetailRow(
-                          label: 'Date',
-                          value: formatDateTime(entry.createdAt),
-                        ),
-                        Divider(color: zt.border, height: 1),
-                        _DetailRow(
-                          label: 'Status',
-                          value: statusLabel,
-                          valueColor: statusColor,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  if (isSent) ...[
-                    PrimaryButton(
-                      label: 'Repeat payment',
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        showSendFlowSheet(
-                          context,
-                          amount: amountDouble,
-                          prefilledRecipient: entry.recipientZendtag,
-                          prefilledNote: entry.note,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  OutlineActionButton(
-                    label: 'Share receipt',
-                    onPressed: () => Share.share(
-                      [
-                        'Zend! receipt',
-                        '${isSent ? 'Sent' : 'Received'} $amountStr '
-                            '${isSent ? 'to' : 'from'} ${handleLabel(counterparty)}',
-                        if (entry.note?.isNotEmpty == true)
-                          gifIdFromNote(entry.note) != null
-                              ? '(GIF)'
-                              : entry.note!,
-                        formatDateTime(entry.createdAt),
-                        'Status: $statusLabel',
-                      ].join('\n'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlineActionButton(
-                    label: 'Close',
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
+          // Off-screen share card: rendered for capture, never seen here.
+          Positioned(
+            left: -2000,
+            top: 0,
+            child: RepaintBoundary(
+              key: _cardKey,
+              child: _ShareCard(
+                sentence: sentence,
+                amount: amount,
+                note: hasNote ? note : null,
+                seed: themTag,
               ),
             ),
           ),
+          Column(
+            children: [
+              const SizedBox(height: 14),
+              const ZendSheetHandle(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── The note leads ──
+                      Center(
+                        child: hasNote
+                            ? ZendNote(
+                                note,
+                                stickerSize: 88,
+                                gifHeight: 200,
+                                burst: !isSent,
+                                textAlign: TextAlign.center,
+                                textStyle: ZendTextStyles.title.copyWith(
+                                  color: zt.textPrimary,
+                                ),
+                              )
+                            : _PeoplePair(
+                                meInitial: model.selfInitial,
+                                meAvatar: model.currentAvatarUrl,
+                                themName: them,
+                                themAvatar: themAvatar,
+                                themSeed: themTag,
+                                outgoing: isSent,
+                                size: 36,
+                              ),
+                      ),
+                      const SizedBox(height: 24),
+                      // ── Who paid whom, then how much ──
+                      Text(
+                        sentence,
+                        textAlign: TextAlign.center,
+                        style: ZendTextStyles.title.copyWith(
+                          color: zt.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Center(
+                        child: ZendGlow(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 4,
+                            ),
+                            child: ZendAmount(
+                              amount,
+                              style: ZendTextStyles.displayL,
+                              direction: isSent
+                                  ? MoneyDirection.outgoing
+                                  : MoneyDirection.incoming,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (statusLine != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          statusLine.$1,
+                          textAlign: TextAlign.center,
+                          style: ZendTextStyles.caption.copyWith(
+                            color: statusLine.$2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        formatRelativeTime(entry.createdAt),
+                        textAlign: TextAlign.center,
+                        style: ZendTextStyles.caption.copyWith(
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                      if (hasNote) ...[
+                        const SizedBox(height: 20),
+                        Center(
+                          child: _PeoplePair(
+                            meInitial: model.selfInitial,
+                            meAvatar: model.currentAvatarUrl,
+                            themName: them,
+                            themAvatar: themAvatar,
+                            themSeed: themTag,
+                            outgoing: isSent,
+                            size: 22,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+                      // ── Actions ──
+                      Row(
+                        children: [
+                          Expanded(
+                            child: PrimaryButton(
+                              label: isSent ? 'Zend again' : 'Zend back',
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                showSendFlowSheet(
+                                  context,
+                                  amount: isSent ? amount : 0,
+                                  prefilledRecipient: themTag,
+                                  prefilledNote: isSent ? entry.note : null,
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlineActionButton(
+                              label: _sharing ? 'Sharing…' : 'Share',
+                              onPressed: () => _share(shareText),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // ── The record, for support, folded away ──
+                      Center(
+                        child: TextButton(
+                          onPressed: () =>
+                              setState(() => _showDetails = !_showDetails),
+                          child: Text(
+                            _showDetails ? 'Hide details' : 'Details',
+                            style: ZendTextStyles.caption.copyWith(
+                              color: zt.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_showDetails)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: zt.bgSecondary,
+                            borderRadius: BorderRadius.circular(ZendRadii.card),
+                          ),
+                          child: Column(
+                            children: [
+                              _DetailRow(
+                                label: 'From',
+                                value: isSent ? me : them,
+                              ),
+                              Divider(color: zt.border, height: 1),
+                              _DetailRow(
+                                label: 'To',
+                                value: isSent ? them : me,
+                              ),
+                              Divider(color: zt.border, height: 1),
+                              _DetailRow(
+                                label: 'When',
+                                value: formatDateTime(entry.createdAt),
+                              ),
+                              Divider(color: zt.border, height: 1),
+                              _DetailRow(
+                                label: 'Status',
+                                value: isDone
+                                    ? 'Done'
+                                    : isPending
+                                    ? 'On its way'
+                                    : "Didn't go through",
+                              ),
+                              Divider(color: zt.border, height: 1),
+                              _DetailRow(
+                                label: 'Reference',
+                                value: entry.id.length > 8
+                                    ? entry.id.substring(0, 8).toUpperCase()
+                                    : entry.id.toUpperCase(),
+                                mono: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Two avatars with a soft arrow between them: who the money went from and to.
+class _PeoplePair extends StatelessWidget {
+  const _PeoplePair({
+    required this.meInitial,
+    required this.meAvatar,
+    required this.themName,
+    required this.themAvatar,
+    required this.themSeed,
+    required this.outgoing,
+    required this.size,
+  });
+
+  final String meInitial;
+  final String? meAvatar;
+  final String themName;
+  final String? themAvatar;
+  final String themSeed;
+  final bool outgoing;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final me = ZendAvatar(
+      radius: size,
+      photoUrl: meAvatar,
+      initials: meInitial,
+    );
+    final them = ZendAvatar(
+      radius: size,
+      photoUrl: themAvatar,
+      initials: themName.isEmpty ? '?' : themName[0].toUpperCase(),
+      seed: themSeed,
+    );
+    return Semantics(
+      label: outgoing ? 'From you to $themName' : 'From $themName to you',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          outgoing ? me : them,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: size * 0.4),
+            child: Icon(
+              PhosphorIconsRegular.arrowRight,
+              size: size * 0.7,
+              color: zt.textSecondary,
+            ),
+          ),
+          outgoing ? them : me,
+        ],
+      ),
+    );
+  }
+}
+
+/// The image people share: a card tinted with the other person's colour,
+/// the note, the sentence and the amount, with the Zend mark. Captured to
+/// PNG; never shown on screen.
+class _ShareCard extends StatelessWidget {
+  const _ShareCard({
+    required this.sentence,
+    required this.amount,
+    required this.note,
+    required this.seed,
+  });
+
+  final String sentence;
+  final double amount;
+  final String? note;
+  final String seed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = ZendAvatar.colorFor(seed);
+    const fg = Colors.white;
+    return MediaQuery(
+      data: const MediaQueryData(),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Container(
+          width: 360,
+          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(tint, Colors.black, 0.15)!,
+                Color.lerp(tint, Colors.black, 0.55)!,
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (note != null) ...[
+                ZendNote(
+                  note!,
+                  stickerSize: 96,
+                  gifHeight: 180,
+                  textAlign: TextAlign.center,
+                  textStyle: ZendTextStyles.title.copyWith(color: fg),
+                ),
+                const SizedBox(height: 24),
+              ],
+              Text(
+                sentence,
+                textAlign: TextAlign.center,
+                style: ZendTextStyles.title.copyWith(color: fg),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                formatUsd(amount),
+                style: ZendTextStyles.displayL.copyWith(color: fg),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const ZendMark(size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Zend!',
+                    style: ZendTextStyles.body.copyWith(
+                      color: fg,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

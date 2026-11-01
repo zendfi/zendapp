@@ -161,10 +161,10 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         _errorMessage = e.userMessage;
         _stage = _DepositStage.error;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _DepositStage.error;
       });
     }
@@ -218,10 +218,10 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         _errorMessage = e.userMessage;
         _stage = _DepositStage.error;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _stage = _DepositStage.error;
       });
     }
@@ -290,7 +290,7 @@ class _SavingsDepositSheetState extends State<SavingsDepositSheet> {
         onDone: () => Navigator.of(context).pop(),
       ),
       _DepositStage.error => _ErrorStage(
-        message: _errorMessage ?? 'Something went wrong.',
+        message: _errorMessage ?? "That didn't go through. Try again.",
         onRetry: () {
           setState(() {
             _pinDigits = '';

@@ -20,7 +20,10 @@ import '../../navigation/zend_routes.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
+import '../../services/appkit_service.dart';
+import '../zapps/zapp_card.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed, no thousands separator logic beyond what's already
@@ -78,6 +81,22 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
   final TextEditingController _filterController = TextEditingController();
   final FocusNode _filterFocus = FocusNode();
 
+  /// Recent ZApp cards (results, invites, status) shown above the threads.
+  List<Map<String, dynamic>> _appCards = const [];
+
+  bool get _showAppCards => _appCards.isNotEmpty && _filterQuery.isEmpty;
+
+  Future<void> _loadAppCards() async {
+    try {
+      final cards = await AppKitService(
+        ZendScope.of(context).walletService.apiClient,
+      ).feed();
+      if (mounted) setState(() => _appCards = cards.take(5).toList());
+    } catch (_) {
+      // Apps are optional on this screen; never block activity on them.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +108,7 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
       // exactly like LegacyActivityListView already does.
       model.fetchHistory();
       model.fetchThreadedActivity();
+      _loadAppCards();
     });
     _loadMutePreference();
     _filterController.addListener(() {
@@ -479,7 +499,12 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
             // ── Content ──
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () => model.fetchThreadedActivity(),
+                onRefresh: () async {
+                  await Future.wait([
+                    model.fetchThreadedActivity(),
+                    _loadAppCards(),
+                  ]);
+                },
                 child: isLoading
                     ? const ActivityFeedSkeleton()
                     : feedItems.isEmpty
@@ -506,8 +531,12 @@ class _ThreadedActivityScreenState extends State<ThreadedActivityScreen> {
                     : ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                        itemCount: feedItems.length,
-                        itemBuilder: (context, i) {
+                        itemCount: feedItems.length + (_showAppCards ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (_showAppCards && index == 0) {
+                            return _AppCardsSection(cards: _appCards);
+                          }
+                          final i = _showAppCards ? index - 1 : index;
                           final item = feedItems[i];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
@@ -1223,7 +1252,7 @@ class _UserThreadTile extends StatelessWidget {
                     if (mostRecent.note?.isNotEmpty == true && !isVibe) ...[
                       const SizedBox(height: 3),
                       Text(
-                        mostRecent.note!,
+                        noteText(mostRecent.note),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1694,6 +1723,42 @@ class _OverflowItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Feed cards from ZApps the user is connected to. Drawn by core templates.
+class _AppCardsSection extends StatelessWidget {
+  const _AppCardsSection({required this.cards});
+  final List<Map<String, dynamic>> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 2),
+            child: Text(
+              'From your apps',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: zt.textSecondary,
+              ),
+            ),
+          ),
+          for (final c in cards)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ZAppCard(key: ValueKey(c['id']), card: c),
+            ),
+        ],
       ),
     );
   }

@@ -84,7 +84,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.zendfi.zendapp
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: ${{ inputs.track || 'internal' }}
+          tracks: ${{ inputs.track || 'internal' }}
           # Internal builds go straight to testers; no review step.
           status: completed
           releaseName: "${{ github.run_number }} (${{ github.sha }})"

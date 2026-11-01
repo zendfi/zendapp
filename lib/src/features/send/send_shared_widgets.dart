@@ -6,6 +6,7 @@ import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Shared PIN entry stage widget, extracted from SendFlowSheet for reuse
 /// in QrPaymentSheet and other payment flows.
@@ -381,7 +382,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
             if (widget.note != null && widget.note!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                '"${widget.note}"',
+                '"${noteText(widget.note)}"',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Geist',

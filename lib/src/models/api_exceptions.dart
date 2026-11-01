@@ -1,3 +1,5 @@
+import 'error_copy.dart';
+
 abstract class ZendException implements Exception {
   String get userMessage;
 
@@ -14,51 +16,14 @@ class ApiException extends ZendException {
     required this.statusCode,
     required this.errorCode,
     required this.rawMessage,
+    this.retryable,
   });
 
-  @override
-  String get userMessage => _mapErrorCodeToMessage(errorCode);
+  /// The backend's `retryable` flag, when the body carried one.
+  final bool? retryable;
 
-  static String _mapErrorCodeToMessage(String errorCode) {
-    switch (errorCode) {
-      case 'OTP_RATE_LIMITED':
-        return 'Please wait a moment before requesting another code.';
-      case 'INVALID_PHONE_FORMAT':
-        return 'Please enter a valid phone number.';
-      case 'INVALID_OTP_CODE':
-        return "That code doesn't match. Please try again.";
-      case 'OTP_EXPIRED':
-        return 'Your code has expired. Please request a new one.';
-      case 'OTP_MAX_ATTEMPTS':
-        return 'Too many attempts. Please request a new code.';
-      case 'PHONE_ALREADY_REGISTERED':
-        return 'This phone number is already registered. Try signing in.';
-      case 'ZENDTAG_UNAVAILABLE':
-        return 'That username is taken. Please choose another.';
-      case 'INSUFFICIENT_BALANCE':
-        return "You don't have enough balance for this transfer.";
-      case 'RECIPIENT_NOT_FOUND':
-        return "We couldn't find that username. Please check and try again.";
-      case 'INVALID_AMOUNT':
-        return r'Please enter a valid amount between $0.01 and $10,000.';
-      case 'TRANSFER_RATE_LIMITED':
-        return "You've sent too many transfers recently. Please wait and try again.";
-      case 'BACKUP_NOT_FOUND':
-        return 'No wallet backup found. Setting up a new wallet.';
-      case 'NONCE_ALREADY_USED':
-      case 'NONCE_SUPERSEDED':
-      case 'INVALID_NONCE':
-        return 'Beacon expired. Scanning for a fresh connection…';
-      case 'VIBE_DAILY_LIMIT_EXCEEDED':
-        return "You've hit today's \$25 Vibe limit. Try again tomorrow.";
-      case 'POOL_NOT_ACTIVE':
-        return 'This pool is no longer active.';
-      case 'POOL_FULL':
-        return 'This pool has already reached its goal.';
-      default:
-        return 'Something went wrong. Please try again.';
-    }
-  }
+  @override
+  String get userMessage => errorCopyFor(errorCode, retryable: retryable);
 
   @override
   String toString() => 'ApiException($statusCode, $errorCode): $rawMessage';
@@ -88,3 +53,9 @@ class PinDecryptionException extends ZendException {
   @override
   String toString() => 'PinDecryptionException: $userMessage';
 }
+
+/// Friendly text for any error a flow can catch: our exceptions carry their
+/// own copy; everything else gets the safe generic line (the raw error is for
+/// logs, never the screen).
+String friendlyError(Object error) =>
+    error is ZendException ? error.userMessage : generic;

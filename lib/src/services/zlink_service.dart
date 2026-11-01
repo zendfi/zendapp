@@ -11,6 +11,11 @@ import 'sui_zklogin_service.dart';
 
 /// Must match `DOMAIN` in `move/zend_zlink/sources/zlink.move`.
 const String kZlinkClaimDomain = 'zend-zlink-claim-v1';
+
+/// Shown whenever the device refuses to approve what the server prepared.
+const String _kSafetyStop =
+    "We stopped this because something didn't look right. Your money hasn't moved.";
+
 const String kZlinkWebOrigin = 'https://app.usezend.app';
 
 /// Optional pin for the published package. When set, every prepared Zlink
@@ -85,6 +90,7 @@ class ZlinkService {
   final FlutterSecureStorage _storage;
   static final Ed25519 _ed25519 = Ed25519();
   static const _keyPrefix = 'zlink_key:';
+  static const _pubPrefix = 'zlink_pub:';
   static const _pinnedAddressKey = 'zlink_pinned_address';
 
   // ── Own address (pinned) ──────────────────────────────────────────────────
@@ -102,7 +108,7 @@ class ZlinkService {
     }
     if (pinned != reported) {
       throw const ZlinkException(
-        "Your account address changed unexpectedly. Sign out and back in.",
+        "Something about your account changed. Sign out and back in.",
       );
     }
     return reported;
@@ -122,32 +128,32 @@ class ZlinkService {
     try {
       tx = decodeSuiTransaction(Uint8List.fromList(base64.decode(txBase64)));
     } on SuiTransactionDecodeException {
-      throw const ZlinkException('Could not read this transaction. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     if (normaliseSuiAddress(tx.sender) != normaliseSuiAddress(sender)) {
-      throw const ZlinkException('Transaction sender is wrong. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     final calls = tx.commands.whereType<SuiMoveCallCommand>().toList();
     if (calls.length != 1 || tx.commands.length != 1) {
-      throw const ZlinkException('Unexpected transaction shape. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     final call = calls.single;
     if (call.module != 'zlink' || call.function != function) {
-      throw ZlinkException('Unexpected call ${call.target}. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     if (kZlinkPackageId.isNotEmpty &&
         normaliseSuiAddress(call.package) !=
             normaliseSuiAddress(kZlinkPackageId)) {
-      throw const ZlinkException('Unexpected contract. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     final withdrawals = tx.inputs.whereType<SuiFundsWithdrawalInput>().toList();
     if (withdrawBaseUnits == null) {
       if (withdrawals.isNotEmpty) {
-        throw const ZlinkException('This step should not move your money. Not signing.');
+        throw const ZlinkException(_kSafetyStop);
       }
     } else if (withdrawals.length != 1 ||
         withdrawals.single.amount != withdrawBaseUnits) {
-      throw const ZlinkException('Amount does not match. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
   }
 
@@ -175,6 +181,8 @@ class ZlinkService {
     String? recipientHint,
     int? ngnQuoteKobo,
     Duration? expiresIn,
+    String? app,
+    String? reference,
   }) async {
     final keyPair = await _ed25519.newKeyPair();
     final seed = Uint8List.fromList(await keyPair.extractPrivateKeyBytes());
@@ -192,6 +200,8 @@ class ZlinkService {
       'recipient_hint': ?recipientHint,
       'ngn_quote_kobo': ?ngnQuoteKobo,
       if (expiresIn != null) 'expires_in_secs': expiresIn.inSeconds,
+      'app': ?app,
+      'reference': ?reference,
     });
     final tx = _txOf(prepared);
     _verify(
@@ -200,24 +210,41 @@ class ZlinkService {
       function: 'create',
       withdrawBaseUnits: perClaim * BigInt.from(uses),
     );
+    // Save the key under its public key *before* signing. If anything fails
+    // after the money moves, the key is still on this device and My Links can
+    // re-attach it once the link shows up.
+    final pubHex = publicKey
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+    await _storage.write(key: '$_pubPrefix$pubHex', value: base64.encode(seed));
     final result = await _signAndSubmit('/give/submit', tx);
     final id = result['id'] as String?;
     if (id == null) {
-      // Executed but not yet indexed. The money is safe in the escrow; the
-      // link appears in My Links once indexed, but its key must not be lost.
       throw const ZlinkException(
-        'Your link is being set up. Check My Links in a moment.',
+        'Your link is being set up. It will appear in My Links in a moment.',
       );
     }
     await _storage.write(key: '$_keyPrefix$id', value: base64.encode(seed));
+    await _storage.delete(key: '$_pubPrefix$pubHex');
     return CreatedGiveLink(id: id, seed: seed);
   }
 
   /// The locally stored key for a link this device created, for re-sharing.
-  Future<CreatedGiveLink?> localLink(String id) async {
-    final raw = await _storage.read(key: '$_keyPrefix$id');
+  Future<CreatedGiveLink?> localLink(String id, {String? claimPubkey}) async {
+    var raw = await _storage.read(key: '$_keyPrefix$id');
+    if (raw == null && claimPubkey != null) {
+      // Created while the link was still pending: adopt the key saved by pubkey.
+      raw = await _storage.read(key: '$_pubPrefix${claimPubkey.toLowerCase()}');
+      if (raw != null) {
+        await _storage.write(key: '$_keyPrefix$id', value: raw);
+        await _storage.delete(key: '$_pubPrefix${claimPubkey.toLowerCase()}');
+      }
+    }
     if (raw == null) return null;
-    return CreatedGiveLink(id: id, seed: Uint8List.fromList(base64.decode(raw)));
+    return CreatedGiveLink(
+      id: id,
+      seed: Uint8List.fromList(base64.decode(raw)),
+    );
   }
 
   Future<Map<String, dynamic>> previewGive(String id) =>
@@ -259,8 +286,12 @@ class ZlinkService {
     double? maxAmountUsd,
     int? maxPayments,
     String? memo,
+    String? app,
+    String? reference,
   }) async {
     final data = await _api.zlinkPost('/ask', {
+      'app': ?app,
+      'reference': ?reference,
       'amount_usd': ?amountUsd,
       'max_amount_usd': ?maxAmountUsd,
       'max_payments': ?maxPayments,
@@ -269,11 +300,15 @@ class ZlinkService {
     return data['url'] as String;
   }
 
-  Future<Map<String, dynamic>> previewAsk(String id) => _api.zlinkGet('/ask/$id');
+  Future<Map<String, dynamic>> previewAsk(String id) =>
+      _api.zlinkGet('/ask/$id');
 
   /// Pays an ask link. The prepared bytes are a plain gasless transfer, checked
   /// with the same verifier the normal send flow uses before signing.
-  Future<Map<String, dynamic>> payAsk(String id, {required double amountUsd}) async {
+  Future<Map<String, dynamic>> payAsk(
+    String id, {
+    required double amountUsd,
+  }) async {
     final payer = await _myAddress();
     final prepared = await _api.zlinkPost('/ask/$id/pay/prepare', {
       'amount_usd': amountUsd,
@@ -287,10 +322,10 @@ class ZlinkService {
           senderAddress: payer,
         ),
       );
-    } on SuiTransactionVerificationException catch (e) {
-      throw ZlinkException('Payment check failed (${e.reason}). Not signing.');
+    } on SuiTransactionVerificationException {
+      throw const ZlinkException(_kSafetyStop);
     } on SuiTransactionDecodeException {
-      throw const ZlinkException('Could not read this payment. Not signing.');
+      throw const ZlinkException(_kSafetyStop);
     }
     return _signAndSubmit('/ask/$id/pay/submit', tx);
   }
@@ -301,7 +336,6 @@ class ZlinkService {
 
   Future<List<Map<String, dynamic>>> myLinks() async {
     final data = await _api.zlinkGet('');
-    return (data['links'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
+    return (data['links'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
   }
 }

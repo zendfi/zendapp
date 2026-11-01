@@ -142,10 +142,10 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
         _processing = false;
         _pinDigits = '';
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Something went wrong. Please try again.';
+        _errorMessage = friendlyError(e);
         _processing = false;
         _pinDigits = '';
       });

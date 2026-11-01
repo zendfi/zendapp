@@ -5,6 +5,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/drop_models.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Tier 1 (≤$50) confirmation stage.
 ///
@@ -125,7 +126,7 @@ class _DropCountdownStageState extends State<DropCountdownStage>
         if (widget.note != null && widget.note!.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
-            widget.note!,
+            noteText(widget.note),
             style: ZendTextStyles.tabularNumeric.copyWith(
               fontSize: 12,
               color: zt.textSecondary,

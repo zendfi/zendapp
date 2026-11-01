@@ -12,6 +12,7 @@ import 'activity_receipt_builder.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 /// Opened by tapping a person node in the "Your Mutuals" Graph_View —
 /// shows that person's full authorized activity: the viewer's own edges
@@ -262,7 +263,7 @@ class _PersonActivityRow extends StatelessWidget {
                     if (edge.note?.isNotEmpty == true) ...[
                       const SizedBox(height: 3),
                       Text(
-                        edge.note!,
+                        noteText(edge.note),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

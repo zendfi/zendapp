@@ -15,6 +15,7 @@ import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
+import '../../design/zend_note.dart';
 
 const _kReactionEmojis = [
   '🔥',
@@ -797,7 +798,7 @@ class _FeedPost extends StatelessWidget {
                 if (edge.note?.isNotEmpty == true && !isVibe) ...[
                   const SizedBox(height: 8),
                   Text(
-                    edge.note!,
+                    noteText(edge.note),
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 14,

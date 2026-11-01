@@ -9,6 +9,7 @@ import '../../models/drop_models.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_note.dart';
 
 class DropConfirmStage extends StatefulWidget {
   const DropConfirmStage({
@@ -160,7 +161,7 @@ class _DropConfirmStageState extends State<DropConfirmStage> {
           if (widget.note != null && widget.note!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              widget.note!,
+              noteText(widget.note),
               textAlign: TextAlign.center,
               style: ZendTextStyles.tabularNumeric.copyWith(
                 fontSize: 12,

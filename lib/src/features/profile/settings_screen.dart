@@ -98,11 +98,10 @@ class SettingsScreen extends StatelessWidget {
                         _Tile(
                           icon: PhosphorIconsRegular.link,
                           label: 'My Links',
-                          subtitle: 'Money you sent as links and links you\'re collecting on',
-                          onTap: () => pushZendSlide(
-                            context,
-                            const MyLinksScreen(),
-                          ),
+                          subtitle:
+                              'Money you sent as links and links you\'re collecting on',
+                          onTap: () =>
+                              pushZendSlide(context, const MyLinksScreen()),
                         ),
                       ],
                     ),

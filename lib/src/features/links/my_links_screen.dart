@@ -74,9 +74,8 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
     }
   }).toList();
 
-  void _snack(String text) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _share(Map<String, dynamic> link) async {
     final service = zlinkServiceOf(context);
@@ -84,7 +83,10 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
     if (link['kind'] == 'ask') {
       url = link['url'] as String? ?? zlinkAskUrl(link['id'] as String);
     } else {
-      url = (await service.localLink(link['id'] as String))?.url;
+      url = (await service.localLink(
+        link['id'] as String,
+        claimPubkey: link['claim_pubkey'] as String?,
+      ))?.url;
     }
     if (url == null) {
       _snack('This link was made on another device. Share it from there.');
@@ -134,7 +136,9 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
       _snack(isGive ? 'Money is back in your balance' : 'Link closed');
       await _load();
     } catch (e) {
-      _snack(e is ZlinkException ? e.message : 'Something went wrong. Try again.');
+      _snack(
+        e is ZlinkException ? e.message : 'Something went wrong. Try again.',
+      );
     } finally {
       if (mounted) setState(() => _busy.remove(id));
     }
@@ -163,7 +167,10 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Icon(PhosphorIconsRegular.caretLeft, color: zt.textPrimary),
+                    child: Icon(
+                      PhosphorIconsRegular.caretLeft,
+                      color: zt.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -179,7 +186,10 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                   ),
                   IconButton(
                     onPressed: _load,
-                    icon: Icon(PhosphorIconsRegular.arrowsClockwise, color: zt.textSecondary),
+                    icon: Icon(
+                      PhosphorIconsRegular.arrowsClockwise,
+                      color: zt.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -188,7 +198,10 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
               height: 48,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: _filters.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
@@ -208,7 +221,9 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                         _filterLabel(f),
                         style: TextStyle(
                           fontFamily: 'Geist',
-                          color: active ? ZendColors.textOnDeep : zt.textSecondary,
+                          color: active
+                              ? ZendColors.textOnDeep
+                              : zt.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -222,7 +237,12 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                  ? Center(child: Text(_error!, style: TextStyle(color: zt.textSecondary)))
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: zt.textSecondary),
+                      ),
+                    )
                   : visible.isEmpty
                   ? Center(
                       child: Padding(
@@ -230,7 +250,10 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                         child: Text(
                           'No links yet. Send money to anyone, even if they\'re not on Zend, and it shows up here.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary),
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            color: zt.textSecondary,
+                          ),
                         ),
                       ),
                     )
@@ -291,7 +314,10 @@ class _LinkTile extends StatelessWidget {
         'claimed' => 'Collected',
         'returned' => 'Taken back',
         'expired' => 'Expired, money returned',
-        _ => total > 1 ? '${total - left} of $total collected' : 'Waiting to be collected',
+        _ =>
+          total > 1
+              ? '${total - left} of $total collected'
+              : 'Waiting to be collected',
       };
     }
     final paid = link['payments_count'] as int? ?? 0;
@@ -325,7 +351,9 @@ class _LinkTile extends StatelessWidget {
             radius: 20,
             backgroundColor: zt.bgSecondary,
             child: Icon(
-              isGive ? PhosphorIconsRegular.gift : PhosphorIconsRegular.handCoins,
+              isGive
+                  ? PhosphorIconsRegular.gift
+                  : PhosphorIconsRegular.handCoins,
               color: zt.textPrimary,
               size: 20,
             ),
@@ -348,20 +376,40 @@ class _LinkTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _subtitle(),
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
           if (busy)
-            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           else if (active) ...[
             if (onCopy != null)
-              IconButton(icon: Icon(PhosphorIconsRegular.copy, color: zt.textSecondary), onPressed: onCopy),
-            IconButton(icon: Icon(PhosphorIconsRegular.shareNetwork, color: zt.textSecondary), onPressed: onShare),
+              IconButton(
+                icon: Icon(PhosphorIconsRegular.copy, color: zt.textSecondary),
+                onPressed: onCopy,
+              ),
+            IconButton(
+              icon: Icon(
+                PhosphorIconsRegular.shareNetwork,
+                color: zt.textSecondary,
+              ),
+              onPressed: onShare,
+            ),
             IconButton(
               tooltip: isGive ? 'Take it back' : 'Stop collecting',
-              icon: Icon(PhosphorIconsRegular.arrowUUpLeft, color: zt.textSecondary),
+              icon: Icon(
+                PhosphorIconsRegular.arrowUUpLeft,
+                color: zt.textSecondary,
+              ),
               onPressed: onClose,
             ),
           ],
