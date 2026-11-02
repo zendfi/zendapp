@@ -41,10 +41,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # --wasm emits both builds: WasmGC browsers load main.dart.wasm + skwasm,
-      # older ones fall back to main.dart.js automatically.
+      # --wasm is deliberately NOT used. It selects the skwasm renderer on
+      # WasmGC browsers, and skwasm was trapping with "memory access out of
+      # bounds" inside skwasm.wasm. A Wasm trap is not recoverable: the renderer
+      # stops producing frames and the whole app freezes with no Dart exception
+      # to catch, so there is nothing the app can do about it. Dropping --wasm
+      # builds dart2js + CanvasKit instead, which is the path mobile Chrome was
+      # already loading (it has no WasmGC, so it took main.dart.js) and the only
+      # configuration that has completed a sign-in end to end.
+      #
+      # It also removes a second class of problem: dart2wasm has no dart:html,
+      # which is how dio 5.4 broke every request in the wasm bundle while the
+      # JS bundle was fine. One compiler means one behaviour to reason about.
+      #
+      # Nothing depends on dart2wasm. The js_interop call sites all use
+      # package:web, which compiles under both.
+      #
       # --no-web-resources-cdn self-hosts the renderer, which keeps CanvasKit
-      # and skwasm off gstatic and out of the CSP.
+      # off gstatic and out of the CSP.
       #
       # That is no longer the whole story: the CSP in vercel.json also allows
       # https://accounts.google.com/gsi/*, because google_sign_in_web injects
@@ -70,7 +84,7 @@ jobs:
       # there was no offline capability to preserve, and Flutter's own build
       # output notes this service worker is deprecated and due for removal.
       - name: Build web
-        run: flutter build web --wasm --release --no-web-resources-cdn --pwa-strategy=none --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }}
+        run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }}
 
       # build/web is uploaded as the deployment root, so vercel.json goes in
       # it — minus outputDirectory, which only makes sense from the repo root.

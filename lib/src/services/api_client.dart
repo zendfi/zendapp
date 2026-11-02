@@ -875,6 +875,14 @@ class ApiClient {
       );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
+      // Validation endpoints (manifests, cards) list every problem in `errors`.
+      final data = e.response?.data;
+      if (data is Map && data['errors'] is List) {
+        throw AppKitValidationException(
+          (data['message'] as String?) ?? 'There are problems',
+          (data['errors'] as List).map((x) => '$x').toList(),
+        );
+      }
       throw e.error ?? e;
     }
   }
@@ -2624,12 +2632,13 @@ class ApiClient {
   /// [WalletService.signArbitraryMessage] over the pairing code.
   Future<void> approveCliPairingSession(
     String sessionId,
-    String signatureB64,
+    String? signatureB64,
   ) async {
     try {
       await _dio.post(
         '/api/v1/dev/cli-auth/sessions/$sessionId/approve',
-        data: {'signature': signatureB64},
+        // Google sign-in accounts send no signature; a fresh re-auth stands in.
+        data: {'signature': ?signatureB64},
       );
     } on DioException catch (e) {
       throw e.error ?? e;
@@ -2950,4 +2959,14 @@ class _DetailedNetworkException extends NetworkException {
 
   @override
   String toString() => 'NetworkException($innerError): $_message';
+}
+
+
+/// A ZendAppKit validation failure with every problem listed.
+class AppKitValidationException implements Exception {
+  const AppKitValidationException(this.message, this.errors);
+  final String message;
+  final List<String> errors;
+  @override
+  String toString() => message;
 }

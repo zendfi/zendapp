@@ -16,6 +16,7 @@ import 'connected_banks_screen.dart';
 import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
 import '../links/my_links_screen.dart';
+import '../developer/developer_apps_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 
@@ -95,6 +96,16 @@ class SettingsScreen extends StatelessWidget {
                             const ConnectedAppsScreen(),
                           ),
                         ),
+                        if (developerToolsAvailable(context))
+                          _Tile(
+                            icon: PhosphorIconsRegular.code,
+                            label: 'Developer',
+                            subtitle: 'Build apps on Zend',
+                            onTap: () => pushZendSlide(
+                              context,
+                              const DeveloperAppsScreen(),
+                            ),
+                          ),
                         _Tile(
                           icon: PhosphorIconsRegular.link,
                           label: 'My Links',

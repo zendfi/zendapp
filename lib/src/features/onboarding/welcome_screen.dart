@@ -51,6 +51,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   /// between the tap and `window.open`.
   PreparedZkLoginSignIn? _prepared;
 
+  /// True while [_prepareSession] is in flight, so the button can show itself
+  /// as busy instead of letting a tap through to the path that cannot work.
+  ///
+  /// Without this the first tap after load raced the pre-warm: the field was
+  /// still null, the handler fell back to minting inline, and Safari hung for
+  /// the full five-minute callback timeout.
+  bool _preparing = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +76,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   Future<void> _prepareSession() async {
+    if (_preparing) return;
     final model = ZendScope.read(context);
+    if (mounted) setState(() => _preparing = true);
     try {
       final prepared = await model.zkLoginService.preparePublicSignIn();
       if (!mounted) {
@@ -78,10 +88,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _prepared?.dispose();
       _prepared = prepared;
     } catch (error) {
-      // Not surfaced. A failed pre-warm only costs the popup its activation;
-      // the tap still falls back to minting a session inline, which is exactly
-      // the old behaviour rather than a new failure.
+      // Still not surfaced on its own: the button reports "getting ready" and
+      // the next tap retries. What must not happen is falling through to the
+      // inline path, which cannot open a window under Safari.
       debugPrint('zkLogin session pre-warm failed: $error');
+    } finally {
+      if (mounted) setState(() => _preparing = false);
     }
   }
 
@@ -101,6 +113,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _prepared = null;
     final usable = prepared != null && prepared.isUsable;
     if (prepared != null && !usable) prepared.dispose();
+
+    // On web, refuse to continue without a session already in hand. Falling
+    // back to minting one here is what hung Safari: the round-trip spends the
+    // tap's user activation, `window.open` is then blocked, and nothing ever
+    // writes the callback the plugin is polling for — so it spins for the full
+    // five-minute timeout with no error. Better to re-arm and let the user tap
+    // again a moment later.
+    if (kIsWeb && !usable) {
+      unawaited(_prepareSession());
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = 'Almost ready — tap again in a second.';
+        });
+      }
+      return;
+    }
 
     try {
       final result = await model.authService.signInWithGoogle(
@@ -295,7 +324,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       const ZlinkWelcomeLine(),
                       PrimaryButton(
                         label: 'Continue with Google',
-                        isLoading: _busy,
+                        // Also busy while the pre-warm is in flight, so the
+                        // common case is simply waiting a beat rather than
+                        // tapping into the guard above.
+                        isLoading: _busy || _preparing,
                         onPressed: _continueWithGoogle,
                       ),
                       if (_error != null) ...[

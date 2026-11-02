@@ -163,6 +163,10 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
   /// only the PIN-per-payment override is consulted.
   Future<void> _onApproveTap() async {
     final model = ZendScope.of(context);
+    if (model.isZkLoginAccount) {
+      await _approveWithGoogle();
+      return;
+    }
     final cache = WalletSessionCache.instance;
     final pinPerPaymentEnabled =
         await model.signingPolicyService.pinPerPaymentEnabled;
@@ -176,6 +180,32 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
         _pinDigits = '';
         _pinError = null;
         _stage = PairingApprovalStage.pin;
+      });
+    }
+  }
+
+  /// Google sign-in accounts have no PIN or local key: confirm it's you with
+  /// Google (single-use re-auth the backend checks), then approve.
+  Future<void> _approveWithGoogle() async {
+    final model = ZendScope.of(context);
+    setState(() => _stage = PairingApprovalStage.signing);
+    try {
+      await model.zkLoginService.satisfyStepUp();
+      await model.walletService.apiClient.approveCliPairingSession(_sessionId!, null);
+      if (!mounted) return;
+      HapticFeedback.mediumImpact();
+      setState(() => _stage = PairingApprovalStage.success);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _stage = PairingApprovalStage.error;
+        _errorMessage = e.userMessage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _stage = PairingApprovalStage.error;
+        _errorMessage = "Couldn't confirm it's you. Please try again.";
       });
     }
   }

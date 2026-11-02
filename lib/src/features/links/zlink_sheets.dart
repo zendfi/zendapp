@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -5,6 +6,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_modal.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../services/dev_return_redirect_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import 'my_links_screen.dart' show zlinkServiceOf;
@@ -284,8 +286,21 @@ class _AskPaySheetState extends State<_AskPaySheet> {
       _error = null;
     });
     try {
-      await service.payAsk(widget.id, amountUsd: amount);
+      final paid = await service.payAsk(widget.id, amountUsd: amount);
       model.fetchBalance();
+      // "Pay with Zend" from a developer's site: send the payer back there.
+      final token = paid['return_token'] as String?;
+      final redirect = paid['redirect_url'] as String?;
+      final devId = paid['dev_request_id'] as String?;
+      if (token != null && redirect != null && devId != null) {
+        await DevReturnRedirectService.redirectAndReportOutcome(
+          apiClient: model.walletService.apiClient,
+          requestId: devId,
+          redirectUrl: redirect,
+          token: token,
+          platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+        );
+      }
       if (mounted) setState(() => _paid = true);
     } catch (e) {
       if (mounted) {

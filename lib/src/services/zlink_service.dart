@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -327,7 +327,13 @@ class ZlinkService {
     } on SuiTransactionDecodeException {
       throw const ZlinkException(_kSafetyStop);
     }
-    return _signAndSubmit('/ask/$id/pay/submit', tx);
+    final signature = await _zkLogin.signPreparedTransaction(transactionDataBcsBase64: tx);
+    return _api.zlinkPost('/ask/$id/pay/submit', {
+      'transaction_data_bcs': tx,
+      'signature': signature,
+      // Return tokens for "Pay with Zend" are issued per platform.
+      'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+    });
   }
 
   Future<void> cancelAsk(String id) => _api.zlinkPost('/ask/$id/cancel');
