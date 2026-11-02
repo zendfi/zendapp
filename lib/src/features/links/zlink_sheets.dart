@@ -298,7 +298,9 @@ class _AskPaySheetState extends State<_AskPaySheet> {
           requestId: devId,
           redirectUrl: redirect,
           token: token,
-          platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+          platform: defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
         );
       }
       if (mounted) setState(() => _paid = true);

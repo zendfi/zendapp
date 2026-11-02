@@ -191,7 +191,10 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
     setState(() => _stage = PairingApprovalStage.signing);
     try {
       await model.zkLoginService.satisfyStepUp();
-      await model.walletService.apiClient.approveCliPairingSession(_sessionId!, null);
+      await model.walletService.apiClient.approveCliPairingSession(
+        _sessionId!,
+        null,
+      );
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       setState(() => _stage = PairingApprovalStage.success);

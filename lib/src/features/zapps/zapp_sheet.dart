@@ -29,7 +29,11 @@ Future<void> openZAppLink(BuildContext context, DeepLinkPayload p) async {
   try {
     final i = await svc.getInteraction(p.interactionId!);
     if (!context.mounted) return;
-    await openZApp(context, i['app'] as String, query: {'interaction': p.interactionId!});
+    await openZApp(
+      context,
+      i['app'] as String,
+      query: {'interaction': p.interactionId!},
+    );
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,8 +71,11 @@ class _ZAppSheet extends StatefulWidget {
   String resolvedPath(ZAppDescriptor app) {
     final u = Uri.parse(path ?? app.entry);
     if (query == null || query!.isEmpty) return u.toString();
-    return u.replace(queryParameters: {...u.queryParameters, ...query!}).toString();
+    return u
+        .replace(queryParameters: {...u.queryParameters, ...query!})
+        .toString();
   }
+
   @override
   State<_ZAppSheet> createState() => _ZAppSheetState();
 }

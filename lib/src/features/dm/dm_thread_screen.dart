@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../design/zend_web_frame.dart';
 import '../../core/zend_format.dart';
 import '../profile/block_report_sheet.dart';
 import 'package:flutter/services.dart';
@@ -2149,459 +2150,481 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         // gives bubbles a surface to visibly sit on top of, matching the
         // WhatsApp/iMessage "canvas vs. bubble" depth.
         backgroundColor: zt.chatBg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // ── AppBar ────────────────────────────────────────────────────
-              Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: _handleBackPressed,
-                      icon: Icon(
-                        PhosphorIconsRegular.caretLeft,
-                        color: zt.textPrimary,
-                        size: 26,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => pushZendSlide(
-                        context,
-                        UserProfileScreen(zendtag: cp.zendtag),
-                      ),
-                      child: ZendAvatar(
-                        seed: cp.userId,
-                        radius: 20,
-                        photoUrl: cp.avatarUrl,
-                        initials: cp.initialLetter,
-                        isOnline: _counterpartyOnline,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
+        body: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () {
+              if (_replyingTo != null) {
+                setState(() => _replyingTo = null);
+              } else {
+                _handleBackPressed();
+              }
+            },
+          },
+          child: SafeArea(
+            child: Column(
+              children: [
+                // ── AppBar ────────────────────────────────────────────────────
+                Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      // In the desktop pane the chat list is right beside it,
+                      // so a back chevron is noise; Esc closes instead.
+                      if (!ZendWebLayout.isDesktop(context))
+                        IconButton(
+                          onPressed: _handleBackPressed,
+                          icon: Icon(
+                            PhosphorIconsRegular.caretLeft,
+                            color: zt.textPrimary,
+                            size: 26,
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 12),
+                      GestureDetector(
                         onTap: () => pushZendSlide(
                           context,
                           UserProfileScreen(zendtag: cp.zendtag),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    cp.displayName.trim().isEmpty
-                                        ? handleLabel(cp.zendtag)
-                                        : cp.displayName,
-                                    style: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: zt.textPrimary,
+                        child: ZendAvatar(
+                          seed: cp.userId,
+                          radius: 20,
+                          photoUrl: cp.avatarUrl,
+                          initials: cp.initialLetter,
+                          isOnline: _counterpartyOnline,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => pushZendSlide(
+                            context,
+                            UserProfileScreen(zendtag: cp.zendtag),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      cp.displayName.trim().isEmpty
+                                          ? handleLabel(cp.zendtag)
+                                          : cp.displayName,
+                                      style: TextStyle(
+                                        fontFamily: 'Geist',
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: zt.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                if (ZendFeatures.dmE2ee && _e2eeReady) ...[
-                                  const SizedBox(width: 5),
-                                  Icon(
-                                    PhosphorIconsRegular.lockSimple,
-                                    size: 13,
-                                    color: ZendColors.positive,
-                                  ),
+                                  if (ZendFeatures.dmE2ee && _e2eeReady) ...[
+                                    const SizedBox(width: 5),
+                                    Icon(
+                                      PhosphorIconsRegular.lockSimple,
+                                      size: 13,
+                                      color: ZendColors.positive,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
+                              // ── Presence / status row ─────────────────────
+                              _buildPresenceSubtitle(zt, cp),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // ── Overflow menu ─────────────────────────────────────
+                      PopupMenuButton<_ChatMenuAction>(
+                        icon: Icon(
+                          PhosphorIconsRegular.dotsThreeVertical,
+                          color: zt.textSecondary,
+                          size: 24,
+                        ),
+                        color: zt.bgSecondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(ZendRadii.xl),
+                        ),
+                        elevation: 1,
+                        shadowColor: Colors.black.withValues(alpha: 0.08),
+                        popUpAnimationStyle: AnimationStyle.noAnimation,
+                        onSelected: (action) =>
+                            _handleMenuAction(context, zt, cp, action),
+                        itemBuilder: (ctx) => [
+                          _popupItem(
+                            ctx,
+                            zt,
+                            _ChatMenuAction.viewContact,
+                            PhosphorIconsRegular.user,
+                            'View contact',
+                          ),
+                          // Both of these were rendered greyed-out with no-op
+                          // handlers — see [ZendFeatures.dmChatExtras].
+                          _popupItem(
+                            ctx,
+                            zt,
+                            _ChatMenuAction.searchInChat,
+                            PhosphorIconsRegular.magnifyingGlass,
+                            'Search in chat',
+                          ),
+                          if (ZendFeatures.dmChatExtras) ...[
+                            _popupItem(
+                              ctx,
+                              zt,
+                              _ChatMenuAction.disappearing,
+                              PhosphorIconsRegular.clock,
+                              'Disappearing messages',
+                              disabled: true,
                             ),
-                            // ── Presence / status row ─────────────────────
-                            _buildPresenceSubtitle(zt, cp),
                           ],
-                        ),
-                      ),
-                    ),
-                    // ── Overflow menu ─────────────────────────────────────
-                    PopupMenuButton<_ChatMenuAction>(
-                      icon: Icon(
-                        PhosphorIconsRegular.dotsThreeVertical,
-                        color: zt.textSecondary,
-                        size: 24,
-                      ),
-                      color: zt.bgSecondary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(ZendRadii.xl),
-                      ),
-                      elevation: 1,
-                      shadowColor: Colors.black.withValues(alpha: 0.08),
-                      popUpAnimationStyle: AnimationStyle.noAnimation,
-                      onSelected: (action) =>
-                          _handleMenuAction(context, zt, cp, action),
-                      itemBuilder: (ctx) => [
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.viewContact,
-                          PhosphorIconsRegular.user,
-                          'View contact',
-                        ),
-                        // Both of these were rendered greyed-out with no-op
-                        // handlers — see [ZendFeatures.dmChatExtras].
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.searchInChat,
-                          PhosphorIconsRegular.magnifyingGlass,
-                          'Search in chat',
-                        ),
-                        if (ZendFeatures.dmChatExtras) ...[
                           _popupItem(
                             ctx,
                             zt,
-                            _ChatMenuAction.disappearing,
-                            PhosphorIconsRegular.clock,
-                            'Disappearing messages',
-                            disabled: true,
+                            _ChatMenuAction.clearChat,
+                            PhosphorIconsRegular.trash,
+                            'Clear chat',
                           ),
+                          // Block is gated off deliberately — see
+                          // [ZendFeatures.blockUser]. It rendered as a live
+                          // destructive action but only toasted "coming soon",
+                          // so a user could believe they'd blocked someone who
+                          // could still message them.
+                          if (ZendFeatures.blockUser) ...[
+                            const PopupMenuDivider(),
+                            _popupItem(
+                              ctx,
+                              zt,
+                              _ChatMenuAction.block,
+                              PhosphorIconsRegular.prohibit,
+                              'Block or report',
+                              isDestructive: true,
+                            ),
+                          ],
                         ],
-                        _popupItem(
-                          ctx,
-                          zt,
-                          _ChatMenuAction.clearChat,
-                          PhosphorIconsRegular.trash,
-                          'Clear chat',
-                        ),
-                        // Block is gated off deliberately — see
-                        // [ZendFeatures.blockUser]. It rendered as a live
-                        // destructive action but only toasted "coming soon",
-                        // so a user could believe they'd blocked someone who
-                        // could still message them.
-                        if (ZendFeatures.blockUser) ...[
-                          const PopupMenuDivider(),
-                          _popupItem(
-                            ctx,
-                            zt,
-                            _ChatMenuAction.block,
-                            PhosphorIconsRegular.prohibit,
-                            'Block or report',
-                            isDestructive: true,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Divider(height: 1, color: zt.border),
-
-              // ── Reconnecting banner ──
-              if (_showReconnecting)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  color: zt.bgSecondary,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          color: zt.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Reconnecting...',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 12,
-                          color: zt.textSecondary,
-                        ),
                       ),
                     ],
                   ),
                 ),
+                Divider(height: 1, color: zt.border),
 
-              // ── Could not connect banner — shown once the WS has given up
-              // retrying automatically (5 consecutive failures). Tapping it
-              // resets the failure counter and reconnects.
-              if (!_showReconnecting &&
-                  _ws.connectionState.value == WsConnectionState.disconnected &&
-                  _hasConnectedOnce)
-                GestureDetector(
-                  onTap: () => _ws.resetAndReconnect(),
-                  child: Container(
+                // ── Reconnecting banner ──
+                if (_showReconnecting)
+                  Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 6,
                     ),
-                    color: ZendColors.destructive.withValues(alpha: 0.1),
-                    child: Text(
-                      'Could not connect. Tap to retry.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 12,
-                        color: zt.textPrimary,
+                    color: zt.bgSecondary,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Reconnecting...',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 12,
+                            color: zt.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // ── Could not connect banner — shown once the WS has given up
+                // retrying automatically (5 consecutive failures). Tapping it
+                // resets the failure counter and reconnects.
+                if (!_showReconnecting &&
+                    _ws.connectionState.value ==
+                        WsConnectionState.disconnected &&
+                    _hasConnectedOnce)
+                  GestureDetector(
+                    onTap: () => _ws.resetAndReconnect(),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      color: ZendColors.destructive.withValues(alpha: 0.1),
+                      child: Text(
+                        'Could not connect. Tap to retry.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12,
+                          color: zt.textPrimary,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-              // ── Messages + scroll-to-bottom ───────────────────────────────
-              Expanded(
-                child: GestureDetector(
-                  // Swipe left from right edge → reveal timestamps (iMessage style)
-                  onHorizontalDragUpdate: (details) {
-                    if (details.delta.dx < -3 && !_showTimestamps) {
-                      setState(() => _showTimestamps = true);
-                    }
-                  },
-                  onHorizontalDragEnd: (_) {
-                    if (_showTimestamps) {
-                      setState(() => _showTimestamps = false);
-                    }
-                  },
-                  onHorizontalDragCancel: () {
-                    if (_showTimestamps) {
-                      setState(() => _showTimestamps = false);
-                    }
-                  },
-                  child: Stack(
-                    children: [
-                      _loading
-                          ? const DmThreadSkeleton()
-                          : _loadError
-                          ? ZendErrorState(
-                              title: "Couldn't load this conversation",
-                              onRetry: () => _loadMessages(),
-                            )
-                          : Builder(
-                              builder: (ctx) {
-                                final displayList = _buildDisplayList();
-                                final typingOffset = _theyAreTyping ? 1 : 0;
-                                final moreOffset = _loadingMore ? 1 : 0;
-                                final totalCount =
-                                    displayList.length +
-                                    typingOffset +
-                                    moreOffset;
-                                _lastBuiltItemCount = totalCount;
+                // ── Messages + scroll-to-bottom ───────────────────────────────
+                Expanded(
+                  child: GestureDetector(
+                    // Swipe left from right edge → reveal timestamps (iMessage style)
+                    onHorizontalDragUpdate: (details) {
+                      if (details.delta.dx < -3 && !_showTimestamps) {
+                        setState(() => _showTimestamps = true);
+                      }
+                    },
+                    onHorizontalDragEnd: (_) {
+                      if (_showTimestamps) {
+                        setState(() => _showTimestamps = false);
+                      }
+                    },
+                    onHorizontalDragCancel: () {
+                      if (_showTimestamps) {
+                        setState(() => _showTimestamps = false);
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        _loading
+                            ? const DmThreadSkeleton()
+                            : _loadError
+                            ? ZendErrorState(
+                                title: "Couldn't load this conversation",
+                                onRetry: () => _loadMessages(),
+                              )
+                            : Builder(
+                                builder: (ctx) {
+                                  final displayList = _buildDisplayList();
+                                  final typingOffset = _theyAreTyping ? 1 : 0;
+                                  final moreOffset = _loadingMore ? 1 : 0;
+                                  final totalCount =
+                                      displayList.length +
+                                      typingOffset +
+                                      moreOffset;
+                                  _lastBuiltItemCount = totalCount;
 
-                                return ScrollablePositionedList.builder(
-                                  itemScrollController: _itemScrollController,
-                                  itemPositionsListener: _itemPositionsListener,
-                                  reverse: true,
-                                  padding: const EdgeInsets.fromLTRB(
-                                    8,
-                                    4,
-                                    8,
-                                    4,
-                                  ),
-                                  itemCount: totalCount,
-                                  itemBuilder: (ctx, i) {
-                                    // "Load more" spinner at the very end (oldest)
-                                    if (_loadingMore &&
-                                        i ==
-                                            displayList.length + typingOffset) {
-                                      return const Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Center(
-                                          child: ZendLoader(size: 18),
-                                        ),
-                                      );
-                                    }
-                                    // Typing indicator at the very start (newest)
-                                    if (_theyAreTyping && i == 0) {
-                                      return _TypingIndicator(
-                                        avatarUrl: cp.avatarUrl,
-                                        initial: cp.initialLetter,
-                                      );
-                                    }
-                                    final listIdx = i - typingOffset;
-                                    final item = displayList[listIdx];
-
-                                    // Date separator
-                                    if (item is _DmSeparatorItem) {
-                                      return _DateSeparator(date: item.date);
-                                    }
-
-                                    final msgItem = item as _DmMessageItem;
-                                    final msg = msgItem.message;
-
-                                    // Map back to _messages index for grouping helpers
-                                    final msgIdx = _messages.indexWhere(
-                                      (m) =>
-                                          m.id == msg.id ||
-                                          (m.clientId != null &&
-                                              m.clientId == msg.clientId),
-                                    );
-
-                                    final isMe =
-                                        msg.senderUserId == model.currentUserId;
-                                    final isCont = msgIdx >= 0
-                                        ? _isContinuation(msgIdx)
-                                        : false;
-                                    final isFirst = msgIdx >= 0
-                                        ? _isFirstInGroup(msgIdx)
-                                        : true;
-                                    final isLast = msgIdx >= 0
-                                        ? _isLastInGroup(msgIdx)
-                                        : true;
-                                    final isGroupEnd = !isMe && isFirst;
-                                    final isFlashing = _flashingMsgId == msg.id;
-
-                                    Widget bubbleRow = Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        // Avatar slot — only shown on group-end for incoming.
-                                        // Fixed 26×26 so the circle never stretches to an oval.
-                                        if (!isMe)
-                                          SizedBox(
-                                            width: 32,
-                                            height: 26,
-                                            child: isGroupEnd
-                                                ? Align(
-                                                    alignment:
-                                                        Alignment.bottomCenter,
-                                                    child: ZendAvatar(
-                                                      seed: cp.userId,
-                                                      radius: 13,
-                                                      photoUrl: cp.avatarUrl,
-                                                      initials:
-                                                          cp.initialLetter,
-                                                    ),
-                                                  )
-                                                : null,
+                                  return ScrollablePositionedList.builder(
+                                    itemScrollController: _itemScrollController,
+                                    itemPositionsListener:
+                                        _itemPositionsListener,
+                                    reverse: true,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      8,
+                                      4,
+                                      8,
+                                      4,
+                                    ),
+                                    itemCount: totalCount,
+                                    itemBuilder: (ctx, i) {
+                                      // "Load more" spinner at the very end (oldest)
+                                      if (_loadingMore &&
+                                          i ==
+                                              displayList.length +
+                                                  typingOffset) {
+                                        return const Padding(
+                                          padding: EdgeInsets.all(8),
+                                          child: Center(
+                                            child: ZendLoader(size: 18),
                                           ),
-                                        Expanded(
-                                          child: DmMessageBubble(
-                                            message: msg,
-                                            isMe: isMe,
-                                            isContinuation: isCont,
-                                            isFirst: isFirst,
-                                            isLast: isLast,
-                                            showTimestamp: _showTimestamps,
-                                            onReply: (m) =>
-                                                setState(() => _replyingTo = m),
-                                            onReplyTap: (m) =>
-                                                _scrollToReplyOrigin(m),
-                                            onRetry:
-                                                msg.localStatus ==
-                                                    DmLocalStatus.failed
-                                                ? (msg.type ==
-                                                          DmMessageType.vibe
-                                                      ? () => _retryVibe(
-                                                          msg.clientId ?? '',
-                                                        )
-                                                      : () => _onRetry(
-                                                          msg.clientId ?? '',
-                                                        ))
-                                                : null,
-                                            onPayRequest: _onPayRequest,
-                                            onLongPress: _showMessageActions,
-                                            onReactionTap: _onToggleReaction,
+                                        );
+                                      }
+                                      // Typing indicator at the very start (newest)
+                                      if (_theyAreTyping && i == 0) {
+                                        return _TypingIndicator(
+                                          avatarUrl: cp.avatarUrl,
+                                          initial: cp.initialLetter,
+                                        );
+                                      }
+                                      final listIdx = i - typingOffset;
+                                      final item = displayList[listIdx];
+
+                                      // Date separator
+                                      if (item is _DmSeparatorItem) {
+                                        return _DateSeparator(date: item.date);
+                                      }
+
+                                      final msgItem = item as _DmMessageItem;
+                                      final msg = msgItem.message;
+
+                                      // Map back to _messages index for grouping helpers
+                                      final msgIdx = _messages.indexWhere(
+                                        (m) =>
+                                            m.id == msg.id ||
+                                            (m.clientId != null &&
+                                                m.clientId == msg.clientId),
+                                      );
+
+                                      final isMe =
+                                          msg.senderUserId ==
+                                          model.currentUserId;
+                                      final isCont = msgIdx >= 0
+                                          ? _isContinuation(msgIdx)
+                                          : false;
+                                      final isFirst = msgIdx >= 0
+                                          ? _isFirstInGroup(msgIdx)
+                                          : true;
+                                      final isLast = msgIdx >= 0
+                                          ? _isLastInGroup(msgIdx)
+                                          : true;
+                                      final isGroupEnd = !isMe && isFirst;
+                                      final isFlashing =
+                                          _flashingMsgId == msg.id;
+
+                                      Widget bubbleRow = Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          // Avatar slot — only shown on group-end for incoming.
+                                          // Fixed 26×26 so the circle never stretches to an oval.
+                                          if (!isMe)
+                                            SizedBox(
+                                              width: 32,
+                                              height: 26,
+                                              child: isGroupEnd
+                                                  ? Align(
+                                                      alignment: Alignment
+                                                          .bottomCenter,
+                                                      child: ZendAvatar(
+                                                        seed: cp.userId,
+                                                        radius: 13,
+                                                        photoUrl: cp.avatarUrl,
+                                                        initials:
+                                                            cp.initialLetter,
+                                                      ),
+                                                    )
+                                                  : null,
+                                            ),
+                                          Expanded(
+                                            child: DmMessageBubble(
+                                              message: msg,
+                                              isMe: isMe,
+                                              isContinuation: isCont,
+                                              isFirst: isFirst,
+                                              isLast: isLast,
+                                              showTimestamp: _showTimestamps,
+                                              onReply: (m) => setState(
+                                                () => _replyingTo = m,
+                                              ),
+                                              onReplyTap: (m) =>
+                                                  _scrollToReplyOrigin(m),
+                                              onRetry:
+                                                  msg.localStatus ==
+                                                      DmLocalStatus.failed
+                                                  ? (msg.type ==
+                                                            DmMessageType.vibe
+                                                        ? () => _retryVibe(
+                                                            msg.clientId ?? '',
+                                                          )
+                                                        : () => _onRetry(
+                                                            msg.clientId ?? '',
+                                                          ))
+                                                  : null,
+                                              onPayRequest: _onPayRequest,
+                                              onLongPress: _showMessageActions,
+                                              onReactionTap: _onToggleReaction,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    );
+                                        ],
+                                      );
 
-                                    // When this message carries reactions, the floating
-                                    // badge (drawn inside DmMessageBubble via a
-                                    // Positioned widget with a negative bottom offset,
-                                    // so it doesn't affect the Row's own height / the
-                                    // avatar's cross-axis-end alignment above) needs
-                                    // somewhere below the bubble to actually sit in.
-                                    // Grouped messages normally sit almost flush
-                                    // together (1-5px gap), which isn't enough room —
-                                    // without this spacer the badge bleeds onto the
-                                    // next message's bubble. Adding the extra gap
-                                    // HERE (as a sibling below the Row, not inside it)
-                                    // reserves that space without dragging the avatar
-                                    // down with it.
-                                    Widget itemContent =
-                                        msg.reactions.isNotEmpty
-                                        ? Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: [
-                                              bubbleRow,
-                                              const SizedBox(height: 14),
-                                            ],
-                                          )
-                                        : bubbleRow;
+                                      // When this message carries reactions, the floating
+                                      // badge (drawn inside DmMessageBubble via a
+                                      // Positioned widget with a negative bottom offset,
+                                      // so it doesn't affect the Row's own height / the
+                                      // avatar's cross-axis-end alignment above) needs
+                                      // somewhere below the bubble to actually sit in.
+                                      // Grouped messages normally sit almost flush
+                                      // together (1-5px gap), which isn't enough room —
+                                      // without this spacer the badge bleeds onto the
+                                      // next message's bubble. Adding the extra gap
+                                      // HERE (as a sibling below the Row, not inside it)
+                                      // reserves that space without dragging the avatar
+                                      // down with it.
+                                      Widget itemContent =
+                                          msg.reactions.isNotEmpty
+                                          ? Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                bubbleRow,
+                                                const SizedBox(height: 14),
+                                              ],
+                                            )
+                                          : bubbleRow;
 
-                                    // Flash highlight — AnimatedContainer tint that
-                                    // fades in and out when tapping a reply to jump
-                                    // back to the original message.
-                                    return _FlashHighlight(
-                                      key: ValueKey(msg.id),
-                                      isFlashing: isFlashing,
-                                      child: itemContent,
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                      // ── Scroll-to-bottom button ─────────────────────────────
-                      _buildScrollToBottomButton(zt),
-                    ],
-                  ), // close Stack
-                ), // close GestureDetector child
-              ), // close Expanded
-              // Reply strip - shown when user swipes right on a message
-              if (_replyingTo != null)
-                _ReplyStrip(
-                  message: _replyingTo!,
-                  currentUserId: model.currentUserId ?? '',
-                  onCancel: () => setState(() => _replyingTo = null),
+                                      // Flash highlight — AnimatedContainer tint that
+                                      // fades in and out when tapping a reply to jump
+                                      // back to the original message.
+                                      return _FlashHighlight(
+                                        key: ValueKey(msg.id),
+                                        isFlashing: isFlashing,
+                                        child: itemContent,
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                        // ── Scroll-to-bottom button ─────────────────────────────
+                        _buildScrollToBottomButton(zt),
+                      ],
+                    ), // close Stack
+                  ), // close GestureDetector child
+                ), // close Expanded
+                // Reply strip - shown when user swipes right on a message
+                if (_replyingTo != null)
+                  _ReplyStrip(
+                    message: _replyingTo!,
+                    currentUserId: model.currentUserId ?? '',
+                    onCancel: () => setState(() => _replyingTo = null),
+                  ),
+
+                // "Securing chat…" strip — shown only while the E2EE key exchange
+                // for this room is still in flight. Messages sent during this
+                // window still wait for resolution (see _awaitE2eeResolution),
+                // this is purely informational so the user isn't left guessing
+                // why the lock icon in the AppBar hasn't appeared yet.
+                if (ZendFeatures.dmE2ee && _e2eeStatus == _E2eeStatus.resolving)
+                  _SecuringChatStrip(zt: zt),
+
+                // ── Input ─────────────────────────────────────────────────────
+                DmInputBar(
+                  onSend: (text) {
+                    if (_replyingTo != null) {
+                      final quoted = _replyingTo!;
+                      setState(() => _replyingTo = null);
+                      // Send with structured reply context — not a text prefix.
+                      // The optimistic message carries replyToContent/replyToSenderZendtag
+                      // so the bubble renders a proper quote block immediately.
+                      _onSendWithReply(text, quoted);
+                    } else {
+                      _onSend(text);
+                    }
+                  },
+                  onTyping: (v) => _ws.sendTyping(v),
+                  roomId: widget.roomId,
+                  onSendVibe: _onSendVibe,
+                  onRequestPayment: _onRequestPayment,
+                  onPayRecipient: _onPayRecipient,
+                  onPickGif: gifSearchEnabled ? _onPickGif : null,
+                  onOpenApps: () => showZAppTray(
+                    context,
+                    counterpartyZendtag: widget.counterparty.zendtag,
+                  ),
+                  initialDraft: model.dmService.getDraft(widget.roomId),
+                  onDraftChanged: (text) =>
+                      model.dmService.setDraft(widget.roomId, text),
                 ),
-
-              // "Securing chat…" strip — shown only while the E2EE key exchange
-              // for this room is still in flight. Messages sent during this
-              // window still wait for resolution (see _awaitE2eeResolution),
-              // this is purely informational so the user isn't left guessing
-              // why the lock icon in the AppBar hasn't appeared yet.
-              if (ZendFeatures.dmE2ee && _e2eeStatus == _E2eeStatus.resolving)
-                _SecuringChatStrip(zt: zt),
-
-              // ── Input ─────────────────────────────────────────────────────
-              DmInputBar(
-                onSend: (text) {
-                  if (_replyingTo != null) {
-                    final quoted = _replyingTo!;
-                    setState(() => _replyingTo = null);
-                    // Send with structured reply context — not a text prefix.
-                    // The optimistic message carries replyToContent/replyToSenderZendtag
-                    // so the bubble renders a proper quote block immediately.
-                    _onSendWithReply(text, quoted);
-                  } else {
-                    _onSend(text);
-                  }
-                },
-                onTyping: (v) => _ws.sendTyping(v),
-                roomId: widget.roomId,
-                onSendVibe: _onSendVibe,
-                onRequestPayment: _onRequestPayment,
-                onPayRecipient: _onPayRecipient,
-                onPickGif: gifSearchEnabled ? _onPickGif : null,
-                onOpenApps: () => showZAppTray(
-                  context,
-                  counterpartyZendtag: widget.counterparty.zendtag,
-                ),
-                initialDraft: model.dmService.getDraft(widget.roomId),
-                onDraftChanged: (text) =>
-                    model.dmService.setDraft(widget.roomId, text),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -390,31 +391,47 @@ class _DmInputBarState extends State<DmInputBar>
                             // button's own margin still handles the rest
                             // of the visual separation.
                             padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
-                            child: TextField(
-                              controller: _ctrl,
-                              focusNode: _focusNode,
-                              onChanged: _onChanged,
-                              onSubmitted: (_) => _send(),
-                              maxLines: 5,
-                              minLines: 1,
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 15,
-                                color: zt.textPrimary,
-                                height: 1.35,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'Message',
-                                hintStyle: TextStyle(
+                            child: CallbackShortcuts(
+                              // Desktop habit: Enter sends, Shift+Enter
+                              // breaks the line. Phones keep the keyboard's
+                              // own return key.
+                              bindings: kIsWeb
+                                  ? {
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.enter,
+                                      ): _send,
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.numpadEnter,
+                                      ): _send,
+                                    }
+                                  : const {},
+                              child: TextField(
+                                controller: _ctrl,
+                                focusNode: _focusNode,
+                                autofocus: kIsWeb,
+                                onChanged: _onChanged,
+                                onSubmitted: (_) => _send(),
+                                maxLines: 5,
+                                minLines: 1,
+                                style: TextStyle(
                                   fontFamily: 'Geist',
                                   fontSize: 15,
-                                  color: zt.textSecondary.withValues(
-                                    alpha: 0.55,
-                                  ),
+                                  color: zt.textPrimary,
+                                  height: 1.35,
                                 ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
+                                decoration: InputDecoration(
+                                  hintText: 'Message',
+                                  hintStyle: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontSize: 15,
+                                    color: zt.textSecondary.withValues(
+                                      alpha: 0.55,
+                                    ),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
                               ),
                             ),
                           ),

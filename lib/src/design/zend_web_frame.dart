@@ -106,8 +106,12 @@ class ZendWebFrame extends StatelessWidget {
                 final contentWidth = size.width - railWidth - 1;
                 return CallbackShortcuts(
                   bindings: {
-                    const SingleActivator(LogicalKeyboardKey.keyN): () =>
-                        _Sidebar.openZend(navigatorKey),
+                    // Only when nothing is being typed into: text input on
+                    // web arrives as text, but the raw key still bubbles up
+                    // here, so typing "n" anywhere opened the Zend sheet.
+                    const SingleActivator(LogicalKeyboardKey.keyN): () {
+                      if (!_isTyping()) _Sidebar.openZend(navigatorKey);
+                    },
                   },
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,4 +576,12 @@ class _FrameOverlayState extends State<_FrameOverlay> {
 
   @override
   Widget build(BuildContext context) => Overlay(initialEntries: [_entry]);
+}
+
+/// True while focus is in a text field, so single-key shortcuts stay quiet.
+bool _isTyping() {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  if (ctx == null) return false;
+  return ctx.widget is EditableText ||
+      ctx.findAncestorWidgetOfExactType<EditableText>() != null;
 }

@@ -381,7 +381,9 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
         PendingZlink.store(payload);
         return;
       }
-      payload.isZApp ? openZAppLink(context, payload) : openZlink(context, payload);
+      payload.isZApp
+          ? openZAppLink(context, payload)
+          : openZlink(context, payload);
       return;
     }
 

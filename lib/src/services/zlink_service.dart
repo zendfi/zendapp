@@ -327,12 +327,16 @@ class ZlinkService {
     } on SuiTransactionDecodeException {
       throw const ZlinkException(_kSafetyStop);
     }
-    final signature = await _zkLogin.signPreparedTransaction(transactionDataBcsBase64: tx);
+    final signature = await _zkLogin.signPreparedTransaction(
+      transactionDataBcsBase64: tx,
+    );
     return _api.zlinkPost('/ask/$id/pay/submit', {
       'transaction_data_bcs': tx,
       'signature': signature,
       // Return tokens for "Pay with Zend" are issued per platform.
-      'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+      'platform': defaultTargetPlatform == TargetPlatform.iOS
+          ? 'ios'
+          : 'android',
     });
   }
 

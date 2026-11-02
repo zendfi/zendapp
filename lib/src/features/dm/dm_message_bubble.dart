@@ -373,7 +373,25 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     }
 
     // Press feedback + long-press → full reactions
+    void openActions() {
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) return;
+      final origin = renderBox.localToGlobal(Offset.zero);
+      widget.onLongPress?.call(
+        context,
+        widget.message,
+        Rect.fromLTWH(
+          origin.dx,
+          origin.dy,
+          renderBox.size.width,
+          renderBox.size.height,
+        ),
+      );
+    }
+
     child = GestureDetector(
+      // Desktop: right-click is the long-press.
+      onSecondaryTap: openActions,
       onLongPressStart: (details) {
         HapticFeedback.mediumImpact();
         final renderBox = context.findRenderObject() as RenderBox?;

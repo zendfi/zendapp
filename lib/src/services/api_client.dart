@@ -2961,7 +2961,6 @@ class _DetailedNetworkException extends NetworkException {
   String toString() => 'NetworkException($innerError): $_message';
 }
 
-
 /// A ZendAppKit validation failure with every problem listed.
 class AppKitValidationException implements Exception {
   const AppKitValidationException(this.message, this.errors);
