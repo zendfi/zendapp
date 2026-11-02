@@ -46,6 +46,20 @@ jobs:
 
       - run: flutter pub get
 
+      # ── Android NDK ───────────────────────────────────────────────────────────
+      # Gradle's on-demand NDK download sometimes lands a truncated zip ("Archive is not
+      # a ZIP archive"). Install it up front with sdkmanager, retrying, and clear any
+      # half-extracted copy first.
+      - name: Install Android NDK
+        run: |
+          NDK=28.2.13676358
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          for i in 1 2 3; do
+            rm -rf "$ANDROID_HOME/ndk/$NDK" "$ANDROID_HOME/.temp" 
+            yes | "$SDKM" --install "ndk;$NDK" > /tmp/ndk.log 2>&1 && test -f "$ANDROID_HOME/ndk/$NDK/source.properties" && break
+            echo "NDK install attempt $i failed"; tail -5 /tmp/ndk.log; sleep 10
+          done
+          test -f "$ANDROID_HOME/ndk/$NDK/source.properties"
       - name: Signing setup
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
