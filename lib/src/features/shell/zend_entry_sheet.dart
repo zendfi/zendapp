@@ -17,6 +17,9 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart' show ApiException;
 import '../../models/recent_contact.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
+import 'package:share_plus/share_plus.dart';
+
+import '../../services/zlink_service.dart';
 import '../send/send_flow_sheet.dart';
 import '../send/send_shared_widgets.dart' show VisibilityPill;
 import '../send/transfer_status_controller.dart';
@@ -531,6 +534,13 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     if (amount <= 0) return;
     final model = ZendScope.of(context);
     final note = _note;
+    // Someone not on Zend gets a link they can pay from, shared by the
+    // requester. People on Zend keep the in-app request: they get a
+    // notification and pay without leaving Zend.
+    if (_email != null && model.isZkLoginAccount) {
+      unawaited(_requestWithLink(amount, note));
+      return;
+    }
     Navigator.of(context, rootNavigator: true).pop();
     unawaited(
       model.transferStatus.request(
@@ -541,6 +551,63 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         note: note,
       ),
     );
+  }
+
+  bool _creatingAskLink = false;
+
+  Future<void> _requestWithLink(double amount, String? note) async {
+    if (_creatingAskLink) return;
+    final model = ZendScope.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _creatingAskLink = true);
+    try {
+      final url = await ZlinkService(
+        api: model.walletService.apiClient,
+        zkLogin: model.zkLoginService,
+      ).createAskLink(
+        amountUsd: amount,
+        maxPayments: 1,
+        // The link holds at most 140 characters of note.
+        memo: note == null ? null : String.fromCharCodes(note.runes.take(140)),
+      );
+      navigator.pop();
+      final forWhat = note == null ? '' : ' for $note';
+      await Share.share(
+        'Can you send me ${formatUsd(amount)}$forWhat? Pay here on Zend: $url',
+        subject: 'Money request on Zend',
+      );
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Link ready. You can re-share it from My Links.'),
+        ),
+      );
+    } on ApiException catch (e) {
+      const notOpenYet = {'LINKS_PILOT_ONLY', 'ZLINKS_DISABLED', 'SUI_UNAVAILABLE'};
+      if (notOpenYet.contains(e.errorCode)) {
+        // Links aren't available to this account yet: send the usual
+        // emailed request instead.
+        navigator.pop();
+        unawaited(
+          model.transferStatus.request(
+            amount: amount,
+            recipientZendtag: null,
+            recipientEmail: _email,
+            recipientDisplayName: _displayName,
+            note: note,
+          ),
+        );
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      if (mounted) setState(() => _creatingAskLink = false);
+    } catch (e) {
+      final message = e is ZlinkException
+          ? e.message
+          : "Couldn't create the link. Try again.";
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      if (mounted) setState(() => _creatingAskLink = false);
+    }
   }
 
   void _showVibesComingSoon() {

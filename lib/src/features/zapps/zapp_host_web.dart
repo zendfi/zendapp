@@ -74,7 +74,11 @@ class _ZAppHostState extends State<ZAppHost> {
     final origin = Uri.tryParse(e.origin);
     if (origin == null || !widget.app.allows(origin)) return;
     final child = _frame.contentWindow;
-    if (child == null || e.source != child) return;
+    // JS identity (===), not Dart `==`: Dart's equality inspects the object,
+    // and touching a cross-origin window that way throws a SecurityError,
+    // which silently dropped every message from the app.
+    final source = e.source;
+    if (child == null || source == null || !source.strictEquals(child).toDart) return;
     final data = e.data;
     if (!data.isA<JSString>()) return;
     final reply = await widget.bridge.handleRaw((data as JSString).toDart);
