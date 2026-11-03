@@ -33,6 +33,7 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
   final _tester = TextEditingController();
   String? _message;
   List<String> _errors = const [];
+  Map<String, dynamic>? _review;
   bool _busy = false;
 
   Future<Map<String, dynamic>> _call(String m, String p, [Object? body]) =>
@@ -122,6 +123,19 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
     await _load();
   });
 
+  void _loadReview(String id) async {
+    try {
+      final r = await _call('GET', '/apps/$id/review');
+      if (mounted) setState(() => _review = r);
+    } catch (_) {}
+  }
+
+  Future<void> _rotate() => _run(() async {
+    final r = await _call('POST', '/apps/${_selected!['id']}/rotate', {'which': 'both'});
+    _newKeys = {'api_key': r['api_key'], 'webhook_secret': r['webhook_secret']};
+    _message = 'New keys made. The old ones stopped working.';
+  });
+
   Future<void> _addTester() => _run(() async {
     await _call('POST', '/apps/${_selected!['id']}/testers', {
       'zendtag': _tester.text.trim(),
@@ -195,6 +209,8 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
                       ),
                       onTap: () => setState(() {
                         _selected = a;
+                        _review = null;
+                        _loadReview(a['id'] as String);
                         _newKeys = null;
                         _message = null;
                         _errors = const [];
@@ -242,6 +258,26 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
                           style: s(13, c: zt.textSecondary),
                         ),
                         if (_newKeys != null) _KeysCard(keys: _newKeys!),
+                        if (_review != null) ...[
+                          const SizedBox(height: 16),
+                          Text('Listing: ${_review!['status']}', style: s(14, w: FontWeight.w600)),
+                          for (final rv in (_review!['reviews'] as List).take(3))
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'v${rv['manifest_version']} · ${rv['result']}'
+                                '${(rv['findings'] as List).isEmpty ? '' : '\n  • ${(rv['findings'] as List).join('\n  • ')}'}',
+                                style: s(12, c: zt.textSecondary),
+                              ),
+                            ),
+                        ],
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: _busy ? null : _rotate,
+                            child: const Text('Make new keys'),
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         Text('Manifest', style: s(15, w: FontWeight.w600)),
                         const SizedBox(height: 6),

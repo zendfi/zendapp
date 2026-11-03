@@ -27,6 +27,7 @@ import 'people_screen.dart';
 import 'wallet_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../zapps/discover_screen.dart';
 import '../../models/handle_label.dart';
 
 class ZendShell extends StatefulWidget {
@@ -45,7 +46,7 @@ class _ZendShellState extends State<ZendShell> {
   late final PageController _pageController;
   // One detail navigator per tab (desktop web), so each tab keeps whatever
   // was open in its right-hand pane while you're on another tab.
-  final _detailKeys = List.generate(4, (_) => GlobalKey<NavigatorState>());
+  final _detailKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
   Timer? _bannerTimer;
   // Tracks the last notification ID so re-arrival of a new request
   // forces the banner widget to rebuild and replay the slide-in animation.
@@ -361,6 +362,7 @@ class _ZendShellState extends State<ZendShell> {
       FeedScreen(onOpenWallet: () => _openWallet(context)),
       const PeopleScreen(),
       const DmListScreen(),
+      const DiscoverScreen(),
       const ProfileScreen(showBackButton: false),
     ];
 
@@ -750,11 +752,21 @@ class ZendBottomBar extends StatelessWidget {
                     badgeCount: chatsBadgeCount,
                   ),
                   _BottomNavIcon(
+                    icon: PhosphorIconsRegular.compass,
+                    activeIcon: PhosphorIconsFill.compass,
+                    label: 'Discover',
+                    active: currentIndex == 3,
+                    onTap: () => onChanged(3),
+                    activeColor: activeColor,
+                    inactiveColor: inactiveColor,
+                    badgeBorderColor: badgeBorderColor,
+                  ),
+                  _BottomNavIcon(
                     icon: PhosphorIconsRegular.userCircle,
                     activeIcon: PhosphorIconsFill.userCircle,
                     label: 'You',
-                    active: currentIndex == 3,
-                    onTap: () => onChanged(3),
+                    active: currentIndex == 4,
+                    onTap: () => onChanged(4),
                     activeColor: activeColor,
                     inactiveColor: inactiveColor,
                     badgeBorderColor: badgeBorderColor,
@@ -1879,6 +1891,11 @@ class _DesktopPanes extends StatelessWidget {
       PhosphorIconsRegular.chatCircleText,
       'Your chats',
       'Pick a conversation to open it here.',
+    ),
+    (
+      PhosphorIconsRegular.compass,
+      'Discover',
+      'Pick an app to see what it does.',
     ),
     (
       PhosphorIconsRegular.gearSix,

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
@@ -8,18 +7,29 @@ import 'package:web/web.dart' as web;
 import '../../services/appkit_service.dart';
 import 'zapp_bridge.dart';
 
-/// Web host: a sandboxed iframe. The SDK posts JSON strings to `window.parent`;
-/// only messages from this iframe's window and a registered origin are handled.
-/// The sandbox omits `allow-top-navigation`, so the app can't navigate Zend away.
+/// On web the browser's own back button handles history, so this does nothing.
+class ZAppHostHandle {
+  Future<bool> back() async => false;
+}
+
+/// Web host: a sandboxed iframe filling the window under Zend's bar. Only messages
+/// from this iframe's window and a registered origin are handled. The sandbox omits
+/// `allow-top-navigation`, so the app can't navigate Zend away.
 class ZAppHost extends StatefulWidget {
   const ZAppHost({
     super.key,
     required this.app,
     required this.bridge,
+    required this.handle,
+    required this.onReady,
+    required this.onLeave,
     this.path,
   });
   final ZAppDescriptor app;
   final ZAppBridge bridge;
+  final ZAppHostHandle handle;
+  final void Function(Color? background) onReady;
+  final void Function(Uri uri) onLeave;
   final String? path;
 
   @override
@@ -31,6 +41,7 @@ class _ZAppHostState extends State<ZAppHost> {
   late final String _viewType = 'zapp-iframe-${_seq++}';
   late final web.HTMLIFrameElement _frame;
   JSFunction? _listener;
+  bool _readySent = false;
 
   @override
   void initState() {
@@ -41,19 +52,15 @@ class _ZAppHostState extends State<ZAppHost> {
       ..style.width = '100%'
       ..style.height = '100%'
       ..allow = 'clipboard-write';
-    _frame.setAttribute(
-      'sandbox',
-      'allow-scripts allow-same-origin allow-forms allow-popups',
-    );
-    ui_web.platformViewRegistry.registerViewFactory(
-      _viewType,
-      (int _) => _frame,
-    );
-    // Block body, not `=>`: the arrow returned _onMessage's Future, and a
-    // function passed to JS via toJS may only return void or a JS type.
-    _listener = ((web.MessageEvent e) {
-      unawaited(_onMessage(e));
-    }).toJS;
+    _frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    _frame.addEventListener('load', ((web.Event _) {
+      if (!_readySent && mounted) {
+        _readySent = true;
+        widget.onReady(null);
+      }
+    }).toJS);
+    ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) => _frame);
+    _listener = ((web.MessageEvent e) => _onMessage(e)).toJS;
     web.window.addEventListener('message', _listener);
   }
 

@@ -12,6 +12,19 @@ class ZAppDescriptor {
 
   /// "Made by Tunde. Not checked by Zend." for unreviewed apps; null when reviewed.
   String? get trustLabel => raw['trust_label'] as String?;
+
+  /// Who made it, from the manifest's `developer.name` (public apps).
+  String? get developerName => (raw['developer'] as Map?)?['name'] as String?;
+
+  /// `app` | `checked` | `none`: how results are decided.
+  String get results => raw['results'] as String? ?? 'none';
+
+  /// Plain-language line about results, or null when there are none.
+  String? get resultsLine => switch (results) {
+    'checked' => 'Checked afterwards so nobody can cheat',
+    'app' => 'Results decided by $name',
+    _ => null,
+  };
   String get custody => raw['custody'] as String? ?? 'contract';
   List<String> get origins => (raw['origins'] as List? ?? []).cast<String>();
   List<String> get permissions =>

@@ -37,11 +37,12 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
   Future<void> _load() async {
     try {
       final apps = await _svc.connectedApps();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _apps = apps;
           _failed = false;
         });
+      }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }

@@ -297,6 +297,14 @@ class _Sidebar extends StatelessWidget {
               badge: model.dmUnreadTotal,
               onTap: () => _goToTab(2),
             ),
+            _NavItem(
+              collapsed: collapsed,
+              icon: PhosphorIconsRegular.compass,
+              activeIcon: PhosphorIconsFill.compass,
+              label: 'Discover',
+              active: currentTab == 3,
+              onTap: () => _goToTab(3),
+            ),
             const SizedBox(height: 20),
             Semantics(
               button: true,
@@ -350,12 +358,12 @@ class _Sidebar extends StatelessWidget {
             const Spacer(),
             // "You" lives at the bottom as the account row, desktop-style.
             Material(
-              color: currentTab == 3 ? zt.bgCard : Colors.transparent,
+              color: currentTab == 4 ? zt.bgCard : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
                 mouseCursor: SystemMouseCursors.click,
-                onTap: () => _goToTab(3),
+                onTap: () => _goToTab(4),
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(

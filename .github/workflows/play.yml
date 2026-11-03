@@ -79,7 +79,7 @@ jobs:
       # goes up; the offset keeps it above builds already uploaded by hand.
       - name: Build App Bundle
         run: >
-          flutter build appbundle --release
+          flutter build appbundle --release --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7
           --build-number=$((1000 + ${{ github.run_number }}))
           --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_ANDROID }}
 

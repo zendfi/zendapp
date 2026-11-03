@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
+import '../../services/prize_service.dart';
 import '../../services/zlink_service.dart';
 import 'zapp_confirm_sheet.dart';
 
@@ -46,6 +47,70 @@ class ZAppBridge {
     api: _model.walletService.apiClient,
     zkLogin: _model.zkLoginService,
   );
+
+  PrizeService get _prizes => PrizeService(
+    api: _model.walletService.apiClient,
+    zkLogin: _model.zkLoginService,
+  );
+
+  static String _duration(int secs) => secs >= 86400
+      ? '${(secs / 86400).round()} days'
+      : secs >= 3600
+      ? '${(secs / 3600).round()} hours'
+      : '${(secs / 60).round()} minutes';
+
+  Future<Object?> _prizeCreate(Map<String, dynamic> p) async {
+    if (!_can('prize')) throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "prize"');
+    final amount = _amount(p, min: 1);
+    final joinIn = (p['joinInSecs'] as num?)?.toInt() ?? 0;
+    final resolveIn = (p['resolveInSecs'] as num?)?.toInt() ?? 0;
+    final maxPlayers = (p['maxPlayers'] as num?)?.toInt() ?? 0;
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context, app: app, title: 'Put up a prize of', amountLabel: _money2(amount),
+      note: 'Up to $maxPlayers people can join for ${_duration(joinIn)}. '
+          '${app.name} decides the winners. If there is no result in ${_duration(resolveIn)}, '
+          'or you cancel during the short wait after results, it all comes back to you. '
+          'Held safely until the rules say who gets it.',
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    final r = await _prizes.create(
+      app: app.slug, amountUsd: amount, joinInSecs: joinIn, resolveInSecs: resolveIn,
+      maxPlayers: maxPlayers, disputeSecs: (p['disputeSecs'] as num?)?.toInt(),
+      reference: p['reference'] as String?, interactionId: p['interactionId'] as String?,
+    );
+    _model.fetchBalance();
+    return r;
+  }
+
+  Future<Object?> _prizeJoin(Map<String, dynamic> p) async {
+    final id = _str(p, 'id');
+    final prize = await _prizes.get(id);
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context, app: app, title: 'Join for a chance to win',
+      amountLabel: _money2((prize['pot_usd'] as num).toDouble()),
+      note: "It's free to join. ${app.name} decides the winners.",
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    return _prizes.join(id);
+  }
+
+  Future<Object?> _prizeCancel(Map<String, dynamic> p) async {
+    final id = _str(p, 'id');
+    final prize = await _prizes.get(id);
+    if (prize['is_host'] != true) throw const ZBridgeError('NOT_HOST', 'Only the host can cancel');
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context, app: app, title: 'Cancel the prize and take back',
+      amountLabel: _money2((prize['pot_usd'] as num).toDouble()),
+      note: 'Nobody gets paid. All of it comes back to you.',
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    final r = await _prizes.veto(id);
+    _model.fetchBalance();
+    return r;
+  }
 
   bool _can(String permission) => app.permissions.contains(permission);
 
@@ -120,6 +185,29 @@ class ZAppBridge {
           );
         }
         return _appkit.postCard(p);
+      case 'attest':
+        if (!_can('attest')) throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "attest"');
+        return _model.walletService.apiClient.appkit('POST', '/apps/attest', {
+          'app': app.slug,
+          'label': _str(p, 'label'),
+          'data_hash': _str(p, 'dataHash'),
+          'interaction_id': ?(p['interactionId'] as String?),
+        });
+      case 'prize.get':
+        return _prizes.get(_str(p, 'id'));
+      case 'prize.create':
+        return _money(() => _prizeCreate(p));
+      case 'prize.join':
+        return _money(() => _prizeJoin(p));
+      case 'prize.cancel':
+        return _money(() => _prizeCancel(p));
+      case 'report':
+        return _model.walletService.apiClient.appkit('POST', '/apps/by-slug/${app.slug}/report', {
+          'reason': _str(p, 'reason'),
+          'detail': ?(p['detail'] as String?),
+          'interaction_id': ?(p['interactionId'] as String?),
+          'prize_id': ?(p['prizeId'] as String?),
+        });
       case 'close':
         onClose(p['result']);
         return true;
