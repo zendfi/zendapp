@@ -61,6 +61,7 @@ Future<void> showSendFlowSheet(
   required double amount,
   String? prefilledRecipient,
   String? prefilledNote,
+  String? prefilledEmail,
 }) {
   return showZendModalSheet(
     context: context,
@@ -74,6 +75,7 @@ Future<void> showSendFlowSheet(
       amount: amount,
       prefilledRecipient: prefilledRecipient,
       prefilledNote: prefilledNote,
+      prefilledEmail: prefilledEmail,
     ),
   );
 }
@@ -84,11 +86,17 @@ class SendFlowSheet extends StatefulWidget {
     required this.amount,
     this.prefilledRecipient,
     this.prefilledNote,
+    this.prefilledEmail,
   });
 
   final double amount;
   final String? prefilledRecipient;
   final String? prefilledNote;
+
+  /// An email the caller already looked up and found no Zend account for.
+  /// Goes straight to the "not on Zend" path (a money link on Sui accounts)
+  /// instead of being sent to as if it were a username.
+  final String? prefilledEmail;
 
   @override
   State<SendFlowSheet> createState() => _SendFlowSheetState();
@@ -146,7 +154,17 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
         );
 
-    if (widget.prefilledRecipient != null) {
+    final email = widget.prefilledEmail;
+    if (email != null) {
+      _emailRecipient = email;
+      _recipientDisplayName = email;
+      if (widget.prefilledNote != null) {
+        _noteController.text = widget.prefilledNote!;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _proceedFromEmailIntentRecipient(email);
+      });
+    } else if (widget.prefilledRecipient != null) {
       _recipientZendtag = widget.prefilledRecipient;
       _recipientDisplayName = widget.prefilledRecipient;
       if (widget.prefilledNote != null) {
@@ -552,9 +570,14 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       final hint = at > 0
           ? '${email.substring(0, at.clamp(0, 2))}***${email.substring(at)}'
           : null;
+      final note = _noteController.text.trim();
       final link = await service.createGiveLink(
         amountUsd: widget.amount,
         recipientHint: hint,
+        // The link holds at most 140 characters of note.
+        memo: note.isEmpty
+            ? null
+            : String.fromCharCodes(note.runes.take(140)),
       );
       model.fetchBalance();
       await Share.share(
@@ -576,6 +599,9 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           ? e.userMessage
           : "Couldn't create the link. Try again.";
       messenger.showSnackBar(SnackBar(content: Text(message)));
+      // Opened straight into this step, there's no earlier stage to fall back
+      // to, so don't leave the sheet spinning.
+      if (mounted && widget.prefilledEmail != null) _dismiss();
     } finally {
       if (mounted) setState(() => _creatingLink = false);
     }
@@ -759,7 +785,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         return SendProcessingStage(
           key: const ValueKey('preparing'),
           amountFormatted: _amountFormatted,
-          recipientZendtag: _recipientZendtag ?? '',
+          recipientZendtag: _recipientZendtag ?? _emailRecipient ?? '',
         );
       case SendStage.uncertain:
         return const SendUncertainStage(key: ValueKey('uncertain'));

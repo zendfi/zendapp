@@ -458,14 +458,15 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     // sheet's context after it's been popped.
     final navigator = Navigator.of(context, rootNavigator: true);
 
-    // A non-Zend recipient goes through the email-intent flow, which only
-    // the full send sheet implements.
+    // Someone not on Zend: the full send sheet turns this into a money link
+    // they can collect after signing up. Passed as an email, not a recipient,
+    // so it isn't sent to as if it were a username.
     if (tag == null) {
       navigator.pop();
       showSendFlowSheet(
         navigator.context,
         amount: amount,
-        prefilledRecipient: _email,
+        prefilledEmail: _email,
         prefilledNote: note,
       );
       return;
