@@ -41,7 +41,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Future<void> _load() async {
     try {
-      final r = await ZendScope.of(context).walletService.apiClient.appkit('GET', '/apps/discover');
+      final r = await ZendScope.of(
+        context,
+      ).walletService.apiClient.appkit('GET', '/apps/discover');
       if (!mounted) return;
       setState(() {
         _apps = (r['apps'] as List? ?? []).cast<Map<String, dynamic>>();
@@ -56,76 +58,131 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? c}) =>
-        TextStyle(fontFamily: 'Geist', fontSize: size, fontWeight: w, color: c ?? zt.textPrimary);
+        TextStyle(
+          fontFamily: 'Geist',
+          fontSize: size,
+          fontWeight: w,
+          color: c ?? zt.textPrimary,
+        );
     final all = _apps;
     final apps = all == null || _q.isEmpty
         ? all
-        : all.where((a) => (a['name'] as String).toLowerCase().contains(_q)).toList();
-    final friendsPicks = (apps ?? []).where((a) => (a['friends_using'] as num? ?? 0) > 0).take(6).toList();
+        : all
+              .where((a) => (a['name'] as String).toLowerCase().contains(_q))
+              .toList();
+    final friendsPicks = (apps ?? [])
+        .where((a) => (a['friends_using'] as num? ?? 0) > 0)
+        .take(6)
+        .toList();
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 4),
-                child: Text('Discover', style: s(26, w: FontWeight.w700)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Same header rhythm as Chats and People: title, then a search pill, both fixed.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: SizedBox(
+                height: 48,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Discover', style: s(26, w: FontWeight.w700)),
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 16),
-                child: Text('Games and tools you can use with your people.', style: s(14, c: zt.textSecondary)),
-              ),
-              TextField(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: TextField(
                 controller: _search,
                 textInputAction: TextInputAction.search,
                 onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+                style: s(14),
                 decoration: InputDecoration(
                   hintText: 'Search apps',
-                  prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass, color: zt.textSecondary, size: 20),
+                  hintStyle: s(14, c: zt.textSecondary.withValues(alpha: 0.7)),
+                  prefixIcon: Icon(
+                    PhosphorIconsRegular.magnifyingGlass,
+                    color: zt.textSecondary,
+                    size: 18,
+                  ),
                   suffixIcon: _q.isEmpty
                       ? null
-                      : IconButton(
-                          icon: Icon(PhosphorIconsRegular.x, size: 18, color: zt.textSecondary),
-                          onPressed: () => setState(() {
+                      : GestureDetector(
+                          onTap: () => setState(() {
                             _search.clear();
                             _q = '';
                           }),
+                          child: Icon(
+                            PhosphorIconsRegular.xCircle,
+                            size: 18,
+                            color: zt.textSecondary,
+                          ),
                         ),
                   filled: true,
                   fillColor: zt.bgSecondary,
-                  isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZendRadii.pill), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              if (_failed)
-                _Empty(text: "Couldn't load apps. Pull to try again.", zt: zt)
-              else if (apps == null)
-                const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
-              else if (apps.isEmpty)
-                _Empty(text: _q.isEmpty ? 'New apps are on the way. Check back soon.' : 'No apps called "${_search.text.trim()}"', zt: zt)
-              else if (_q.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                for (final a in apps) _AppTile(app: a),
-              ]
-              else ...[
-                if (friendsPicks.isNotEmpty) ...[
-                  _Header('Your people use these', zt),
-                  for (final a in friendsPicks) _AppTile(app: a),
-                ],
-                for (final (key, title) in _sections)
-                  if (apps.any((a) => a['category'] == key && !friendsPicks.contains(a))) ...[
-                    _Header(title, zt),
-                    for (final a in apps.where((a) => a['category'] == key && !friendsPicks.contains(a)))
-                      _AppTile(app: a),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                  children: [
+                    if (_failed)
+                      _Empty(
+                        text: "Couldn't load apps. Pull to try again.",
+                        zt: zt,
+                      )
+                    else if (apps == null)
+                      const Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (apps.isEmpty)
+                      _Empty(
+                        text: _q.isEmpty
+                            ? 'New apps are on the way. Check back soon.'
+                            : 'No apps called "${_search.text.trim()}"',
+                        zt: zt,
+                      )
+                    else if (_q.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      for (final a in apps) _AppTile(app: a),
+                    ] else ...[
+                      if (friendsPicks.isNotEmpty) ...[
+                        _Header('Your people use these', zt),
+                        for (final a in friendsPicks) _AppTile(app: a),
+                      ],
+                      for (final (key, title) in _sections)
+                        if (apps.any(
+                          (a) =>
+                              a['category'] == key && !friendsPicks.contains(a),
+                        )) ...[
+                          _Header(title, zt),
+                          for (final a in apps.where(
+                            (a) =>
+                                a['category'] == key &&
+                                !friendsPicks.contains(a),
+                          ))
+                            _AppTile(app: a),
+                        ],
+                    ],
                   ],
-              ],
-            ],
-          ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -138,8 +195,16 @@ class _Header extends StatelessWidget {
   final ZendTheme zt;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
-    child: Text(text, style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.textSecondary)),
+    padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontFamily: 'Geist',
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: zt.textSecondary,
+      ),
+    ),
   );
 }
 
@@ -150,7 +215,13 @@ class _Empty extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(40),
-    child: Center(child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary))),
+    child: Center(
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary),
+      ),
+    ),
   );
 }
 
@@ -198,9 +269,18 @@ class _AppTile extends StatelessWidget {
                     height: 48,
                     color: zt.bgPrimary,
                     child: icon != null
-                        ? Image.network(icon, fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(PhosphorIconsRegular.squaresFour, color: zt.textSecondary))
-                        : Icon(PhosphorIconsRegular.squaresFour, color: zt.textSecondary),
+                        ? Image.network(
+                            icon,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Icon(
+                              PhosphorIconsRegular.squaresFour,
+                              color: zt.textSecondary,
+                            ),
+                          )
+                        : Icon(
+                            PhosphorIconsRegular.squaresFour,
+                            color: zt.textSecondary,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -208,23 +288,54 @@ class _AppTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        Expanded(
-                          child: Text(app['name'] as String,
-                              style: TextStyle(fontFamily: 'Geist', fontSize: 15, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-                        ),
-                        Text(app['connected'] == true ? 'Open' : 'Get',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: zt.accent)),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              app['name'] as String,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: zt.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            app['connected'] == true ? 'Open' : 'Get',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: zt.accent,
+                            ),
+                          ),
+                        ],
+                      ),
                       if (app['description'] is String) ...[
                         const SizedBox(height: 2),
-                        Text(app['description'] as String,
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary)),
+                        Text(
+                          app['description'] as String,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            color: zt.textSecondary,
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 6),
                       Text(
-                        [if (app['developer'] is String) 'By ${app['developer']}', _social(), ?how].join(' · '),
-                        style: TextStyle(fontFamily: 'Geist', fontSize: 11, color: zt.textSecondary),
+                        [
+                          if (app['developer'] is String)
+                            'By ${app['developer']}',
+                          _social(),
+                          ?how,
+                        ].join(' · '),
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 11,
+                          color: zt.textSecondary,
+                        ),
                       ),
                     ],
                   ),
