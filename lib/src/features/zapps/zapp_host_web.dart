@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
@@ -60,7 +61,12 @@ class _ZAppHostState extends State<ZAppHost> {
       }
     }).toJS);
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) => _frame);
-    _listener = ((web.MessageEvent e) => _onMessage(e)).toJS;
+    // Block body, not `=>`: the arrow returns _onMessage's Future, and a
+    // function passed to JS via toJS may only return void or a JS type.
+    // (This regressed once already; keep it a block.)
+    _listener = ((web.MessageEvent e) {
+      unawaited(_onMessage(e));
+    }).toJS;
     web.window.addEventListener('message', _listener);
   }
 
