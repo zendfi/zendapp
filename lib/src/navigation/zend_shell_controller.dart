@@ -26,7 +26,9 @@ class ZendShellController {
     void Function(int) switchTab, {
     int initialTab = 0,
   }) {
-    final ctrl = _instance ?? ZendShellController._();
+    // A fresh controller per shell, so an outgoing shell can be told apart
+    // from the one replacing it (see [deactivate]).
+    final ctrl = ZendShellController._();
     _instance = ctrl;
     ctrl._switchTab = switchTab;
     // Deferred: activate runs inside ZendShell.initState, i.e. during a build.
@@ -39,8 +41,17 @@ class ZendShellController {
     return ctrl;
   }
 
-  /// Called by [ZendShell]'s dispose.
-  static void deactivate() {
+  /// Called by [ZendShell]'s dispose with the controller it got from
+  /// [activate].
+  ///
+  /// Only clears state if [ctrl] is still the active one. When a new shell
+  /// replaces an old one (sign-in, unlock, pushAndRemoveUntil), the new
+  /// shell activates first and the old one disposes after. Clearing
+  /// unconditionally wiped the new shell's registration and set currentTab
+  /// to null, which the web frame reads as "signed out" and drops to the
+  /// narrow phone-width layout until something forced a rebuild.
+  static void deactivate([ZendShellController? ctrl]) {
+    if (ctrl != null && !identical(ctrl, _instance)) return;
     _instance?._switchTab = null;
     _instance = null;
     currentTab.value = null;

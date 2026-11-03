@@ -2617,7 +2617,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   onPickGif: gifSearchEnabled ? _onPickGif : null,
                   onOpenApps: () => showZAppTray(
                     context,
-                    counterpartyZendtag: widget.counterparty.zendtag,
+                    counterpartyUserId: widget.counterparty.userId,
                   ),
                   initialDraft: model.dmService.getDraft(widget.roomId),
                   onDraftChanged: (text) =>

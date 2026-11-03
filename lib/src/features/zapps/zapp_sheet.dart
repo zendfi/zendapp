@@ -108,12 +108,8 @@ class _ZAppScreenState extends State<_ZAppScreen> {
   @override
   void initState() {
     super.initState();
-    _leaveUrl = enterZAppUrl(widget.slug, () {
-      if (mounted && !_closing) {
-        _closing = true;
-        Navigator.of(context).pop();
-      }
-    });
+    // Browser back arrives as a normal back press (see PopScope below).
+    _leaveUrl = enterZAppUrl(widget.slug);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 

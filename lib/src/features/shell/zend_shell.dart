@@ -44,6 +44,7 @@ class _ZendShellState extends State<ZendShell> {
   // which no longer exists as a tab at all (Zend is now a floating action).
   int _tabIndex = 0;
   late final PageController _pageController;
+  ZendShellController? _shellCtrl;
   // One detail navigator per tab (desktop web), so each tab keeps whatever
   // was open in its right-hand pane while you're on another tab.
   final _detailKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
@@ -75,7 +76,7 @@ class _ZendShellState extends State<ZendShell> {
     // showing whatever page it was already on — tapping a notification to
     // "go to Activity" would show the Activity tab as selected while the
     // actual visible content stayed on Home/Send/DM.
-    ZendShellController.activate((index) {
+    _shellCtrl = ZendShellController.activate((index) {
       if (mounted) _setTab(index);
     }, initialTab: _tabIndex);
     // Consume any pending deep link that was stored before the user
@@ -104,7 +105,7 @@ class _ZendShellState extends State<ZendShell> {
 
   @override
   void dispose() {
-    ZendShellController.deactivate();
+    ZendShellController.deactivate(_shellCtrl);
     _pageController.dispose();
     _bannerTimer?.cancel();
     _reactionBannerTimer?.cancel();

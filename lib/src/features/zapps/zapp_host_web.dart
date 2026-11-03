@@ -83,6 +83,17 @@ class _ZAppHostState extends State<ZAppHost> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // An iframe is a separate document, so clicks inside its rectangle never
+    // reach Flutter, even where a Zend sheet or dialog is drawn on top of it.
+    // While anything is open over the app (its menu, "Leave Zend?", a payment
+    // confirmation from the bridge), let clicks fall through to Flutter.
+    final onTop = ModalRoute.isCurrentOf(context) ?? true;
+    _frame.style.pointerEvents = onTop ? 'auto' : 'none';
+  }
+
+  @override
   void dispose() {
     if (_listener != null) web.window.removeEventListener('message', _listener);
     super.dispose();

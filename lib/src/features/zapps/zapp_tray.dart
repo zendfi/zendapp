@@ -12,12 +12,12 @@ import 'zapp_sheet.dart';
 /// then opens the app's sheet on it.
 Future<void> showZAppTray(
   BuildContext context, {
-  required String counterpartyZendtag,
+  required String counterpartyUserId,
 }) {
   return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _Tray(counterparty: counterpartyZendtag),
+    builder: (_) => _Tray(counterpartyUserId: counterpartyUserId),
   );
 }
 
@@ -28,8 +28,11 @@ class _TrayAction {
 }
 
 class _Tray extends StatefulWidget {
-  const _Tray({required this.counterparty});
-  final String counterparty;
+  const _Tray({required this.counterpartyUserId});
+
+  /// The other person in this chat. Sent as `chat:<id>` so it works even
+  /// for people who haven't picked a username yet.
+  final String counterpartyUserId;
   @override
   State<_Tray> createState() => _TrayState();
 }
@@ -80,7 +83,7 @@ class _TrayState extends State<_Tray> {
       if (type != null) {
         final i = await _svc.createInteraction(t.app.slug, {
           'type': type,
-          'participants': ['@${widget.counterparty}'],
+          'participants': ['chat:${widget.counterpartyUserId}'],
         });
         query = {'interaction': i['id'] as String};
       }
