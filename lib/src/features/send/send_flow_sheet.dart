@@ -588,7 +588,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       if (!emailed) {
         await Share.share(
           'I sent you \$${widget.amount.toStringAsFixed(2)} on Zend. '
-          'Tap to collect it: ${link.url}',
+          'Open it in Zend: ${link.url}',
           subject: 'I sent you money on Zend',
         );
       }

@@ -109,7 +109,7 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
         title: Text(isGive ? 'Take it back?' : 'Stop collecting?'),
         content: Text(
           isGive
-              ? "Whatever hasn't been collected comes back to your balance."
+              ? "Whatever hasn't been received comes back to your balance."
               : 'People will no longer be able to pay this link.',
         ),
         actions: [
@@ -311,13 +311,13 @@ class _LinkTile extends StatelessWidget {
       final total = link['uses_total'] as int? ?? 1;
       final left = link['uses_left'] as int? ?? 0;
       return switch (status) {
-        'claimed' => 'Collected',
+        'claimed' => 'Received',
         'returned' => 'Taken back',
         'expired' => 'Expired, money returned',
         _ =>
           total > 1
-              ? '${total - left} of $total collected'
-              : 'Waiting to be collected',
+              ? '${total - left} of $total received'
+              : 'Not opened yet',
       };
     }
     final paid = link['payments_count'] as int? ?? 0;
