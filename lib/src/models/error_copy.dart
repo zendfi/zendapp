@@ -37,8 +37,14 @@ const _copy = <String, String>{
   'VIBE_DAILY_LIMIT_EXCEEDED':
       "You've hit today's \$25 Vibe limit. Try again tomorrow.",
 
-  'AMOUNT_TOO_SMALL': 'That amount is below the minimum for this bank. '
+  'AMOUNT_TOO_SMALL':
+      'That amount is below the minimum for this bank. '
       r'Withdraw at least $0.50 to a Naira account, or $5 elsewhere.',
+
+  'ZENDTAG_CHANGE_LIMIT': "You've used both of your Zend tag changes.",
+  'ZENDTAG_CHANGE_TOO_SOON': 'You can change your Zend tag once a year.',
+  'ZENDTAG_UNCHANGED': 'That is already your Zend tag.',
+  'INVALID_DETAILS': 'Check the details and try again.',
 
   // ── Recipient ────────────────────────────────────────────────────────
   'RECIPIENT_NOT_FOUND':

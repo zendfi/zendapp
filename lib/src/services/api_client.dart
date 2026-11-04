@@ -528,6 +528,55 @@ class ApiClient {
     }
   }
 
+  /// Replaces an existing zendtag. At most 2 changes, a year apart; the old
+  /// tag is retired forever.
+  Future<String> changeZendtag(String zendtag) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/zendtag/change',
+        data: {'zendtag': zendtag},
+      );
+      return (response.data as Map<String, dynamic>)['zendtag'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// `{changes_used, changes_left, next_change_at, can_change}`.
+  Future<Map<String, dynamic>> getZendtagChangeStatus() async {
+    try {
+      final r = await _dio.get('/api/zend/zendtag/change');
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Optional profile details: `{birthdate: 'YYYY-MM-DD'?, phone?}`.
+  Future<Map<String, dynamic>> getProfileDetails() async {
+    try {
+      final r = await _dio.get('/api/zend/user/details');
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> putProfileDetails({
+    String? birthdate,
+    String? phone,
+  }) async {
+    try {
+      final r = await _dio.put(
+        '/api/zend/user/details',
+        data: {'birthdate': birthdate, 'phone': phone},
+      );
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// Reads the whole salt once, so it can be split into shares.
   ///
   /// Only used during migration onto sharded custody, and gated server-side behind

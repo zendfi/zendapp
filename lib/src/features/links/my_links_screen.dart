@@ -315,9 +315,7 @@ class _LinkTile extends StatelessWidget {
         'returned' => 'Taken back',
         'expired' => 'Expired, money returned',
         _ =>
-          total > 1
-              ? '${total - left} of $total received'
-              : 'Not opened yet',
+          total > 1 ? '${total - left} of $total received' : 'Not opened yet',
       };
     }
     final paid = link['payments_count'] as int? ?? 0;

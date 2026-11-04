@@ -20,18 +20,24 @@ import '../../design/zend_modal.dart';
 ///
 /// That last option is recorded server-side rather than in device preferences, so
 /// a reinstall or a second device does not re-ask someone who already declined.
-Future<void> showZendtagPromptSheet(BuildContext context) {
+Future<void> showZendtagPromptSheet(
+  BuildContext context, {
+  bool change = false,
+}) {
   return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     // Dismissible on purpose: closing it is the same as "maybe later".
-    builder: (_) => const _ZendtagPromptSheet(),
+    builder: (_) => _ZendtagPromptSheet(change: change),
   );
 }
 
 class _ZendtagPromptSheet extends StatefulWidget {
-  const _ZendtagPromptSheet();
+  const _ZendtagPromptSheet({this.change = false});
+
+  /// Replacing an existing tag rather than choosing the first one.
+  final bool change;
 
   @override
   State<_ZendtagPromptSheet> createState() => _ZendtagPromptSheetState();
@@ -118,7 +124,10 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
     final model = ZendScope.read(context);
     final navigator = Navigator.of(context);
     try {
-      final claimed = await model.walletService.apiClient.claimZendtag(tag);
+      final api = model.walletService.apiClient;
+      final claimed = widget.change
+          ? await api.changeZendtag(tag)
+          : await api.claimZendtag(tag);
       if (!mounted) return;
       model.applyClaimedZendtag(claimed);
       navigator.pop();
@@ -192,7 +201,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Want a zendtag?',
+                widget.change ? 'Change your Zend tag' : 'Want a zendtag?',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 24,
@@ -202,8 +211,12 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Pick a short handle so you can send and receive cash without '
-                'sharing your email.',
+                widget.change
+                    ? 'You can change it twice in total, a year apart. Your old '
+                          'tag still reaches you for 90 days, then retires. '
+                          'Nobody can ever take it.'
+                    : 'Pick a short handle so you can send and receive cash '
+                          'without sharing your email.',
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.4,
@@ -267,7 +280,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
               ],
               const SizedBox(height: 20),
               PrimaryButton(
-                label: 'Claim handle',
+                label: widget.change ? 'Change tag' : 'Claim handle',
                 isLoading: _busy,
                 onPressed: tag.isEmpty || formatError != null ? null : _claim,
               ),
@@ -275,20 +288,21 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
               TextButton(
                 onPressed: _busy ? null : () => Navigator.of(context).pop(),
                 child: Text(
-                  'Maybe later',
+                  widget.change ? 'Cancel' : 'Maybe later',
                   style: TextStyle(color: zt.textSecondary),
                 ),
               ),
-              TextButton(
-                onPressed: _busy ? null : _neverAskAgain,
-                child: Text(
-                  "Don't ask again — use my email",
-                  style: TextStyle(
-                    color: zt.textSecondary.withValues(alpha: 0.7),
-                    fontSize: 13,
+              if (!widget.change)
+                TextButton(
+                  onPressed: _busy ? null : _neverAskAgain,
+                  child: Text(
+                    "Don't ask again — use my email",
+                    style: TextStyle(
+                      color: zt.textSecondary.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
