@@ -76,6 +76,89 @@ Uint8List zlinkClaimMessage(String linkId, String recipient) {
   ]);
 }
 
+/// The check run before signing anything for a link (or, with [module]
+/// `prize`, a prize): only the expected `<module>::<function>` call, sent by [sender], withdrawing exactly
+/// [withdrawBaseUnits] when set (creating a link) and nothing otherwise.
+/// Throws [ZlinkException] with the safety message on anything else.
+void verifyZlinkTransaction(
+  String txBase64, {
+  required String sender,
+  required String function,
+  BigInt? withdrawBaseUnits,
+  String packageId = kZlinkPackageId,
+  String module = 'zlink',
+}) {
+  final SuiDecodedTransaction tx;
+  try {
+    tx = decodeSuiTransaction(Uint8List.fromList(base64.decode(txBase64)));
+  } on SuiTransactionDecodeException {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  if (normaliseSuiAddress(tx.sender) != normaliseSuiAddress(sender)) {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  final calls = tx.commands.whereType<SuiMoveCallCommand>().toList();
+  if (calls.length != tx.commands.length) {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  // Creating a link takes the money out of the balance first, so it is two
+  // steps: `0x2::balance::redeem_funds<T>(withdrawal)`, then
+  // `zlink::create<T>(that balance, ...)`. Everything else is one step.
+  final expectedSteps = withdrawBaseUnits == null ? 1 : 2;
+  if (calls.length != expectedSteps) {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  final call = calls.last;
+  if (call.module != module || call.function != function) {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  if (withdrawBaseUnits != null) {
+    final redeem = calls.first;
+    final withdrawal = tx.inputs.whereType<SuiFundsWithdrawalInput>();
+    if (normaliseSuiAddress(redeem.package) != normaliseSuiAddress('0x2') ||
+        redeem.module != 'balance' ||
+        redeem.function != 'redeem_funds' ||
+        redeem.typeArguments.length != 1 ||
+        redeem.arguments.length != 1 ||
+        withdrawal.length != 1) {
+      throw const ZlinkException(_kSafetyStop);
+    }
+    // redeem_funds must spend the withdrawal input, from the sender.
+    final from = redeem.arguments.single;
+    if (from.kind != SuiArgumentKind.input ||
+        from.index == null ||
+        from.index! >= tx.inputs.length ||
+        tx.inputs[from.index!] is! SuiFundsWithdrawalInput ||
+        withdrawal.single.source != SuiWithdrawFrom.sender) {
+      throw const ZlinkException(_kSafetyStop);
+    }
+    // The link must be funded by exactly that balance, of the same type.
+    final coinType = withdrawal.single.coinType.canonical;
+    if (call.arguments.isEmpty ||
+        call.arguments.first.kind != SuiArgumentKind.result ||
+        call.arguments.first.index != 0 ||
+        call.arguments.skip(1).any((a) => a.kind == SuiArgumentKind.result || a.kind == SuiArgumentKind.nestedResult) ||
+        redeem.typeArguments.single.canonical != coinType ||
+        call.typeArguments.length != 1 ||
+        call.typeArguments.single.canonical != coinType) {
+      throw const ZlinkException(_kSafetyStop);
+    }
+  }
+  if (packageId.isNotEmpty &&
+      normaliseSuiAddress(call.package) !=
+          normaliseSuiAddress(packageId)) {
+    throw const ZlinkException(_kSafetyStop);
+  }
+  final withdrawals = tx.inputs.whereType<SuiFundsWithdrawalInput>().toList();
+  if (withdrawBaseUnits == null) {
+    if (withdrawals.isNotEmpty) {
+      throw const ZlinkException(_kSafetyStop);
+    }
+  } else if (withdrawals.length != 1 ||
+      withdrawals.single.amount != withdrawBaseUnits) {
+    throw const ZlinkException(_kSafetyStop);
+  }}
+
 class ZlinkService {
   ZlinkService({
     required ApiClient api,
@@ -123,39 +206,13 @@ class ZlinkService {
     required String sender,
     required String function,
     BigInt? withdrawBaseUnits,
-  }) {
-    final SuiDecodedTransaction tx;
-    try {
-      tx = decodeSuiTransaction(Uint8List.fromList(base64.decode(txBase64)));
-    } on SuiTransactionDecodeException {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    if (normaliseSuiAddress(tx.sender) != normaliseSuiAddress(sender)) {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    final calls = tx.commands.whereType<SuiMoveCallCommand>().toList();
-    if (calls.length != 1 || tx.commands.length != 1) {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    final call = calls.single;
-    if (call.module != 'zlink' || call.function != function) {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    if (kZlinkPackageId.isNotEmpty &&
-        normaliseSuiAddress(call.package) !=
-            normaliseSuiAddress(kZlinkPackageId)) {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    final withdrawals = tx.inputs.whereType<SuiFundsWithdrawalInput>().toList();
-    if (withdrawBaseUnits == null) {
-      if (withdrawals.isNotEmpty) {
-        throw const ZlinkException(_kSafetyStop);
-      }
-    } else if (withdrawals.length != 1 ||
-        withdrawals.single.amount != withdrawBaseUnits) {
-      throw const ZlinkException(_kSafetyStop);
-    }
-  }
+  }) => verifyZlinkTransaction(
+    txBase64,
+    sender: sender,
+    function: function,
+    withdrawBaseUnits: withdrawBaseUnits,
+  );
+
 
   String _txOf(Map<String, dynamic> prepared) =>
       ((prepared['envelope'] as Map)['payload'] as Map)['transaction_data_bcs']

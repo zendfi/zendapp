@@ -1,17 +1,11 @@
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'api_client.dart';
-import 'sui_transaction_decoder.dart';
 import 'sui_transaction_verifier.dart' show normaliseSuiAddress;
 import 'sui_zklogin_service.dart';
-import 'zlink_service.dart' show ZlinkException;
+import 'zlink_service.dart' show verifyZlinkTransaction;
 
 /// Optional pin for the published `zend::prize` package.
 const String kPrizePackageId = String.fromEnvironment('PRIZE_PACKAGE_ID');
-
-const _kSafetyStop =
-    "We stopped this because something didn't look right. Your money hasn't moved.";
 
 /// Host-funded prizes (`zend::prize`). Hosts create and may cancel during the
 /// dispute window; players join. Every prepared transaction is decoded and
@@ -27,34 +21,21 @@ class PrizeService {
   Future<String> _me() async =>
       normaliseSuiAddress((await _api.zlinkGet('/me'))['address'] as String);
 
+  /// Same check as links (a prize is funded the same way), for `prize::<function>`.
   void _verify(
     String txB64, {
     required String sender,
     required String function,
     BigInt? withdraw,
-  }) {
-    final SuiDecodedTransaction tx;
-    try {
-      tx = decodeSuiTransaction(Uint8List.fromList(base64.decode(txB64)));
-    } on SuiTransactionDecodeException {
-      throw const ZlinkException(_kSafetyStop);
-    }
-    final calls = tx.commands.whereType<SuiMoveCallCommand>().toList();
-    final ok =
-        normaliseSuiAddress(tx.sender) == sender &&
-        tx.commands.length == 1 &&
-        calls.length == 1 &&
-        calls.single.module == 'prize' &&
-        calls.single.function == function &&
-        (kPrizePackageId.isEmpty ||
-            normaliseSuiAddress(calls.single.package) ==
-                normaliseSuiAddress(kPrizePackageId));
-    final w = tx.inputs.whereType<SuiFundsWithdrawalInput>().toList();
-    final moneyOk = withdraw == null
-        ? w.isEmpty
-        : (w.length == 1 && w.single.amount == withdraw);
-    if (!ok || !moneyOk) throw const ZlinkException(_kSafetyStop);
-  }
+  }) => verifyZlinkTransaction(
+    txB64,
+    sender: sender,
+    function: function,
+    withdrawBaseUnits: withdraw,
+    packageId: kPrizePackageId,
+    module: 'prize',
+  );
+
 
   String _tx(Map<String, dynamic> p) =>
       ((p['envelope'] as Map)['payload'] as Map)['transaction_data_bcs']

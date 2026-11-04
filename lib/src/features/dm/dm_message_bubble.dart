@@ -315,9 +315,39 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         isLast: widget.isLast,
       ),
       DmMessageType.vibe => _buildVibeBubble(),
-      DmMessageType.appCard when widget.message.appCardData != null => Align(
-        alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: ZAppCard(card: widget.message.appCardData!),
+      // A ZApp card is a message like any other: same bubble shape, width
+      // and fill as a payment bubble, so it sits in the thread instead of
+      // breaking it.
+      DmMessageType.appCard when widget.message.appCardData != null => Row(
+        mainAxisAlignment: widget.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          const SizedBox(width: 4),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.66,
+              ),
+              child: _BubbleShape(
+                isMe: widget.isMe,
+                isFirst: widget.isFirst,
+                isLast: widget.isLast,
+                color: widget.isMe
+                    ? ZendTheme.of(context).bgAccentSurface
+                    : ZendTheme.of(context).bubbleReceived,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                  child: ZAppCard(
+                    card: widget.message.appCardData!,
+                    inBubble: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (widget.isMe) const SizedBox(width: 4),
+        ],
       ),
       DmMessageType.paymentRequest => DmPaymentRequestBubble(
         message: widget.message,

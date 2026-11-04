@@ -12,10 +12,14 @@ import 'zapp_sheet.dart';
 /// The app supplies only text, emoji, media and buttons; status comes from
 /// the live interaction. Unknown templates fall back to a plain card.
 class ZAppCard extends StatefulWidget {
-  const ZAppCard({super.key, required this.card});
+  const ZAppCard({super.key, required this.card, this.inBubble = false});
 
   /// `{app: slug|{slug,name}, app_name?, template, slots, interaction_id}`
   final Map<String, dynamic> card;
+
+  /// Drawn inside a DM bubble: the bubble supplies the surface, so the
+  /// card drops its own box and tightens up.
+  final bool inBubble;
 
   @override
   State<ZAppCard> createState() => _ZAppCardState();
@@ -120,14 +124,17 @@ class _ZAppCardState extends State<ZAppCard> {
               .toList()
         : <Map<String, dynamic>>[];
     final finished = _state == 'resolved' || _state == 'expired';
+    final bubble = widget.inBubble;
     return Container(
-      constraints: const BoxConstraints(maxWidth: 320),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: zt.bgSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: zt.border),
-      ),
+      constraints: bubble ? null : const BoxConstraints(maxWidth: 320),
+      padding: bubble ? EdgeInsets.zero : const EdgeInsets.all(14),
+      decoration: bubble
+          ? null
+          : BoxDecoration(
+              color: zt.bgSecondary,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: zt.border),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -150,13 +157,13 @@ class _ZAppCardState extends State<ZAppCard> {
                 Text(_stateLabel(_state!), style: s(11, c: zt.textSecondary)),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: bubble ? 4 : 8),
           if (known && slots['media'] is String) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 slots['media'] as String,
-                height: 140,
+                height: bubble ? 110 : 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => const SizedBox.shrink(),
@@ -168,7 +175,9 @@ class _ZAppCardState extends State<ZAppCard> {
             known
                 ? [slots['emoji'], slots['title']].whereType<String>().join(' ')
                 : 'Open in Zend to see this',
-            style: s(15, w: FontWeight.w600),
+            style: s(bubble ? 14.5 : 15, w: FontWeight.w600),
+            maxLines: bubble ? 3 : null,
+            overflow: bubble ? TextOverflow.ellipsis : null,
           ),
           if (known && slots['subtitle'] is String) ...[
             const SizedBox(height: 2),
@@ -178,18 +187,21 @@ class _ZAppCardState extends State<ZAppCard> {
             ),
           ],
           if (buttons.isNotEmpty || !known) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: bubble ? 8 : 10),
             Wrap(
               spacing: 8,
+              runSpacing: 6,
               children: [
                 if (!known)
                   OutlinedButton(
+                    style: bubble ? _compact(zt) : null,
                     onPressed: () => openZApp(context, _slug),
                     child: const Text('Open'),
                   ),
                 for (final b in buttons)
                   // Invites stop being actionable once the interaction is finished.
                   OutlinedButton(
+                    style: bubble ? _compact(zt) : null,
                     onPressed: template == 'invite' && finished
                         ? null
                         : () => _press(b),
@@ -203,3 +215,19 @@ class _ZAppCardState extends State<ZAppCard> {
     );
   }
 }
+
+/// Small pill buttons for cards inside chat bubbles.
+ButtonStyle _compact(ZendTheme zt) => OutlinedButton.styleFrom(
+  minimumSize: const Size(0, 34),
+  padding: const EdgeInsets.symmetric(horizontal: 14),
+  tapTargetSize: MaterialTapTargetSize.padded,
+  visualDensity: VisualDensity.compact,
+  foregroundColor: zt.textPrimary,
+  side: BorderSide(color: zt.border),
+  shape: const StadiumBorder(),
+  textStyle: const TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+  ),
+);
