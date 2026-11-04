@@ -30,7 +30,11 @@ String gifNote(String id) => '$_prefix$id';
 
 String _media(String id, {bool small = false, bool still = false}) =>
     'https://media.giphy.com/media/$id/'
-    '${still ? '200w_s' : small ? '200w' : 'giphy'}.gif';
+    '${still
+        ? '200w_s'
+        : small
+        ? '200w'
+        : 'giphy'}.gif';
 
 /// A GIF note on a rounded tile, the GIF counterpart of `ZendEmojiTile`.
 class ZendGifTile extends StatelessWidget {
@@ -157,10 +161,10 @@ class _GifPickerState extends State<_GifPicker> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(ZendRadii.chip),
                             // Still frames in the grid: 24 animating GIFs (each its own
-                              // browser <img> on web) used enough memory for
-                              // mobile browsers to reload the tab. Only the
-                              // chosen GIF animates.
-                              child: _GifImage(_media(_ids[i], still: true)),
+                            // browser <img> on web) used enough memory for
+                            // mobile browsers to reload the tab. Only the
+                            // chosen GIF animates.
+                            child: _GifImage(_media(_ids[i], still: true)),
                           ),
                         ),
                       ),

@@ -1,4 +1,3 @@
-
 import 'api_client.dart';
 import 'sui_transaction_verifier.dart' show normaliseSuiAddress;
 import 'sui_zklogin_service.dart';
@@ -35,7 +34,6 @@ class PrizeService {
     packageId: kPrizePackageId,
     module: 'prize',
   );
-
 
   String _tx(Map<String, dynamic> p) =>
       ((p['envelope'] as Map)['payload'] as Map)['transaction_data_bcs']

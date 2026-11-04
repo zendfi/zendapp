@@ -6,6 +6,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_modal.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
+import '../../models/api_exceptions.dart';
 import '../../services/dev_return_redirect_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
@@ -37,13 +38,10 @@ String zlinkAmountLabel(Map<String, dynamic> preview) {
 /// Opens the right sheet for a Zlink payload. Caller ensures the user is signed in.
 Future<void> openZlink(BuildContext context, DeepLinkPayload payload) {
   if (payload.isZlinkGive) {
-    return showZendModalSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _ClaimSheet(
-        id: payload.zlinkGiveId!,
-        keyFragment: payload.zlinkKey ?? '',
-      ),
+    return _receiveQuietly(
+      context,
+      payload.zlinkGiveId!,
+      payload.zlinkKey ?? '',
     );
   }
   return showZendModalSheet<void>(
@@ -62,6 +60,7 @@ class ZlinkWelcomeLine extends StatefulWidget {
 
 class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
   String? _text;
+  String? _sub;
 
   @override
   void initState() {
@@ -76,9 +75,11 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
       final service = zlinkServiceOf(context);
       if (p.isZlinkGive) {
         final v = await service.previewGive(p.zlinkGiveId!);
-        _text = v['status'] == 'active'
+        final active = v['status'] == 'active';
+        _text = active
             ? '${v['sender_name']} sent you ${zlinkAmountLabel(v)}'
             : _closedText(v['status'] as String?);
+        _sub = active ? "It'll be in your balance as soon as you're in." : null;
       } else {
         final v = await service.previewAsk(p.zlinkAskId!);
         _text = '${v['payee_name']} is asking for ${zlinkAmountLabel(v)}';
@@ -93,23 +94,40 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
     final zt = ZendTheme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        _text!,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: 'Geist',
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-          color: zt.textPrimary,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _text!,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: zt.textPrimary,
+            ),
+          ),
+          if (_sub != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              _sub!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
 String _closedText(String? status) => switch (status) {
-  'claimed' => 'This link has already been collected',
-  'returned' => 'The sender took this link back',
+  'claimed' => 'This money has already been received',
+  'returned' => 'The sender took this back',
   _ => 'This link has expired',
 };
 
@@ -162,79 +180,108 @@ class _SheetFrame extends StatelessWidget {
   }
 }
 
-/// Claims automatically on open: the user already said yes by signing in.
-class _ClaimSheet extends StatefulWidget {
-  const _ClaimSheet({required this.id, required this.keyFragment});
-  final String id;
-  final String keyFragment;
-  @override
-  State<_ClaimSheet> createState() => _ClaimSheetState();
-}
+/// Money someone sent by link arrives like any other money: no sheet, no
+/// spinner, nothing to tap. It moves into the balance in the background and a
+/// quiet "Tolu sent you ₦8,000" appears once it's there, the way a normal
+/// payment does. Only a link that can't be used gets a screen of its own.
+Future<void> _receiveQuietly(
+  BuildContext context,
+  String id,
+  String keyFragment,
+) async {
+  final model = ZendScope.of(context);
+  final service = zlinkServiceOf(context);
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
 
-class _ClaimSheetState extends State<_ClaimSheet> {
-  String _title = 'Collecting your money…';
-  String? _body;
-  IconData _icon = PhosphorIconsRegular.gift;
-  bool _done = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _claim());
+  void explain(String title, String body) {
+    if (!navigator.mounted) return;
+    showZendModalSheet<void>(
+      context: navigator.context,
+      builder: (c) => _SheetFrame(
+        icon: PhosphorIconsRegular.info,
+        title: title,
+        body: body,
+        action: PrimaryButton(
+          label: 'OK',
+          onPressed: () => Navigator.of(c).pop(),
+        ),
+      ),
+    );
   }
 
-  Future<void> _claim() async {
-    final model = ZendScope.of(context);
-    final service = zlinkServiceOf(context);
-    final key = parseZlinkKey(widget.keyFragment);
+  final key = parseZlinkKey(keyFragment);
+  if (key == null) {
+    explain(
+      'This link is incomplete',
+      'Ask the person who sent it to share it again.',
+    );
+    return;
+  }
+  Map<String, dynamic> preview;
+  try {
+    preview = await service.previewGive(id);
+  } catch (_) {
+    explain("We couldn't open this link", 'Open it again in a moment.');
+    return;
+  }
+  if (preview['status'] != 'active') {
+    explain(_closedText(preview['status'] as String?), _closedBody(preview));
+    return;
+  }
+
+  // A brief network or sponsor hiccup shouldn't become a message: try a few
+  // times quietly before saying anything.
+  Object? last;
+  for (final wait in const [0, 2, 5]) {
+    if (wait > 0) await Future<void>.delayed(Duration(seconds: wait));
     try {
-      if (key == null) {
-        throw const ZlinkException(
-          'This link is incomplete. Ask the sender to share it again.',
-        );
-      }
-      final preview = await service.previewGive(widget.id);
-      if (preview['status'] != 'active') {
-        throw ZlinkException(_closedText(preview['status'] as String?));
-      }
-      await service.claim(linkId: widget.id, linkKey: key);
+      await service.claim(linkId: id, linkKey: key);
       model.fetchBalance();
-      _set(
-        PhosphorIconsRegular.checkCircle,
-        '${zlinkAmountLabel(preview)} is in your balance',
-        'From ${preview['sender_name']}',
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${preview['sender_name']} sent you ${zlinkAmountLabel(preview)}',
+          ),
+        ),
       );
+      return;
+    } on ApiException catch (e) {
+      last = e;
+      if (e.errorCode == 'OWN_LINK') {
+        messenger?.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This is your own link. You can take it back from My Links.',
+            ),
+          ),
+        );
+        return;
+      }
+      // Only retry what can change on its own.
+      if (e.retryable != true && e.statusCode < 500) break;
+    } on ZlinkException catch (e) {
+      last = e;
+      break; // the app refused to sign: retrying won't help
     } catch (e) {
-      _set(
-        PhosphorIconsRegular.warningCircle,
-        "Couldn't collect this link",
-        e is ZlinkException ? e.message : 'Something went wrong. Try again.',
-      );
+      last = e;
     }
   }
-
-  void _set(IconData icon, String title, String? body) {
-    if (!mounted) return;
-    setState(() {
-      _icon = icon;
-      _title = title;
-      _body = body;
-      _done = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => _SheetFrame(
-    icon: _icon,
-    title: _title,
-    body: _body,
-    action: _done
-        ? PrimaryButton(
-            label: 'Done',
-            onPressed: () => Navigator.of(context).pop(),
-          )
-        : const CircularProgressIndicator(),
+  explain(
+    "That didn't go through",
+    last is ZlinkException
+        ? last.message
+        : 'The money is still waiting for you. Open the link again in a moment.',
   );
+}
+
+String _closedBody(Map<String, dynamic> preview) {
+  final name = preview['sender_name'] as String? ?? 'the sender';
+  return switch (preview['status']) {
+    'claimed' => 'If it was meant for you, ask $name about it.',
+    'returned' => 'Ask $name to send it again if it was meant for you.',
+    _ => 'Links last a few days. The money went back to $name.',
+  };
 }
 
 /// Shows what's being asked and pays on confirmation. Paying is a real choice,

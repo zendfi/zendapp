@@ -137,7 +137,13 @@ void verifyZlinkTransaction(
     if (call.arguments.isEmpty ||
         call.arguments.first.kind != SuiArgumentKind.result ||
         call.arguments.first.index != 0 ||
-        call.arguments.skip(1).any((a) => a.kind == SuiArgumentKind.result || a.kind == SuiArgumentKind.nestedResult) ||
+        call.arguments
+            .skip(1)
+            .any(
+              (a) =>
+                  a.kind == SuiArgumentKind.result ||
+                  a.kind == SuiArgumentKind.nestedResult,
+            ) ||
         redeem.typeArguments.single.canonical != coinType ||
         call.typeArguments.length != 1 ||
         call.typeArguments.single.canonical != coinType) {
@@ -145,8 +151,7 @@ void verifyZlinkTransaction(
     }
   }
   if (packageId.isNotEmpty &&
-      normaliseSuiAddress(call.package) !=
-          normaliseSuiAddress(packageId)) {
+      normaliseSuiAddress(call.package) != normaliseSuiAddress(packageId)) {
     throw const ZlinkException(_kSafetyStop);
   }
   final withdrawals = tx.inputs.whereType<SuiFundsWithdrawalInput>().toList();
@@ -157,7 +162,8 @@ void verifyZlinkTransaction(
   } else if (withdrawals.length != 1 ||
       withdrawals.single.amount != withdrawBaseUnits) {
     throw const ZlinkException(_kSafetyStop);
-  }}
+  }
+}
 
 class ZlinkService {
   ZlinkService({
@@ -212,7 +218,6 @@ class ZlinkService {
     function: function,
     withdrawBaseUnits: withdrawBaseUnits,
   );
-
 
   String _txOf(Map<String, dynamic> prepared) =>
       ((prepared['envelope'] as Map)['payload'] as Map)['transaction_data_bcs']
@@ -403,11 +408,8 @@ class ZlinkService {
 
   /// Zend emails this link to [email] with a Collect button. The full link,
   /// key included, goes to Zend for this one email and isn't kept.
-  Future<void> emailGiveLink(CreatedGiveLink link, String email) =>
-      _api.zlinkPost('/give/${link.id}/email', {
-        'email': email,
-        'url': link.url,
-      });
+  Future<void> emailGiveLink(CreatedGiveLink link, String email) => _api
+      .zlinkPost('/give/${link.id}/email', {'email': email, 'url': link.url});
 
   /// Zend emails an ask link to [email] with a Pay button.
   Future<void> emailAskLink(String url, String email) {
