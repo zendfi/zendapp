@@ -53,14 +53,23 @@ class _ZAppHostState extends State<ZAppHost> {
       ..style.width = '100%'
       ..style.height = '100%'
       ..allow = 'clipboard-write';
-    _frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-    _frame.addEventListener('load', ((web.Event _) {
-      if (!_readySent && mounted) {
-        _readySent = true;
-        widget.onReady(null);
-      }
-    }).toJS);
-    ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) => _frame);
+    _frame.setAttribute(
+      'sandbox',
+      'allow-scripts allow-same-origin allow-forms allow-popups',
+    );
+    _frame.addEventListener(
+      'load',
+      ((web.Event _) {
+        if (!_readySent && mounted) {
+          _readySent = true;
+          widget.onReady(null);
+        }
+      }).toJS,
+    );
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewType,
+      (int _) => _frame,
+    );
     // Block body, not `=>`: the arrow returns _onMessage's Future, and a
     // function passed to JS via toJS may only return void or a JS type.
     // (This regressed once already; keep it a block.)
@@ -78,7 +87,8 @@ class _ZAppHostState extends State<ZAppHost> {
     // and touching a cross-origin window that way throws a SecurityError,
     // which silently dropped every message from the app.
     final source = e.source;
-    if (child == null || source == null || !source.strictEquals(child).toDart) return;
+    if (child == null || source == null || !source.strictEquals(child).toDart)
+      return;
     final data = e.data;
     if (!data.isA<JSString>()) return;
     final reply = await widget.bridge.handleRaw((data as JSString).toDart);

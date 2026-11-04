@@ -14,8 +14,10 @@ import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import 'zapp_bridge.dart';
-import 'zapp_host_mobile.dart' if (dart.library.js_interop) 'zapp_host_web.dart';
-import 'zapp_web_url_stub.dart' if (dart.library.js_interop) 'zapp_web_url_web.dart';
+import 'zapp_host_mobile.dart'
+    if (dart.library.js_interop) 'zapp_host_web.dart';
+import 'zapp_web_url_stub.dart'
+    if (dart.library.js_interop) 'zapp_web_url_web.dart';
 
 /// Plain-language description of each optional scope for the consent screen.
 const _scopeCopy = {
@@ -34,7 +36,11 @@ Future<void> openZAppLink(BuildContext context, DeepLinkPayload p) async {
   try {
     final i = await svc.getInteraction(p.interactionId!);
     if (!context.mounted) return;
-    await openZApp(context, i['app'] as String, query: {'interaction': p.interactionId!});
+    await openZApp(
+      context,
+      i['app'] as String,
+      query: {'interaction': p.interactionId!},
+    );
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,13 +65,17 @@ Future<Object?> openZApp(
       opaque: true,
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (_, _, _) => _ZAppScreen(slug: slug, path: path, query: query),
+      pageBuilder: (_, _, _) =>
+          _ZAppScreen(slug: slug, path: path, query: query),
       transitionsBuilder: (_, a, _, child) {
         final curved = CurvedAnimation(parent: a, curve: Curves.easeOutCubic);
         return FadeTransition(
           opacity: curved,
           child: SlideTransition(
-            position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(curved),
+            position: Tween(
+              begin: const Offset(0, 0.04),
+              end: Offset.zero,
+            ).animate(curved),
             child: child,
           ),
         );
@@ -83,7 +93,9 @@ class _ZAppScreen extends StatefulWidget {
   String resolvedPath(ZAppDescriptor app) {
     final u = Uri.parse(path ?? app.entry);
     if (query == null || query!.isEmpty) return u.toString();
-    return u.replace(queryParameters: {...u.queryParameters, ...query!}).toString();
+    return u
+        .replace(queryParameters: {...u.queryParameters, ...query!})
+        .toString();
   }
 
   @override
@@ -103,7 +115,8 @@ class _ZAppScreenState extends State<_ZAppScreen> {
   late final VoidCallback _leaveUrl;
   bool _closing = false;
 
-  AppKitService get _svc => AppKitService(ZendScope.of(context).walletService.apiClient);
+  AppKitService get _svc =>
+      AppKitService(ZendScope.of(context).walletService.apiClient);
 
   @override
   void initState() {
@@ -149,12 +162,16 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     try {
       final s = await _svc.connect(
         widget.slug,
-        scopes: _optional.entries.where((e) => e.value).map((e) => e.key).toList(),
+        scopes: _optional.entries
+            .where((e) => e.value)
+            .map((e) => e.key)
+            .toList(),
         allowPosting: _allowPosting && _app!.permissions.contains('post_card'),
       );
       if (mounted) setState(() => _session = s);
     } catch (_) {
-      if (mounted) setState(() => _error = "That didn't go through. Try again.");
+      if (mounted)
+        setState(() => _error = "That didn't go through. Try again.");
     } finally {
       if (mounted) setState(() => _consenting = false);
     }
@@ -165,10 +182,18 @@ class _ZAppScreenState extends State<_ZAppScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Leave Zend?'),
-        content: Text('${_app?.name ?? 'This app'} wants to open something outside Zend.'),
+        content: Text(
+          '${_app?.name ?? 'This app'} wants to open something outside Zend.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Open')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Open'),
+          ),
         ],
       ),
     );
@@ -210,22 +235,39 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     final reason = await showZendModalSheet<String>(
       context: context,
       builder: (c) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const ListTile(title: Text("What's wrong?", style: TextStyle(fontWeight: FontWeight.w700))),
-          for (final e in reasons.entries)
-            ListTile(title: Text(e.value), onTap: () => Navigator.pop(c, e.key)),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                "What's wrong?",
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            for (final e in reasons.entries)
+              ListTile(
+                title: Text(e.value),
+                onTap: () => Navigator.pop(c, e.key),
+              ),
+          ],
+        ),
       ),
     );
     if (reason == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ZendScope.of(context).walletService.apiClient.appkit(
-        'POST', '/apps/by-slug/${app.slug}/report', {'reason': reason},
+        'POST',
+        '/apps/by-slug/${app.slug}/report',
+        {'reason': reason},
       );
-      messenger.showSnackBar(const SnackBar(content: Text('Thanks. Zend will take a look.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Thanks. Zend will take a look.')),
+      );
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text("That didn't go through. Try again.")));
+      messenger.showSnackBar(
+        const SnackBar(content: Text("That didn't go through. Try again.")),
+      );
     }
   }
 
@@ -235,8 +277,9 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     final app = _app;
     final bg = _background ?? zt.bgPrimary;
     final dark = bg.computeLuminance() < 0.45;
-    final overlay = (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-        .copyWith(statusBarColor: Colors.transparent);
+    final overlay =
+        (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+            .copyWith(statusBarColor: Colors.transparent);
 
     Widget body;
     if (_error != null) {
@@ -255,21 +298,34 @@ class _ZAppScreenState extends State<_ZAppScreen> {
           _ready = true;
           _background = c;
         }),
-        bridge: ZAppBridge(context: context, app: app, session: _session!, onClose: _close),
+        bridge: ZAppBridge(
+          context: context,
+          app: app,
+          session: _session!,
+          onClose: _close,
+        ),
       );
       body = kIsWeb
-          ? Column(children: [
-              _WebBar(app: app, onMenu: _menu, onClose: _close),
-              Expanded(child: Stack(children: [
-                Positioned.fill(child: host),
+          ? Column(
+              children: [
+                _WebBar(app: app, onMenu: _menu, onClose: _close),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: host),
+                      if (!_ready) Positioned.fill(child: _Splash(app: app)),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Stack(
+              children: [
+                Positioned.fill(child: SafeArea(bottom: false, child: host)),
                 if (!_ready) Positioned.fill(child: _Splash(app: app)),
-              ])),
-            ])
-          : Stack(children: [
-              Positioned.fill(child: SafeArea(bottom: false, child: host)),
-              if (!_ready) Positioned.fill(child: _Splash(app: app)),
-              _ExitPill(app: app, onClose: () => _close(), onMenu: _menu),
-            ]);
+                _ExitPill(app: app, onClose: () => _close(), onMenu: _menu),
+              ],
+            );
     }
 
     return PopScope(
@@ -291,35 +347,65 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     final zt = ZendTheme.of(context);
     final model = ZendScope.of(context);
     TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? c}) =>
-        TextStyle(fontFamily: 'Geist', fontSize: size, fontWeight: w, color: c ?? zt.textPrimary);
+        TextStyle(
+          fontFamily: 'Geist',
+          fontSize: size,
+          fontWeight: w,
+          color: c ?? zt.textPrimary,
+        );
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: IconButton(icon: Icon(PhosphorIconsRegular.x, color: zt.textSecondary), onPressed: _close),
+            child: IconButton(
+              icon: Icon(PhosphorIconsRegular.x, color: zt.textSecondary),
+              onPressed: _close,
+            ),
           ),
           const SizedBox(height: 24),
           Center(child: _AppIcon(app: app, size: 72)),
           const SizedBox(height: 16),
-          Text(app.name, textAlign: TextAlign.center, style: s(24, w: FontWeight.w700)),
+          Text(
+            app.name,
+            textAlign: TextAlign.center,
+            style: s(24, w: FontWeight.w700),
+          ),
           if (app.developerName != null)
-            Text('By ${app.developerName}', textAlign: TextAlign.center, style: s(13, c: zt.textSecondary)),
+            Text(
+              'By ${app.developerName}',
+              textAlign: TextAlign.center,
+              style: s(13, c: zt.textSecondary),
+            ),
           if (app.trustLabel != null) ...[
             const SizedBox(height: 6),
-            Text(app.trustLabel!, textAlign: TextAlign.center, style: s(12, c: zt.textSecondary)),
+            Text(
+              app.trustLabel!,
+              textAlign: TextAlign.center,
+              style: s(12, c: zt.textSecondary),
+            ),
           ],
           if (app.resultsLine != null) ...[
             const SizedBox(height: 6),
-            Text(app.resultsLine!, textAlign: TextAlign.center, style: s(12, c: zt.textSecondary)),
+            Text(
+              app.resultsLine!,
+              textAlign: TextAlign.center,
+              style: s(12, c: zt.textSecondary),
+            ),
           ],
           const SizedBox(height: 28),
-          Text('Continue as ${model.currentDisplayName ?? 'you'}?',
-              textAlign: TextAlign.center, style: s(17, w: FontWeight.w600)),
+          Text(
+            'Continue as ${model.currentDisplayName ?? 'you'}?',
+            textAlign: TextAlign.center,
+            style: s(17, w: FontWeight.w600),
+          ),
           const SizedBox(height: 6),
-          Text('${app.name} will see your name, username and photo.',
-              textAlign: TextAlign.center, style: s(14, c: zt.textSecondary)),
+          Text(
+            '${app.name} will see your name, username and photo.',
+            textAlign: TextAlign.center,
+            style: s(14, c: zt.textSecondary),
+          ),
           const SizedBox(height: 12),
           for (final e in _optional.entries)
             SwitchListTile(
@@ -330,16 +416,29 @@ class _ZAppScreenState extends State<_ZAppScreen> {
           if (app.permissions.contains('post_card'))
             SwitchListTile(
               title: Text('Post to your feed and chats', style: s(15)),
-              subtitle: Text('Only when you do something in the app', style: s(12, c: zt.textSecondary)),
+              subtitle: Text(
+                'Only when you do something in the app',
+                style: s(12, c: zt.textSecondary),
+              ),
               value: _allowPosting,
               onChanged: (v) => setState(() => _allowPosting = v),
             ),
           const SizedBox(height: 8),
-          Text('You can change this anytime in Settings → Connected apps.',
-              textAlign: TextAlign.center, style: s(12, c: zt.textSecondary)),
+          Text(
+            'You can change this anytime in Settings → Connected apps.',
+            textAlign: TextAlign.center,
+            style: s(12, c: zt.textSecondary),
+          ),
           const SizedBox(height: 24),
-          PrimaryButton(label: 'Continue', isLoading: _consenting, onPressed: _consenting ? null : _connect),
-          TextButton(onPressed: _close, child: Text('Not now', style: s(14, c: zt.textSecondary))),
+          PrimaryButton(
+            label: 'Continue',
+            isLoading: _consenting,
+            onPressed: _consenting ? null : _connect,
+          ),
+          TextButton(
+            onPressed: _close,
+            child: Text('Not now', style: s(14, c: zt.textSecondary)),
+          ),
         ],
       ),
     );
@@ -361,9 +460,20 @@ class _AppIcon extends StatelessWidget {
         height: size,
         color: zt.bgSecondary,
         child: url != null
-            ? Image.network(url, fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Icon(PhosphorIconsRegular.squaresFour, size: size * 0.45, color: zt.textSecondary))
-            : Icon(PhosphorIconsRegular.squaresFour, size: size * 0.45, color: zt.textSecondary),
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Icon(
+                  PhosphorIconsRegular.squaresFour,
+                  size: size * 0.45,
+                  color: zt.textSecondary,
+                ),
+              )
+            : Icon(
+                PhosphorIconsRegular.squaresFour,
+                size: size * 0.45,
+                color: zt.textSecondary,
+              ),
       ),
     );
   }
@@ -379,19 +489,44 @@ class _Splash extends StatelessWidget {
     return ColoredBox(
       color: zt.bgPrimary,
       child: Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _AppIcon(app: app, size: 84),
-          if (app != null) ...[
-            const SizedBox(height: 16),
-            Text(app!.name, style: TextStyle(fontFamily: 'Geist', fontSize: 18, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-            if (app!.trustLabel != null) ...[
-              const SizedBox(height: 6),
-              Text(app!.trustLabel!, style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AppIcon(app: app, size: 84),
+            if (app != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                app!.name,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: zt.textPrimary,
+                ),
+              ),
+              if (app!.trustLabel != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  app!.trustLabel!,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 12,
+                    color: zt.textSecondary,
+                  ),
+                ),
+              ],
             ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: zt.textSecondary,
+              ),
+            ),
           ],
-          const SizedBox(height: 24),
-          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: zt.textSecondary)),
-        ]),
+        ),
       ),
     );
   }
@@ -408,11 +543,18 @@ class _Message extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(text, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Geist', color: zt.textPrimary)),
-            const SizedBox(height: 16),
-            TextButton(onPressed: onClose, child: const Text('Back to Zend')),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Geist', color: zt.textPrimary),
+              ),
+              const SizedBox(height: 16),
+              TextButton(onPressed: onClose, child: const Text('Back to Zend')),
+            ],
+          ),
         ),
       ),
     );
@@ -423,7 +565,11 @@ class _Message extends StatelessWidget {
 /// people learn it's there, folds into a dot after a few seconds, and can be
 /// dragged up and down so it never covers the app's own buttons.
 class _ExitPill extends StatefulWidget {
-  const _ExitPill({required this.app, required this.onClose, required this.onMenu});
+  const _ExitPill({
+    required this.app,
+    required this.onClose,
+    required this.onMenu,
+  });
   final ZAppDescriptor app;
   final VoidCallback onClose;
   final VoidCallback onMenu;
@@ -468,29 +614,44 @@ class _ExitPillState extends State<_ExitPill> {
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         child: _expanded
-            ? Row(mainAxisSize: MainAxisSize.min, children: [
-                const SizedBox(width: 6),
-                _AppIcon(app: widget.app, size: 24),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 140),
-                  child: Text(widget.app.name, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600, color: fg)),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'More',
-                  icon: const Icon(PhosphorIconsBold.dotsThree, color: fg, size: 18),
-                  onPressed: widget.onMenu,
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Close',
-                  icon: const Icon(PhosphorIconsBold.x, color: fg, size: 16),
-                  onPressed: widget.onClose,
-                ),
-                const SizedBox(width: 2),
-              ])
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 6),
+                  _AppIcon(app: widget.app, size: 24),
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 140),
+                    child: Text(
+                      widget.app.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: fg,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'More',
+                    icon: const Icon(
+                      PhosphorIconsBold.dotsThree,
+                      color: fg,
+                      size: 18,
+                    ),
+                    onPressed: widget.onMenu,
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Close',
+                    icon: const Icon(PhosphorIconsBold.x, color: fg, size: 16),
+                    onPressed: widget.onClose,
+                  ),
+                  const SizedBox(width: 2),
+                ],
+              )
             : InkWell(
                 onTap: () {
                   setState(() => _expanded = true);
@@ -508,7 +669,10 @@ class _ExitPillState extends State<_ExitPill> {
       right: 8,
       child: GestureDetector(
         onVerticalDragUpdate: (d) => setState(() {
-          _top = (_top + d.delta.dy).clamp(0.0, height - pad.top - pad.bottom - 60);
+          _top = (_top + d.delta.dy).clamp(
+            0.0,
+            height - pad.top - pad.bottom - 60,
+          );
         }),
         child: pill,
       ),
@@ -518,7 +682,11 @@ class _ExitPillState extends State<_ExitPill> {
 
 /// Web: a slim Zend bar above the app, so it reads as a page inside Zend.
 class _WebBar extends StatelessWidget {
-  const _WebBar({required this.app, required this.onMenu, required this.onClose});
+  const _WebBar({
+    required this.app,
+    required this.onMenu,
+    required this.onClose,
+  });
   final ZAppDescriptor app;
   final VoidCallback onMenu;
   final VoidCallback onClose;
@@ -527,29 +695,69 @@ class _WebBar extends StatelessWidget {
     final zt = ZendTheme.of(context);
     return Container(
       height: 48,
-      decoration: BoxDecoration(color: zt.bgPrimary, border: Border(bottom: BorderSide(color: zt.border))),
+      decoration: BoxDecoration(
+        color: zt.bgPrimary,
+        border: Border(bottom: BorderSide(color: zt.border)),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(children: [
-        IconButton(tooltip: 'Back to Zend', icon: Icon(PhosphorIconsRegular.arrowLeft, color: zt.textPrimary), onPressed: onClose),
-        Image.asset('assets/icons/zend-icon-navbar.png', width: 16, height: 16, color: zt.textSecondary),
-        const SizedBox(width: 10),
-        _AppIcon(app: app, size: 22),
-        const SizedBox(width: 8),
-        Text(app.name, style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600, color: zt.textPrimary)),
-        if (app.trustLabel != null) ...[
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Back to Zend',
+            icon: Icon(PhosphorIconsRegular.arrowLeft, color: zt.textPrimary),
+            onPressed: onClose,
+          ),
+          Image.asset(
+            'assets/icons/zend-icon-navbar.png',
+            width: 16,
+            height: 16,
+            color: zt.textSecondary,
+          ),
           const SizedBox(width: 10),
-          Flexible(child: Text(app.trustLabel!, overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary))),
+          _AppIcon(app: app, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            app.name,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: zt.textPrimary,
+            ),
+          ),
+          if (app.trustLabel != null) ...[
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                app.trustLabel!,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 12,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ),
+          ],
+          const Spacer(),
+          IconButton(
+            tooltip: 'More',
+            icon: Icon(PhosphorIconsRegular.dotsThree, color: zt.textSecondary),
+            onPressed: onMenu,
+          ),
         ],
-        const Spacer(),
-        IconButton(tooltip: 'More', icon: Icon(PhosphorIconsRegular.dotsThree, color: zt.textSecondary), onPressed: onMenu),
-      ]),
+      ),
     );
   }
 }
 
 class _AppMenu extends StatelessWidget {
-  const _AppMenu({required this.app, required this.onReport, required this.onDisconnect, required this.onClose});
+  const _AppMenu({
+    required this.app,
+    required this.onReport,
+    required this.onDisconnect,
+    required this.onClose,
+  });
   final ZAppDescriptor app;
   final VoidCallback onReport;
   final VoidCallback onDisconnect;
@@ -558,20 +766,42 @@ class _AppMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     return SafeArea(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(
-          leading: _AppIcon(app: app, size: 36),
-          title: Text(app.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(
-            [if (app.developerName != null) 'By ${app.developerName}', ?app.trustLabel, ?app.resultsLine].join('\n'),
-            style: TextStyle(color: zt.textSecondary),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: _AppIcon(app: app, size: 36),
+            title: Text(
+              app.name,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              [
+                if (app.developerName != null) 'By ${app.developerName}',
+                ?app.trustLabel,
+                ?app.resultsLine,
+              ].join('\n'),
+              style: TextStyle(color: zt.textSecondary),
+            ),
           ),
-        ),
-        const Divider(height: 1),
-        ListTile(leading: const Icon(PhosphorIconsRegular.flag), title: const Text('Report this app'), onTap: onReport),
-        ListTile(leading: const Icon(PhosphorIconsRegular.plugs), title: const Text('Disconnect'), onTap: onDisconnect),
-        ListTile(leading: const Icon(PhosphorIconsRegular.x), title: const Text('Close'), onTap: onClose),
-      ]),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(PhosphorIconsRegular.flag),
+            title: const Text('Report this app'),
+            onTap: onReport,
+          ),
+          ListTile(
+            leading: const Icon(PhosphorIconsRegular.plugs),
+            title: const Text('Disconnect'),
+            onTap: onDisconnect,
+          ),
+          ListTile(
+            leading: const Icon(PhosphorIconsRegular.x),
+            title: const Text('Close'),
+            onTap: onClose,
+          ),
+        ],
+      ),
     );
   }
 }

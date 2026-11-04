@@ -131,7 +131,9 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
   }
 
   Future<void> _rotate() => _run(() async {
-    final r = await _call('POST', '/apps/${_selected!['id']}/rotate', {'which': 'both'});
+    final r = await _call('POST', '/apps/${_selected!['id']}/rotate', {
+      'which': 'both',
+    });
     _newKeys = {'api_key': r['api_key'], 'webhook_secret': r['webhook_secret']};
     _message = 'New keys made. The old ones stopped working.';
   });
@@ -260,8 +262,13 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
                         if (_newKeys != null) _KeysCard(keys: _newKeys!),
                         if (_review != null) ...[
                           const SizedBox(height: 16),
-                          Text('Listing: ${_review!['status']}', style: s(14, w: FontWeight.w600)),
-                          for (final rv in (_review!['reviews'] as List).take(3))
+                          Text(
+                            'Listing: ${_review!['status']}',
+                            style: s(14, w: FontWeight.w600),
+                          ),
+                          for (final rv in (_review!['reviews'] as List).take(
+                            3,
+                          ))
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(

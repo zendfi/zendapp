@@ -1,6 +1,4 @@
-import '../../design/zend_money.dart';
 import '../../design/zend_keypad.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -597,7 +595,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 ),
                 const SizedBox(height: 10),
                 // Modelled on the Zend send sheet: a smaller "\$" hugging
-                // the figure, and the on-screen keypad on phones.
+                // the figure.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -616,8 +614,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                       child: TextField(
                         controller: _amountController,
                         focusNode: _amountFocus,
-                        readOnly: !kIsWeb,
-                        showCursor: kIsWeb,
+                        inputFormatters: const [AmountInputFormatter()],
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -663,19 +660,6 @@ class _AddCashSheetState extends State<AddCashSheet> {
             ),
           ),
         ),
-        if (!kIsWeb)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: ZendAmountKeypad(
-              onKey: (k) {
-                final next = applyAmountKey(_amountController.text, k);
-                if (next == null) return;
-                ZendFeel.keypadTap();
-                _amountController.text = next;
-                setState(() => _ngnError = null);
-              },
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: SizedBox(

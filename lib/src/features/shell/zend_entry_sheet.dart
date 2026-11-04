@@ -3,7 +3,6 @@ import '../../services/zend_analytics.dart';
 import '../../design/zend_motion_widgets.dart';
 import '../../core/zend_format.dart';
 import '../../design/zend_money.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -167,19 +166,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
   String get _amountLabel => formatUsd(_amount);
-
-  /// Keypad entry (Cash App lesson: the keypad is the product). Max two
-  /// decimals, one dot, no leading zeros.
-  void _onKey(String key) {
-    final next = applyAmountKey(_amountController.text, key);
-    if (next == null) return;
-    ZendFeel.keypadTap();
-    _amountController.text = next;
-    setState(() {
-      _confirmingZend = false;
-      _amountError = null;
-    });
-  }
 
   /// Emoji suggestions for the note: the user's own recent emoji notes first,
   /// then a default set.
@@ -562,15 +548,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _creatingAskLink = true);
     try {
-      final url = await ZlinkService(
-        api: model.walletService.apiClient,
-        zkLogin: model.zkLoginService,
-      ).createAskLink(
-        amountUsd: amount,
-        maxPayments: 1,
-        // The link holds at most 140 characters of note.
-        memo: note == null ? null : String.fromCharCodes(note.runes.take(140)),
-      );
+      final url =
+          await ZlinkService(
+            api: model.walletService.apiClient,
+            zkLogin: model.zkLoginService,
+          ).createAskLink(
+            amountUsd: amount,
+            maxPayments: 1,
+            // The link holds at most 140 characters of note.
+            memo: note == null
+                ? null
+                : String.fromCharCodes(note.runes.take(140)),
+          );
       navigator.pop();
       final forWhat = note == null ? '' : ' for $note';
       await Share.share(
@@ -583,7 +572,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         ),
       );
     } on ApiException catch (e) {
-      const notOpenYet = {'LINKS_PILOT_ONLY', 'ZLINKS_DISABLED', 'SUI_UNAVAILABLE'};
+      const notOpenYet = {
+        'LINKS_PILOT_ONLY',
+        'ZLINKS_DISABLED',
+        'SUI_UNAVAILABLE',
+      };
       if (notOpenYet.contains(e.errorCode)) {
         // Links aren't available to this account yet: send the usual
         // emailed request instead.
@@ -978,10 +971,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                         child: TextField(
                           controller: _amountController,
                           focusNode: _amountFocus,
-                          // Phones use the on-screen keypad below; on the web
-                          // the physical keyboard types straight in.
-                          readOnly: !kIsWeb,
-                          showCursor: kIsWeb,
+                          // System numpad on phones, keyboard on web.
+                          inputFormatters: const [AmountInputFormatter()],
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
@@ -1205,10 +1196,6 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   ),
           ),
           const SizedBox(height: 12),
-          if (!_confirmingZend && !kIsWeb) ...[
-            ZendAmountKeypad(onKey: _onKey),
-            const SizedBox(height: 8),
-          ],
           // ── Action area — pinned outside the scroll view ──
           // Fixed 52pt height, so the two states swap without the sheet's
           // pinned bottom region changing size.

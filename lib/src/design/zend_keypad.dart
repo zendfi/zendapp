@@ -1,9 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:flutter/services.dart';
 
-import 'zend_tokens.dart';
-
-/// Applies one keypad key ('0'-'9', '.', '<' for delete) to an amount string.
+/// Applies one key ('0'-'9', '.', '<' for delete) to an amount string.
 /// Max two decimals, one dot, seven digits, no leading zero. Returns null
 /// when the key is rejected.
 String? applyAmountKey(String t, String key) {
@@ -15,61 +12,27 @@ String? applyAmountKey(String t, String key) {
   return t == '0' ? key : '$t$key';
 }
 
-/// Numeric keypad for the amount. 44px+ touch targets, light tick per tap.
-class ZendAmountKeypad extends StatelessWidget {
-  const ZendAmountKeypad({super.key, required this.onKey});
-
-  final ValueChanged<String> onKey;
+/// Keeps a typed or pasted amount valid with the same rules as
+/// [applyAmountKey]: digits and one "." only (a "," is read as "."), two
+/// decimals, seven digits, no leading zero. Used with the system numpad.
+class AmountInputFormatter extends TextInputFormatter {
+  const AmountInputFormatter();
 
   @override
-  Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    const rows = [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['.', '0', '<'],
-    ];
-    return Column(
-      children: [
-        for (final row in rows)
-          Row(
-            children: [
-              for (final k in row)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: k == '<'
-                        ? 'Delete'
-                        : k == '.'
-                        ? 'Decimal point'
-                        : k,
-                    excludeSemantics: true,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(ZendRadii.card),
-                      onTap: () => onKey(k),
-                      child: SizedBox(
-                        height: 52,
-                        child: Center(
-                          child: k == '<'
-                              ? Icon(
-                                  PhosphorIconsRegular.backspace,
-                                  color: zt.textPrimary,
-                                )
-                              : Text(
-                                  k,
-                                  style: ZendTextStyles.amountM.copyWith(
-                                    color: zt.textPrimary,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-      ],
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var t = newValue.text.replaceAll(',', '.');
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(t)) return oldValue;
+    if (t.startsWith('.')) t = '0$t';
+    final dot = t.indexOf('.');
+    if (dot >= 0 && t.length - dot - 1 > 2) return oldValue;
+    if (t.replaceAll('.', '').length > 7) return oldValue;
+    if (t.length > 1 && t.startsWith('0') && t[1] != '.') t = t.substring(1);
+    return TextEditingValue(
+      text: t,
+      selection: TextSelection.collapsed(offset: t.length),
     );
   }
 }

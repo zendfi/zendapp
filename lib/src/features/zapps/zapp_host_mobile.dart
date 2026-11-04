@@ -55,11 +55,18 @@ const _polishJs = '''
 
 Color? _parseCss(Object raw) {
   final s = raw.toString().replaceAll('"', '');
-  final m = RegExp(r'rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)').firstMatch(s);
+  final m = RegExp(
+    r'rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)',
+  ).firstMatch(s);
   if (m == null) return null;
   final a = m.group(4) == null ? 1.0 : double.tryParse(m.group(4)!) ?? 1.0;
   if (a < 0.5) return null; // transparent body: keep Zend's background
-  return Color.fromARGB(255, int.parse(m.group(1)!), int.parse(m.group(2)!), int.parse(m.group(3)!));
+  return Color.fromARGB(
+    255,
+    int.parse(m.group(1)!),
+    int.parse(m.group(2)!),
+    int.parse(m.group(3)!),
+  );
 }
 
 class _ZAppHostState extends State<ZAppHost> {
@@ -77,8 +84,10 @@ class _ZAppHostState extends State<ZAppHost> {
         NavigationDelegate(
           onNavigationRequest: (req) {
             final uri = Uri.tryParse(req.url);
-            if (uri != null && widget.app.allows(uri)) return NavigationDecision.navigate;
-            if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) widget.onLeave(uri);
+            if (uri != null && widget.app.allows(uri))
+              return NavigationDecision.navigate;
+            if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http'))
+              widget.onLeave(uri);
             return NavigationDecision.prevent;
           },
           onPageFinished: (_) => _polish(),
@@ -99,9 +108,11 @@ class _ZAppHostState extends State<ZAppHost> {
     Color? bg;
     try {
       await _controller.runJavaScript(_polishJs);
-      bg = _parseCss(await _controller.runJavaScriptReturningResult(
-        'getComputedStyle(document.body).backgroundColor',
-      ));
+      bg = _parseCss(
+        await _controller.runJavaScriptReturningResult(
+          'getComputedStyle(document.body).backgroundColor',
+        ),
+      );
     } catch (_) {}
     if (!_readySent && mounted) {
       _readySent = true;

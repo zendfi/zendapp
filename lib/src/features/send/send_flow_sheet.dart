@@ -575,9 +575,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         amountUsd: widget.amount,
         recipientHint: hint,
         // The link holds at most 140 characters of note.
-        memo: note.isEmpty
-            ? null
-            : String.fromCharCodes(note.runes.take(140)),
+        memo: note.isEmpty ? null : String.fromCharCodes(note.runes.take(140)),
       );
       model.fetchBalance();
       await Share.share(
