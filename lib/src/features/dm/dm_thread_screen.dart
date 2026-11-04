@@ -207,6 +207,24 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     );
   }
 
+  /// The server has this message: give the bubble its real id (so refreshes,
+  /// reactions and read receipts match it) and mark it delivered.
+  void _confirmSent(String clientId, String? serverId) {
+    final i = _messages.indexWhere((m) => m.clientId == clientId);
+    if (i == -1) return;
+    final m = _messages[i];
+    if (serverId != null && serverId.isNotEmpty && serverId != clientId) {
+      // Another copy may already be in the list with this id (a refresh that
+      // landed first); keep just one.
+      _messages.removeWhere((o) => !identical(o, m) && o.id == serverId);
+      m.id = serverId;
+    }
+    if (m.localStatus == DmLocalStatus.sending) {
+      m.localStatus = DmLocalStatus.delivered;
+    }
+    _markMessagesStructureChanged();
+  }
+
   void _initWs() {
     final model = ZendScope.of(context);
     _ws = DmWebSocketService(
@@ -317,10 +335,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           final clientId = frame.data['client_id'] as String?;
           if (clientId != null) {
             setState(() {
-              final idx = _messages.indexWhere((m) => m.clientId == clientId);
-              if (idx != -1) {
-                _messages[idx].localStatus = DmLocalStatus.delivered;
-              }
+              _confirmSent(clientId, frame.data['server_id'] as String?);
             });
           }
         case WsFrameType.reaction:
@@ -524,9 +539,20 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (more) {
           _messages.addAll(fetched);
         } else {
-          // Merge: keep any optimistic messages (local-only) and replace the rest
+          // Merge: keep optimistic messages the server doesn't have yet, and
+          // replace the rest. A sent message whose confirmation hadn't
+          // arrived yet is in `fetched` already: keeping its optimistic copy
+          // too showed it twice until the next full reload.
+          final fetchedClientIds = {
+            for (final m in fetched)
+              if (m.clientId != null) m.clientId!,
+          };
           final localOnly = _messages
-              .where((m) => m.id.startsWith('local-'))
+              .where(
+                (m) =>
+                    m.id.startsWith('local-') &&
+                    !fetchedClientIds.contains(m.clientId),
+              )
               .toList();
           _messages
             ..clear()
@@ -683,16 +709,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         if (idx != -1 && _messages[idx].localStatus == DmLocalStatus.sending) {
           model.dmService
               .sendMessage(widget.roomId, wireContent, clientId)
-              .then((_) {
+              .then((sent) {
                 if (mounted) {
-                  setState(() {
-                    final i = _messages.indexWhere(
-                      (m) => m.clientId == clientId,
-                    );
-                    if (i != -1) {
-                      _messages[i].localStatus = DmLocalStatus.delivered;
-                    }
-                  });
+                  setState(() => _confirmSent(clientId, sent.id));
                 }
               })
               .catchError((_) {
@@ -807,16 +826,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                 replyToSenderZendtag: quotedMsg.senderZendtag,
                 replyToMessageId: replyToId,
               )
-              .then((_) {
+              .then((sent) {
                 if (mounted) {
-                  setState(() {
-                    final i = _messages.indexWhere(
-                      (m) => m.clientId == clientId,
-                    );
-                    if (i != -1) {
-                      _messages[i].localStatus = DmLocalStatus.delivered;
-                    }
-                  });
+                  setState(() => _confirmSent(clientId, sent.id));
                 }
               })
               .catchError((_) {

@@ -171,7 +171,9 @@ class DmMessage {
     this.isDeleted = false,
   });
 
-  final String id;
+  /// Starts as `local-<clientId>` for a message still being sent, and becomes
+  /// the server's id once the server confirms it.
+  String id;
   final String roomId;
   final String senderUserId;
   final String? senderZendtag;
