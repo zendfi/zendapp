@@ -22,8 +22,27 @@ class ApiException extends ZendException {
   /// The backend's `retryable` flag, when the body carried one.
   final bool? retryable;
 
+  /// Refusals whose server message is already written for people and says
+  /// something specific (a limit, a count). Showing generic copy instead hid
+  /// the reason, e.g. that a link was over the most a link can hold.
+  static const _serverWorded = {
+    'ABOVE_LINK_MAXIMUM',
+    'BELOW_MINIMUM',
+    'ABOVE_MAXIMUM',
+    'LINKS_AT_CAPACITY',
+    'DAILY_LINK_LIMIT',
+    'LINKS_PILOT_ONLY',
+    'ZLINKS_DISABLED',
+    'MEMO_TOO_LONG',
+    'OWN_LINK',
+    'LINK_NOT_FOUND',
+  };
+
   @override
-  String get userMessage => errorCopyFor(errorCode, retryable: retryable);
+  String get userMessage =>
+      _serverWorded.contains(errorCode) && rawMessage.trim().isNotEmpty
+      ? rawMessage
+      : errorCopyFor(errorCode, retryable: retryable);
 
   @override
   String toString() => 'ApiException($statusCode, $errorCode): $rawMessage';
