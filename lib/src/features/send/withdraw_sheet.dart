@@ -38,7 +38,9 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
 
   static const Duration _sheetResize = Duration(milliseconds: 220);
 
-  static const double _minWithdrawUsdc = 5.0;
+  /// Lowest amount any rail accepts (NGN: $0.50). International rails ($5)
+  /// enforce their own higher minimum on the server, with a clear message.
+  static const double _minWithdrawUsdc = 0.5;
 
   double get _parsedAmount =>
       _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
@@ -225,7 +227,7 @@ class _AmountStage extends StatelessWidget {
                   )
                 : belowMinimum
                 ? Text(
-                    'Minimum withdrawal is \$5.00',
+                    'Minimum withdrawal is \$0.50',
                     textAlign: TextAlign.center,
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 11,
@@ -258,7 +260,7 @@ class _AmountStage extends StatelessWidget {
               label: canContinue
                   ? 'Continue'
                   : belowMinimum
-                  ? 'Minimum \$5.00'
+                  ? 'Minimum \$0.50'
                   : 'Enter amount',
               onPressed: canContinue ? onContinue : null,
             ),
