@@ -254,7 +254,8 @@ class DmMessage {
     }
 
     return DmMessage(
-      id: json['id'] as String? ?? '',
+      // Socket frames name it server_id; REST responses name it id.
+      id: (json['id'] ?? json['server_id']) as String? ?? '',
       roomId: json['room_id'] as String? ?? '',
       senderUserId: json['sender_user_id'] as String? ?? '',
       senderZendtag: json['sender_zendtag'] as String?,
