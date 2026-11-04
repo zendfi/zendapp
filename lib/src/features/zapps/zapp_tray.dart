@@ -84,6 +84,8 @@ class _TrayState extends State<_Tray> {
         final i = await _svc.createInteraction(t.app.slug, {
           'type': type,
           'participants': ['chat:${widget.counterpartyUserId}'],
+          // If they already started one with you, join theirs instead.
+          'reuse_open': true,
         });
         query = {'interaction': i['id'] as String};
       }
