@@ -73,10 +73,25 @@ class _DmListScreenState extends State<DmListScreen> {
     // Fires on every model notify, because build() takes a ZendScope
     // dependency. Reads with `read` since the dependency already exists.
     _rebuildItems();
+    // A new message arrived somewhere: refresh the list so its preview,
+    // position and unread dot update now, not when a chat is next opened.
+    // Debounced so a burst of messages is one fetch.
+    final seq = ZendScope.read(context).dmActivitySeq;
+    if (_seenDmSeq != null && seq != _seenDmSeq) {
+      _dmRefreshTimer?.cancel();
+      _dmRefreshTimer = Timer(const Duration(milliseconds: 300), () {
+        if (mounted) _loadThreads();
+      });
+    }
+    _seenDmSeq = seq;
   }
+
+  int? _seenDmSeq;
+  Timer? _dmRefreshTimer;
 
   @override
   void dispose() {
+    _dmRefreshTimer?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocus.dispose();

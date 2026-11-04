@@ -371,6 +371,10 @@ class ZendAppModel extends ChangeNotifier {
   /// Last DM SSE data for in-app banner display.
   Map<String, dynamic>? lastDmBannerData;
 
+  /// Goes up by one for every new chat message the server tells us about, so
+  /// the Chats list knows to refresh its previews, order and unread dots.
+  int dmActivitySeq = 0;
+
   void clearLastDmBannerData() {
     lastDmBannerData = null;
     // No notify needed — shell already consumed it
@@ -690,8 +694,14 @@ class ZendAppModel extends ChangeNotifier {
   void _handleDmSseEvent(SseEvent event) {
     switch (event.type) {
       case SseEventType.dmMessage:
-        dmUnreadTotal++;
-        lastDmBannerData = event.data;
+        dmActivitySeq++;
+        // Already reading that chat: it shows the message itself, so no
+        // badge bump or banner.
+        final room = event.data['room_id'] as String?;
+        if (room == null || room != PushNotificationService.activeDmRoomId) {
+          dmUnreadTotal++;
+          lastDmBannerData = event.data;
+        }
         notifyListeners();
       case SseEventType.streakMilestone:
         final cpTag = event.data['counterparty_zendtag'] as String? ?? '';

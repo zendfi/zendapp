@@ -279,7 +279,10 @@ class _ZendShellState extends State<ZendShell> {
     // The SSE data is carried via model.lastDmBannerData
     if (model.lastDmBannerData != null) {
       final data = model.lastDmBannerData!;
-      final key = data['room_id'] as String? ?? '';
+      // Keyed per message, not per chat: keying on the chat showed a banner
+      // for someone's first message and never again for their next ones.
+      final key =
+          data['message_id'] as String? ?? data['room_id'] as String? ?? '';
       if (key != _lastDmBannerKey && _tabIndex != 2) {
         _lastDmBannerKey = key;
         _pendingDmBanner = data;
