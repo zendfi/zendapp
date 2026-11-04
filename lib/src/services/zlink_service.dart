@@ -399,6 +399,22 @@ class ZlinkService {
 
   Future<void> cancelAsk(String id) => _api.zlinkPost('/ask/$id/cancel');
 
+  // ── Emailing a link ───────────────────────────────────────────────────────
+
+  /// Zend emails this link to [email] with a Collect button. The full link,
+  /// key included, goes to Zend for this one email and isn't kept.
+  Future<void> emailGiveLink(CreatedGiveLink link, String email) =>
+      _api.zlinkPost('/give/${link.id}/email', {
+        'email': email,
+        'url': link.url,
+      });
+
+  /// Zend emails an ask link to [email] with a Pay button.
+  Future<void> emailAskLink(String url, String email) {
+    final id = Uri.parse(url).pathSegments.last;
+    return _api.zlinkPost('/ask/$id/email', {'email': email});
+  }
+
   // ── My Links ──────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> myLinks() async {

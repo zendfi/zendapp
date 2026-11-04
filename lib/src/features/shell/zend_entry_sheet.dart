@@ -548,27 +548,38 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _creatingAskLink = true);
     try {
-      final url =
-          await ZlinkService(
-            api: model.walletService.apiClient,
-            zkLogin: model.zkLoginService,
-          ).createAskLink(
-            amountUsd: amount,
-            maxPayments: 1,
-            // The link holds at most 140 characters of note.
-            memo: note == null
-                ? null
-                : String.fromCharCodes(note.runes.take(140)),
-          );
-      navigator.pop();
-      final forWhat = note == null ? '' : ' for $note';
-      await Share.share(
-        'Can you send me ${formatUsd(amount)}$forWhat? Pay here on Zend: $url',
-        subject: 'Money request on Zend',
+      final links = ZlinkService(
+        api: model.walletService.apiClient,
+        zkLogin: model.zkLoginService,
       );
+      final email = _email!;
+      final url = await links.createAskLink(
+        amountUsd: amount,
+        maxPayments: 1,
+        // The link holds at most 140 characters of note.
+        memo: note == null ? null : String.fromCharCodes(note.runes.take(140)),
+      );
+      // Zend emails it with a Pay button; sharing is the fallback.
+      var emailed = false;
+      try {
+        await links.emailAskLink(url, email);
+        emailed = true;
+      } catch (_) {}
+      navigator.pop();
+      if (!emailed) {
+        final forWhat = note == null ? '' : ' for $note';
+        await Share.share(
+          'Can you send me ${formatUsd(amount)}$forWhat? Pay here on Zend: $url',
+          subject: 'Money request on Zend',
+        );
+      }
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Link ready. You can re-share it from My Links.'),
+        SnackBar(
+          content: Text(
+            emailed
+                ? 'We emailed $email. You can also share it from My Links.'
+                : 'Link ready. You can re-share it from My Links.',
+          ),
         ),
       );
     } on ApiException catch (e) {

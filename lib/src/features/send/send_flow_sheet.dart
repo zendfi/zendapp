@@ -578,15 +578,28 @@ class _SendFlowSheetState extends State<SendFlowSheet>
         memo: note.isEmpty ? null : String.fromCharCodes(note.runes.take(140)),
       );
       model.fetchBalance();
-      await Share.share(
-        'I sent you \$${widget.amount.toStringAsFixed(2)} on Zend. '
-        'Tap to collect it: ${link.url}',
-        subject: 'I sent you money on Zend',
-      );
+      // Zend emails it with a Collect button. If that doesn't go through,
+      // the sender shares it themselves, as before.
+      var emailed = false;
+      try {
+        await service.emailGiveLink(link, email);
+        emailed = true;
+      } catch (_) {}
+      if (!emailed) {
+        await Share.share(
+          'I sent you \$${widget.amount.toStringAsFixed(2)} on Zend. '
+          'Tap to collect it: ${link.url}',
+          subject: 'I sent you money on Zend',
+        );
+      }
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Link ready. You can re-share it from My Links.'),
+        SnackBar(
+          content: Text(
+            emailed
+                ? 'We emailed $email. You can also share it from My Links.'
+                : 'Link ready. You can re-share it from My Links.',
+          ),
         ),
       );
       _dismiss();
