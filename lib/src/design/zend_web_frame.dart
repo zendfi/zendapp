@@ -104,14 +104,25 @@ class ZendWebFrame extends StatelessWidget {
                     ? sidebarCollapsedWidth
                     : sidebarWidth;
                 final contentWidth = size.width - railWidth - 1;
-                return CallbackShortcuts(
-                  bindings: {
-                    // Only when nothing is being typed into: text input on
-                    // web arrives as text, but the raw key still bubbles up
-                    // here, so typing "n" anywhere opened the Zend sheet.
-                    const SingleActivator(LogicalKeyboardKey.keyN): () {
-                      if (!_isTyping()) _Sidebar.openZend(navigatorKey);
-                    },
+                // A plain key handler, not CallbackShortcuts: CallbackShortcuts
+                // marks the key handled even when the callback does nothing,
+                // so "n" never reached text fields. Here the key is only
+                // claimed when it actually opens Zend; while typing it's
+                // passed on untouched.
+                return Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onKeyEvent: (node, event) {
+                    final plainN =
+                        event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.keyN &&
+                        !HardwareKeyboard.instance.isControlPressed &&
+                        !HardwareKeyboard.instance.isMetaPressed &&
+                        !HardwareKeyboard.instance.isAltPressed &&
+                        !HardwareKeyboard.instance.isShiftPressed;
+                    if (!plainN || _isTyping()) return KeyEventResult.ignored;
+                    _Sidebar.openZend(navigatorKey);
+                    return KeyEventResult.handled;
                   },
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
