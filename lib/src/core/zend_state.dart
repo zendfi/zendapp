@@ -922,6 +922,56 @@ class ZendAppModel extends ChangeNotifier {
   /// Equal to [spendableBalance] on rails that report no split.
   double get sendableBalance => spendableBalance + awaitingDepositBalance;
 
+  // ── Money on its way in ──
+  //
+  // Money someone sent by link is shown in the balance the moment the link
+  // opens, while it actually moves in the background, so it never seems to
+  // wait. It is display only: [sendableBalance] (what sends are checked
+  // against) never includes it, so nothing can be spent before it lands.
+  final Map<int, ({double amount, double baseline})> _arriving = {};
+  int _arrivingSeq = 0;
+
+  /// The part of arriving money the confirmed balance doesn't show yet. Once
+  /// the balance rises by the amount, its share falls to zero on its own, so
+  /// the shown figure never jumps or counts the money twice.
+  double get arrivingBalance {
+    var total = 0.0;
+    for (final a in _arriving.values) {
+      final landed = (sendableBalance - a.baseline).clamp(0.0, a.amount);
+      total += a.amount - landed;
+    }
+    return total;
+  }
+
+  /// What balance displays show: confirmed money plus money arriving.
+  double get displayBalance => sendableBalance + arrivingBalance;
+
+  /// Starts showing [amount] in the balance. Returns a handle for
+  /// [finishArriving].
+  int beginArriving(double amount) {
+    final id = ++_arrivingSeq;
+    _arriving[id] = (amount: amount, baseline: sendableBalance);
+    notifyListeners();
+    return id;
+  }
+
+  /// [landed]: the money is in; refresh until the confirmed balance shows it,
+  /// then stop adding it. Otherwise take it back off the display.
+  Future<void> finishArriving(int id, {required bool landed}) async {
+    final a = _arriving[id];
+    if (a == null) return;
+    if (landed) {
+      // The confirmed balance can trail the transfer by a few seconds.
+      for (var i = 0; i < 8; i++) {
+        await fetchBalance();
+        if (sendableBalance - a.baseline >= a.amount - 0.005) break;
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+    }
+    _arriving.remove(id);
+    notifyListeners();
+  }
+
   double monthlyYield = 0.0;
   bool balanceLoading = false;
   String? lastBalanceError;

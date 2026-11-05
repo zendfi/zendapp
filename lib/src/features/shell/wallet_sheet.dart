@@ -155,7 +155,7 @@ class _WalletSheetState extends State<WalletSheet> {
                             child: Text(
                               model.balanceHidden
                                   ? '••••••'
-                                  : formatUsd(model.sendableBalance),
+                                  : formatUsd(model.displayBalance),
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontSize: 40,

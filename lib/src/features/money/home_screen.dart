@@ -464,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   model.balanceHidden
                                       ? '••••••'
-                                      : formatUsd(model.sendableBalance),
+                                      : formatUsd(model.displayBalance),
                                   style: TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,

@@ -364,7 +364,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
 
     final isLoading = model.threadedActivityLoading && allEdges.isEmpty;
     final isNewUser =
-        !isLoading && allEdges.isEmpty && model.sendableBalance == 0;
+        !isLoading && allEdges.isEmpty && model.displayBalance == 0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -388,7 +388,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
               searchOpen: _searchOpen,
               balanceLabel: model.balanceHidden
                   ? '•••'
-                  : _formatBalance(model.sendableBalance),
+                  : _formatBalance(model.displayBalance),
               onOpenWallet: widget.onOpenWallet,
               onToggleSearch: _toggleSearch,
             ),
@@ -431,7 +431,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         children: [
                           if (!_searchOpen)
                             _BalanceHero(
-                              balance: model.sendableBalance,
+                              balance: model.displayBalance,
                               hidden: model.balanceHidden,
                               onOpenWallet: widget.onOpenWallet,
                             ),
@@ -466,7 +466,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                               return _searchOpen
                                   ? const SizedBox(height: 4)
                                   : _BalanceHero(
-                                      balance: model.sendableBalance,
+                                      balance: model.displayBalance,
                                       hidden: model.balanceHidden,
                                       onOpenWallet: widget.onOpenWallet,
                                     );

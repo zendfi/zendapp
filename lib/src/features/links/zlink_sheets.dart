@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_modal.dart';
+import '../../design/zend_money.dart' show ZendFeel;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -218,6 +221,9 @@ Future<void> _receiveQuietly(
     );
     return;
   }
+  // The count-up starts from the real balance, so load it alongside the link
+  // (right after sign-in it may not be loaded yet).
+  final balanceReady = model.fetchBalance();
   Map<String, dynamic> preview;
   try {
     preview = await service.previewGive(id);
@@ -230,6 +236,21 @@ Future<void> _receiveQuietly(
     return;
   }
 
+  // The money shows in the balance now and counts up into place, like any
+  // money arriving; moving it in happens underneath. The display can't be
+  // spent from until it lands (see ZendAppModel.beginArriving).
+  await balanceReady;
+  final amount = (preview['amount_usd'] as num?)?.toDouble() ?? 0;
+  final arriving = amount > 0 ? model.beginArriving(amount) : null;
+  ZendFeel.received();
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Text(
+        '${preview['sender_name']} sent you ${zlinkAmountLabel(preview)}',
+      ),
+    ),
+  );
+
   // A brief network or sponsor hiccup shouldn't become a message: try a few
   // times quietly before saying anything.
   Object? last;
@@ -237,18 +258,19 @@ Future<void> _receiveQuietly(
     if (wait > 0) await Future<void>.delayed(Duration(seconds: wait));
     try {
       await service.claim(linkId: id, linkKey: key);
-      model.fetchBalance();
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Text(
-            '${preview['sender_name']} sent you ${zlinkAmountLabel(preview)}',
-          ),
-        ),
-      );
+      if (arriving != null) {
+        unawaited(model.finishArriving(arriving, landed: true));
+      } else {
+        model.fetchBalance();
+      }
       return;
     } on ApiException catch (e) {
       last = e;
       if (e.errorCode == 'OWN_LINK') {
+        if (arriving != null) {
+          unawaited(model.finishArriving(arriving, landed: false));
+        }
+        messenger?.hideCurrentSnackBar();
         messenger?.showSnackBar(
           const SnackBar(
             content: Text(
@@ -267,6 +289,11 @@ Future<void> _receiveQuietly(
       last = e;
     }
   }
+  // It didn't land: take it back off the balance and say so plainly.
+  if (arriving != null) {
+    unawaited(model.finishArriving(arriving, landed: false));
+  }
+  messenger?.hideCurrentSnackBar();
   explain(
     "That didn't go through",
     last is ZlinkException
