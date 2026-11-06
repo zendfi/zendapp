@@ -408,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         model.balanceHidden
                                             ? '••••••'
-                                            : formatUsd(value),
+                                            : formatMoney(value),
                                         style: TextStyle(
                                           fontFamily: 'Geist',
                                           color: ZendColors.textOnDeep,
@@ -464,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   model.balanceHidden
                                       ? '••••••'
-                                      : formatUsd(model.displayBalance),
+                                      : formatMoney(model.displayBalance),
                                   style: TextStyle(
                                     fontFamily: 'Geist',
                                     color: ZendColors.textOnDeep,
@@ -787,7 +787,7 @@ class _SavingsCard extends StatelessWidget {
         ? '${model.savingsApy.toStringAsFixed(1)}%'
         : '—';
     final balanceStr = model.savingsBalance > 0
-        ? formatUsd(model.savingsBalance)
+        ? formatMoney(model.savingsBalance)
         : '\$0.00';
 
     return GestureDetector(
@@ -881,7 +881,7 @@ class _PoolsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final total = model.totalPoolsGathered;
-    final totalStr = formatUsd(total);
+    final totalStr = formatMoney(total);
     final participants = model.recentPoolParticipants;
     final displayedCount = participants.length > 2 ? 2 : participants.length;
     final overflow = participants.length - displayedCount;

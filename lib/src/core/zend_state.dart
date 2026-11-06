@@ -1305,7 +1305,15 @@ class ZendAppModel extends ChangeNotifier {
   Future<void> loadPersistedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     notifyMutualsOnShare = prefs.getBool('notify_mutuals_on_share') ?? true;
+    await fxService.restoreNairaRate();
     notifyListeners();
+    unawaited(refreshNairaRate());
+  }
+
+  /// Refreshes the Naira rate used for display ([formatMoney]) and rebuilds
+  /// when it changed. Cheap to call often; the service throttles it.
+  Future<void> refreshNairaRate() async {
+    if (await fxService.refreshNairaRate()) notifyListeners();
   }
 
   /// Toggles whether mutuals are notified when the user makes an activity public.
@@ -1402,6 +1410,7 @@ class ZendAppModel extends ChangeNotifier {
     // Only notify for the loading state if we have no data yet (first load).
     // Background refreshes update silently to avoid mid-transition rebuilds.
     final firstLoad = balance == 0.0 && !balanceLoading;
+    unawaited(refreshNairaRate());
     balanceLoading = true;
     lastBalanceError = null;
     if (firstLoad) notifyListeners();
@@ -1580,8 +1589,8 @@ class ZendAppModel extends ChangeNotifier {
             : '→ $bankName';
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '-${formatUsd(amountUsdc)}'
-            : '-${formatUsd(amountUsdc)}';
+            ? '-${formatMoney(amountUsdc)}'
+            : '-${formatMoney(amountUsdc)}';
 
         final timeStr = (status == 'pending_payment' || status == 'processing')
             ? 'Processing'
@@ -1651,8 +1660,8 @@ class ZendAppModel extends ChangeNotifier {
             DateTime.tryParse(completedAtStr ?? createdAtStr) ?? DateTime.now();
 
         final amtStr = amountUsdc == amountUsdc.roundToDouble()
-            ? '+${formatUsd(amountUsdc)}'
-            : '+${formatUsd(amountUsdc)}';
+            ? '+${formatMoney(amountUsdc)}'
+            : '+${formatMoney(amountUsdc)}';
 
         final note = originBlockchain.isNotEmpty
             ? '$originSymbol via $originBlockchain'
@@ -1823,7 +1832,7 @@ class ZendAppModel extends ChangeNotifier {
       ZendTransaction(
         name: handleLabel(recipientZendtag),
         note: note ?? 'Sent from ZendApp',
-        amount: '-${formatUsd(amount)}',
+        amount: '-${formatMoney(amount)}',
         time: 'Just now',
         avatarLabel: recipientDisplayName.isNotEmpty
             ? recipientDisplayName[0].toUpperCase()

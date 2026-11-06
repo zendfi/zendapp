@@ -29,8 +29,8 @@ class PaymentRequestNotification {
 
   String get formattedAmount {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return formatUsd(amountUsdc);
+      return formatMoney(amountUsdc);
     }
-    return formatUsd(amountUsdc);
+    return formatMoney(amountUsdc);
   }
 }

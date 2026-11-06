@@ -113,6 +113,7 @@ class _ZAppScreenState extends State<_ZAppScreen> {
   Color? _background;
   final Map<String, bool> _optional = {};
   bool _allowPosting = true;
+  bool _shareWithFriends = false;
   final _handle = ZAppHostHandle();
   late final VoidCallback _leaveUrl;
   bool _closing = false;
@@ -181,6 +182,7 @@ class _ZAppScreenState extends State<_ZAppScreen> {
             .map((e) => e.key)
             .toList(),
         allowPosting: _allowPosting && _app!.permissions.contains('post_card'),
+        shareWithFriends: _shareWithFriends,
       );
       if (mounted) setState(() => _session = s);
     } catch (_) {
@@ -438,7 +440,20 @@ class _ZAppScreenState extends State<_ZAppScreen> {
                 style: s(12, c: zt.textSecondary),
               ),
               value: _allowPosting,
-              onChanged: (v) => setState(() => _allowPosting = v),
+              onChanged: (v) => setState(() {
+                _allowPosting = v;
+                if (!v) _shareWithFriends = false;
+              }),
+            ),
+          if (app.permissions.contains('post_card') && _allowPosting)
+            SwitchListTile(
+              title: Text('Share results with your friends', style: s(15)),
+              subtitle: Text(
+                'Friends you chat with can see what it posts to your feed',
+                style: s(12, c: zt.textSecondary),
+              ),
+              value: _shareWithFriends,
+              onChanged: (v) => setState(() => _shareWithFriends = v),
             ),
           const SizedBox(height: 8),
           Text(

@@ -18,7 +18,7 @@ import '../../navigation/zend_shell_controller.dart';
 import '../dm/dm_thread_screen.dart';
 import '../shell/zend_entry_sheet.dart';
 import '../../services/appkit_service.dart';
-import '../zapps/zapp_feed_section.dart';
+import '../zapps/zapp_feed_card.dart';
 import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
@@ -30,7 +30,7 @@ import '../../design/zend_gif.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed.
-String _formatBalance(double balance) => formatUsd(balance);
+String _formatBalance(double balance) => formatMoney(balance);
 
 /// Feed — ZEND BETA spec §5-7, §21-24: a single flat, reverse-chronological
 /// timeline mixing the viewer's own private Activities with the
@@ -107,7 +107,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       final cards = await AppKitService(
         ZendScope.read(context).walletService.apiClient,
       ).feed();
-      if (mounted) setState(() => _appCards = cards.take(5).toList());
+      if (mounted) setState(() => _appCards = cards.take(20).toList());
     } catch (_) {
       // Apps are optional here; never block the feed on them.
     }
@@ -456,7 +456,17 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                               hidden: model.balanceHidden,
                               onOpenWallet: widget.onOpenWallet,
                             ),
-                          if (_showAppCards) ZAppFeedSection(cards: _appCards),
+                          if (_showAppCards)
+                            for (final c in _appCards)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: ZendSpacing.betweenCards,
+                                ),
+                                child: ZAppFeedCard(
+                                  key: ValueKey(c['id']),
+                                  card: c,
+                                ),
+                              ),
                           SizedBox(
                             height: 320,
                             child: isNewUser
@@ -483,14 +493,29 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                         selector: (_) =>
                             (_visibleEdges, _appCards, _showAppCards),
                         builder: (context, selected, _) {
-                          final visible = selected.$1;
+                          // Edges and ZApp cards share one timeline, newest first, under
+                          // the same day headers.
+                          final items =
+                              <
+                                  ({
+                                    DateTime at,
+                                    ActivityEdge? edge,
+                                    Map<String, dynamic>? card,
+                                  })
+                                >[
+                                  for (final e in selected.$1)
+                                    (at: e.createdAt, edge: e, card: null),
+                                  if (selected.$3)
+                                    for (final c in selected.$2)
+                                      (at: appCardTime(c), edge: null, card: c),
+                                ]
+                                ..sort((x, y) => y.at.compareTo(x.at));
                           return ListView.builder(
                             controller: _listScrollController,
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                             // Slot 0 is the hero; it scrolls away naturally.
-                            itemCount:
-                                visible.length + 1 + (_showAppCards ? 1 : 0),
+                            itemCount: items.length + 1,
                             itemBuilder: (context, slot) {
                               if (slot == 0) {
                                 return _searchOpen
@@ -501,17 +526,14 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                                         onOpenWallet: widget.onOpenWallet,
                                       );
                               }
-                              if (_showAppCards && slot == 1) {
-                                return ZAppFeedSection(cards: _appCards);
-                              }
-                              final i = slot - 1 - (_showAppCards ? 1 : 0);
-                              final edge = visible[i];
-                              final day = formatDayGroup(edge.createdAt);
+                              final i = slot - 1;
+                              final item = items[i];
+                              final day = formatDayGroup(item.at);
                               final showDay =
                                   i == 0 ||
-                                  formatDayGroup(visible[i - 1].createdAt) !=
-                                      day;
-                              final card = Padding(
+                                  formatDayGroup(items[i - 1].at) != day;
+                              final edge = item.edge;
+                              final Widget card = Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: ZendSpacing.betweenCards,
                                 ),
@@ -521,16 +543,20 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                                 // card's count arriving from repainting the
                                 // whole visible list.
                                 child: RepaintBoundary(
-                                  child: _FeedActivityCard(
-                                    key: ValueKey(edge.edgeId),
-                                    edge: edge,
-                                    // Passed down rather than read from the
-                                    // model inside the card — see
-                                    // _FeedActivityCard's doc.
-                                    selfInitial: _selfInitial,
-                                    selfAvatarUrl: _selfAvatarUrl,
-                                    onTap: () => _openActivity(edge),
-                                  ),
+                                  child: edge != null
+                                      ? _FeedActivityCard(
+                                          key: ValueKey(edge.edgeId),
+                                          edge: edge,
+                                          // Passed down rather than read from
+                                          // the model inside the card.
+                                          selfInitial: _selfInitial,
+                                          selfAvatarUrl: _selfAvatarUrl,
+                                          onTap: () => _openActivity(edge),
+                                        )
+                                      : ZAppFeedCard(
+                                          key: ValueKey(item.card!['id']),
+                                          card: item.card!,
+                                        ),
                                 ),
                               );
                               if (!showDay) return card;

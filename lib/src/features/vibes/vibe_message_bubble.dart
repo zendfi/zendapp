@@ -522,7 +522,7 @@ class _FullScreenExplosionOverlay extends StatelessWidget {
                       ],
                     ),
                     child: Text(
-                      formatUsd(amountUsdc),
+                      formatMoney(amountUsdc),
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontWeight: FontWeight.w700,
@@ -577,7 +577,7 @@ class _RevealedVibe extends StatelessWidget {
           Text(emoji, style: const TextStyle(fontSize: 36)),
           const SizedBox(height: 6),
           Text(
-            formatUsd(amountUsdc),
+            formatMoney(amountUsdc),
             style: TextStyle(
               fontFamily: 'Geist',
               fontWeight: FontWeight.w700,

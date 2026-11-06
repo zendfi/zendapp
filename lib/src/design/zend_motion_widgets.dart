@@ -133,7 +133,7 @@ class _SendCelebrationState extends State<_SendCelebration>
                                 ),
                               ),
                             Text(
-                              formatUsd(widget.amount),
+                              formatMoney(widget.amount),
                               style: ZendTextStyles.displayL.copyWith(
                                 color: zt.textPrimary,
                               ),

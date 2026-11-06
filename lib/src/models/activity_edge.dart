@@ -197,7 +197,7 @@ class ActivityEdge {
   /// whether to show the chip at all, which is the real question.
   String? get signedAmountLabel => amountHidden
       ? null
-      : formatUsd(
+      : formatMoney(
           (double.tryParse(amountUsdc ?? '') ?? 0) * (isOutgoing ? -1 : 1),
           signed: true,
         );

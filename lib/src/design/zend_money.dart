@@ -34,8 +34,8 @@ class ZendAmount extends StatelessWidget {
     final text = hidden
         ? '•••'
         : direction == MoneyDirection.neutral
-        ? formatUsd(amount)
-        : formatUsd(
+        ? formatMoney(amount)
+        : formatMoney(
             direction == MoneyDirection.incoming ? amount.abs() : -amount.abs(),
             signed: true,
           );
@@ -48,7 +48,7 @@ class ZendAmount extends StatelessWidget {
                 ? 'Received '
                 : direction == MoneyDirection.outgoing
                 ? 'Sent '
-                : ''}${formatUsd(amount.abs())}',
+                : ''}${formatMoney(amount.abs())}',
       style: style.copyWith(color: color),
     );
   }
@@ -74,14 +74,14 @@ class ZendRollingAmount extends StatelessWidget {
     final s = style.copyWith(color: zt.textPrimary);
     if (hidden) return Text('•••', style: s, semanticsLabel: 'Balance hidden');
     if (ZendMotion.reduced(context)) {
-      return Text(formatUsd(amount), style: s);
+      return Text(formatMoney(amount), style: s);
     }
     return TweenAnimationBuilder<double>(
       tween: Tween(end: amount),
       duration: ZendMotion.celebrate,
       curve: ZendMotion.springSnappy,
       builder: (context, v, _) =>
-          Text(formatUsd(v), style: s, semanticsLabel: formatUsd(amount)),
+          Text(formatMoney(v), style: s, semanticsLabel: formatMoney(amount)),
     );
   }
 }

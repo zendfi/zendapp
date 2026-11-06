@@ -303,7 +303,7 @@ class _RequestTile extends StatelessWidget {
     };
 
     // Amount string — always fixed since we filter out PWYW
-    final amountStr = amount != null ? formatUsd(amount) : '';
+    final amountStr = amount != null ? formatMoney(amount) : '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

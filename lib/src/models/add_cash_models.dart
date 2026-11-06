@@ -104,7 +104,7 @@ class FundsArrivedNotification {
   bool get isBankTransfer => source == 'bank_transfer';
 
   /// "$32.40", the amount added to the balance.
-  String get amountLabel => formatUsd(amountUsdc);
+  String get amountLabel => formatMoney(amountUsdc);
 
   /// "₦50,000" when the deposit came in another currency, else null.
   String? get originLabel {

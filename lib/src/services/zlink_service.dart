@@ -345,6 +345,7 @@ class ZlinkService {
 
   Future<String> createAskLink({
     double? amountUsd,
+    double? priceNgn,
     double? maxAmountUsd,
     int? maxPayments,
     String? memo,
@@ -355,6 +356,7 @@ class ZlinkService {
       'app': ?app,
       'reference': ?reference,
       'amount_usd': ?amountUsd,
+      'price_ngn': ?priceNgn,
       'max_amount_usd': ?maxAmountUsd,
       'max_payments': ?maxPayments,
       'memo': ?memo,

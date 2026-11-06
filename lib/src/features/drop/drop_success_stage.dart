@@ -80,9 +80,9 @@ class _DropSuccessStageState extends State<DropSuccessStage>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return formatUsd(widget.amount);
+      return formatMoney(widget.amount);
     }
-    return formatUsd(widget.amount);
+    return formatMoney(widget.amount);
   }
 
   String get _zendtag =>
@@ -196,8 +196,8 @@ class _DropSuccessStageState extends State<DropSuccessStage>
                 // Count down from widget.amount → 0
                 final displayed = widget.amount * (1 - t);
                 final formatted = displayed == displayed.roundToDouble()
-                    ? formatUsd(displayed)
-                    : formatUsd(displayed);
+                    ? formatMoney(displayed)
+                    : formatMoney(displayed);
                 return Text(
                   t < 0.98 ? formatted : _amountStr,
                   textAlign: TextAlign.center,

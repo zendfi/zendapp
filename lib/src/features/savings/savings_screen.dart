@@ -303,7 +303,7 @@ class _ActiveState extends StatelessWidget {
   }
 
   String _formatUsd(double value) {
-    return formatUsd(value);
+    return formatMoney(value);
   }
 
   @override

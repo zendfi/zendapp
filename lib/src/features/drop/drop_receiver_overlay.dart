@@ -126,9 +126,9 @@ class _DropReceivedOverlayState extends State<_DropReceivedOverlay>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return '+${formatUsd(widget.amount)}';
+      return '+${formatMoney(widget.amount)}';
     }
-    return '+${formatUsd(widget.amount)}';
+    return '+${formatMoney(widget.amount)}';
   }
 
   @override

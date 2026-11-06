@@ -48,6 +48,20 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
     }
   }
 
+  Future<void> _setShare(Map<String, dynamic> app, bool value) async {
+    final before = app['share_with_friends'] == true;
+    setState(() => app['share_with_friends'] = value);
+    try {
+      await _svc.setShareWithFriends(app['slug'] as String, value);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => app['share_with_friends'] = before);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("That didn't go through. Try again.")),
+      );
+    }
+  }
+
   Future<void> _disconnect(Map<String, dynamic> app) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -195,6 +209,17 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
                                   Text(
                                     '• Can post to your feed and chats',
                                     style: s(13, c: zt.textSecondary),
+                                  ),
+                                if (a['can_post'] == true)
+                                  SwitchListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    dense: true,
+                                    title: Text(
+                                      'Share results with friends',
+                                      style: s(14),
+                                    ),
+                                    value: a['share_with_friends'] == true,
+                                    onChanged: (v) => _setShare(a, v),
                                   ),
                               ],
                             ),

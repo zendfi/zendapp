@@ -119,7 +119,7 @@ class _ReceiptSheetState extends State<_ReceiptSheet> {
         : ("That didn't go through. Try again.", zt.destructive);
 
     final shareText = [
-      '$sentence ${formatUsd(amount)} on Zend',
+      '$sentence ${formatMoney(amount)} on Zend',
       if (hasNote) noteText(note),
     ].join(' · ');
 
@@ -449,7 +449,7 @@ class _ShareCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                formatUsd(amount),
+                formatMoney(amount),
                 style: ZendTextStyles.displayL.copyWith(color: fg),
               ),
               const SizedBox(height: 28),

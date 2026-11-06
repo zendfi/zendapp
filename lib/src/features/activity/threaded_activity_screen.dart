@@ -28,7 +28,7 @@ import '../../design/zend_note.dart';
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed, no thousands separator logic beyond what's already
 /// legible at this size (this is a glance-value, not a statement).
-String _formatBalance(double balance) => formatUsd(balance);
+String _formatBalance(double balance) => formatMoney(balance);
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.
@@ -1468,7 +1468,7 @@ class _PoolThreadTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
-                  formatUsd(thread.runningTotal),
+                  formatMoney(thread.runningTotal),
                   style: ZendTextStyles.tabularNumeric.copyWith(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -1645,7 +1645,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
                   Text(
                     switch (contributor.entry) {
                       PoolContributorUser(amountHidden: true) => 'Hidden',
-                      _ => formatUsd(contributor.totalUsdc),
+                      _ => formatMoney(contributor.totalUsdc),
                     },
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 13,

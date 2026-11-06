@@ -52,6 +52,7 @@ class PrizeService {
   Future<Map<String, dynamic>> create({
     required String app,
     required double amountUsd,
+    double? priceNgn,
     required int joinInSecs,
     required int resolveInSecs,
     required int maxPlayers,
@@ -63,6 +64,7 @@ class PrizeService {
     final prepared = await _api.appkit('POST', '/apps/prizes/prepare', {
       'app': app,
       'amount_usd': amountUsd,
+      'price_ngn': ?priceNgn,
       'join_in_secs': joinInSecs,
       'resolve_in_secs': resolveInSecs,
       'max_players': maxPlayers,

@@ -278,7 +278,7 @@ class _PocketScreenState extends State<PocketScreen> {
 
         // ── Total balance ─────────────────────────────────────────────
         Text(
-          formatUsd(_totalBalance),
+          formatMoney(_totalBalance),
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 48,
@@ -508,7 +508,7 @@ class _FreeSavingsCard extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.sm),
           Text(
-            formatUsd(balance),
+            formatMoney(balance),
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 28,
@@ -815,7 +815,7 @@ class LockCard extends StatelessWidget {
           ),
           const SizedBox(height: ZendSpacing.sm),
           Text(
-            formatUsd(pocket.balanceUsd),
+            formatMoney(pocket.balanceUsd),
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 28,

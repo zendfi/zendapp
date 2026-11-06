@@ -51,9 +51,9 @@ class EmailIntent {
   /// Formatted amount string, e.g. "$5.00"
   String get amountFormatted {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return formatUsd(amountUsdc);
+      return formatMoney(amountUsdc);
     }
-    return formatUsd(amountUsdc);
+    return formatMoney(amountUsdc);
   }
 
   /// Days remaining before expiry (0 if already expired).
@@ -129,8 +129,8 @@ class IntentPreview {
 
   String get amountFormatted {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return formatUsd(amountUsdc);
+      return formatMoney(amountUsdc);
     }
-    return formatUsd(amountUsdc);
+    return formatMoney(amountUsdc);
   }
 }

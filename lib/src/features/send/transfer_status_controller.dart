@@ -147,7 +147,7 @@ class TransferStatus {
   bool get isRequest => request != null;
 
   String get amountLabel =>
-      amount == amount.roundToDouble() ? formatUsd(amount) : formatUsd(amount);
+      amount == amount.roundToDouble() ? formatMoney(amount) : formatMoney(amount);
 
   /// "@omooba", or the email for a non-Zend recipient.
   String get recipientLabel {

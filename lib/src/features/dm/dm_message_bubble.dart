@@ -1156,7 +1156,7 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final rd = message.paymentRequestData;
     final amountStr = rd?.amountUsdc ?? '0.00';
-    final amountFormatted = formatUsd(double.tryParse(amountStr) ?? 0);
+    final amountFormatted = formatMoney(double.tryParse(amountStr) ?? 0);
     final isPending = rd?.isPending ?? true;
 
     final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;

@@ -70,9 +70,9 @@ class PaymentRequestItem {
 
   String get formattedAmount {
     if (amountUsdc == amountUsdc.roundToDouble()) {
-      return formatUsd(amountUsdc);
+      return formatMoney(amountUsdc);
     }
-    return formatUsd(amountUsdc);
+    return formatMoney(amountUsdc);
   }
 
   factory PaymentRequestItem.fromOutboundJson(Map<String, dynamic> json) {

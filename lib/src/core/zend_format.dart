@@ -23,6 +23,36 @@ String formatUsd(double amount, {bool signed = false}) {
   return negative ? '−$body' : body;
 }
 
+/// Naira for one dollar, from `GET /api/zend/v2/fx/ngn` (the rate cash-outs
+/// use). Set by [NairaRateService]; null until a rate has been seen, and then
+/// money shows in dollars.
+abstract final class NairaRate {
+  static double? ngnPerUsd;
+
+  /// Show amounts in Naira. Off shows dollars everywhere, as before.
+  static const bool display = true;
+
+  static bool get active => display && ngnPerUsd != null;
+
+  /// Naira for [usd] at the current rate, or null when there is no rate.
+  static double? toNgn(double usd) {
+    final r = ngnPerUsd;
+    return r == null ? null : usd * r;
+  }
+}
+
+/// How Zend shows a balance or payment: `₦13,700` when a rate is known,
+/// `$10.00` otherwise. For display only. Amount entry is still in dollars,
+/// so screens where someone types an amount keep using [formatUsd].
+String formatMoney(double usd, {bool signed = false}) {
+  if (!NairaRate.active) return formatUsd(usd, signed: signed);
+  final ngn = usd * NairaRate.ngnPerUsd!;
+  // Whole Naira: kobo-level precision from a converted figure would be noise.
+  final body = formatNaira(ngn.abs().roundToDouble());
+  if (signed) return '${usd < 0 ? '−' : '+'}$body';
+  return usd < 0 ? '−$body' : body;
+}
+
 /// `₦7,850` — whole Naira with thousands separators. Kobo are only shown when
 /// the amount isn't whole (`₦12.50`).
 String formatNaira(double amount) {

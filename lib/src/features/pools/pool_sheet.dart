@@ -305,7 +305,7 @@ class _PoolSheetState extends State<PoolSheet> {
     final zt = ZendTheme.of(context);
     final contribution = p.contribution == 0
         ? '\$0.00'
-        : formatUsd(p.contribution);
+        : formatMoney(p.contribution);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),

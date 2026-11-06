@@ -121,9 +121,9 @@ class _DropReceiverSheetState extends State<_DropReceiverSheet>
 
   String get _amountStr {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return formatUsd(widget.amount);
+      return formatMoney(widget.amount);
     }
-    return formatUsd(widget.amount);
+    return formatMoney(widget.amount);
   }
 
   @override

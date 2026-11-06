@@ -192,13 +192,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   const SizedBox(height: ZendSpacing.xl),
 
                   // ── Stats ─────────────────────────────────────────────
-                  _StatRow(label: 'Saved', value: formatUsd(balance), zt: zt),
+                  _StatRow(label: 'Saved', value: formatMoney(balance), zt: zt),
                   Divider(color: zt.border, height: 24),
-                  _StatRow(label: 'Target', value: formatUsd(target), zt: zt),
+                  _StatRow(label: 'Target', value: formatMoney(target), zt: zt),
                   Divider(color: zt.border, height: 24),
                   _StatRow(
                     label: 'Earned',
-                    value: formatUsd(yield_),
+                    value: formatMoney(yield_),
                     valueColor: ZendColors.accentBright,
                     zt: zt,
                   ),

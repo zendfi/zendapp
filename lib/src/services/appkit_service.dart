@@ -69,10 +69,19 @@ class AppKitService {
     String slug, {
     required List<String> scopes,
     required bool allowPosting,
+    bool shareWithFriends = false,
   }) => _api.appkit('POST', '/apps/by-slug/$slug/connect', {
     'scopes': scopes,
     'allow_posting': allowPosting,
+    'share_with_friends': allowPosting && shareWithFriends,
   });
+
+  /// Lets friends see (or stops them seeing) this app's feed cards for the user.
+  Future<void> setShareWithFriends(String slug, bool value) => _api.appkit(
+    'PATCH',
+    '/me/connected-apps/$slug',
+    {'share_with_friends': value},
+  );
 
   Future<void> disconnect(String slug) =>
       _api.appkit('DELETE', '/apps/by-slug/$slug/grant');

@@ -134,10 +134,10 @@ class Pool {
       targetAmount <= 0 ? 0.0 : (gathered / targetAmount).clamp(0.0, 1.0);
 
   /// Formatted gathered amount as a dollar string.
-  String get formattedGathered => formatUsd(gathered);
+  String get formattedGathered => formatMoney(gathered);
 
   /// Formatted target amount as a dollar string.
-  String get formattedTarget => formatUsd(targetAmount);
+  String get formattedTarget => formatMoney(targetAmount);
 
   factory Pool.fromJson(Map<String, dynamic> json) {
     final participantsJson =

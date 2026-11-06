@@ -239,7 +239,7 @@ class _BlockedByBalance extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    formatUsd(holding.usdcBalance),
+                    formatMoney(holding.usdcBalance),
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 17,

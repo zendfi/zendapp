@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../core/zend_format.dart' show formatNaira;
+import '../../core/zend_format.dart' show formatMoney, formatNaira;
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
@@ -79,7 +79,8 @@ class ZAppBridge {
     if (!_can('prize')) {
       throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "prize"');
     }
-    final amount = _amount(p, min: 1);
+    final priced = await _amountOrPrice(p, min: 1);
+    final amount = priced.usd;
     final joinIn = (p['joinInSecs'] as num?)?.toInt() ?? 0;
     final resolveIn = (p['resolveInSecs'] as num?)?.toInt() ?? 0;
     final maxPlayers = (p['maxPlayers'] as num?)?.toInt() ?? 0;
@@ -88,7 +89,9 @@ class ZAppBridge {
       context,
       app: app,
       title: 'Put up a prize of',
-      amountLabel: _money2(amount),
+      amountLabel: priced.ngn != null
+          ? formatNaira(priced.ngn!)
+          : _money2(amount),
       note:
           'Up to $maxPlayers people can join for ${_duration(joinIn)}. '
           '${app.name} decides the winners. If there is no result in ${_duration(resolveIn)}, '
@@ -99,6 +102,7 @@ class ZAppBridge {
     final r = await _prizes.create(
       app: app.slug,
       amountUsd: amount,
+      priceNgn: priced.ngn,
       joinInSecs: joinIn,
       resolveInSecs: resolveIn,
       maxPlayers: maxPlayers,
@@ -118,7 +122,7 @@ class ZAppBridge {
       context,
       app: app,
       title: 'Join for a chance to win',
-      amountLabel: _money2((prize['pot_usd'] as num).toDouble()),
+      amountLabel: _potLabel(prize),
       note: "It's free to join. ${app.name} decides the winners.",
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
@@ -136,7 +140,7 @@ class ZAppBridge {
       context,
       app: app,
       title: 'Cancel the prize and take back',
-      amountLabel: _money2((prize['pot_usd'] as num).toDouble()),
+      amountLabel: _potLabel(prize),
       note: 'Nobody gets paid. All of it comes back to you.',
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
@@ -383,7 +387,39 @@ class ZAppBridge {
     return d;
   }
 
-  static String _money2(double usd) => '\$${usd.toStringAsFixed(2)}';
+  static String _money2(double usd) => formatMoney(usd);
+
+  /// The pot of a prize as its host saw it: their Naira figure, else dollars.
+  static String _potLabel(Map<String, dynamic> prize) {
+    final ngn = (prize['pot_ngn'] as num?)?.toDouble();
+    return ngn != null
+        ? formatNaira(ngn)
+        : _money2((prize['pot_usd'] as num).toDouble());
+  }
+
+  /// `amount` (dollars) or `price: { ngn }`. A Naira price is converted here,
+  /// at the rate fetched just now, so the dollars checked against the prepared
+  /// bytes are Zend's own figure. The server refuses it if its rate differs
+  /// by more than 3%.
+  Future<({double usd, double? ngn})> _amountOrPrice(
+    Map<String, dynamic> p, {
+    double min = 0.01,
+  }) async {
+    final ngn = _priceNgn(p);
+    if (ngn == null) return (usd: _amount(p, min: min), ngn: null);
+    final rate = await _model.fxService.currentNairaRate();
+    if (rate == null) {
+      throw const ZBridgeError(
+        'FX_UNAVAILABLE',
+        "Prices can't be shown right now. Try again in a moment.",
+      );
+    }
+    final usd = (ngn / rate * 1000000).round() / 1000000;
+    if (usd < min) {
+      throw ZBridgeError('INVALID_AMOUNT', 'price.ngn is below the minimum');
+    }
+    return (usd: usd, ngn: ngn);
+  }
 
   /// `price: { ngn: 2000 }` from the page, or null when it gave `amount`.
   static double? _priceNgn(Map<String, dynamic> p) {
@@ -573,7 +609,10 @@ class ZAppBridge {
         'Manifest lacks "request_payment"',
       );
     }
-    final amount = p['amount'] == null ? null : _amount(p);
+    final priced = p['amount'] == null && p['price'] == null
+        ? null
+        : await _amountOrPrice(p);
+    final amount = priced?.usd;
     final note = p['note'] as String?;
     final maxPayments = (p['maxPayments'] as num?)?.toInt();
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
@@ -581,12 +620,18 @@ class ZAppBridge {
       context,
       app: app,
       title: 'Ask for',
-      amountLabel: amount == null ? 'Any amount' : _money2(amount),
+      amountLabel: priced == null
+          ? 'Any amount'
+          : priced.ngn != null
+          ? formatNaira(priced.ngn!)
+          : _money2(priced.usd),
       note: note,
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
     final url = await _zlinks.createAskLink(
       amountUsd: amount,
+      // A Naira-priced ask link asks for that many Naira whenever it's paid.
+      priceNgn: priced?.ngn,
       maxPayments: maxPayments,
       memo: note,
       app: app.slug,
@@ -603,7 +648,8 @@ class ZAppBridge {
         'Manifest lacks "create_link"',
       );
     }
-    final amount = _amount(p, min: 1);
+    final priced = await _amountOrPrice(p, min: 1);
+    final amount = priced.usd;
     final uses = ((p['uses'] as num?) ?? 1).toInt().clamp(1, 100);
     final note = p['note'] as String?;
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
@@ -613,12 +659,15 @@ class ZAppBridge {
       title: uses > 1
           ? 'Make a money link for $uses people, each'
           : 'Make a money link for',
-      amountLabel: _money2(amount),
+      amountLabel: priced.ngn != null
+          ? formatNaira(priced.ngn!)
+          : _money2(amount),
       note: note,
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
     final link = await _zlinks.createGiveLink(
       amountUsd: amount,
+      ngnQuoteKobo: priced.ngn == null ? null : (priced.ngn! * 100).round(),
       uses: uses,
       memo: note,
       app: app.slug,

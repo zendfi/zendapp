@@ -353,7 +353,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             const SizedBox(height: 4),
                             Text(
                               '${_edges.length} activit${_edges.length == 1 ? 'y' : 'ies'} together'
-                              '${_edges.any((e) => e.amountUsdc != null) ? ' · net ${formatUsd(_runningTotal, signed: true)}' : ''}',
+                              '${_edges.any((e) => e.amountUsdc != null) ? ' · net ${formatMoney(_runningTotal, signed: true)}' : ''}',
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontSize: 13,
