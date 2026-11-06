@@ -218,12 +218,12 @@ class _SendFlowSheetState extends State<SendFlowSheet>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return formatUsd(widget.amount);
+      return formatMoney(widget.amount);
     }
-    return formatUsd(widget.amount);
+    return formatMoney(widget.amount);
   }
 
-  String get _amountFormattedExact => formatUsd(widget.amount);
+  String get _amountFormattedExact => formatMoney(widget.amount);
 
   void _goTo(SendStage stage) {
     setState(() => _stage = stage);
@@ -587,7 +587,7 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       } catch (_) {}
       if (!emailed) {
         await Share.share(
-          'I sent you \$${widget.amount.toStringAsFixed(2)} on Zend. '
+          'I sent you ${formatMoney(widget.amount)} on Zend. '
           'Open it in Zend: ${link.url}',
           subject: 'I sent you money on Zend',
         );
@@ -1304,7 +1304,7 @@ class _RecipientStageState extends State<_RecipientStage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Available · \$${model.sendableBalance.toStringAsFixed(2)}',
+                            'Available · ${formatMoney(model.sendableBalance)}',
                             style: ZendTextStyles.tabularNumeric.copyWith(
                               fontSize: 12,
                               color: zt.textSecondary,
@@ -1594,7 +1594,7 @@ class _EmailIntentStage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 4),
               child: Text(
-                'Insufficient balance · \$${model.sendableBalance.toStringAsFixed(2)} available',
+                'Insufficient balance · ${formatMoney(model.sendableBalance)} available',
                 textAlign: TextAlign.center,
                 style: ZendTextStyles.tabularNumeric.copyWith(
                   fontSize: 12,

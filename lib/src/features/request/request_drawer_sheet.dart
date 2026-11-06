@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_error_modal.dart';
+import '../../design/zend_keypad.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sound_service.dart';
@@ -88,7 +89,7 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
   void initState() {
     super.initState();
     _amount = widget.initialAmount ?? 0;
-    if (_amount > 0) _amountController.text = _amount.toStringAsFixed(2);
+    if (_amount > 0) _amountController.text = _entry.textFor(_amount);
     if (!widget.amountReadOnly) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _amountFocus.requestFocus();
@@ -104,12 +105,10 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     super.dispose();
   }
 
-  String get _amountFormatted {
-    if (_amount == _amount.roundToDouble()) {
-      return formatUsd(_amount);
-    }
-    return formatUsd(_amount);
-  }
+  /// Naira when a rate is known as the sheet opens, else dollars.
+  final AmountEntry _entry = AmountEntry.current();
+
+  String get _amountFormatted => _entry.format(_amount);
 
   bool get _canCreate => _amount > 0;
 
@@ -238,8 +237,8 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
         recipientLabel: widget.prefilledRecipient,
         amountFormatted: _amountFormatted,
         canCreate: _canCreate,
-        onAmountChanged: (v) =>
-            setState(() => _amount = double.tryParse(v) ?? 0),
+        entry: _entry,
+        onAmountChanged: (v) => setState(() => _amount = _entry.usd(v)),
         onSubmit: _submit,
       ),
       _RequestStage.loading => const _RequestLoadingStage(
@@ -267,6 +266,7 @@ class _RequestAmountStage extends StatelessWidget {
     required this.recipientLabel,
     required this.amountFormatted,
     required this.canCreate,
+    required this.entry,
     required this.onAmountChanged,
     required this.onSubmit,
   });
@@ -278,6 +278,7 @@ class _RequestAmountStage extends StatelessWidget {
   final String? recipientLabel;
   final String amountFormatted;
   final bool canCreate;
+  final AmountEntry entry;
   final ValueChanged<String> onAmountChanged;
   final VoidCallback onSubmit;
 
@@ -324,8 +325,9 @@ class _RequestAmountStage extends StatelessWidget {
                     controller: amountController,
                     focusNode: amountFocus,
                     readOnly: amountReadOnly,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                    inputFormatters: [AmountInputFormatter(naira: entry.naira)],
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: !entry.naira,
                     ),
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -335,7 +337,7 @@ class _RequestAmountStage extends StatelessWidget {
                       color: zt.textPrimary,
                     ),
                     decoration: InputDecoration(
-                      prefixText: '\$',
+                      prefixText: entry.symbol,
                       prefixStyle: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 32,
@@ -481,9 +483,7 @@ class _RequestSuccessStageState extends State<_RequestSuccessStage>
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final amount = widget.request.amount;
-    final amountStr = amount == amount.roundToDouble()
-        ? formatUsd(amount)
-        : formatUsd(amount);
+    final amountStr = formatMoney(amount);
     final tag = widget.request.recipientZendtag;
     final note = widget.request.description;
 

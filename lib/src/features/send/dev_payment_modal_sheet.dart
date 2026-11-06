@@ -193,7 +193,7 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
     }
   }
 
-  String _formatAmount(double amount) => formatUsd(amount);
+  String _formatAmount(double amount) => formatMoney(amount);
 
   /// Re-fetches the request's current status immediately before invoking
   /// the signing flow (Requirement 4.8). If it's no longer payable, aborts
@@ -528,7 +528,7 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
           children: [
             Expanded(
               child: SendSuccessStage(
-                amountFormattedExact: formatUsd((_amountUsdc ?? 0.0)),
+                amountFormattedExact: formatMoney((_amountUsdc ?? 0.0)),
                 recipientZendtag: _requesterZendtag ?? widget.zendtag,
                 onDone: _dismiss,
               ),
@@ -608,7 +608,7 @@ class _DevConfirmStage extends StatelessWidget {
   final String requesterZendtag;
   final VoidCallback onConfirm;
 
-  String _formatAmount(double amount) => formatUsd(amount);
+  String _formatAmount(double amount) => formatMoney(amount);
 
   @override
   Widget build(BuildContext context) {

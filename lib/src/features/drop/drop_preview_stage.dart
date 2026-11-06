@@ -42,9 +42,9 @@ class _DropPreviewStageState extends State<DropPreviewStage>
 
   String get _amountFormatted {
     if (widget.amount == widget.amount.roundToDouble()) {
-      return formatUsd(widget.amount);
+      return formatMoney(widget.amount);
     }
-    return formatUsd(widget.amount);
+    return formatMoney(widget.amount);
   }
 
   String get _displayName {

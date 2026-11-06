@@ -149,7 +149,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     } else {
       _stage = _EntryStage.identity;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusForStage());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusForStage();
+      // A fresh rate for converting what's typed; display already has one.
+      if (mounted) unawaited(ZendScope.of(context).refreshNairaRate());
+    });
   }
 
   @override
@@ -163,9 +167,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     super.dispose();
   }
 
-  double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
+  /// Naira when a rate is known as the sheet opens, else dollars. Fixed for
+  /// the life of the sheet so the unit never changes mid-typing.
+  final AmountEntry _entry = AmountEntry.current();
 
-  String get _amountLabel => formatUsd(_amount);
+  /// The dollars that will move for what's typed. Typing the balance as
+  /// shown sends all of it (see [AmountEntry.usd]).
+  double get _amount => _entry.usd(
+    _amountController.text,
+    cap: ZendScope.of(context).sendableBalance,
+  );
+
+  String get _amountLabel => _entry.format(_amount);
 
   /// Emoji suggestions for the note: the user's own recent emoji notes first,
   /// then a default set.
@@ -411,7 +424,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       ZendFeel.error();
       setState(
         () => _amountError =
-            "You only have ${formatUsd(available)}. Add money or send less.",
+            "You only have ${_entry.format(available)}. Add money or send less.",
       );
       return;
     }
@@ -569,7 +582,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       if (!emailed) {
         final forWhat = note == null ? '' : ' for $note';
         await Share.share(
-          'Can you send me ${formatUsd(amount)}$forWhat? Pay here on Zend: $url',
+          'Can you send me ${formatMoney(amount)}$forWhat? Pay here on Zend: $url',
           subject: 'Money request on Zend',
         );
       }
@@ -969,7 +982,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        '\$',
+                        _entry.symbol,
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 32,
@@ -983,9 +996,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           controller: _amountController,
                           focusNode: _amountFocus,
                           // System numpad on phones, keyboard on web.
-                          inputFormatters: const [AmountInputFormatter()],
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                          inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
+                          // Whole Naira: no decimal key.
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: !_entry.naira,
                           ),
                           textAlign: TextAlign.left,
                           style: ZendTextStyles.displayXl.copyWith(

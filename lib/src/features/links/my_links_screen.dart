@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/zend_format.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -299,9 +301,9 @@ class _LinkTile extends StatelessWidget {
 
   String _money() {
     final kobo = link['ngn_quote_kobo'] as num?;
-    if (kobo != null) return '₦${(kobo / 100).toStringAsFixed(0)}';
+    if (kobo != null) return formatNaira((kobo / 100).roundToDouble());
     final usd = (link['amount_usd'] ?? link['max_amount_usd']) as num?;
-    return usd == null ? 'Any amount' : '\$${usd.toStringAsFixed(2)}';
+    return usd == null ? 'Any amount' : formatMoney(usd.toDouble());
   }
 
   String _subtitle() {

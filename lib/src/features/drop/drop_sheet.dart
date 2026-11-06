@@ -155,7 +155,7 @@ class _DropSheetState extends State<DropSheet>
     DropDebugLog.i.clear(); // Fresh log for each Drop session
     DropDebugLog.i.add(
       'SHEET',
-      'Drop sheet opened — amount=\$${widget.amount.toStringAsFixed(2)}',
+      'Drop sheet opened — amount=${formatMoney(widget.amount)}',
     );
     _checkBluetoothAndStart();
   }
@@ -509,7 +509,7 @@ class _DropSheetState extends State<DropSheet>
   Future<void> _performTransfer({String? pin, Uint8List? keypairBytes}) async {
     DropDebugLog.i.add(
       'XFER',
-      'Executing transfer: \$${widget.amount.toStringAsFixed(2)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}',
+      'Executing transfer: ${formatMoney(widget.amount)} → @${_confirmedReceiver?.gattPayload?.zendtag ?? '?'}',
     );
     _goTo(DropStage.processing);
     // BleAdvertiserService is no longer used from the sheet.
@@ -856,8 +856,8 @@ class _DropSheetState extends State<DropSheet>
         return SendPinStage(
           key: const ValueKey('drop-pin'),
           amountFormatted: widget.amount == widget.amount.roundToDouble()
-              ? formatUsd(widget.amount)
-              : formatUsd(widget.amount),
+              ? formatMoney(widget.amount)
+              : formatMoney(widget.amount),
           recipientZendtag:
               _confirmedReceiver?.gattPayload?.zendtag ??
               _confirmedReceiver?.preview?.zendtag ??

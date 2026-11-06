@@ -14,6 +14,7 @@ import '../../services/wallet_session_cache.dart';
 import 'send_shared_widgets.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
+import '../../design/zend_keypad.dart';
 import '../../models/handle_label.dart';
 
 // ── Stage enum ────────────────────────────────────────────────────────────────
@@ -98,6 +99,9 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
   // ── Open intent amount input (keypad-driven, no device keyboard) ──
   String _digits = '';
 
+  /// Naira when a rate is known as the sheet opens, else dollars.
+  final AmountEntry _entry = AmountEntry.current();
+
   // ── Whether the error was a fetch error (vs transfer error) ──
   bool _isFetchError = false;
 
@@ -168,9 +172,9 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
   // ── Amount formatting helpers ─────────────────────────────────────────────
 
-  String _formatAmount(double amount) => formatUsd(amount);
+  String _formatAmount(double amount) => formatMoney(amount);
 
-  String _formatAmountExact(double amount) => formatUsd(amount);
+  String _formatAmountExact(double amount) => formatMoney(amount);
 
   // ── Fetch request link ────────────────────────────────────────────────────
 
@@ -224,34 +228,17 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
 
   void _onAmountKey(String value) {
     HapticFeedback.lightImpact();
-    setState(() {
-      if (value == 'del') {
-        if (_digits.isNotEmpty) {
-          _digits = _digits.substring(0, _digits.length - 1);
-        }
-      } else if (value == '.') {
-        if (!_digits.contains('.')) {
-          _digits = _digits.isEmpty ? '0.' : '$_digits.';
-        }
-      } else if (RegExp(r'[0-9]').hasMatch(value)) {
-        // Max 2 decimal places
-        if (_digits.contains('.')) {
-          final parts = _digits.split('.');
-          if (parts.length == 2 && parts[1].length >= 2) return;
-        }
-        // No leading zeros
-        if (_digits == '0') {
-          if (value == '0') return;
-          _digits = value;
-        } else {
-          _digits += value;
-        }
-      }
-    });
+    final next = applyAmountKey(
+      _digits,
+      value == 'del' ? '<' : value,
+      naira: _entry.naira,
+    );
+    if (next != null) setState(() => _digits = next);
   }
 
+  /// Dollars for what's typed (open intent).
   double get _parsedAmount =>
-      _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
+      _entry.usd(_digits, cap: ZendScope.of(context).balance);
 
   // ── PIN key handler ───────────────────────────────────────────────────────
 
@@ -489,6 +476,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
           resolvedNote: _resolvedNote,
           fxPreviewNgn: _fxPreviewNgn,
           digits: _digits,
+          entry: _entry,
           onAmountKey: _onAmountKey,
           onConfirm: () {
             // Fetch FX preview for open intent when user proceeds
@@ -604,6 +592,7 @@ class _QrConfirmStage extends StatefulWidget {
     required this.resolvedNote,
     required this.fxPreviewNgn,
     required this.digits,
+    required this.entry,
     required this.onAmountKey,
     required this.onConfirm,
   });
@@ -614,6 +603,7 @@ class _QrConfirmStage extends StatefulWidget {
   final double? fxPreviewNgn;
   // Open intent: keypad-driven digit string
   final String digits;
+  final AmountEntry entry;
   final ValueChanged<String> onAmountKey;
   final VoidCallback onConfirm;
 
@@ -626,7 +616,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
       widget.intent.amountUsdc == null && widget.intent.requestLinkId == null;
 
   double get _parsedAmount =>
-      widget.digits.isEmpty ? 0 : (double.tryParse(widget.digits) ?? 0);
+      widget.entry.usd(widget.digits, cap: ZendScope.of(context).balance);
 
   double? get _effectiveAmount =>
       widget.resolvedAmount ?? (_parsedAmount > 0 ? _parsedAmount : null);
@@ -634,7 +624,9 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
   // Minimum for an open-intent zdfi.me payment — $0.50 USDC.
   static const double _minOpenIntentUsdc = 0.5;
 
-  String _formatAmount(double amount) => formatUsd(amount);
+  String _formatAmount(double amount) => formatMoney(amount);
+
+  String get _minimumLabel => widget.entry.format(_minOpenIntentUsdc);
 
   String _formatNgn(double value) {
     final rounded = value.round();
@@ -702,7 +694,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                     ZendLoader(size: 12)
                   else
                     Text(
-                      formatUsd(balance),
+                      formatMoney(balance),
                       style: ZendTextStyles.tabularNumeric.copyWith(
                         fontSize: 12,
                         color: ZendTheme.of(context).textSecondary,
@@ -717,7 +709,11 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           // ── Amount display ───────────────────────────────────────────────
           if (_isOpenIntent) ...[
             // Keypad-driven amount — mirrors SendScreen's _UsdAmountDisplay
-            _AmountDisplay(digits: widget.digits, compact: compact),
+            _AmountDisplay(
+              digits: widget.digits,
+              symbol: widget.entry.symbol,
+              compact: compact,
+            ),
             const SizedBox(height: 4),
             // Inline hint for below-minimum or insufficient balance
             if (insufficientBalance)
@@ -731,7 +727,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
               )
             else if (belowMinimum)
               Text(
-                'Minimum payment is \$0.50',
+                'Minimum payment is $_minimumLabel',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 13,
@@ -749,7 +745,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 color: ZendTheme.of(context).textPrimary,
               ),
             ),
-            if (widget.fxPreviewNgn != null) ...[
+            if (widget.fxPreviewNgn != null && !NairaRate.active) ...[
               const SizedBox(height: 4),
               Text(
                 '≈ ₦${_formatNgn(widget.fxPreviewNgn!)}',
@@ -789,6 +785,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           if (_isOpenIntent) ...[
             const Spacer(),
             _AmountKeypad(
+              decimal: !widget.entry.naira,
               onTap: widget.onAmountKey,
               keyHeight: compact ? 52 : 64,
             ),
@@ -801,7 +798,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           PrimaryButton(
             label: _isOpenIntent
                 ? (belowMinimum
-                      ? 'Minimum \$0.50'
+                      ? 'Minimum $_minimumLabel'
                       : _parsedAmount > 0
                       ? 'Zend ${_formatAmount(_parsedAmount)}'
                       : 'Enter amount')
@@ -817,9 +814,14 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
 // ── Amount display (mirrors SendScreen's split rendering) ─────────────────────
 
 class _AmountDisplay extends StatelessWidget {
-  const _AmountDisplay({required this.digits, required this.compact});
+  const _AmountDisplay({
+    required this.digits,
+    required this.symbol,
+    required this.compact,
+  });
 
   final String digits;
+  final String symbol;
   final bool compact;
 
   String get _wholePart {
@@ -870,7 +872,7 @@ class _AmountDisplay extends StatelessWidget {
       children: [
         Padding(
           padding: EdgeInsets.only(top: wholeSize * 0.08),
-          child: Text('\$', style: currencyStyle),
+          child: Text(symbol, style: currencyStyle),
         ),
         Text(_wholePart, style: wholeStyle),
         if (_hasDecimal) ...[
@@ -903,14 +905,24 @@ class _AmountDisplay extends StatelessWidget {
 // ── Amount keypad ─────────────────────────────────────────────────────────────
 
 class _AmountKeypad extends StatelessWidget {
-  const _AmountKeypad({required this.onTap, required this.keyHeight});
+  const _AmountKeypad({
+    required this.onTap,
+    required this.keyHeight,
+    this.decimal = true,
+  });
 
   final ValueChanged<String> onTap;
   final double keyHeight;
 
+  /// Dollars get a "." key; whole Naira get "000" in its place.
+  final bool decimal;
+
   @override
   Widget build(BuildContext context) {
-    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'];
+    final keys = [
+      '1', '2', '3', '4', '5', '6', '7', '8', '9',
+      decimal ? '.' : '000', '0', 'del',
+    ];
 
     return Column(
       children: [

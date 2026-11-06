@@ -175,9 +175,9 @@ class _VibePinSheetState extends State<_VibePinSheet>
 
   String get _amountFormatted {
     if (widget.amountUsdc == widget.amountUsdc.roundToDouble()) {
-      return formatUsd(widget.amountUsdc);
+      return formatMoney(widget.amountUsdc);
     }
-    return formatUsd(widget.amountUsdc);
+    return formatMoney(widget.amountUsdc);
   }
 
   @override

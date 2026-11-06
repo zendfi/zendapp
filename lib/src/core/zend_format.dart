@@ -41,9 +41,66 @@ abstract final class NairaRate {
   }
 }
 
+/// Dollars for a Naira figure, to the smallest unit of the balance (6 dp),
+/// not to the cent: ₦1,000 must arrive as ₦1,000, and a cent is ~₦14.
+double nairaToUsd(double ngn, double ngnPerUsd) =>
+    (ngn / ngnPerUsd * 1000000).round() / 1000000;
+
+/// What someone types an amount in on one entry screen. Fixed when the
+/// screen opens, so the unit never changes under their fingers: Naira when
+/// a rate is known, dollars otherwise.
+class AmountEntry {
+  AmountEntry._(this.ngnPerUsd);
+
+  /// Naira when [NairaRate] has a rate, else dollars.
+  factory AmountEntry.current() =>
+      AmountEntry._(NairaRate.active ? NairaRate.ngnPerUsd : null);
+
+  /// Always dollars (cash-out, providers, protocol amounts).
+  factory AmountEntry.dollars() => AmountEntry._(null);
+
+  final double? ngnPerUsd;
+
+  bool get naira => ngnPerUsd != null;
+  String get symbol => naira ? '₦' : '\$';
+
+  /// The typed text as a number (Naira or dollars). Commas are separators.
+  double typed(String text) =>
+      double.tryParse(text.trim().replaceAll(',', '')) ?? 0;
+
+  /// Dollars for the typed text. When [cap] is given (the balance) and the
+  /// typed Naira is within ₦1 of it, the cap is used, so typing the balance
+  /// as shown sends all of it rather than failing by a fraction.
+  double usd(String text, {double? cap}) {
+    final t = typed(text);
+    final r = ngnPerUsd;
+    if (r == null || t <= 0) return t;
+    final usd = nairaToUsd(t, r);
+    if (cap != null && cap > 0 && (usd - cap).abs() * r <= 1) return cap;
+    return usd;
+  }
+
+  /// Text to put in the field for a dollar amount (prefill).
+  String textFor(double usd) {
+    final r = ngnPerUsd;
+    if (r == null) return usd.toStringAsFixed(2);
+    return groupThousands((usd * r).round().toString());
+  }
+
+  /// [formatMoney] for a dollar figure on this screen, consistent with the
+  /// unit being typed.
+  String format(double usd) => naira
+      ? formatNaira((usd * ngnPerUsd!).roundToDouble())
+      : formatUsd(usd);
+}
+
+/// `1234567` → `1,234,567`.
+String groupThousands(String digits) =>
+    digits.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+
 /// How Zend shows a balance or payment: `₦13,700` when a rate is known,
-/// `$10.00` otherwise. For display only. Amount entry is still in dollars,
-/// so screens where someone types an amount keep using [formatUsd].
+/// `$10.00` otherwise. Screens where someone types an amount use
+/// [AmountEntry], which follows the same rule.
 String formatMoney(double usd, {bool signed = false}) {
   if (!NairaRate.active) return formatUsd(usd, signed: signed);
   final ngn = usd * NairaRate.ngnPerUsd!;

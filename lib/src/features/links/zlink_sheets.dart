@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/zend_format.dart';
+import '../../design/zend_keypad.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
@@ -33,9 +36,9 @@ class PendingZlink {
 
 String zlinkAmountLabel(Map<String, dynamic> preview) {
   final kobo = preview['ngn_quote_kobo'] as num?;
-  if (kobo != null) return '₦${(kobo / 100).toStringAsFixed(0)}';
+  if (kobo != null) return formatNaira((kobo / 100).roundToDouble());
   final usd = (preview['amount_usd'] ?? preview['max_amount_usd']) as num?;
-  return usd == null ? 'money' : '\$${usd.toStringAsFixed(2)}';
+  return usd == null ? 'money' : formatMoney(usd.toDouble());
 }
 
 /// Opens the right sheet for a Zlink payload. Caller ensures the user is signed in.
@@ -327,6 +330,9 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   bool _paid = false;
   final _amount = TextEditingController();
 
+  /// Naira when a rate is known as the sheet opens, else dollars.
+  final AmountEntry _entry = AmountEntry.current();
+
   @override
   void initState() {
     super.initState();
@@ -348,8 +354,8 @@ class _AskPaySheetState extends State<_AskPaySheet> {
 
   Future<void> _pay() async {
     final fixed = _preview!['amount_usd'] as num?;
-    final amount = fixed?.toDouble() ?? double.tryParse(_amount.text.trim());
-    if (amount == null || amount <= 0) {
+    final amount = fixed?.toDouble() ?? _entry.usd(_amount.text);
+    if (amount <= 0) {
       setState(() => _error = 'Enter an amount');
       return;
     }
@@ -438,10 +444,14 @@ class _AskPaySheetState extends State<_AskPaySheet> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: TextField(
                   controller: _amount,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
+                  keyboardType: TextInputType.numberWithOptions(
+                    decimal: !_entry.naira,
                   ),
-                  decoration: const InputDecoration(hintText: 'Amount'),
+                  decoration: InputDecoration(
+                    hintText: 'Amount',
+                    prefixText: _entry.symbol,
+                  ),
                 ),
               ),
             PrimaryButton(
