@@ -16,6 +16,8 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
 import '../../models/dm_thread.dart';
+import '../../models/dm_group.dart';
+import 'group_info_sheet.dart';
 import '../../navigation/zend_routes.dart';
 import '../../services/dm_websocket_service.dart';
 import '../../services/e2ee_service.dart' show kE2eePrefix;
@@ -58,10 +60,15 @@ class DmThreadScreen extends StatefulWidget {
     super.key,
     required this.roomId,
     required this.counterparty,
+    this.group,
   });
 
   final String roomId;
   final DmCounterparty counterparty;
+
+  /// Set when opening a group chat. When it is missing for a `g_` room (a
+  /// notification deep link, say) the screen loads the details itself.
+  final DmGroupSummary? group;
 
   @override
   State<DmThreadScreen> createState() => _DmThreadScreenState();
@@ -100,6 +107,80 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   /// bound) before encrypting, so the very first messages in a new chat wait
   /// for the exchange instead of racing it and silently sending plaintext.
   final Completer<void> _e2eeResolution = Completer<void>();
+  bool get _isGroup => isGroupRoomId(widget.roomId);
+
+  /// Groups: each other member's last-read message id, by user id.
+  final Map<String, String> _readCursors = {};
+
+  /// Groups: who is typing now (zendtag -> auto-clear timer).
+  final Map<String, Timer> _typingTags = {};
+
+  String get _typingLabel {
+    final names = _typingTags.keys.toList();
+    if (names.isEmpty) return 'typing…';
+    if (names.length == 1) return '${names[0]} is typing…';
+    if (names.length == 2) return '${names[0]} and ${names[1]} are typing…';
+    return '${names[0]} and ${names.length - 1} others are typing…';
+  }
+
+  /// Groups: how many members have read up to [msg]. [_messages] is
+  /// newest-first, so a reader at index c has seen every message at index >= c.
+  int _seenByCount(DmMessage msg) {
+    final i = _messages.indexWhere((m) => m.id == msg.id);
+    if (i == -1) return 0;
+    var n = 0;
+    for (final id in _readCursors.values) {
+      final c = _messages.indexWhere((m) => m.id == id);
+      if (c != -1 && c <= i) n++;
+    }
+    return n;
+  }
+
+  /// The newest message I sent that has a real server id.
+  String? get _myLatestSentId {
+    final me = ZendScope.read(context).currentUserId;
+    for (final m in _messages) {
+      if (m.senderUserId == me && !m.id.startsWith('local-') && !m.isSystem) {
+        return m.id;
+      }
+    }
+    return null;
+  }
+
+  DmGroupDetail? _groupDetail;
+
+  String get _groupName =>
+      _groupDetail?.name ??
+      widget.group?.name ??
+      widget.counterparty.displayName;
+  String? get _groupEmoji => _groupDetail?.emoji ?? widget.group?.emoji;
+  int get _groupMemberCount =>
+      _groupDetail?.members.length ?? widget.group?.memberCount ?? 0;
+
+  Future<void> _loadGroupDetail() async {
+    try {
+      final g = await ZendScope.read(context).dmService.getGroup(widget.roomId);
+      if (mounted) setState(() => _groupDetail = g);
+    } catch (_) {
+      // The header falls back to the name passed in.
+    }
+  }
+
+  Future<void> _openGroupInfo() async {
+    final model = ZendScope.of(context);
+    final result = await showGroupInfoSheet(
+      context,
+      roomId: widget.roomId,
+      myUserId: model.currentUserId ?? '',
+    );
+    if (!mounted) return;
+    if (result == GroupInfoResult.left) {
+      Navigator.of(context).pop();
+    } else {
+      _loadGroupDetail();
+    }
+  }
+
   Timer? _typingClearTimer;
   Timer? _recordingClearTimer;
   String? _nextCursor;
@@ -152,7 +233,14 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _initWs();
     _loadMessages();
     _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
-    _fetchCounterpartyPubkey();
+    if (_isGroup) {
+      // Groups are plaintext and have no single counterparty to key against.
+      _e2eeStatus = _E2eeStatus.unavailable;
+      _e2eeResolution.complete();
+      _loadGroupDetail();
+    } else {
+      _fetchCounterpartyPubkey();
+    }
   }
 
   Future<void> _fetchCounterpartyPubkey() async {
@@ -252,6 +340,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           // its 4s auto-clear timeout expires.
           if (msg.senderUserId != model.currentUserId && _theyAreTyping) {
             _typingClearTimer?.cancel();
+            for (final t in _typingTags.values) {
+              t.cancel();
+            }
             setState(() => _theyAreTyping = false);
           }
           // If the counterparty's message arrives while the user is
@@ -322,7 +413,24 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         case WsFrameType.typing:
           final isTyping = frame.data['is_typing'] as bool? ?? false;
           final senderId = frame.data['sender_user_id'] as String?;
-          if (senderId != model.currentUserId) {
+          if (_isGroup && senderId != model.currentUserId) {
+            final tag = frame.data['sender_zendtag'] as String? ?? '';
+            if (tag.isNotEmpty) {
+              setState(() {
+                _typingTags.remove(tag)?.cancel();
+                if (isTyping) {
+                  _typingTags[tag] = Timer(const Duration(seconds: 4), () {
+                    if (!mounted) return;
+                    setState(() {
+                      _typingTags.remove(tag);
+                      _theyAreTyping = _typingTags.isNotEmpty;
+                    });
+                  });
+                }
+                _theyAreTyping = _typingTags.isNotEmpty;
+              });
+            }
+          } else if (senderId != model.currentUserId) {
             setState(() => _theyAreTyping = isTyping);
             if (isTyping) {
               _typingClearTimer?.cancel();
@@ -397,7 +505,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
           // Ignore our own read receipts echoed back — only the
           // counterparty reading our messages should flip our sent bubbles
           // to "read".
-          if (readerUserId != null &&
+          if (_isGroup &&
+              readerUserId != null &&
+              readerUserId != model.currentUserId &&
+              lastReadId != null) {
+            setState(() => _readCursors[readerUserId] = lastReadId);
+          } else if (readerUserId != null &&
               readerUserId != model.currentUserId &&
               lastReadId != null) {
             final readIdx = _messages.indexWhere((m) => m.id == lastReadId);
@@ -573,7 +686,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
         // counterparty's read cursor — without this, reopening a thread the
         // counterparty had already fully read would show single ticks
         // until the next live read_receipt frame arrives.
-        final cpReadId = result.counterpartyLastReadMessageId;
+        if (_isGroup) _readCursors.addAll(result.readCursors);
+        final cpReadId = _isGroup ? null : result.counterpartyLastReadMessageId;
         if (cpReadId != null) {
           final readIdx = _messages.indexWhere((m) => m.id == cpReadId);
           if (readIdx != -1) {
@@ -1826,6 +1940,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     _ChatMenuAction action,
   ) {
     switch (action) {
+      case _ChatMenuAction.groupInfo:
+        _openGroupInfo();
       case _ChatMenuAction.viewContact:
         pushZendSlide(context, UserProfileScreen(zendtag: cp.zendtag));
       case _ChatMenuAction.searchInChat:
@@ -2195,25 +2311,32 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       else
                         const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: () => pushZendSlide(
-                          context,
-                          UserProfileScreen(zendtag: cp.zendtag),
-                        ),
+                        onTap: _isGroup
+                            ? _openGroupInfo
+                            : () => pushZendSlide(
+                                context,
+                                UserProfileScreen(zendtag: cp.zendtag),
+                              ),
                         child: ZendAvatar(
                           seed: cp.userId,
                           radius: 20,
                           photoUrl: cp.avatarUrl,
-                          initials: cp.initialLetter,
-                          isOnline: _counterpartyOnline,
+                          initials: _isGroup
+                              ? (_groupEmoji ??
+                                    (_groupName.isEmpty ? '?' : _groupName[0]))
+                              : cp.initialLetter,
+                          isOnline: _isGroup ? null : _counterpartyOnline,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => pushZendSlide(
-                            context,
-                            UserProfileScreen(zendtag: cp.zendtag),
-                          ),
+                          onTap: _isGroup
+                              ? _openGroupInfo
+                              : () => pushZendSlide(
+                                  context,
+                                  UserProfileScreen(zendtag: cp.zendtag),
+                                ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -2222,9 +2345,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      cp.displayName.trim().isEmpty
-                                          ? handleLabel(cp.zendtag)
-                                          : cp.displayName,
+                                      _isGroup
+                                          ? _groupName
+                                          : (cp.displayName.trim().isEmpty
+                                                ? handleLabel(cp.zendtag)
+                                                : cp.displayName),
                                       style: TextStyle(
                                         fontFamily: 'Geist',
                                         fontSize: 16,
@@ -2245,7 +2370,18 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                 ],
                               ),
                               // ── Presence / status row ─────────────────────
-                              _buildPresenceSubtitle(zt, cp),
+                              if (_isGroup)
+                                _PresenceLabel(
+                                  text: _theyAreTyping
+                                      ? _typingLabel
+                                      : '$_groupMemberCount members',
+                                  color: _theyAreTyping
+                                      ? zt.accent
+                                      : zt.textSecondary,
+                                  dot: _theyAreTyping,
+                                )
+                              else
+                                _buildPresenceSubtitle(zt, cp),
                             ],
                           ),
                         ),
@@ -2267,13 +2403,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                         onSelected: (action) =>
                             _handleMenuAction(context, zt, cp, action),
                         itemBuilder: (ctx) => [
-                          _popupItem(
-                            ctx,
-                            zt,
-                            _ChatMenuAction.viewContact,
-                            PhosphorIconsRegular.user,
-                            'View contact',
-                          ),
+                          if (_isGroup)
+                            _popupItem(
+                              ctx,
+                              zt,
+                              _ChatMenuAction.groupInfo,
+                              PhosphorIconsRegular.usersThree,
+                              'Group info',
+                            )
+                          else
+                            _popupItem(
+                              ctx,
+                              zt,
+                              _ChatMenuAction.viewContact,
+                              PhosphorIconsRegular.user,
+                              'View contact',
+                            ),
                           // Both of these were rendered greyed-out with no-op
                           // handlers — see [ZendFeatures.dmChatExtras].
                           _popupItem(
@@ -2305,7 +2450,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           // destructive action but only toasted "coming soon",
                           // so a user could believe they'd blocked someone who
                           // could still message them.
-                          if (ZendFeatures.blockUser) ...[
+                          if (ZendFeatures.blockUser && !_isGroup) ...[
                             const PopupMenuDivider(),
                             _popupItem(
                               ctx,
@@ -2486,6 +2631,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                       final isLast = msgIdx >= 0
                                           ? _isLastInGroup(msgIdx)
                                           : true;
+                                      if (msg.isSystem) {
+                                        return _SystemNotice(
+                                          key: ValueKey(msg.id),
+                                          text: msg.content ?? '',
+                                        );
+                                      }
                                       final isGroupEnd = !isMe && isFirst;
                                       final isFlashing =
                                           _flashingMsgId == msg.id;
@@ -2505,43 +2656,64 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                                       alignment: Alignment
                                                           .bottomCenter,
                                                       child: ZendAvatar(
-                                                        seed: cp.userId,
+                                                        seed: _isGroup
+                                                            ? msg.senderUserId
+                                                            : cp.userId,
                                                         radius: 13,
-                                                        photoUrl: cp.avatarUrl,
-                                                        initials:
-                                                            cp.initialLetter,
+                                                        photoUrl: _isGroup
+                                                            ? msg.senderAvatarUrl
+                                                            : cp.avatarUrl,
+                                                        initials: _isGroup
+                                                            ? ((msg.senderZendtag ??
+                                                                          '?')
+                                                                      .isEmpty
+                                                                  ? '?'
+                                                                  : (msg.senderZendtag ??
+                                                                            '?')[0]
+                                                                        .toUpperCase())
+                                                            : cp.initialLetter,
                                                       ),
                                                     )
                                                   : null,
                                             ),
                                           Expanded(
-                                            child: DmMessageBubble(
-                                              message: msg,
-                                              isMe: isMe,
-                                              isContinuation: isCont,
-                                              isFirst: isFirst,
-                                              isLast: isLast,
-                                              showTimestamp: _showTimestamps,
-                                              onReply: (m) => setState(
-                                                () => _replyingTo = m,
+                                            child: _GroupSenderLabel(
+                                              show:
+                                                  _isGroup && !isMe && isFirst,
+                                              name: msg.senderZendtag ?? '',
+                                              colorSeed: msg.senderUserId,
+                                              child: DmMessageBubble(
+                                                message: msg,
+                                                isMe: isMe,
+                                                isContinuation: isCont,
+                                                isFirst: isFirst,
+                                                isLast: isLast,
+                                                showTimestamp: _showTimestamps,
+                                                onReply: (m) => setState(
+                                                  () => _replyingTo = m,
+                                                ),
+                                                onReplyTap: (m) =>
+                                                    _scrollToReplyOrigin(m),
+                                                onRetry:
+                                                    msg.localStatus ==
+                                                        DmLocalStatus.failed
+                                                    ? (msg.type ==
+                                                              DmMessageType.vibe
+                                                          ? () => _retryVibe(
+                                                              msg.clientId ??
+                                                                  '',
+                                                            )
+                                                          : () => _onRetry(
+                                                              msg.clientId ??
+                                                                  '',
+                                                            ))
+                                                    : null,
+                                                onPayRequest: _onPayRequest,
+                                                onLongPress:
+                                                    _showMessageActions,
+                                                onReactionTap:
+                                                    _onToggleReaction,
                                               ),
-                                              onReplyTap: (m) =>
-                                                  _scrollToReplyOrigin(m),
-                                              onRetry:
-                                                  msg.localStatus ==
-                                                      DmLocalStatus.failed
-                                                  ? (msg.type ==
-                                                            DmMessageType.vibe
-                                                        ? () => _retryVibe(
-                                                            msg.clientId ?? '',
-                                                          )
-                                                        : () => _onRetry(
-                                                            msg.clientId ?? '',
-                                                          ))
-                                                  : null,
-                                              onPayRequest: _onPayRequest,
-                                              onLongPress: _showMessageActions,
-                                              onReactionTap: _onToggleReaction,
                                             ),
                                           ),
                                         ],
@@ -2560,6 +2732,37 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                       // HERE (as a sibling below the Row, not inside it)
                                       // reserves that space without dragging the avatar
                                       // down with it.
+                                      final seenBy =
+                                          _isGroup &&
+                                              isMe &&
+                                              msg.id == _myLatestSentId
+                                          ? _seenByCount(msg)
+                                          : 0;
+                                      if (seenBy > 0) {
+                                        bubbleRow = Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            bubbleRow,
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 2,
+                                                right: 12,
+                                              ),
+                                              child: Text(
+                                                'Seen by $seenBy',
+                                                textAlign: TextAlign.right,
+                                                style: TextStyle(
+                                                  fontFamily: 'Geist',
+                                                  fontSize: 11,
+                                                  color: zt.textSecondary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }
                                       Widget itemContent =
                                           msg.reactions.isNotEmpty
                                           ? Column(
@@ -2623,14 +2826,18 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                   },
                   onTyping: (v) => _ws.sendTyping(v),
                   roomId: widget.roomId,
-                  onSendVibe: _onSendVibe,
-                  onRequestPayment: _onRequestPayment,
-                  onPayRecipient: _onPayRecipient,
+                  // Money, vibes and ZApps are person-to-person, so groups
+                  // offer text and GIFs only.
+                  onSendVibe: _isGroup ? null : _onSendVibe,
+                  onRequestPayment: _isGroup ? null : _onRequestPayment,
+                  onPayRecipient: _isGroup ? null : _onPayRecipient,
                   onPickGif: gifSearchEnabled ? _onPickGif : null,
-                  onOpenApps: () => showZAppTray(
-                    context,
-                    counterpartyUserId: widget.counterparty.userId,
-                  ),
+                  onOpenApps: _isGroup
+                      ? null
+                      : () => showZAppTray(
+                          context,
+                          counterpartyUserId: widget.counterparty.userId,
+                        ),
                   initialDraft: model.dmService.getDraft(widget.roomId),
                   onDraftChanged: (text) =>
                       model.dmService.setDraft(widget.roomId, text),
@@ -2747,6 +2954,7 @@ class _PresenceLabel extends StatelessWidget {
 // ── Chat menu ─────────────────────────────────────────────────────────────────
 
 enum _ChatMenuAction {
+  groupInfo,
   viewContact,
   searchInChat,
   disappearing,
@@ -3203,6 +3411,70 @@ class _ChatSearchSheetState extends State<_ChatSearchSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Centred notice such as "Ada added Ben".
+class _SystemNotice extends StatelessWidget {
+  const _SystemNotice({super.key, required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+      child: Center(
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 12,
+            color: zt.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Puts the sender's name above the first incoming bubble of a run in a group.
+class _GroupSenderLabel extends StatelessWidget {
+  const _GroupSenderLabel({
+    required this.show,
+    required this.name,
+    required this.colorSeed,
+    required this.child,
+  });
+
+  final bool show;
+  final String name;
+  final String colorSeed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!show || name.isEmpty) return child;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12, bottom: 2),
+          child: Text(
+            name,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ZendAvatar.colorFor(colorSeed),
+            ),
+          ),
+        ),
+        child,
+      ],
     );
   }
 }

@@ -303,6 +303,7 @@ class _DmListScreenState extends State<DmListScreen> {
     DmThread thread,
     Uint8List mySeed32,
   ) async {
+    if (thread.isGroup) return; // groups are plaintext
     final lastMsg = thread.lastMessage;
     if (lastMsg == null || lastMsg.type != DmMessageType.text) return;
     final content = lastMsg.content;
@@ -337,7 +338,11 @@ class _DmListScreenState extends State<DmListScreen> {
   void _openThread(DmThread thread) {
     pushZendSlide(
       context,
-      DmThreadScreen(roomId: thread.roomId, counterparty: thread.counterparty),
+      DmThreadScreen(
+        roomId: thread.roomId,
+        counterparty: thread.counterparty,
+        group: thread.group,
+      ),
     ).then((_) => _loadThreads());
   }
 
@@ -618,12 +623,15 @@ class _DmThreadTile extends StatelessWidget {
               Builder(
                 builder: (ctx) {
                   final dmService = ZendScope.of(ctx).dmService;
-                  final isOnline = dmService.presenceCache[cp.userId];
+                  final isOnline = thread.isGroup
+                      ? null
+                      : dmService.presenceCache[cp.userId];
+                  final g = thread.group;
                   return ZendAvatar(
                     seed: cp.userId,
                     radius: 26,
                     photoUrl: cp.avatarUrl,
-                    initials: cp.initialLetter,
+                    initials: g?.emoji ?? cp.initialLetter,
                     isOnline: isOnline,
                   );
                 },
@@ -670,9 +678,9 @@ class _DmThreadTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            thread.lastMessagePreview.isEmpty
+                            thread.listPreview.isEmpty
                                 ? 'Start a conversation'
-                                : thread.lastMessagePreview,
+                                : thread.listPreview,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 14,

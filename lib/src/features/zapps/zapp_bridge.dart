@@ -1,14 +1,19 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/zend_format.dart' show formatNaira;
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
+import '../../services/sui_transaction_verifier.dart';
 import '../../services/prize_service.dart';
 import '../../services/zlink_service.dart';
 import 'zapp_confirm_sheet.dart';
+import 'zapp_live.dart';
+import 'zapp_people_picker.dart';
 
 /// Typed bridge error. `code` is for the developer; it is never shown to users.
 class ZBridgeError implements Exception {
@@ -30,9 +35,20 @@ class ZAppBridge {
     required this.app,
     required this.session,
     required this.onClose,
-  });
+    this.live,
+    Map<String, String>? picks,
+  }) : picks = picks ?? {};
 
   final BuildContext context;
+
+  /// Held by the ZApp screen (not the bridge, which is rebuilt with it) so
+  /// rooms survive rebuilds and close when the app closes.
+  final ZAppLiveRooms? live;
+
+  /// Opaque `pick_…` tokens handed to the page by `people.pick`, mapped to the
+  /// chosen person's user id. The page passes tokens back as interaction
+  /// participants; it never sees user ids. Held by the ZApp screen.
+  final Map<String, String> picks;
   final ZAppDescriptor app;
 
   /// From `/session` or `/connect`: app_session token, scopes, app_user_id.
@@ -60,8 +76,9 @@ class ZAppBridge {
       : '${(secs / 60).round()} minutes';
 
   Future<Object?> _prizeCreate(Map<String, dynamic> p) async {
-    if (!_can('prize'))
+    if (!_can('prize')) {
       throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "prize"');
+    }
     final amount = _amount(p, min: 1);
     final joinIn = (p['joinInSecs'] as num?)?.toInt() ?? 0;
     final resolveIn = (p['resolveInSecs'] as num?)?.toInt() ?? 0;
@@ -111,8 +128,9 @@ class ZAppBridge {
   Future<Object?> _prizeCancel(Map<String, dynamic> p) async {
     final id = _str(p, 'id');
     final prize = await _prizes.get(id);
-    if (prize['is_host'] != true)
+    if (prize['is_host'] != true) {
       throw const ZBridgeError('NOT_HOST', 'Only the host can cancel');
+    }
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
     final ok = await confirmZAppMoney(
       context,
@@ -185,8 +203,10 @@ class ZAppBridge {
         return _money(() => _request(p));
       case 'createLink':
         return _money(() => _createLink(p));
+      case 'people.pick':
+        return _pickPeople(p);
       case 'interaction.create':
-        return _appkit.createInteraction(app.slug, p);
+        return _appkit.createInteraction(app.slug, _withPicks(p));
       case 'interaction.get':
         return _appkit.getInteraction(_str(p, 'id'));
       case 'interaction.update':
@@ -201,11 +221,12 @@ class ZAppBridge {
         }
         return _appkit.postCard(p);
       case 'attest':
-        if (!_can('attest'))
+        if (!_can('attest')) {
           throw const ZBridgeError(
             'PERMISSION_DENIED',
             'Manifest lacks "attest"',
           );
+        }
         return _model.walletService.apiClient.appkit('POST', '/apps/attest', {
           'app': app.slug,
           'label': _str(p, 'label'),
@@ -228,12 +249,109 @@ class ZAppBridge {
               'interaction_id': ?(p['interactionId'] as String?),
               'prize_id': ?(p['prizeId'] as String?),
             });
+      case 'live.join':
+      case 'live.send':
+      case 'live.leave':
+        return _liveCall(method, p);
       case 'close':
         onClose(p['result']);
         return true;
       default:
         throw ZBridgeError('UNKNOWN_METHOD', 'Unknown method $method');
     }
+  }
+
+  Future<Object?> _pickPeople(Map<String, dynamic> p) async {
+    final max = ((p['max'] as num?)?.toInt() ?? 1).clamp(1, 50);
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final chosen = await showZAppPeoplePicker(
+      context,
+      appName: app.name,
+      title: p['title'] as String?,
+      max: max,
+    );
+    if (chosen.isEmpty) return <Object>[];
+    final r = await _model.walletService.apiClient.appkit(
+      'POST',
+      '/apps/people/handles',
+      {
+        'app': app.slug,
+        'user_ids': [for (final c in chosen) c.userId],
+      },
+    );
+    final out = <Map<String, dynamic>>[];
+    for (final person in (r['people'] as List? ?? const [])) {
+      final m = Map<String, dynamic>.from(person as Map);
+      final token = 'pick_${_randomToken()}';
+      picks[token] = m['user_id'] as String;
+      out.add({
+        'appUserId': m['app_user_id'],
+        'name': m['name'],
+        'username': m['username'],
+        'avatar': m['avatar'],
+        'pick': token,
+      });
+    }
+    return out;
+  }
+
+  static String _randomToken() {
+    final r = Random.secure();
+    return List.generate(
+      16,
+      (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+  }
+
+  /// Turns `pick_…` participants into the `chat:<id>` form Zend resolves for
+  /// people the user chats with. Unknown tokens are refused.
+  Map<String, dynamic> _withPicks(Map<String, dynamic> p) {
+    final raw = p['participants'];
+    if (raw is! List) return p;
+    final mapped = <Object?>[];
+    for (final x in raw) {
+      if (x is String && x.startsWith('pick_')) {
+        final id = picks[x];
+        if (id == null) {
+          throw const ZBridgeError('INVALID_PARAMS', 'Unknown pick token');
+        }
+        mapped.add('chat:$id');
+      } else if (x is String && x.startsWith('chat:')) {
+        // Only Zend itself writes this form.
+        throw const ZBridgeError('INVALID_PARAMS', 'Invalid participant');
+      } else {
+        mapped.add(x);
+      }
+    }
+    return {...p, 'participants': mapped};
+  }
+
+  Future<Object?> _liveCall(String method, Map<String, dynamic> p) async {
+    final rooms = live;
+    if (rooms == null) {
+      throw const ZBridgeError('UNAVAILABLE', 'Live rooms are not available');
+    }
+    final id = _str(p, 'interactionId');
+    try {
+      switch (method) {
+        case 'live.join':
+          await rooms.join(id);
+        case 'live.send':
+          final data = p['data'];
+          if (jsonEncode(data).length > 8 * 1024) {
+            throw const ZBridgeError(
+              'LIVE_FRAME_TOO_LARGE',
+              'Messages must be at most 8 KB',
+            );
+          }
+          rooms.send(id, data);
+        default:
+          rooms.leave(id);
+      }
+    } on StateError catch (e) {
+      throw ZBridgeError(e.message, 'Live room: ${e.message}');
+    }
+    return true;
   }
 
   /// One money sheet at a time, so a page can't stack prompts.
@@ -267,6 +385,21 @@ class ZAppBridge {
 
   static String _money2(double usd) => '\$${usd.toStringAsFixed(2)}';
 
+  /// `price: { ngn: 2000 }` from the page, or null when it gave `amount`.
+  static double? _priceNgn(Map<String, dynamic> p) {
+    final price = p['price'];
+    if (price == null) return null;
+    final v = price is Map ? price['ngn'] : null;
+    final d = v is num ? v.toDouble() : double.tryParse('$v');
+    if (d == null || !d.isFinite || d < 1 || d > 10000000) {
+      throw const ZBridgeError(
+        'INVALID_AMOUNT',
+        'price.ngn must be between 1 and 10000000',
+      );
+    }
+    return d;
+  }
+
   Future<Object?> _pay(Map<String, dynamic> p) async {
     if (!_can('pay')) {
       throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "pay"');
@@ -275,22 +408,32 @@ class ZAppBridge {
     if (!to.startsWith('@')) {
       throw const ZBridgeError('INVALID_PARAMS', 'to must be an @username');
     }
-    final amount = _amount(p);
+    if (p['splits'] is List && (p['splits'] as List).isNotEmpty) {
+      return _paySplit(p, to);
+    }
+    // A price in Naira (`price: { ngn }`) or an amount in dollars (`amount`).
+    final priceNgn = _priceNgn(p);
     final note = p['note'] as String?;
     final reference = p['reference'] as String?;
-    // Limits live in core: checked before the user is even asked.
-    final check = await _appkit.payCheck(
+    // Limits live in core: checked before the user is even asked. Zend also
+    // converts a Naira price here, so the amount sent is the one it checked.
+    final checked = await _appkit.payCheck(
       app.slug,
-      amountUsd: amount,
+      amountUsd: priceNgn == null ? _amount(p) : null,
+      priceNgn: priceNgn,
       to: to,
       reference: reference,
     );
+    final check = checked.ticket;
+    final amount = checked.amountUsd;
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
     final ok = await confirmZAppMoney(
       context,
       app: app,
       title: 'Send',
-      amountLabel: _money2(amount),
+      amountLabel: checked.priceNgn != null
+          ? formatNaira(checked.priceNgn!)
+          : _money2(amount),
       recipient: to,
       note: note,
     );
@@ -299,6 +442,8 @@ class ZAppBridge {
       recipientZendtag: to.substring(1),
       amountUsdc: amount,
       note: note,
+      // Zend records the payment for the app at submit, even if this app closes after.
+      appTicket: check,
     );
     dynamic r;
     try {
@@ -309,7 +454,8 @@ class ZAppBridge {
       r = await send();
     }
     _model.fetchBalance();
-    // Best effort: the backend verifies its own record before telling the app.
+    // Older backends record only on report. Newer ones already recorded it at submit, so
+    // this is a no-op there. Best effort either way.
     try {
       await _appkit.payReport(
         app.slug,
@@ -318,6 +464,106 @@ class ZAppBridge {
       );
     } catch (_) {}
     return {'paymentId': r.transferId, 'status': r.status};
+  }
+
+  /// `pay` with `splits`: one transaction pays the recipient and the others
+  /// (for example the app's share). Every part is shown before confirming,
+  /// and the prepared transaction is checked against exactly those parts.
+  Future<Object?> _paySplit(Map<String, dynamic> p, String to) async {
+    final priceNgn = _priceNgn(p);
+    final api = _model.walletService.apiClient;
+    final checked = await api.appkit(
+      'POST',
+      '/apps/by-slug/${app.slug}/split/check',
+      {
+        'to': to,
+        if (priceNgn == null) 'amount_usd': _amount(p),
+        'price_ngn': ?priceNgn,
+        'splits': [
+          for (final s in (p['splits'] as List))
+            {
+              'to': (s as Map)['to'],
+              'percent': ?s['percent'],
+              'amount_usd': ?s['amount'],
+            },
+        ],
+        'reference': ?(p['reference'] as String?),
+      },
+    );
+    final ticket = checked['ticket'] as String;
+    final total = (checked['amount_usd'] as num).toDouble();
+    final totalNgn = (checked['price_ngn'] as num?)?.toDouble();
+    final parts = (checked['parts'] as List).cast<Map>();
+    String label(Map part) {
+      final ngn = (part['price_ngn'] as num?)?.toDouble();
+      return ngn != null
+          ? formatNaira(ngn)
+          : _money2((part['amount_usd'] as num).toDouble());
+    }
+
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context,
+      app: app,
+      title: 'Send',
+      amountLabel: totalNgn != null ? formatNaira(totalNgn) : _money2(total),
+      note: p['note'] as String?,
+      parts: [for (final part in parts) (part['label'] as String, label(part))],
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+
+    Future<Map<String, dynamic>> prepare() => api.appkit(
+      'POST',
+      '/apps/by-slug/${app.slug}/split/prepare',
+      {'ticket': ticket},
+    );
+    Map<String, dynamic> prepared;
+    try {
+      prepared = await prepare();
+    } on ApiException catch (e) {
+      if (e.errorCode != 'STEP_UP_REQUIRED') rethrow;
+      await _model.zkLoginService.satisfyStepUp();
+      prepared = await prepare();
+    }
+    final tx = prepared['transaction_data_bcs'] as String;
+    final preparedParts = (prepared['parts'] as List).cast<Map>();
+    // The amounts must be the ones just shown, in the same order.
+    if (preparedParts.length != parts.length) {
+      throw const ZBridgeError(
+        'SAFETY_STOP',
+        "We stopped this because something didn't look right. Your money hasn't moved.",
+      );
+    }
+    try {
+      verifyGaslessUsdcSplit(
+        transactionDataBcsBase64: tx,
+        senderAddress: prepared['sender'] as String,
+        parts: [
+          for (var i = 0; i < parts.length; i++)
+            SuiSplitPart(
+              address: preparedParts[i]['address'] as String,
+              amountBaseUnits: BigInt.from(
+                ((parts[i]['amount_usd'] as num) * 1000000).round(),
+              ),
+            ),
+        ],
+      );
+    } on Exception {
+      throw const ZBridgeError(
+        'SAFETY_STOP',
+        "We stopped this because something didn't look right. Your money hasn't moved.",
+      );
+    }
+    final signature = await _model.zkLoginService.signPreparedTransaction(
+      transactionDataBcsBase64: tx,
+    );
+    final r = await api.appkit(
+      'POST',
+      '/apps/by-slug/${app.slug}/split/submit',
+      {'ticket': ticket, 'transaction_data_bcs': tx, 'signature': signature},
+    );
+    _model.fetchBalance();
+    return {'paymentId': r['payment_id'], 'status': r['status']};
   }
 
   Future<Object?> _request(Map<String, dynamic> p) async {

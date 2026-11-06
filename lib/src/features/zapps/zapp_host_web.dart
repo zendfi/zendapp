@@ -11,6 +11,10 @@ import 'zapp_bridge.dart';
 /// On web the browser's own back button handles history, so this does nothing.
 class ZAppHostHandle {
   Future<bool> back() async => false;
+  void Function(String raw)? _push;
+
+  /// Sends an event to the page (live room messages).
+  void push(String raw) => _push?.call(raw);
 }
 
 /// Web host: a sandboxed iframe filling the window under Zend's bar. Only messages
@@ -77,6 +81,10 @@ class _ZAppHostState extends State<ZAppHost> {
       unawaited(_onMessage(e));
     }).toJS;
     web.window.addEventListener('message', _listener);
+    // Pushed events go only to the app's own origin.
+    final origin = widget.app.entryUri(widget.path).origin;
+    widget.handle._push = (raw) =>
+        _frame.contentWindow?.postMessage(raw.toJS, origin.toJS);
   }
 
   Future<void> _onMessage(web.MessageEvent e) async {
@@ -87,8 +95,9 @@ class _ZAppHostState extends State<ZAppHost> {
     // and touching a cross-origin window that way throws a SecurityError,
     // which silently dropped every message from the app.
     final source = e.source;
-    if (child == null || source == null || !source.strictEquals(child).toDart)
+    if (child == null || source == null || !source.strictEquals(child).toDart) {
       return;
+    }
     final data = e.data;
     if (!data.isA<JSString>()) return;
     final reply = await widget.bridge.handleRaw((data as JSString).toDart);

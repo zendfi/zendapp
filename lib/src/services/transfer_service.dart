@@ -174,6 +174,10 @@ class TransferService {
     /// Who may see this transfer in Activity. Null inherits the sender's profile
     /// default rather than forcing a choice.
     TransferVisibility? visibility,
+
+    /// Set for ZApp payments: the `pay-check` ticket, so Zend records the payment for the app
+    /// as soon as it's submitted.
+    String? appTicket,
   }) async {
     // Resolved before validating authorization, because whether a local secret is
     // even required depends on the rail: a zkLogin account signs with an
@@ -225,6 +229,7 @@ class TransferService {
       signedTransfer: signedTransfer,
       note: note,
       visibility: visibility,
+      appTicket: appTicket,
     );
     return TransferResponse(
       transferId: submission.transferId,

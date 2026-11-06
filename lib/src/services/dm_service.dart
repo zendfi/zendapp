@@ -1,13 +1,27 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/dm_group.dart';
 import '../models/dm_message.dart';
 import '../models/dm_thread.dart';
 import 'api_client.dart';
 
 /// Sent/read timestamps for a single message — backs the message-info sheet.
+class DmReader {
+  const DmReader({required this.zendtag, required this.readAt});
+  final String zendtag;
+  final DateTime readAt;
+}
+
 class DmMessageInfo {
-  const DmMessageInfo({required this.sentAt, this.readAt});
+  const DmMessageInfo({
+    required this.sentAt,
+    this.readAt,
+    this.readBy = const [],
+  });
+
+  /// Groups only: who has read up to this message.
+  final List<DmReader> readBy;
   final DateTime sentAt;
 
   /// Null if the counterparty hasn't read up to this message yet.
@@ -19,8 +33,12 @@ class DmMessagesResult {
     required this.messages,
     this.nextCursor,
     this.counterpartyLastReadMessageId,
+    this.readCursors = const {},
   });
   final List<DmMessage> messages;
+
+  /// Groups only: each other member's last-read message id, by user id.
+  final Map<String, String> readCursors;
   final String? nextCursor;
 
   /// The counterparty's current read cursor — the id of the last message
@@ -159,6 +177,11 @@ class DmService {
         .cast<Map<String, dynamic>>()
         .map(DmThread.fromJson)
         .toList();
+    final groups = (response.data['groups'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(DmThread.fromGroupJson);
+    result.addAll(groups);
+    result.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
     cachedThreads = result;
     return result;
   }
@@ -234,6 +257,13 @@ class DmService {
       nextCursor: response.data['next_cursor'] as String?,
       counterpartyLastReadMessageId:
           response.data['counterparty_last_read_message_id'] as String?,
+      readCursors: {
+        for (final c
+            in (response.data['read_cursors'] as List<dynamic>? ?? [])
+                .cast<Map<String, dynamic>>())
+          if (c['user_id'] is String && c['last_read_message_id'] is String)
+            c['user_id'] as String: c['last_read_message_id'] as String,
+      },
     );
   }
 
@@ -307,6 +337,17 @@ class DmService {
       readAt: response.data['read_at'] != null
           ? DateTime.tryParse(response.data['read_at'] as String)
           : null,
+      readBy: (response.data['read_by'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(
+            (r) => DmReader(
+              zendtag: r['zendtag'] as String? ?? '',
+              readAt:
+                  DateTime.tryParse(r['read_at'] as String? ?? '') ??
+                  DateTime.now(),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -430,4 +471,66 @@ class DmService {
     partiallySignedTx: partiallySignedTx,
     clientId: clientId,
   );
+
+  // ── Groups ────────────────────────────────────────────────────────────────
+
+  /// Creates a group from people the user already chats with.
+  Future<DmGroupDetail> createGroup({
+    required String name,
+    String? emoji,
+    required List<String> memberIds,
+  }) async {
+    final r = await _apiClient.dio.post(
+      '/api/zend/dm/groups',
+      data: {'name': name, 'emoji': ?emoji, 'member_ids': memberIds},
+    );
+    return DmGroupDetail.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  Future<DmGroupDetail> getGroup(String roomId) async {
+    final r = await _apiClient.dio.get('/api/zend/dm/groups/$roomId');
+    return DmGroupDetail.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  Future<DmGroupDetail> addGroupMembers(
+    String roomId,
+    List<String> userIds,
+  ) async {
+    final r = await _apiClient.dio.post(
+      '/api/zend/dm/groups/$roomId/members',
+      data: {'user_ids': userIds},
+    );
+    return DmGroupDetail.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  /// Removes someone, or leaves the group when [userId] is the current user.
+  Future<void> removeGroupMember(String roomId, String userId) async {
+    await _apiClient.dio.delete('/api/zend/dm/groups/$roomId/members/$userId');
+    cachedThreads = cachedThreads.where((t) => t.roomId != roomId).toList();
+  }
+
+  Future<DmGroupDetail> updateGroup(
+    String roomId, {
+    String? name,
+    String? emoji,
+    bool? muted,
+  }) async {
+    final r = await _apiClient.dio.patch(
+      '/api/zend/dm/groups/$roomId',
+      data: {'name': ?name, 'emoji': ?emoji, 'muted': ?muted},
+    );
+    return DmGroupDetail.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  Future<DmGroupDetail> setGroupAdmin(
+    String roomId,
+    String userId, {
+    required bool admin,
+  }) async {
+    final path = '/api/zend/dm/groups/$roomId/admins/$userId';
+    final r = admin
+        ? await _apiClient.dio.post(path)
+        : await _apiClient.dio.delete(path);
+    return DmGroupDetail.fromJson(r.data as Map<String, dynamic>);
+  }
 }

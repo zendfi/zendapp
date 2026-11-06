@@ -161,7 +161,11 @@ class NotificationNavigator {
         if (!context.mounted) return;
         pushZendSlide(
           context,
-          DmThreadScreen(roomId: roomId, counterparty: thread.counterparty),
+          DmThreadScreen(
+            roomId: roomId,
+            counterparty: thread.counterparty,
+            group: thread.group,
+          ),
           rootNavigator: true,
         );
     }

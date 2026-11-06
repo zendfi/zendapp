@@ -34,6 +34,7 @@ class DmThread {
     this.lastMessage,
     required this.unreadCount,
     required this.lastMessageAt,
+    this.group,
   });
 
   final String roomId;
@@ -41,6 +42,37 @@ class DmThread {
   final DmMessage? lastMessage;
   final int unreadCount;
   final DateTime lastMessageAt;
+
+  /// Set for group chats. [counterparty] is then a stand-in carrying the group
+  /// name, so screens that only need a title and an avatar keep working.
+  final DmGroupSummary? group;
+
+  bool get isGroup => group != null;
+
+  /// Builds a thread from an entry of the `groups` array in GET /api/zend/dm.
+  factory DmThread.fromGroupJson(Map<String, dynamic> json) {
+    final roomId = json['room_id'] as String? ?? '';
+    final summary = DmGroupSummary.fromJson(json);
+    DmMessage? lastMsg;
+    final lm = json['last_message'] as Map<String, dynamic>?;
+    if (lm != null) {
+      lastMsg = DmMessage.fromJson({
+        ...lm,
+        'id': 'preview',
+        'room_id': roomId,
+      });
+    }
+    return DmThread(
+      roomId: roomId,
+      counterparty: summary.asCounterparty(),
+      lastMessage: lastMsg,
+      unreadCount: json['unread_count'] as int? ?? 0,
+      lastMessageAt:
+          DateTime.tryParse(json['last_message_at'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      group: summary,
+    );
+  }
 
   factory DmThread.fromJson(Map<String, dynamic> json) {
     DmMessage? lastMsg;
@@ -81,8 +113,20 @@ class DmThread {
   /// present or future.
   static const _lockedPreviewFallback = '🔒 New message';
 
+  /// Preview line for the chat list. In a group it is prefixed with the sender.
+  String get listPreview {
+    final base = lastMessagePreview;
+    final g = group;
+    if (g == null || base.isEmpty || (lastMessage?.isSystem ?? false)) {
+      return base;
+    }
+    final who = g.lastSenderTag;
+    return who == null || who.isEmpty ? base : '$who: $base';
+  }
+
   String get lastMessagePreview {
     if (lastMessage == null) return '';
+    if (lastMessage!.isSystem) return lastMessage!.content ?? '';
     switch (lastMessage!.type) {
       case DmMessageType.text:
         final content = lastMessage!.content ?? '';
@@ -115,3 +159,56 @@ class DmThread {
     }
   }
 }
+
+/// Group details shown on the chat list and in the thread header.
+class DmGroupSummary {
+  const DmGroupSummary({
+    required this.roomId,
+    required this.name,
+    this.emoji,
+    this.memberCount = 0,
+    this.memberAvatars = const [],
+    this.muted = false,
+    this.lastSenderTag,
+  });
+
+  final String roomId;
+  final String name;
+  final String? emoji;
+  final int memberCount;
+  final List<DmCounterparty> memberAvatars;
+  final bool muted;
+
+  /// Zendtag of whoever sent the last message, for "ada: see you there".
+  final String? lastSenderTag;
+
+  factory DmGroupSummary.fromJson(Map<String, dynamic> json) {
+    final avatars = (json['member_avatars'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(DmCounterparty.fromJson)
+        .toList();
+    final last = json['last_message'] as Map<String, dynamic>?;
+    return DmGroupSummary(
+      roomId: json['room_id'] as String? ?? '',
+      name: json['name'] as String? ?? 'Group',
+      emoji: (json['emoji'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : json['emoji'] as String?,
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+      memberAvatars: avatars,
+      muted: json['muted'] as bool? ?? false,
+      lastSenderTag: last?['sender_zendtag'] as String?,
+    );
+  }
+
+  /// Stand-in used where a screen expects a [DmCounterparty]. The id is
+  /// prefixed so it can never collide with a real person.
+  DmCounterparty asCounterparty() => DmCounterparty(
+    userId: 'group:$roomId',
+    zendtag: name,
+    displayName: name,
+  );
+}
+
+/// Group room ids start with `g_`; direct rooms are plain hex.
+bool isGroupRoomId(String roomId) => roomId.startsWith('g_');

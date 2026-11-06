@@ -169,6 +169,7 @@ class DmMessage {
     this.replyToMessageId,
     this.isForwarded = false,
     this.isDeleted = false,
+    this.isSystem = false,
   });
 
   /// Starts as `local-<clientId>` for a message still being sent, and becomes
@@ -208,6 +209,10 @@ class DmMessage {
   /// sender). Deleted messages render a "message deleted" placeholder
   /// instead of their original content.
   bool isDeleted;
+
+  /// A centred notice like "Ada added Ben" (group joins, leaves, renames).
+  /// Stored as plain text; render as a caption, not a bubble.
+  final bool isSystem;
 
   /// True when the content was encrypted at rest and has been decrypted for display.
   bool isEncrypted = false;
@@ -288,6 +293,7 @@ class DmMessage {
           meta['reply_to_message_id'] as String?,
       isForwarded: meta['forwarded'] as bool? ?? false,
       isDeleted: json['deleted_at'] != null,
+      isSystem: typeStr == 'system',
     );
   }
 

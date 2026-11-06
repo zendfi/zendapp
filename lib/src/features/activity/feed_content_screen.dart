@@ -17,6 +17,8 @@ import '../../navigation/zend_routes.dart';
 import '../../navigation/zend_shell_controller.dart';
 import '../dm/dm_thread_screen.dart';
 import '../shell/zend_entry_sheet.dart';
+import '../../services/appkit_service.dart';
+import '../zapps/zapp_feed_section.dart';
 import 'activity_comment_sheet.dart';
 import 'activity_grouping.dart';
 import 'activity_receipt_builder.dart';
@@ -96,6 +98,21 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
   /// skip redundant work — see [_rebuildSortedEdges].
   List<ActivityEdge>? _lastSourceEdges;
 
+  /// Cards connected ZApps have posted to the feed (newest first, a handful).
+  List<Map<String, dynamic>> _appCards = const [];
+  bool get _showAppCards => _appCards.isNotEmpty && _searchQuery.isEmpty;
+
+  Future<void> _loadAppCards() async {
+    try {
+      final cards = await AppKitService(
+        ZendScope.read(context).walletService.apiClient,
+      ).feed();
+      if (mounted) setState(() => _appCards = cards.take(5).toList());
+    } catch (_) {
+      // Apps are optional here; never block the feed on them.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +120,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
       final model = ZendScope.of(context);
       model.fetchHistory();
       model.fetchThreadedActivity();
+      _loadAppCards();
     });
     _searchController.addListener(_onQueryChanged);
     _listScrollController.addListener(_onScroll);
@@ -420,7 +438,10 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
             // ── Content ──
             Expanded(
               child: ZendRefresh(
-                onRefresh: () => model.fetchThreadedActivity(),
+                onRefresh: () => Future.wait([
+                  model.fetchThreadedActivity(),
+                  _loadAppCards(),
+                ]),
                 child: isLoading
                     ? const ActivityFeedSkeleton()
                     : isNewUser || edges.isEmpty
@@ -435,6 +456,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                               hidden: model.balanceHidden,
                               onOpenWallet: widget.onOpenWallet,
                             ),
+                          if (_showAppCards) ZAppFeedSection(cards: _appCards),
                           SizedBox(
                             height: 320,
                             child: isNewUser
@@ -453,62 +475,75 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                     // list only when the data or the query actually
                     // changed, which is what makes identity the right
                     // signal here.
-                    : ZendSelector<List<ActivityEdge>>(
-                        selector: (_) => _visibleEdges,
-                        builder: (context, visible, _) => ListView.builder(
-                          controller: _listScrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                          // Slot 0 is the hero; it scrolls away naturally.
-                          itemCount: visible.length + 1,
-                          itemBuilder: (context, slot) {
-                            if (slot == 0) {
-                              return _searchOpen
-                                  ? const SizedBox(height: 4)
-                                  : _BalanceHero(
-                                      balance: model.displayBalance,
-                                      hidden: model.balanceHidden,
-                                      onOpenWallet: widget.onOpenWallet,
-                                    );
-                            }
-                            final i = slot - 1;
-                            final edge = visible[i];
-                            final day = formatDayGroup(edge.createdAt);
-                            final showDay =
-                                i == 0 ||
-                                formatDayGroup(visible[i - 1].createdAt) != day;
-                            final card = Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: ZendSpacing.betweenCards,
-                              ),
-                              // Each card owns an async reaction fetch
-                              // that repaints it independently of its
-                              // neighbours, so a boundary here stops one
-                              // card's count arriving from repainting the
-                              // whole visible list.
-                              child: RepaintBoundary(
-                                child: _FeedActivityCard(
-                                  key: ValueKey(edge.edgeId),
-                                  edge: edge,
-                                  // Passed down rather than read from the
-                                  // model inside the card — see
-                                  // _FeedActivityCard's doc.
-                                  selfInitial: _selfInitial,
-                                  selfAvatarUrl: _selfAvatarUrl,
-                                  onTap: () => _openActivity(edge),
+                    : ZendSelector<
+                        (List<ActivityEdge>, List<Map<String, dynamic>>, bool)
+                      >(
+                        // App cards are part of the key: without them a card that loads
+                        // after the list was built would never be drawn.
+                        selector: (_) =>
+                            (_visibleEdges, _appCards, _showAppCards),
+                        builder: (context, selected, _) {
+                          final visible = selected.$1;
+                          return ListView.builder(
+                            controller: _listScrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                            // Slot 0 is the hero; it scrolls away naturally.
+                            itemCount:
+                                visible.length + 1 + (_showAppCards ? 1 : 0),
+                            itemBuilder: (context, slot) {
+                              if (slot == 0) {
+                                return _searchOpen
+                                    ? const SizedBox(height: 4)
+                                    : _BalanceHero(
+                                        balance: model.displayBalance,
+                                        hidden: model.balanceHidden,
+                                        onOpenWallet: widget.onOpenWallet,
+                                      );
+                              }
+                              if (_showAppCards && slot == 1) {
+                                return ZAppFeedSection(cards: _appCards);
+                              }
+                              final i = slot - 1 - (_showAppCards ? 1 : 0);
+                              final edge = visible[i];
+                              final day = formatDayGroup(edge.createdAt);
+                              final showDay =
+                                  i == 0 ||
+                                  formatDayGroup(visible[i - 1].createdAt) !=
+                                      day;
+                              final card = Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: ZendSpacing.betweenCards,
                                 ),
-                              ),
-                            );
-                            if (!showDay) return card;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _DayHeader(day, first: i == 0),
-                                card,
-                              ],
-                            );
-                          },
-                        ),
+                                // Each card owns an async reaction fetch
+                                // that repaints it independently of its
+                                // neighbours, so a boundary here stops one
+                                // card's count arriving from repainting the
+                                // whole visible list.
+                                child: RepaintBoundary(
+                                  child: _FeedActivityCard(
+                                    key: ValueKey(edge.edgeId),
+                                    edge: edge,
+                                    // Passed down rather than read from the
+                                    // model inside the card — see
+                                    // _FeedActivityCard's doc.
+                                    selfInitial: _selfInitial,
+                                    selfAvatarUrl: _selfAvatarUrl,
+                                    onTap: () => _openActivity(edge),
+                                  ),
+                                ),
+                              );
+                              if (!showDay) return card;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _DayHeader(day, first: i == 0),
+                                  card,
+                                ],
+                              );
+                            },
+                          );
+                        },
                       ),
               ),
             ),

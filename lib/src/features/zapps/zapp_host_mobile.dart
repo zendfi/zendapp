@@ -7,6 +7,11 @@ import 'zapp_bridge.dart';
 /// Lets the screen ask the host to go back inside the app before leaving it.
 class ZAppHostHandle {
   Future<bool> Function()? _back;
+  Future<void> Function(String raw)? _push;
+
+  /// Sends an event to the page (live room messages). Dropped if the page
+  /// isn't on one of the app's origins right now.
+  void push(String raw) => _push?.call(raw);
 
   /// True if the app handled it (went back a page).
   Future<bool> back() async => await _back?.call() ?? false;
@@ -84,10 +89,13 @@ class _ZAppHostState extends State<ZAppHost> {
         NavigationDelegate(
           onNavigationRequest: (req) {
             final uri = Uri.tryParse(req.url);
-            if (uri != null && widget.app.allows(uri))
+            if (uri != null && widget.app.allows(uri)) {
               return NavigationDecision.navigate;
-            if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http'))
+            }
+            if (uri != null &&
+                (uri.scheme == 'https' || uri.scheme == 'http')) {
               widget.onLeave(uri);
+            }
             return NavigationDecision.prevent;
           },
           onPageFinished: (_) => _polish(),
@@ -95,6 +103,13 @@ class _ZAppHostState extends State<ZAppHost> {
       )
       ..addJavaScriptChannel('ZendBridge', onMessageReceived: _onMessage)
       ..loadRequest(widget.app.entryUri(widget.path));
+    widget.handle._push = (raw) async {
+      final now = Uri.tryParse(await _controller.currentUrl() ?? '');
+      if (now == null || !widget.app.allows(now)) return;
+      await _controller.runJavaScript(
+        'window.__zendReceive && window.__zendReceive(${_jsString(raw)});',
+      );
+    };
     widget.handle._back = () async {
       if (await _controller.canGoBack()) {
         await _controller.goBack();

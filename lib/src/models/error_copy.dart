@@ -58,6 +58,14 @@ const _copy = <String, String>{
       'setting up.',
   'BLOCKED_RECIPIENT': "You can't send money to this account.",
   'USER_BLOCKED': "You can't interact with this account.",
+  'GROUP_NAME_INVALID': 'Give the group a name up to 40 characters.',
+  'GROUP_TOO_SMALL': 'Pick at least 2 people for a group.',
+  'GROUP_FULL': 'A group can have up to 20 people.',
+  'NOT_CONTACT': "You can only add people you've already chatted with.",
+  'GROUP_FORBIDDEN': 'Only group admins can do that.',
+  'NOT_A_MEMBER': "You're not in this group.",
+  'GROUP_RATE_LIMITED': "You're creating groups too quickly. Try again later.",
+  'NOT_SUPPORTED_IN_GROUP': "That isn't available in groups yet.",
   'RECIPIENT_SCREEN_FAILED':
       "We couldn't verify this recipient right now. Try again shortly.",
 

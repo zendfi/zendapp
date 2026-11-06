@@ -17,6 +17,10 @@ Future<bool> confirmZAppMoney(
   String? recipient,
   String? note,
   String? custodyName,
+
+  /// For a payment that pays several people: each person and their amount,
+  /// already formatted ("₦1,800"). Shown under the total.
+  List<(String, String)>? parts,
 }) async {
   final ok = await showZendModalSheet<bool>(
     context: context,
@@ -28,6 +32,7 @@ Future<bool> confirmZAppMoney(
       recipient: recipient,
       note: note,
       custodyName: custodyName,
+      parts: parts,
     ),
   );
   return ok == true;
@@ -41,7 +46,9 @@ class _ConfirmBody extends StatelessWidget {
     this.recipient,
     this.note,
     this.custodyName,
+    this.parts,
   });
+  final List<(String, String)>? parts;
   final ZAppDescriptor app;
   final String title;
   final String amountLabel;
@@ -116,6 +123,19 @@ class _ConfirmBody extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: s(16, w: FontWeight.w600),
               ),
+            ],
+            if (parts != null) ...[
+              const SizedBox(height: 12),
+              for (final (who, amount) in parts!)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(who, style: s(15))),
+                      Text(amount, style: s(15, w: FontWeight.w600)),
+                    ],
+                  ),
+                ),
             ],
             if (note != null && note!.isNotEmpty) ...[
               const SizedBox(height: 8),

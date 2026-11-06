@@ -23,6 +23,19 @@ String formatUsd(double amount, {bool signed = false}) {
   return negative ? '−$body' : body;
 }
 
+/// `₦7,850` — whole Naira with thousands separators. Kobo are only shown when
+/// the amount isn't whole (`₦12.50`).
+String formatNaira(double amount) {
+  final negative = amount < 0;
+  final kobo = (amount.abs() * 100).round();
+  final whole = (kobo ~/ 100).toString().replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  final frac = kobo % 100 == 0 ? '' : '.${(kobo % 100).toString().padLeft(2, '0')}';
+  return '${negative ? '−' : ''}₦$whole$frac';
+}
+
 const _months = [
   'Jan',
   'Feb',

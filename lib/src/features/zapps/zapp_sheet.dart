@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,7 @@ import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import 'zapp_bridge.dart';
+import 'zapp_live.dart';
 import 'zapp_host_mobile.dart'
     if (dart.library.js_interop) 'zapp_host_web.dart';
 import 'zapp_web_url_stub.dart'
@@ -126,8 +128,20 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  /// Live rooms the page joined; closed with the app.
+  ZAppLiveRooms? _live;
+
+  /// People picked through `people.pick`, for this app session only.
+  final Map<String, String> _picks = {};
+
+  ZAppLiveRooms _rooms() => _live ??= ZAppLiveRooms(
+    api: ZendScope.read(context).walletService.apiClient,
+    push: (event) => _handle.push(jsonEncode(event)),
+  );
+
   @override
   void dispose() {
+    _live?.dispose();
     _leaveUrl();
     super.dispose();
   }
@@ -170,8 +184,9 @@ class _ZAppScreenState extends State<_ZAppScreen> {
       );
       if (mounted) setState(() => _session = s);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = "That didn't go through. Try again.");
+      }
     } finally {
       if (mounted) setState(() => _consenting = false);
     }
@@ -303,6 +318,8 @@ class _ZAppScreenState extends State<_ZAppScreen> {
           app: app,
           session: _session!,
           onClose: _close,
+          live: _rooms(),
+          picks: _picks,
         ),
       );
       body = kIsWeb

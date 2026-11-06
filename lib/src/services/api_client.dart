@@ -993,6 +993,7 @@ class ApiClient {
     /// null, which the backend reads as "inherit my profile default" — distinct
     /// from an explicit `private`.
     TransferVisibility? visibility,
+    String? appTicket,
   }) async {
     try {
       final response = await _dio.post(
@@ -1006,6 +1007,7 @@ class ApiClient {
           'asset': asset.wireName,
           'envelope': envelope.toJson(),
           if (visibility != null) 'visibility_preset': visibility.wireName,
+          'app_ticket': ?appTicket,
         },
         options: Options(
           headers: {'Idempotency-Key': idempotencyKey},

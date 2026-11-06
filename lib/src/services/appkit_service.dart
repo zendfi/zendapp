@@ -43,6 +43,17 @@ class ZAppDescriptor {
   });
 }
 
+class ZAppPayCheck {
+  const ZAppPayCheck({
+    required this.ticket,
+    required this.amountUsd,
+    this.priceNgn,
+  });
+  final String ticket;
+  final double amountUsd;
+  final double? priceNgn;
+}
+
 class AppKitService {
   AppKitService(this._api);
   final ApiClient _api;
@@ -91,18 +102,28 @@ class AppKitService {
           .cast<Map<String, dynamic>>();
 
   /// Returns a one-time ticket, or throws if the app's limits don't allow it.
-  Future<String> payCheck(
+  /// Checks an app payment against its limits and returns the ticket plus the
+  /// exact dollar amount to send. With [priceNgn], Zend converts at the current
+  /// rate and the result also carries the Naira price.
+  Future<ZAppPayCheck> payCheck(
     String slug, {
-    required double amountUsd,
+    double? amountUsd,
+    double? priceNgn,
     required String to,
     String? reference,
-  }) async =>
-      (await _api.appkit('POST', '/apps/by-slug/$slug/pay-check', {
-            'amount_usd': amountUsd,
-            'to': to,
-            'reference': ?reference,
-          }))['ticket']
-          as String;
+  }) async {
+    final r = await _api.appkit('POST', '/apps/by-slug/$slug/pay-check', {
+      'amount_usd': ?amountUsd,
+      'price_ngn': ?priceNgn,
+      'to': to,
+      'reference': ?reference,
+    });
+    return ZAppPayCheck(
+      ticket: r['ticket'] as String,
+      amountUsd: (r['amount_usd'] as num).toDouble(),
+      priceNgn: (r['price_ngn'] as num?)?.toDouble(),
+    );
+  }
 
   Future<void> payReport(
     String slug, {

@@ -431,3 +431,120 @@ BigInt usdcBaseUnits(double amountUsdc) {
   final parts = fixed.split('.');
   return BigInt.parse('${parts[0]}${parts[1]}');
 }
+
+/// One recipient of a split payment, as the confirm sheet showed it.
+class SuiSplitPart {
+  const SuiSplitPart({required this.address, required this.amountBaseUnits});
+  final String address;
+  final BigInt amountBaseUnits;
+}
+
+/// Checks a split payment (AppKit splits) before signing: a gasless
+/// transaction that pays exactly [parts], in order, from [senderAddress], and
+/// does nothing else.
+///
+/// Shape, per part `i`: input `2i` is a withdrawal of that part's amount from
+/// the sender, input `2i+1` its recipient; command `2i` is
+/// `0x2::balance::redeem_funds(input 2i)` and command `2i+1` is
+/// `0x2::balance::send_funds(result 2i, input 2i+1)`. All of one coin type.
+void verifyGaslessUsdcSplit({
+  required String transactionDataBcsBase64,
+  required String senderAddress,
+  required List<SuiSplitPart> parts,
+  String? expectedCoinType,
+}) {
+  void no(String why) => throw SuiTransactionVerificationException(why);
+  if (parts.isEmpty || parts.length > 4) no('A split pays 1 to 4 people');
+  final Uint8List bytes;
+  try {
+    bytes = base64.decode(transactionDataBcsBase64.trim());
+  } on FormatException catch (error) {
+    throw SuiTransactionDecodeException(
+      'Transaction payload is not valid base64: ${error.message}',
+    );
+  }
+  final tx = decodeSuiTransaction(bytes);
+  final sender = normaliseSuiAddress(tx.sender);
+  if (sender != normaliseSuiAddress(senderAddress)) no('Sender is $sender');
+  if (!tx.gasPayment.isGasless) no('Transaction is not gasless');
+  if (normaliseSuiAddress(tx.gasPayment.owner) != sender) {
+    no('Gas owner is not the sender');
+  }
+  if (tx.commands.length != parts.length * 2) {
+    no('Expected ${parts.length * 2} commands, found ${tx.commands.length}');
+  }
+  if (tx.inputs.length != parts.length * 2) {
+    no('Expected ${parts.length * 2} inputs, found ${tx.inputs.length}');
+  }
+  String? coinType;
+  for (var i = 0; i < parts.length; i++) {
+    final withdrawal = tx.inputs[2 * i];
+    final recipientInput = tx.inputs[2 * i + 1];
+    if (withdrawal is! SuiFundsWithdrawalInput) {
+      no('Input ${2 * i} is not a withdrawal');
+    }
+    withdrawal as SuiFundsWithdrawalInput;
+    if (withdrawal.source != SuiWithdrawFrom.sender) {
+      no('Part $i is not paid by the sender');
+    }
+    if (withdrawal.amount != parts[i].amountBaseUnits) {
+      no(
+        'Part $i is ${withdrawal.amount}, expected ${parts[i].amountBaseUnits}',
+      );
+    }
+    final type = withdrawal.coinType.canonical;
+    coinType ??= type;
+    if (type != coinType) no('Parts withdraw different currencies');
+    if (recipientInput is! SuiPureInput || recipientInput.asAddress == null) {
+      no('Input ${2 * i + 1} is not an address');
+    }
+    final recipient = normaliseSuiAddress(
+      (recipientInput as SuiPureInput).asAddress!,
+    );
+    if (recipient != normaliseSuiAddress(parts[i].address)) {
+      no('Part $i goes to $recipient');
+    }
+    if (recipient == sender) no('Part $i pays the sender');
+
+    final redeem = tx.commands[2 * i];
+    final send = tx.commands[2 * i + 1];
+    if (redeem is! SuiMoveCallCommand || send is! SuiMoveCallCommand) {
+      no('Part $i has a non-call step');
+    }
+    redeem as SuiMoveCallCommand;
+    send as SuiMoveCallCommand;
+    if (normaliseSuiAddress(redeem.package) != _kBalancePackage ||
+        redeem.module != _kBalanceModule ||
+        redeem.function != _kRedeemFundsFunction ||
+        redeem.typeArguments.length != 1 ||
+        redeem.typeArguments.single.canonical != type ||
+        redeem.arguments.length != 1 ||
+        redeem.arguments.single.kind != SuiArgumentKind.input ||
+        redeem.arguments.single.index != 2 * i) {
+      no('Part $i: first step is not redeem_funds of its withdrawal');
+    }
+    if (normaliseSuiAddress(send.package) != _kBalancePackage ||
+        send.module != _kBalanceModule ||
+        send.function != _kSendFundsFunction ||
+        send.typeArguments.length != 1 ||
+        send.typeArguments.single.canonical != type ||
+        send.arguments.length != 2 ||
+        send.arguments[0].kind != SuiArgumentKind.result ||
+        send.arguments[0].index != 2 * i ||
+        send.arguments[1].kind != SuiArgumentKind.input ||
+        send.arguments[1].index != 2 * i + 1) {
+      no('Part $i: second step does not send that money to its recipient');
+    }
+  }
+  if (expectedCoinType != null && coinType != expectedCoinType) {
+    no('Coin type is $coinType, expected $expectedCoinType');
+  }
+  final expiration = tx.expiration;
+  if (expiration is! SuiValidDuringExpiration ||
+      expiration.minEpoch == null ||
+      expiration.maxEpoch == null ||
+      expiration.maxEpoch! < expiration.minEpoch! ||
+      expiration.maxEpoch! - expiration.minEpoch! > BigInt.two) {
+    no('Expiration is not a bounded epoch window');
+  }
+}

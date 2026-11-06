@@ -12,6 +12,7 @@ import '../../navigation/zend_routes.dart';
 import '../../models/recent_contact.dart';
 import '../pools/create_pool_drawer.dart';
 import 'dm_thread_screen.dart';
+import 'new_group_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_modal.dart';
@@ -300,10 +301,54 @@ class _NewChatSheetState extends State<NewChatSheet> {
     );
   }
 
+  void _newGroup() {
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop();
+    pushZendSlide(nav.context, const NewGroupScreen(), rootNavigator: true);
+  }
+
   Widget _buildDefault(ZendTheme zt, List<RecentContact> recent) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _newGroup,
+            borderRadius: BorderRadius.circular(ZendRadii.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: zt.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      PhosphorIconsRegular.users,
+                      size: 20,
+                      color: zt.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'New group',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: zt.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         // "Create pool" sits just before the contact list, per spec — a
         // pool starts the same way a chat does: pick people, then it
         // becomes its own conversation. Gated off for launch; see

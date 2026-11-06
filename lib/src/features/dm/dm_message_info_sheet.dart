@@ -196,7 +196,16 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                             ),
                           ),
                         ),
-                      if (isMe && _info?.readAt != null)
+                      if (isMe && (_info?.readBy.isNotEmpty ?? false))
+                        for (final r in _info!.readBy)
+                          _InfoRow(
+                            icon: PhosphorIconsRegular.checks,
+                            iconColor: ZendColors.accentPop,
+                            label: 'Seen by @${r.zendtag}',
+                            time: _formatFull(r.readAt),
+                            zt: zt,
+                          )
+                      else if (isMe && _info?.readAt != null)
                         _InfoRow(
                           icon: PhosphorIconsRegular.checks,
                           iconColor: ZendColors.accentPop,
