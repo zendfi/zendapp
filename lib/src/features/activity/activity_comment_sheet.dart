@@ -13,7 +13,7 @@ import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_note.dart';
 
-const _kCommentSheetReactionEmojis = [
+const kCommentSheetReactionEmojis = [
   '🔥',
   '💰',
   '🙏',
@@ -279,8 +279,8 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  for (final emoji in _kCommentSheetReactionEmojis)
-                    _CommentSheetReactionChip(
+                  for (final emoji in kCommentSheetReactionEmojis)
+                    CommentSheetReactionChip(
                       emoji: emoji,
                       selected: reactedEmojis.contains(emoji),
                       onTap: () {
@@ -576,7 +576,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          for (final emoji in _kCommentSheetReactionEmojis.take(
+                          for (final emoji in kCommentSheetReactionEmojis.take(
                             6,
                           ))
                             GestureDetector(
@@ -623,7 +623,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
           // ── Comments (replies) ──
           Expanded(
             child: _loading
-                ? _CommentSkeleton()
+                ? CommentSkeleton()
                 : _loadError
                 ? ZendErrorState(
                     title: "Couldn't load comments",
@@ -650,7 +650,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                     separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (context, i) {
                       final comment = _comments[i];
-                      return _CommentRow(
+                      return CommentRow(
                         comment: comment,
                         isMine: comment.authorUserId == model.currentUserId,
                         relativeTime: _relativeTime(comment.createdAt),
@@ -782,8 +782,9 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
   }
 }
 
-class _CommentRow extends StatelessWidget {
-  const _CommentRow({
+class CommentRow extends StatelessWidget {
+  const CommentRow({
+    super.key,
     required this.comment,
     required this.isMine,
     required this.relativeTime,
@@ -882,12 +883,14 @@ class _CommentRow extends StatelessWidget {
 
 /// Skeleton loading placeholder — 3 shimmering comment rows shown while
 /// reactions and comments are being fetched from the server.
-class _CommentSkeleton extends StatefulWidget {
+class CommentSkeleton extends StatefulWidget {
+  const CommentSkeleton({super.key});
+
   @override
-  State<_CommentSkeleton> createState() => _CommentSkeletonState();
+  State<CommentSkeleton> createState() => _CommentSkeletonState();
 }
 
-class _CommentSkeletonState extends State<_CommentSkeleton>
+class _CommentSkeletonState extends State<CommentSkeleton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
@@ -973,8 +976,9 @@ class _CommentSkeletonState extends State<_CommentSkeleton>
 }
 
 /// Large, tappable emoji option in the reaction picker sheet
-class _CommentSheetReactionChip extends StatefulWidget {
-  const _CommentSheetReactionChip({
+class CommentSheetReactionChip extends StatefulWidget {
+  const CommentSheetReactionChip({
+    super.key,
     required this.emoji,
     required this.selected,
     required this.onTap,
@@ -985,11 +989,11 @@ class _CommentSheetReactionChip extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_CommentSheetReactionChip> createState() =>
+  State<CommentSheetReactionChip> createState() =>
       _CommentSheetReactionChipState();
 }
 
-class _CommentSheetReactionChipState extends State<_CommentSheetReactionChip> {
+class _CommentSheetReactionChipState extends State<CommentSheetReactionChip> {
   bool _pressed = false;
 
   @override
