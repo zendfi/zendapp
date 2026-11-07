@@ -209,6 +209,8 @@ class ZAppBridge {
         return _money(() => _createLink(p));
       case 'people.pick':
         return _pickPeople(p);
+      case 'random':
+        return _random(p);
       case 'interaction.create':
         return _appkit.createInteraction(app.slug, _withPicks(p));
       case 'interaction.get':
@@ -640,6 +642,59 @@ class ZAppBridge {
     // Ask links carry no secret, so the app may have the URL.
     return {'id': Uri.parse(url).pathSegments.last, 'url': url};
   }
+
+  /// `zend.random`: a draw nobody can rig, recorded once per interaction and
+  /// label. Zend's server checks the user is in the interaction, then draws
+  /// on Sui. Asking again for the same label returns the same result, so both
+  /// players' pages can call it. A draw still landing comes back as
+  /// `pending`; ask again briefly until it's ready.
+  Future<Object?> _random(Map<String, dynamic> p) async {
+    final kind = _str(p, 'kind');
+    if (!const {'int', 'shuffle', 'pick'}.contains(kind)) {
+      throw const ZBridgeError(
+        'INVALID_PARAMS',
+        'kind must be int, shuffle or pick',
+      );
+    }
+    final n = (p['n'] as num?)?.toInt();
+    if (n == null) throw const ZBridgeError('INVALID_PARAMS', 'n is required');
+    final body = {
+      'interaction_id': _str(p, 'interactionId'),
+      'label': _str(p, 'label'),
+      'kind': kind,
+      'n': n,
+      'k': ?(p['k'] as num?)?.toInt(),
+    };
+    final api = _model.walletService.apiClient;
+    for (var attempt = 0; ; attempt++) {
+      final r = await api.appkit(
+        'POST',
+        '/apps/by-slug/${app.slug}/random',
+        body,
+      );
+      if (r['status'] != 'pending') return _randomResult(r);
+      if (attempt >= 7) {
+        throw const ZBridgeError(
+          'DRAW_PENDING',
+          'Still drawing. Ask again in a moment.',
+        );
+      }
+      await Future<void>.delayed(Duration(milliseconds: 800 + attempt * 400));
+    }
+  }
+
+  /// The server's draw, in the SDK's camelCase shape.
+  static Map<String, Object?> _randomResult(Map<String, dynamic> r) => {
+    'interactionId': r['interaction_id'],
+    'label': r['label'],
+    'kind': r['kind'],
+    'n': r['n'],
+    'k': r['k'],
+    'value': r['value'],
+    'transactionId': r['transaction_id'],
+    'attestation': r['attestation'],
+    'verify': r['verify'],
+  };
 
   Future<Object?> _createLink(Map<String, dynamic> p) async {
     if (!_can('create_link')) {
