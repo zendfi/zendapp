@@ -168,3 +168,135 @@ class _ConfirmBody extends StatelessWidget {
     );
   }
 }
+
+/// Consent for a spend allowance (R6). Shows the app and both limits in Naira;
+/// the person can accept, lower either limit, or decline. Returns the agreed
+/// `(perPayment, perDay)` in Naira, or null when declined. Limits can only go
+/// down from what the app asked for.
+Future<(double, double)?> confirmZAppAllowance(
+  BuildContext context, {
+  required ZAppDescriptor app,
+  required double perPaymentNgn,
+  required double perDayNgn,
+}) => showZendModalSheet<(double, double)>(
+  context: context,
+  isScrollControlled: true,
+  builder: (c) =>
+      _AllowanceBody(app: app, perPayment: perPaymentNgn, perDay: perDayNgn),
+);
+
+class _AllowanceBody extends StatefulWidget {
+  const _AllowanceBody({
+    required this.app,
+    required this.perPayment,
+    required this.perDay,
+  });
+  final ZAppDescriptor app;
+  final double perPayment;
+  final double perDay;
+
+  @override
+  State<_AllowanceBody> createState() => _AllowanceBodyState();
+}
+
+class _AllowanceBodyState extends State<_AllowanceBody> {
+  late final _pp = TextEditingController(text: _text(widget.perPayment));
+  late final _pd = TextEditingController(text: _text(widget.perDay));
+
+  static String _text(double v) => v.round().toString().replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  static double _num(TextEditingController c) =>
+      double.tryParse(c.text.replaceAll(',', '')) ?? 0;
+
+  @override
+  void dispose() {
+    _pp.dispose();
+    _pd.dispose();
+    super.dispose();
+  }
+
+  String? get _error {
+    final pp = _num(_pp), pd = _num(_pd);
+    if (pp < 1 || pd < 1) return 'Enter both amounts';
+    if (pp > widget.perPayment || pd > widget.perDay) {
+      return "You can lower these, not raise them";
+    }
+    if (pd < pp) return 'The daily amount must be at least one payment';
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? c}) =>
+        TextStyle(
+          fontFamily: 'Geist',
+          fontSize: size,
+          fontWeight: w,
+          color: c ?? zt.textPrimary,
+        );
+    Widget field(String label, TextEditingController c) => Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextField(
+        controller: c,
+        keyboardType: TextInputType.number,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(labelText: label, prefixText: '₦'),
+      ),
+    );
+    final error = _error;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Let ${widget.app.name} pay without asking?',
+                style: s(18, w: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Small payments to people in your game, or to '
+                '${widget.app.name}, go through without this screen. '
+                'Anything bigger, or to anyone else, still asks you.',
+                style: s(14, c: zt.textSecondary),
+              ),
+              field('Up to, each time', _pp),
+              field('Up to, each day', _pd),
+              const SizedBox(height: 10),
+              Text(
+                "You'll get a note each evening it's used. It stops after "
+                "90 days, or a week of not using it. Turn it off any time "
+                'in Settings → Connected apps.',
+                style: s(12, c: zt.textSecondary),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error, style: s(12, c: zt.destructive)),
+              ],
+              const SizedBox(height: 20),
+              PrimaryButton(
+                label: 'Allow',
+                onPressed: error != null
+                    ? null
+                    : () => Navigator.of(context).pop((_num(_pp), _num(_pd))),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Not now', style: s(14, c: zt.textSecondary)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

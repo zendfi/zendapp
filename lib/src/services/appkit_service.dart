@@ -48,10 +48,15 @@ class ZAppPayCheck {
     required this.ticket,
     required this.amountUsd,
     this.priceNgn,
+    this.allowanceOk = false,
   });
   final String ticket;
   final double amountUsd;
   final double? priceNgn;
+
+  /// The person's allowance for this app covers this payment (R6), so it can
+  /// go through without the confirm sheet. Decided by Zend's server.
+  final bool allowanceOk;
 }
 
 class AppKitService {
@@ -120,19 +125,39 @@ class AppKitService {
     double? priceNgn,
     required String to,
     String? reference,
+    String? interactionId,
   }) async {
     final r = await _api.appkit('POST', '/apps/by-slug/$slug/pay-check', {
       'amount_usd': ?amountUsd,
       'price_ngn': ?priceNgn,
       'to': to,
       'reference': ?reference,
+      'interaction_id': ?interactionId,
     });
     return ZAppPayCheck(
       ticket: r['ticket'] as String,
       amountUsd: (r['amount_usd'] as num).toDouble(),
       priceNgn: (r['price_ngn'] as num?)?.toDouble(),
+      allowanceOk: r['allowance_ok'] == true,
     );
   }
+
+  /// Spend allowances (R6).
+  Future<Map<String, dynamic>?> getAllowance(String slug) async =>
+      (await _api.appkit('GET', '/apps/by-slug/$slug/allowance'))['allowance']
+          as Map<String, dynamic>?;
+  Future<Map<String, dynamic>?> setAllowance(
+    String slug, {
+    required double perPaymentNgn,
+    required double perDayNgn,
+  }) async =>
+      (await _api.appkit('POST', '/apps/by-slug/$slug/allowance', {
+            'per_payment_ngn': perPaymentNgn,
+            'per_day_ngn': perDayNgn,
+          }))['allowance']
+          as Map<String, dynamic>?;
+  Future<void> revokeAllowance(String slug) =>
+      _api.appkit('DELETE', '/apps/by-slug/$slug/allowance');
 
   Future<void> payReport(
     String slug, {

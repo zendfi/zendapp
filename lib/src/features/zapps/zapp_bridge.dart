@@ -211,6 +211,10 @@ class ZAppBridge {
         return _pickPeople(p);
       case 'random':
         return _random(p);
+      case 'allowance.request':
+        return _allowanceRequest(p);
+      case 'allowance.get':
+        return _appkit.getAllowance(app.slug);
       case 'interaction.create':
         return _appkit.createInteraction(app.slug, _withPicks(p));
       case 'interaction.get':
@@ -461,21 +465,34 @@ class ZAppBridge {
       priceNgn: priceNgn,
       to: to,
       reference: reference,
+      interactionId: p['interactionId'] as String?,
     );
     final check = checked.ticket;
     final amount = checked.amountUsd;
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
-    final ok = await confirmZAppMoney(
-      context,
-      app: app,
-      title: 'Send',
-      amountLabel: checked.priceNgn != null
-          ? formatNaira(checked.priceNgn!)
-          : _money2(amount),
-      recipient: to,
-      note: note,
-    );
-    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    final label = checked.priceNgn != null
+        ? formatNaira(checked.priceNgn!)
+        : _money2(amount);
+    if (checked.allowanceOk) {
+      // Within the allowance the person gave this app: no sheet, but always a
+      // visible note of what went where. The phone still checks the payment
+      // matches the ticket before signing (in sendTransfer).
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text('$label to $to · ${app.name}')));
+    } else {
+      final ok = await confirmZAppMoney(
+        context,
+        app: app,
+        title: 'Send',
+        amountLabel: label,
+        recipient: to,
+        note: note,
+      );
+      if (!ok) {
+        throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+      }
+    }
     Future<dynamic> send() => _model.transferService.sendTransfer(
       recipientZendtag: to.substring(1),
       amountUsdc: amount,
@@ -641,6 +658,43 @@ class ZAppBridge {
     );
     // Ask links carry no secret, so the app may have the URL.
     return {'id': Uri.parse(url).pathSegments.last, 'url': url};
+  }
+
+  /// `zend.allowance.request`: asks the person to let this app pay small
+  /// amounts without the confirm sheet. They can lower the limits or decline.
+  Future<Object?> _allowanceRequest(Map<String, dynamic> p) async {
+    if (!_can('pay')) {
+      throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "pay"');
+    }
+    double? ngn(String k) {
+      final v = p[k];
+      final n = v is Map ? v['ngn'] : v;
+      return n is num ? n.toDouble() : null;
+    }
+
+    final pp = ngn('perPayment') ?? 500;
+    final pd = ngn('perDay') ?? 2000;
+    if (!pp.isFinite || !pd.isFinite || pp < 1 || pd < pp || pd > 10000000) {
+      throw const ZBridgeError(
+        'INVALID_PARAMS',
+        'perPayment and perDay are { ngn }, with perDay >= perPayment >= 1',
+      );
+    }
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final agreed = await confirmZAppAllowance(
+      context,
+      app: app,
+      perPaymentNgn: pp,
+      perDayNgn: pd,
+    );
+    if (agreed == null) {
+      throw const ZBridgeError('USER_CANCELLED', 'The user said not now');
+    }
+    return _appkit.setAllowance(
+      app.slug,
+      perPaymentNgn: agreed.$1,
+      perDayNgn: agreed.$2,
+    );
   }
 
   /// `zend.random`: a draw nobody can rig, recorded once per interaction and
