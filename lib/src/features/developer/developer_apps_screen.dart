@@ -206,7 +206,8 @@ class _DeveloperAppsScreenState extends State<DeveloperAppsScreen> {
                         style: s(14, w: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        '${a['slug']} · ${a['status']} · v${a['manifest_version'] ?? '-'}',
+                        '${a['slug']} · ${a['status']} · v${a['manifest_version'] ?? '-'}'
+                        '${_budgetLine(a['network_budget'])}',
                         style: s(12, c: zt.textSecondary),
                       ),
                       onTap: () => setState(() {
@@ -401,4 +402,16 @@ class _KeysCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// " · network 12% this month" for a developer's app (R16). Developer-only
+/// screen, so the term is fine here; empty when the server didn't send it.
+String _budgetLine(Object? nb) {
+  if (nb is! Map) return '';
+  final used = (nb['used_mist'] as num?)?.toDouble() ?? 0;
+  final budget = (nb['budget_mist'] as num?)?.toDouble() ?? 0;
+  if (budget <= 0) return '';
+  if (used >= budget) return ' · network budget used up';
+  final pct = (used / budget * 100).clamp(0, 100).round();
+  return ' · network $pct% this month';
 }

@@ -36,6 +36,9 @@ class ApiException extends ZendException {
     'MEMO_TOO_LONG',
     'OWN_LINK',
     'LINK_NOT_FOUND',
+    // "This app has hit its limit for now. Try later."
+    'APP_GAS_BUDGET',
+    'APP_LIMIT_AMOUNT',
   };
 
   @override
