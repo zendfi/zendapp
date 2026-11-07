@@ -39,6 +39,10 @@ class ApiException extends ZendException {
     // "This app has hit its limit for now. Try later."
     'APP_GAS_BUDGET',
     'APP_LIMIT_AMOUNT',
+    // "You're doing that a lot. Try again later."
+    'RATE_LIMITED',
+    // "This isn't available right now. Try again later."
+    'SPONSOR_PAUSED',
   };
 
   @override

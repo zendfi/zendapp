@@ -186,6 +186,30 @@ class _ZAppCardState extends State<ZAppCard> {
               style: s(13, c: zt.textSecondary),
             ),
           ],
+          // Set only by Zend's server after its own check (R9). Never shown
+          // as a warning when missing: no badge just means nothing to show.
+          if (template == 'result' && slots['checked'] is Map) ...[
+            const SizedBox(height: 6),
+            Semantics(
+              button: true,
+              label: 'Result checked. Tap to see what was checked.',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _showChecked(
+                  context,
+                  _appName,
+                  Map<String, dynamic>.from(slots['checked'] as Map),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    'Result checked ✓',
+                    style: s(12, w: FontWeight.w600, c: zt.moneyIn),
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (buttons.isNotEmpty || !known) ...[
             SizedBox(height: bubble ? 8 : 10),
             Wrap(
@@ -231,3 +255,57 @@ ButtonStyle _compact(ZendTheme zt) => OutlinedButton.styleFrom(
     fontWeight: FontWeight.w600,
   ),
 );
+
+/// What "Result checked ✓" means, in plain words (R9.3).
+void _showChecked(BuildContext context, String app, Map<String, dynamic> c) {
+  final zt = ZendTheme.of(context);
+  final draws = (c['draws'] as List? ?? const []).length;
+  TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? col}) =>
+      TextStyle(
+        fontFamily: 'Geist',
+        fontSize: size,
+        fontWeight: w,
+        color: col ?? zt.textPrimary,
+      );
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: zt.bgPrimary,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Result checked ✓', style: s(18, w: FontWeight.w700)),
+            const SizedBox(height: 12),
+            Text(
+              draws == 1
+                  ? 'The chance behind this result was drawn by Zend, not by $app '
+                        'or anyone playing. It was recorded when it happened, and '
+                        'nobody can draw it again or change it.'
+                  : 'The $draws chances behind this result were drawn by Zend, not '
+                        'by $app or anyone playing. Each was recorded when it '
+                        'happened, and nobody can draw them again or change them.',
+              style: s(15),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Zend checked this when the card was posted. How $app '
+              'turns the draw into a winner is up to $app.',
+              style: s(13, col: zt.textSecondary),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
