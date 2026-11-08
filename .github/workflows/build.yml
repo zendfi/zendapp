@@ -5,6 +5,15 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main, master]
+  # Actions → Build Release APK → Run workflow. With offline_test on, the APK has
+  # the "Pay without signal (test)" screen (see appkit-primitives/offline-test.md).
+  # It's only an artifact: never released, never sent to Play.
+  workflow_dispatch:
+    inputs:
+      offline_test:
+        description: "Include the pay-without-signal test screen"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -78,7 +87,7 @@ jobs:
 
       # ── Build ─────────────────────────────────────────────────────────────────
       - name: Build release APK
-        run: flutter build apk --release --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_ANDROID }} --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7
+        run: flutter build apk --release --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_ANDROID }} --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7 ${{ inputs.offline_test && '--dart-define=ZEND_OFFLINE_TEST=true' || '' }}
 
       # Rename APK to include build number for clarity
       - name: Rename APK
@@ -94,7 +103,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zendapp-${{ steps.slug.outputs.ref_slug }}-build${{ github.run_number }}
+          name: zendapp-${{ steps.slug.outputs.ref_slug }}-build${{ github.run_number }}${{ inputs.offline_test && '-offline-test' || '' }}
           path: build/app/outputs/flutter-apk/zendapp-${{ github.run_number }}.apk
           retention-days: 30
 
