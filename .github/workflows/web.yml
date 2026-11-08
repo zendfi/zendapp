@@ -80,12 +80,18 @@ jobs:
       # hashed build artifacts from a previous deploy waits forever on files
       # that now 404, which presents as an endless spinner rather than an error.
       #
-      # Nothing is lost. A wallet needs the API for every meaningful action, so
-      # there was no offline capability to preserve, and Flutter's own build
-      # output notes this service worker is deprecated and due for removal.
+      # Offline is now handled by our own web/zend_sw.js instead (network first,
+      # one cache per build, cache only on network failure), so the app opens
+      # with no signal without the problems above.
       - name: Build web
         run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }} --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7
 
+      # One offline cache per build. Set the repo variable ZEND_WEB_SW=off to
+      # ship a worker that unregisters itself and clears its caches.
+      - name: Stamp offline cache
+        run: |
+          sed -i "s/__ZEND_BUILD__/${GITHUB_SHA}/; s/__ZEND_SW__/${{ vars.ZEND_WEB_SW || 'on' }}/" build/web/zend_sw.js
+          grep -q "__ZEND_" build/web/zend_sw.js && { echo "zend_sw.js not stamped"; exit 1; } || true
       # build/web is uploaded as the deployment root, so vercel.json goes in
       # it — minus outputDirectory, which only makes sense from the repo root.
       - name: Add hosting config
