@@ -845,16 +845,23 @@ class RailRouter {
         DateTime.now().difference(at) < _cacheTtl) {
       return cached;
     }
-    try {
-      final fresh = await _apiClient.getP2pCapabilities();
-      _cached = fresh;
-      _cachedAt = DateTime.now();
-      return fresh;
-    } catch (_) {
-      // Unreachable capabilities must not strand the user: fall back to the
-      // last known answer if we have one, otherwise let the caller default.
-      return cached;
+    // One quick retry: right after sign-in the first request can fail while the session settles,
+    // and giving up there leaves the account with no usable network until the cache is refilled.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final fresh = await _apiClient.getP2pCapabilities();
+        _cached = fresh;
+        _cachedAt = DateTime.now();
+        return fresh;
+      } catch (_) {
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        }
+      }
     }
+    // Unreachable capabilities must not strand the user: fall back to the last known answer if
+    // we have one, otherwise let the caller default.
+    return cached;
   }
 
   /// Whether [rail] can only be signed for with a locally held private key.

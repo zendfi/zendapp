@@ -912,6 +912,19 @@ class ZendAppModel extends ChangeNotifier {
   bool hasPinSetup = false;
 
   double balance = 0.0;
+
+  /// True once a balance has been read from the server in this session. Until then a
+  /// zero is "not known yet", not "empty", and screens should say so rather than show $0.00.
+  bool balanceLoaded = false;
+
+  /// Whether the figures on screen are real: read from the server, restored from the saved
+  /// snapshot, or set by an event that carried an amount. A non-zero figure can only have come
+  /// from one of those.
+  bool get balanceKnown =>
+      balanceLoaded ||
+      balance != 0.0 ||
+      spendableBalance != 0.0 ||
+      awaitingDepositBalance != 0.0;
   double spendableBalance = 0.0;
 
   /// USDC held but not yet spendable, awaiting a deposit into the address
@@ -1443,6 +1456,20 @@ class ZendAppModel extends ChangeNotifier {
     );
   }
 
+  /// First read after sign-in. The read can fail while the session and the transfer service are
+  /// still settling, and nothing else asks again soon, so it retries with growing gaps until one
+  /// succeeds. Stops early on sign-out.
+  Future<void> loadBalanceAfterSignIn() async {
+    for (final waitSecs in const [0, 1, 2, 4, 8]) {
+      if (waitSecs > 0) {
+        await Future<void>.delayed(Duration(seconds: waitSecs));
+      }
+      if (!isAuthenticated) return;
+      await fetchBalance();
+      if (balanceLoaded && lastBalanceError == null) return;
+    }
+  }
+
   Future<void> _fetchBalanceLoop() async {
     do {
       _balanceDirty = false;
@@ -1495,6 +1522,7 @@ class ZendAppModel extends ChangeNotifier {
       balance = double.tryParse(response.usdcBalance) ?? 0.0;
       spendableBalance = double.tryParse(response.spendableBalance) ?? balance;
       awaitingDepositBalance = double.tryParse(response.awaitingDeposit) ?? 0.0;
+      balanceLoaded = true;
       lastBalanceError = null;
       // Snapshot the confirmed figure for the next launch. Fire-and-forget:
       // SnapshotCache swallows its own failures and nothing here depends on
@@ -1857,6 +1885,7 @@ class ZendAppModel extends ChangeNotifier {
     // which currentUserId is known, which is what the snapshot is keyed on.
     unawaited(hydrateFromCache());
     startPolling();
+    unawaited(loadBalanceAfterSignIn());
     // Start the inactivity lock timer now that the user is authenticated
     appLockService.startTimer();
     // Initialize push notifications now that the user is authenticated
@@ -1976,6 +2005,7 @@ class ZendAppModel extends ChangeNotifier {
 
     // ── Balance ──
     balance = 0.0;
+    balanceLoaded = false;
     spendableBalance = 0.0;
     awaitingDepositBalance = 0.0;
     monthlyYield = 0.0;

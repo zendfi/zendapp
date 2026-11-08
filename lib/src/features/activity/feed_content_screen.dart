@@ -406,7 +406,9 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
               searchOpen: _searchOpen,
               balanceLabel: model.balanceHidden
                   ? '•••'
-                  : _formatBalance(model.displayBalance),
+                  : model.balanceKnown
+                  ? _formatBalance(model.displayBalance)
+                  : '—',
               onOpenWallet: widget.onOpenWallet,
               onToggleSearch: _toggleSearch,
             ),
@@ -688,9 +690,41 @@ class _BalanceHero extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: ZendRollingAmount(balance, hidden: hidden),
+                      Builder(
+                        builder: (context) {
+                          final m = ZendScope.of(context);
+                          if (m.balanceKnown) {
+                            return FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: ZendRollingAmount(balance, hidden: hidden),
+                            );
+                          }
+                          // Not read yet, or the read failed: say so instead of $0.00.
+                          final failed = m.lastBalanceError != null;
+                          return GestureDetector(
+                            onTap: failed ? m.fetchBalance : null,
+                            child: Column(
+                              children: [
+                                Text(
+                                  '—',
+                                  style: TextStyle(
+                                    fontFamily: 'Geist',
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.w700,
+                                    color: zt.textSecondary,
+                                  ),
+                                ),
+                                if (failed)
+                                  Text(
+                                    "Couldn't load your balance. Tap to retry",
+                                    style: ZendTextStyles.caption.copyWith(
+                                      color: zt.textSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
