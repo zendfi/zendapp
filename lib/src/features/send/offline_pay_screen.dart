@@ -247,9 +247,24 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
             const SizedBox(height: 16),
             qr(_paymentCode!),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Share.share(_paymentCode!),
-              child: const Text('Share the code instead'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: _paymentCode!));
+                    if (!mounted) return;
+                    setState(
+                      () => _message = 'Copied. Paste it on the other device.',
+                    );
+                  },
+                  child: const Text('Copy code'),
+                ),
+                TextButton(
+                  onPressed: () => Share.share(_paymentCode!),
+                  child: const Text('Share'),
+                ),
+              ],
             ),
           ],
         ],
