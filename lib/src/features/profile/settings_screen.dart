@@ -16,6 +16,7 @@ import 'connected_banks_screen.dart';
 import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
 import '../links/my_links_screen.dart';
+import '../send/offline_pay_screen.dart';
 import '../developer/developer_apps_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
@@ -104,6 +105,16 @@ class SettingsScreen extends StatelessWidget {
                             onTap: () => pushZendSlide(
                               context,
                               const DeveloperAppsScreen(),
+                            ),
+                          ),
+                        if (kOfflinePayTest)
+                          _Tile(
+                            icon: PhosphorIconsRegular.airplane,
+                            label: 'Pay without signal (test)',
+                            subtitle: 'Two-phone airplane-mode test',
+                            onTap: () => pushZendSlide(
+                              context,
+                              const OfflinePayScreen(),
                             ),
                           ),
                         _Tile(

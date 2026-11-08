@@ -115,11 +115,19 @@ class _ActiveSession {
   /// Cached proof, fetched lazily and reused for every transfer in the session.
   Map<String, dynamic>? proof;
 
+  /// Offline payments (R21.0): everything in this session's zkLogin signature
+  /// before the per-transaction part. A zkLogin signature is
+  /// `prefix || 0x00-flagged ed25519 sig (64) || public key (32)`, and the
+  /// prefix (proof, address seed, max epoch) is the same for every signature
+  /// in the session. Not secret: it's in every signature on the network.
+  Uint8List? offlinePrefix;
+
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   void dispose() {
     keyPair.zeroize();
     proof = null;
+    offlinePrefix = null;
   }
 }
 
@@ -418,6 +426,90 @@ class SuiZkLoginService {
       ephemeralSignature: signature.signatureBase64,
       extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
     );
+  }
+
+  /// Offline payments (R21.0): while online, captures this session's
+  /// signature prefix so [signOffline] can sign with no network. Returns when
+  /// the session (and so offline signing) ends.
+  Future<DateTime> prepareOfflineSigning() async {
+    if (!hasActiveSession) await renewSessionSilently();
+    final session = _requireSession();
+    final proof = await _proofFor(session);
+    // Assembly doesn't check what was signed, so any bytes give the prefix.
+    final probe = Uint8List.fromList(List<int>.filled(32, 7));
+    final sig = await _signing.signTransactionData(
+      transactionDataBcs: probe,
+      keyPair: session.keyPair,
+    );
+    final assembled = base64.decode(
+      await _api.assembleSuiZkLoginSignature(
+        sessionId: session.sessionId,
+        idToken: session.idToken,
+        proof: proof,
+        ephemeralSignature: sig.signatureBase64,
+        extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
+      ),
+    );
+    final tail = [
+      ...base64.decode(sig.signatureBase64),
+      ...session.keyPair.publicKey,
+    ];
+    final n = assembled.length;
+    final ok =
+        n > 98 &&
+        assembled[0] == 0x05 &&
+        assembled[n - 97] == 0x00 &&
+        assembled[n - 98] == 97 &&
+        _sameBytes(assembled.sublist(n - 96), tail);
+    if (!ok) {
+      throw const SuiZkLoginSessionExpired(
+        "This phone can't get ready to pay without signal",
+      );
+    }
+    session.offlinePrefix = Uint8List.fromList(assembled.sublist(0, n - 96));
+    return session.expiresAt;
+  }
+
+  /// When offline signing is ready, until when; null when it isn't.
+  DateTime? get offlineReadyUntil {
+    final s = _session;
+    if (s == null || s.isExpired || s.offlinePrefix == null) return null;
+    return s.expiresAt;
+  }
+
+  /// Signs [transactionDataBcsBase64] with no network, using the prefix from
+  /// [prepareOfflineSigning]. Never renews the session: offline it can't.
+  Future<String> signOffline(String transactionDataBcsBase64) async {
+    final s = _session;
+    if (s == null || s.isExpired) {
+      throw const SuiZkLoginSessionExpired(
+        'Paying without signal needs Zend to have stayed open since you were '
+        'last online. Get online and try again.',
+      );
+    }
+    final prefix = s.offlinePrefix;
+    if (prefix == null) {
+      throw const SuiZkLoginSessionExpired(
+        'Get ready to pay without signal first, while you have signal.',
+      );
+    }
+    final sig = await _signing.signPreparedTransfer(
+      transactionDataBcsBase64: transactionDataBcsBase64,
+      keyPair: s.keyPair,
+    );
+    return base64.encode([
+      ...prefix,
+      ...base64.decode(sig.signatureBase64),
+      ...s.keyPair.publicKey,
+    ]);
+  }
+
+  static bool _sameBytes(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   /// Reconstructs the salt for a proof request, or null when custody is not
