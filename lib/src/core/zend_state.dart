@@ -480,6 +480,18 @@ class ZendAppModel extends ChangeNotifier {
   // ── Fallback polling (used when SSE is unavailable) ──
   Timer? _pollingTimer;
   static const Duration _pollingInterval = Duration(seconds: 30);
+
+  // Money sent straight to the wallet from outside Zend raises no event we can hear, so even
+  // with the live connection up the balance is read again now and then.
+  Timer? _reconcileTimer;
+  static const Duration _reconcileInterval = Duration(seconds: 45);
+
+  void _startReconcileTimer() {
+    _reconcileTimer ??= Timer.periodic(_reconcileInterval, (_) {
+      if (isAuthenticated) unawaited(fetchBalance());
+    });
+  }
+
   bool _sseConnected = false;
 
   /// Start real-time updates via SSE.
@@ -516,6 +528,7 @@ class ZendAppModel extends ChangeNotifier {
     // Start fallback polling immediately — it will be cancelled if SSE delivers
     // its first event within the polling interval, confirming SSE is working.
     _startFallbackPolling();
+    _startReconcileTimer();
   }
 
   void _onSseEvent(SseEvent event) {
@@ -533,7 +546,7 @@ class ZendAppModel extends ChangeNotifier {
         // Immediately patch any matching pending entry to 'confirmed' so open
         // receipt sheets update live without waiting for fetchHistory() to complete.
         _patchTransferStatus(event.data);
-        unawaited(fetchBalance());
+        settleBalance();
         unawaited(fetchHistory());
         if (_threadedActivityEverLoaded) {
           unawaited(fetchThreadedActivity(mergeWithExisting: true));
@@ -554,7 +567,7 @@ class ZendAppModel extends ChangeNotifier {
             notifyListeners();
           }
         } else {
-          unawaited(fetchBalance());
+          settleBalance();
         }
       case SseEventType.fundsAdded:
         // Arrives alongside balanceUpdate above, which already handles the
@@ -566,9 +579,10 @@ class ZendAppModel extends ChangeNotifier {
         // The money is in, so Activity and the wallet's recent list should
         // show it without the user pulling to refresh.
         unawaited(fetchHistory());
+        settleBalance();
       case SseEventType.refreshRequired:
         // Server told us we missed events — do a full refresh
-        unawaited(fetchBalance());
+        settleBalance();
         unawaited(fetchHistory());
         if (_threadedActivityEverLoaded) {
           unawaited(fetchThreadedActivity(mergeWithExisting: true));
@@ -815,6 +829,8 @@ class ZendAppModel extends ChangeNotifier {
     _sseSubscription = null;
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _reconcileTimer?.cancel();
+    _reconcileTimer = null;
     _sseConnected = false;
   }
 
@@ -848,6 +864,7 @@ class ZendAppModel extends ChangeNotifier {
       },
     );
     _startFallbackPolling();
+    _startReconcileTimer();
   }
 
   @override
@@ -1406,7 +1423,66 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchBalance() async {
+  // ── Balance consistency ──
+  //
+  // Several things ask for the balance at once (an SSE event, the resume refresh, a send
+  // finishing). Run side by side, the slowest request landed last and could put an older figure
+  // back over a newer one. So only one read runs at a time, and a request that arrives while one
+  // is running makes it read once more afterwards instead of starting a second.
+  Future<void>? _balanceInFlight;
+  bool _balanceDirty = false;
+
+  Future<void> fetchBalance() {
+    final running = _balanceInFlight;
+    if (running != null) {
+      _balanceDirty = true;
+      return running;
+    }
+    return _balanceInFlight = _fetchBalanceLoop().whenComplete(
+      () => _balanceInFlight = null,
+    );
+  }
+
+  Future<void> _fetchBalanceLoop() async {
+    do {
+      _balanceDirty = false;
+      await _fetchBalanceOnce();
+    } while (_balanceDirty && isAuthenticated);
+  }
+
+  // A chain read can trail the event that announced it by a few seconds, so one read right
+  // after "your balance changed" may still show the old figure. This keeps reading, a few times
+  // over about fifteen seconds, until the figure actually moves.
+  bool _settlingBalance = false;
+
+  bool _balanceDiffers(({double b, double s, double a}) before) =>
+      (balance - before.b).abs() > 0.0000005 ||
+      (spendableBalance - before.s).abs() > 0.0000005 ||
+      (awaitingDepositBalance - before.a).abs() > 0.0000005;
+
+  void settleBalance() {
+    if (_settlingBalance) return;
+    _settlingBalance = true;
+    unawaited(_runSettleBalance());
+  }
+
+  Future<void> _runSettleBalance() async {
+    final before = (b: balance, s: spendableBalance, a: awaitingDepositBalance);
+    try {
+      for (final waitMs in const [0, 1500, 3000, 5000, 8000]) {
+        if (waitMs > 0) {
+          await Future<void>.delayed(Duration(milliseconds: waitMs));
+        }
+        if (!isAuthenticated) break;
+        await fetchBalance();
+        if (_balanceDiffers(before)) break;
+      }
+    } finally {
+      _settlingBalance = false;
+    }
+  }
+
+  Future<void> _fetchBalanceOnce() async {
     // Only notify for the loading state if we have no data yet (first load).
     // Background refreshes update silently to avoid mid-transition rebuilds.
     final firstLoad = balance == 0.0 && !balanceLoading;

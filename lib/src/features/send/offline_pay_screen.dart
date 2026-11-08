@@ -13,8 +13,28 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/offline_pay_service.dart';
 
-/// Shown only in builds made with `--dart-define=ZEND_OFFLINE_TEST=true`.
+/// Forces the screen on in builds made with `--dart-define=ZEND_OFFLINE_TEST=true`.
+/// Otherwise it shows only for accounts the server lists in
+/// `ZEND_OFFLINE_TEST_EMAILS` (see [OfflinePayGate]).
 const bool kOfflinePayTest = bool.fromEnvironment('ZEND_OFFLINE_TEST');
+
+/// Builds [builder] only when paying without signal is on for this account.
+class OfflinePayGate extends StatelessWidget {
+  const OfflinePayGate({super.key, required this.builder});
+  final WidgetBuilder builder;
+
+  @override
+  Widget build(BuildContext context) {
+    if (kOfflinePayTest) return builder(context);
+    return FutureBuilder<bool>(
+      future: OfflinePayService.isAvailable(
+        ZendScope.of(context).walletService.apiClient,
+      ),
+      builder: (context, snap) =>
+          snap.data == true ? builder(context) : const SizedBox.shrink(),
+    );
+  }
+}
 
 /// Test screen for paying without signal (R21, task 0.9). See
 /// `.kiro/specs/appkit-primitives/offline-test.md` for the two-phone steps.

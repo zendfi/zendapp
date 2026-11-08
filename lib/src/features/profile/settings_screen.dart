@@ -107,8 +107,8 @@ class SettingsScreen extends StatelessWidget {
                               const DeveloperAppsScreen(),
                             ),
                           ),
-                        if (kOfflinePayTest)
-                          _Tile(
+                        OfflinePayGate(
+                          builder: (context) => _Tile(
                             icon: PhosphorIconsRegular.airplane,
                             label: 'Pay without signal (test)',
                             subtitle: 'Two-phone airplane-mode test',
@@ -117,6 +117,7 @@ class SettingsScreen extends StatelessWidget {
                               const OfflinePayScreen(),
                             ),
                           ),
+                        ),
                         _Tile(
                           icon: PhosphorIconsRegular.link,
                           label: 'My Links',

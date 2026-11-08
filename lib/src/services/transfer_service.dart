@@ -250,6 +250,9 @@ class TransferService {
       solBalance: balance.amountFor(PaymentAsset.native),
       usdcBalance: usdc,
       spendableBalance: balance.spendable.amount,
+      // Without this, money held in coin objects (a plain transfer into the wallet) was
+      // dropped: the display sums spendable + awaiting, so a funded wallet read as $0.
+      awaitingDeposit: balance.awaitingDeposit?.amount,
     );
   }
 

@@ -65,6 +65,20 @@ class OfflinePayService {
   /// Kept in memory only: it's only useful while the signing session is.
   static OfflineParams? _params;
 
+  /// Whether Zend has turned this on for this account (test accounts only).
+  static bool? _available;
+
+  static Future<bool> isAvailable(ApiClient api) async {
+    final known = _available;
+    if (known != null) return known;
+    try {
+      final r = await api.appkit('GET', '/p2p/offline/available');
+      return _available = r['available'] == true;
+    } catch (_) {
+      return false; // Not cached, so it's asked again next time.
+    }
+  }
+
   DateTime? get readyUntil => _params == null ? null : _zk.offlineReadyUntil;
 
   /// Step 1 (online).
