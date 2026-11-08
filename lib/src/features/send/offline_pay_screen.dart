@@ -74,6 +74,7 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
   void dispose() {
     _tick?.cancel();
     _amount.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -107,15 +108,50 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
     context,
   ).push<String>(MaterialPageRoute(builder: (_) => _ScanPage(title: title)));
 
+  final _amountFocus = FocusNode();
+
+  void _toast(String text) => ScaffoldMessenger.maybeOf(
+    context,
+  )?.showSnackBar(SnackBar(content: Text(text)));
+
   Future<void> _scanPayee() async {
     final raw = await _scan("Scan the other person's receive code");
-    if (raw == null) return;
+    if (raw == null || !mounted) return;
+    _usePayee(raw);
+  }
+
+  /// A scanned or pasted receive code: say clearly what happened.
+  void _usePayee(String raw) {
     final code = OfflinePayService.readReceiveCode(raw);
+    if (code == null) {
+      final seen = raw.length > 40 ? '${raw.substring(0, 40)}…' : raw;
+      setState(() => _message = null);
+      _toast(
+        OfflinePayService.isPaymentCode(raw)
+            ? "That's a payment code. Scan it under Receive instead."
+            : "That isn't a Zend receive code (read: $seen)",
+      );
+      return;
+    }
     setState(() {
       _payee = code;
       _paymentCode = null;
-      _message = code == null ? "That isn't a Zend receive code" : null;
+      _message = null;
     });
+    _toast('Paying ${code.label}. Enter an amount.');
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _amountFocus.requestFocus(),
+    );
+  }
+
+  Future<void> _pastePayee() async {
+    final t = (await Clipboard.getData('text/plain'))?.text;
+    if (!mounted) return;
+    if (t == null || t.trim().isEmpty) {
+      _toast('Nothing to paste. Copy their receive code first.');
+      return;
+    }
+    _usePayee(t);
   }
 
   Future<void> _pay() => _run(() async {
@@ -188,9 +224,17 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
             style: s(13, c: zt.textSecondary),
           ),
           const SizedBox(height: 10),
-          if (_receiveCode != null)
-            qr(_receiveCode!)
-          else
+          if (_receiveCode != null) ...[
+            qr(_receiveCode!),
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: _receiveCode!));
+                if (!mounted) return;
+                _toast('Receive code copied');
+              },
+              child: const Text('Copy receive code'),
+            ),
+          ] else
             Text(
               'Tap Get ready to make your code.',
               style: s(13, c: zt.textSecondary),
@@ -224,9 +268,14 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
                   : 'Paying ${_payee!.label} (scan again)',
             ),
           ),
+          TextButton(
+            onPressed: _busy ? null : _pastePayee,
+            child: const Text('Paste a receive code'),
+          ),
           if (_payee != null) ...[
             TextField(
               controller: _amount,
+              focusNode: _amountFocus,
               inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
               keyboardType: TextInputType.numberWithOptions(
                 decimal: !_entry.naira,
