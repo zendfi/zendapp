@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/zend_state.dart';
+import '../../core/zend_features.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'bank_send_sheet.dart';
@@ -328,18 +329,22 @@ class _DestinationStage extends StatelessWidget {
               showBankSendSheet(context, amount: amount);
             },
           ),
-          const SizedBox(height: 12),
-
           // ── Blockchain option ───────────────────────────────────────
-          _DestinationTile(
-            icon: PhosphorIconsRegular.currencyDollar,
-            title: 'Crypto wallet',
-            subtitle: 'Any chain — Tron, Ethereum, BNB...',
-            onTap: () {
-              Navigator.of(context).pop();
-              showCryptoSendSheet(context, amount: amount);
-            },
-          ),
+          // Crypto send is disabled while our only provider (Dextopus) has no
+          // Sui support — see [ZendFeatures.cryptoRamps]. Hidden, not deleted,
+          // so it returns the moment a Sui-capable provider is wired.
+          if (ZendFeatures.cryptoRamps) ...[
+            const SizedBox(height: 12),
+            _DestinationTile(
+              icon: PhosphorIconsRegular.currencyDollar,
+              title: 'Crypto wallet',
+              subtitle: 'Any chain — Tron, Ethereum, BNB...',
+              onTap: () {
+                Navigator.of(context).pop();
+                showCryptoSendSheet(context, amount: amount);
+              },
+            ),
+          ],
         ],
       ),
     );

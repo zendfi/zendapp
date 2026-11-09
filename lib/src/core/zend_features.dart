@@ -80,6 +80,18 @@ abstract final class ZendFeatures {
   /// balance and emits a funds-arrived event.
   static const bool addCashOtherCurrencies = false;
 
+  /// Dextopus-backed crypto deposit (add cash via a crypto deposit address) and
+  /// crypto send (withdraw to an external wallet on any chain).
+  ///
+  /// Dextopus runs on Relay, which has no Sui chain and — per their team — no
+  /// plans to add one. ZendFi settles on Sui, so these cross-chain flows always
+  /// resolve to a chain Dextopus rejects. The backend hard-gates them behind
+  /// `CRYPTO_RAMPS_ENABLED` (default off) and returns 503 FEATURE_UNAVAILABLE;
+  /// this flag hides the matching UI entry points (the "Crypto wallet" withdraw
+  /// destination and the "Crypto" add-cash method) so users never reach a dead
+  /// end. Turn both on together once a Sui-capable provider is wired.
+  static const bool cryptoRamps = false;
+
   /// Savings / Pockets — the Savings row in the Wallet sheet, Pockets,
   /// goals, and the deposit/withdraw flows.
   ///

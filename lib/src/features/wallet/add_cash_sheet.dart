@@ -339,13 +339,18 @@ class _AddCashSheetState extends State<AddCashSheet> {
           ),
         ),
         const SizedBox(height: 20),
-        _MethodRow(
-          icon: PhosphorIconsRegular.currencyBtc,
-          title: 'Crypto',
-          subtitle: 'Send stablecoins or crypto from any wallet or exchange',
-          onTap: _startCrypto,
-        ),
-        const SizedBox(height: 10),
+        // Crypto deposit is disabled while our only provider (Dextopus) has no
+        // Sui support — see [ZendFeatures.cryptoRamps]. Hidden rather than
+        // deleted so it returns the moment a Sui-capable provider is wired.
+        if (ZendFeatures.cryptoRamps) ...[
+          _MethodRow(
+            icon: PhosphorIconsRegular.currencyBtc,
+            title: 'Crypto',
+            subtitle: 'Send stablecoins or crypto from any wallet or exchange',
+            onTap: _startCrypto,
+          ),
+          const SizedBox(height: 10),
+        ],
         _MethodRow(
           icon: PhosphorIconsRegular.bank,
           title: 'Bank transfer',
