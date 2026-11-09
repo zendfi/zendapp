@@ -170,6 +170,14 @@ String buildGaslessTransfer({
   w.u8(0); // no min timestamp
   w.u8(0); // no max timestamp
   w.bytes(suiAddressBytes(chainIdHex)); // Digest: length-prefixed 32 bytes
-  w.u32(nonce ?? Random.secure().nextInt(1 << 32));
+  w.u32(nonce ?? randomU32());
   return base64.encode(w.take());
+}
+
+/// A random u32 that also works on web. `1 << 32` is 0 in a browser (JavaScript's
+/// 32-bit shifts), so `nextInt(1 << 32)` threw there. Two 16-bit halves combined by
+/// multiplication stay exact on both platforms.
+int randomU32([Random? random]) {
+  final r = random ?? Random.secure();
+  return r.nextInt(0x10000) * 0x10000 + r.nextInt(0x10000);
 }
