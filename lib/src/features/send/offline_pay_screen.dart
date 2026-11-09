@@ -46,7 +46,10 @@ class OfflinePayScreen extends StatefulWidget {
 }
 
 class _OfflinePayScreenState extends State<OfflinePayScreen> {
-  late final OfflinePayService _svc;
+  // Built once. `didChangeDependencies` runs again every time the app model notifies, so
+  // assigning a `late final` there threw LateInitializationError on the second run.
+  OfflinePayService? _svcInstance;
+  OfflinePayService get _svc => _svcInstance!;
   bool _busy = false;
   String? _message;
   String? _receiveCode;
@@ -60,7 +63,7 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final model = ZendScope.of(context);
-    _svc = OfflinePayService(
+    _svcInstance ??= OfflinePayService(
       api: model.walletService.apiClient,
       zkLogin: model.zkLoginService,
     );
