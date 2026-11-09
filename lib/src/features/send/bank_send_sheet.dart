@@ -709,6 +709,7 @@ class _BankSendSheetState extends State<BankSendSheet>
       case _BankSendStage.confirmation:
         return _ConfirmationStage(
           rail: _rail,
+          signRail: _signRail,
           amountUsdc: _confirmedAmountUsdc ?? widget.amount,
           fiatAmount: _fiatAmount,
           accountName: _resolvedAccountName ?? '',

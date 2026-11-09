@@ -663,6 +663,7 @@ class _ResolvingStage extends StatelessWidget {
 class _ConfirmationStage extends StatelessWidget {
   const _ConfirmationStage({
     required this.rail,
+    required this.signRail,
     required this.amountUsdc,
     required this.fiatAmount,
     required this.accountName,
@@ -672,6 +673,11 @@ class _ConfirmationStage extends StatelessWidget {
     required this.onBack,
   });
   final _BankSendRail rail;
+
+  /// On-chain rail the backend resolved for this order: 'sui' or 'solana'.
+  /// The Sui gasless path signs with the in-memory zkLogin key and has no PIN,
+  /// so the action button must not promise one. Null before prepare resolves.
+  final String? signRail;
   final double amountUsdc;
   final double? fiatAmount;
   final String accountName;
@@ -807,7 +813,12 @@ class _ConfirmationStage extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          PrimaryButton(label: 'Enter PIN to send', onPressed: onConfirm),
+          PrimaryButton(
+            // Sui is gasless/zkLogin — no PIN to collect, so the button sends
+            // directly. Solana co-signs with a local key and still gates on PIN.
+            label: signRail == 'sui' ? 'Send' : 'Enter PIN to send',
+            onPressed: onConfirm,
+          ),
         ],
       ),
     );
