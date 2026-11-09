@@ -166,6 +166,34 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
   }
 
+  /// Whose avatar the typing bubble shows. A direct chat has one other person. In a group it is
+  /// the first person currently typing, looked up from the members, then from their messages.
+  ({String? url, String initial, String? seed}) _typistAvatar(
+    DmCounterparty cp,
+  ) {
+    if (!_isGroup) {
+      return (url: cp.avatarUrl, initial: cp.initialLetter, seed: cp.userId);
+    }
+    final tag = _typingTags.keys.isEmpty ? null : _typingTags.keys.first;
+    if (tag == null) return (url: null, initial: '?', seed: null);
+    final member = _groupDetail?.members
+        .where((m) => m.zendtag == tag)
+        .firstOrNull;
+    if (member != null) {
+      return (
+        url: member.avatarUrl,
+        initial: member.initialLetter,
+        seed: member.userId,
+      );
+    }
+    final msg = _messages.where((m) => m.senderZendtag == tag).firstOrNull;
+    return (
+      url: msg?.senderAvatarUrl,
+      initial: tag.isEmpty ? '?' : tag[0].toUpperCase(),
+      seed: msg?.senderUserId,
+    );
+  }
+
   Future<void> _openGroupInfo() async {
     final model = ZendScope.of(context);
     final result = await showGroupInfoSheet(
@@ -2595,9 +2623,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                       }
                                       // Typing indicator at the very start (newest)
                                       if (_theyAreTyping && i == 0) {
+                                        final typist = _typistAvatar(cp);
                                         return _TypingIndicator(
-                                          avatarUrl: cp.avatarUrl,
-                                          initial: cp.initialLetter,
+                                          avatarUrl: typist.url,
+                                          initial: typist.initial,
+                                          seed: typist.seed,
                                         );
                                       }
                                       final listIdx = i - typingOffset;
@@ -2637,7 +2667,22 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                           text: msg.content ?? '',
                                         );
                                       }
-                                      final isGroupEnd = !isMe && isFirst;
+                                      // While that person is typing, the typing bubble is the
+                                      // newest thing from them and takes the avatar. Showing it
+                                      // on their last message too put two of the same avatar on
+                                      // top of each other.
+                                      final typingTakesAvatar =
+                                          _theyAreTyping &&
+                                          listIdx == 0 &&
+                                          !isMe &&
+                                          (!_isGroup ||
+                                              _typingTags.containsKey(
+                                                msg.senderZendtag,
+                                              ));
+                                      final isGroupEnd =
+                                          !isMe &&
+                                          isFirst &&
+                                          !typingTakesAvatar;
                                       final isFlashing =
                                           _flashingMsgId == msg.id;
 
@@ -3197,9 +3242,14 @@ class _FlashHighlightState extends State<_FlashHighlight>
 }
 
 class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator({required this.avatarUrl, required this.initial});
+  const _TypingIndicator({
+    required this.avatarUrl,
+    required this.initial,
+    this.seed,
+  });
   final String? avatarUrl;
   final String initial;
+  final String? seed;
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
@@ -3231,12 +3281,21 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          ZendAvatar(
-            radius: 14,
-            photoUrl: widget.avatarUrl,
-            initials: widget.initial,
+          // Same 32x26 avatar slot the message rows use, so the typing bubble lines up with
+          // the bubbles above it instead of sitting a few pixels off.
+          SizedBox(
+            width: 32,
+            height: 26,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ZendAvatar(
+                radius: 13,
+                photoUrl: widget.avatarUrl,
+                initials: widget.initial,
+                seed: widget.seed,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
