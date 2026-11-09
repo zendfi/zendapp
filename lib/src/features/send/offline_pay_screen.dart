@@ -18,6 +18,12 @@ import '../../services/offline_pay_service.dart';
 /// `ZEND_OFFLINE_TEST_EMAILS` (see [OfflinePayGate]).
 const bool kOfflinePayTest = bool.fromEnvironment('ZEND_OFFLINE_TEST');
 
+/// The commit this build came from (set by CI), shown so a stale tab is easy to spot.
+const String _kBuild = String.fromEnvironment(
+  'ZEND_BUILD',
+  defaultValue: 'local',
+);
+
 /// Builds [builder] only when paying without signal is on for this account.
 class OfflinePayGate extends StatelessWidget {
   const OfflinePayGate({super.key, required this.builder});
@@ -214,6 +220,10 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
             label: until == null ? 'Get ready' : 'Get ready again',
             isLoading: _busy && until == null,
             onPressed: _busy ? null : _getReady,
+          ),
+          Text(
+            'Build ${_kBuild.length > 7 ? _kBuild.substring(0, 7) : _kBuild}',
+            style: s(11, c: zt.textSecondary),
           ),
           if (_message != null) ...[
             const SizedBox(height: 12),

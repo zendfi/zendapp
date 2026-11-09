@@ -84,7 +84,7 @@ jobs:
       # one cache per build, cache only on network failure), so the app opens
       # with no signal without the problems above.
       - name: Build web
-        run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }} --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7
+        run: flutter build web --release --no-web-resources-cdn --pwa-strategy=none --dart-define=ZEND_BUILD=${{ github.sha }} --dart-define=GIPHY_API_KEY=${{ secrets.GIPHY_API_KEY_WEB }} --dart-define=ZLINK_PACKAGE_ID=0xc75d61e531530a63e68aaf23dc360d2587dc902a5f5fc25e725e53a37f135296 --dart-define=PRIZE_PACKAGE_ID=0x97a1fe540f5904405474c171ce96062f8f0cac9c2538b05d8c76e9900adf3ff7
 
       # One offline cache per build. Set the repo variable ZEND_WEB_SW=off to
       # ship a worker that unregisters itself and clears its caches.

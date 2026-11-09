@@ -2678,8 +2678,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                             ),
                                           Expanded(
                                             child: _GroupSenderLabel(
-                                              show:
-                                                  _isGroup && !isMe && isFirst,
+                                              // `isLast` is the top of a run here: the list is reversed, so
+                                              // "last" means the oldest message of the run, which sits
+                                              // highest on screen. The name belongs above the first
+                                              // bubble a person sends, not the last.
+                                              show: _isGroup && !isMe && isLast,
                                               name: msg.senderZendtag ?? '',
                                               colorSeed: msg.senderUserId,
                                               child: DmMessageBubble(
@@ -2937,13 +2940,17 @@ class _PresenceLabel extends StatelessWidget {
           ),
           const SizedBox(width: 4),
         ],
-        Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 11,
-            color: color,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -3465,6 +3472,8 @@ class _GroupSenderLabel extends StatelessWidget {
           padding: const EdgeInsets.only(left: 12, bottom: 2),
           child: Text(
             name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 12,

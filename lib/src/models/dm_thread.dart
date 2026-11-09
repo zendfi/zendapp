@@ -56,11 +56,7 @@ class DmThread {
     DmMessage? lastMsg;
     final lm = json['last_message'] as Map<String, dynamic>?;
     if (lm != null) {
-      lastMsg = DmMessage.fromJson({
-        ...lm,
-        'id': 'preview',
-        'room_id': roomId,
-      });
+      lastMsg = DmMessage.fromJson({...lm, 'id': 'preview', 'room_id': roomId});
     }
     return DmThread(
       roomId: roomId,
@@ -121,7 +117,10 @@ class DmThread {
       return base;
     }
     final who = g.lastSenderTag;
-    return who == null || who.isEmpty ? base : '$who: $base';
+    if (who == null || who.isEmpty) return base;
+    // A long name (an email-style handle, say) would push the message out of the row.
+    final short = who.length > 14 ? '${who.substring(0, 13)}…' : who;
+    return '$short: $base';
   }
 
   String get lastMessagePreview {
@@ -203,11 +202,8 @@ class DmGroupSummary {
 
   /// Stand-in used where a screen expects a [DmCounterparty]. The id is
   /// prefixed so it can never collide with a real person.
-  DmCounterparty asCounterparty() => DmCounterparty(
-    userId: 'group:$roomId',
-    zendtag: name,
-    displayName: name,
-  );
+  DmCounterparty asCounterparty() =>
+      DmCounterparty(userId: 'group:$roomId', zendtag: name, displayName: name);
 }
 
 /// Group room ids start with `g_`; direct rooms are plain hex.

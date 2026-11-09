@@ -275,6 +275,8 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
           ),
           title: Text(
             c.displayName.trim().isEmpty ? '@${c.zendtag}' : c.displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Geist',
               fontWeight: FontWeight.w600,
@@ -283,6 +285,8 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
           ),
           subtitle: Text(
             '@${c.zendtag}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontFamily: 'Geist', color: zt.textSecondary),
           ),
           trailing: Icon(

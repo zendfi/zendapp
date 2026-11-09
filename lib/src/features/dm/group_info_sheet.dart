@@ -340,8 +340,14 @@ class _GroupInfoSheetState extends State<_GroupInfoSheet> {
                             : (m.displayName.trim().isEmpty
                                   ? '@${m.zendtag}'
                                   : m.displayName),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: Text('@${m.zendtag}'),
+                      subtitle: Text(
+                        '@${m.zendtag}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       trailing: m.isAdmin
                           ? Text(
                               m.isOwner ? 'Owner' : 'Admin',
@@ -423,8 +429,14 @@ class _AddPeoplePickerState extends State<_AddPeoplePicker> {
                             c.displayName.trim().isEmpty
                                 ? '@${c.zendtag}'
                                 : c.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text('@${c.zendtag}'),
+                          subtitle: Text(
+                            '@${c.zendtag}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                     ],
                   ),
