@@ -7,6 +7,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../models/dm_group.dart';
 import '../../models/dm_thread.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// Result of the info sheet, so the thread can react.
 enum GroupInfoResult { left, changed }
@@ -334,14 +335,13 @@ class _GroupInfoSheetState extends State<_GroupInfoSheet> {
                         photoUrl: m.avatarUrl,
                         initials: m.initialLetter,
                       ),
-                      title: Text(
+                      title: PersonName(
                         m.userId == widget.myUserId
                             ? 'You'
                             : (m.displayName.trim().isEmpty
                                   ? '@${m.zendtag}'
                                   : m.displayName),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        verified: m.humanVerified,
                       ),
                       subtitle: Text(
                         '@${m.zendtag}',
@@ -425,12 +425,11 @@ class _AddPeoplePickerState extends State<_AddPeoplePicker> {
                             photoUrl: c.avatarUrl,
                             initials: c.initialLetter,
                           ),
-                          title: Text(
+                          title: PersonName(
                             c.displayName.trim().isEmpty
                                 ? '@${c.zendtag}'
                                 : c.displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            verified: c.humanVerified,
                           ),
                           subtitle: Text(
                             '@${c.zendtag}',

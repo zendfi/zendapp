@@ -234,6 +234,9 @@ flutter:
     # assets/countries/ itself held only unused SVGs (there's no SVG renderer
     # in this project), so only the flags directory is bundled.
     - assets/countries/flags/
+    # Pay-to-read decryption bundle for the hidden webview (built by seal/).
+    # Web loads web/zend_seal.js instead, so this is mobile weight only.
+    - assets/seal/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

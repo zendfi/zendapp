@@ -40,6 +40,7 @@ import '../../design/zend_gif.dart';
 import '../../design/zend_money.dart';
 import '../zapps/zapp_tray.dart';
 import '../shell/zend_entry_sheet.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// State of the E2EE key exchange for the currently open room.
 enum _E2eeStatus {
@@ -108,6 +109,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   /// for the exchange instead of racing it and silently sending plaintext.
   final Completer<void> _e2eeResolution = Completer<void>();
   bool get _isGroup => isGroupRoomId(widget.roomId);
+
+  /// Whether this group member holds the badge, from the loaded member list.
+  bool _memberVerified(String userId) =>
+      _groupDetail?.members.any((m) => m.userId == userId && m.humanVerified) ??
+      false;
 
   /// Groups: each other member's last-read message id, by user id.
   final Map<String, String> _readCursors = {};
@@ -2372,19 +2378,19 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               Row(
                                 children: [
                                   Flexible(
-                                    child: Text(
+                                    child: PersonName(
                                       _isGroup
                                           ? _groupName
                                           : (cp.displayName.trim().isEmpty
                                                 ? handleLabel(cp.zendtag)
                                                 : cp.displayName),
+                                      verified: !_isGroup && cp.humanVerified,
                                       style: TextStyle(
                                         fontFamily: 'Geist',
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                         color: zt.textPrimary,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   if (ZendFeatures.dmE2ee && _e2eeReady) ...[
@@ -2729,6 +2735,9 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                               // bubble a person sends, not the last.
                                               show: _isGroup && !isMe && isLast,
                                               name: msg.senderZendtag ?? '',
+                                              verified: _memberVerified(
+                                                msg.senderUserId,
+                                              ),
                                               colorSeed: msg.senderUserId,
                                               child: DmMessageBubble(
                                                 message: msg,
@@ -3509,6 +3518,7 @@ class _SystemNotice extends StatelessWidget {
 /// Puts the sender's name above the first incoming bubble of a run in a group.
 class _GroupSenderLabel extends StatelessWidget {
   const _GroupSenderLabel({
+    this.verified = false,
     required this.show,
     required this.name,
     required this.colorSeed,
@@ -3517,6 +3527,7 @@ class _GroupSenderLabel extends StatelessWidget {
 
   final bool show;
   final String name;
+  final bool verified;
   final String colorSeed;
   final Widget child;
 
@@ -3529,10 +3540,9 @@ class _GroupSenderLabel extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 12, bottom: 2),
-          child: Text(
+          child: PersonName(
             name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            verified: verified,
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 12,

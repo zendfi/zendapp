@@ -10,6 +10,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'bridge_kyc_screen.dart';
+import 'human_verification_screen.dart';
 import 'change_pin_screen.dart';
 import 'connected_apps_screen.dart';
 import 'connected_banks_screen.dart';
@@ -203,6 +204,16 @@ class SettingsScreen extends StatelessWidget {
                             label: 'Change PIN',
                             onTap: () =>
                                 pushZendSlide(context, const ChangePinScreen()),
+                          ),
+                        if (ZendFeatures.humanBadge)
+                          _Tile(
+                            icon: PhosphorIconsRegular.sealCheck,
+                            label: 'Verify you\'re a real person',
+                            subtitle: 'Get a check mark next to your name',
+                            onTap: () => pushZendSlide(
+                              context,
+                              const HumanVerificationScreen(),
+                            ),
                           ),
                         _Tile(
                           icon: PhosphorIconsRegular.identificationBadge,

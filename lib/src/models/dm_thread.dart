@@ -7,12 +7,16 @@ class DmCounterparty {
     required this.zendtag,
     required this.displayName,
     this.avatarUrl,
+    this.humanVerified = false,
   });
 
   final String userId;
   final String zendtag;
   final String displayName;
   final String? avatarUrl;
+
+  /// A real, unique person controls this account.
+  final bool humanVerified;
 
   String get initialLetter =>
       zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
@@ -23,6 +27,7 @@ class DmCounterparty {
       zendtag: json['zendtag'] as String? ?? '',
       displayName: json['display_name'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String?,
+      humanVerified: json['human_verified'] as bool? ?? false,
     );
   }
 }

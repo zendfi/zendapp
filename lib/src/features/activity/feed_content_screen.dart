@@ -6,6 +6,7 @@ import '../../core/zend_selector.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_verified_badge.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_money.dart';
@@ -997,6 +998,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: subject,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.counterpartyHumanVerified && !isPoolContrib)
+                    verifiedBadgeSpan(),
                 ]
               : isPoolContrib
               ? [
@@ -1005,6 +1008,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: subject,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.counterpartyHumanVerified && !isPoolContrib)
+                    verifiedBadgeSpan(),
                   TextSpan(text: isOutgoing ? '' : ' contributed to a pool'),
                 ]
               : [
@@ -1013,6 +1018,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: subject,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.counterpartyHumanVerified && !isPoolContrib)
+                    verifiedBadgeSpan(),
                   TextSpan(text: isOutgoing ? '' : ' $verb'),
                 ],
         ),
@@ -1048,11 +1055,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: senderLabel,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' sent a Vibe ✨ to '),
                   TextSpan(
                     text: recipientLabel,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.recipientHumanVerified) verifiedBadgeSpan(),
                 ]
               : isPoolContrib
               ? [
@@ -1060,6 +1069,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: senderLabel,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' contributed to a pool'),
                 ]
               : [
@@ -1067,11 +1077,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                     text: senderLabel,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   TextSpan(text: ' $verb '),
                   TextSpan(
                     text: recipientLabel,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  if (edge.recipientHumanVerified) verifiedBadgeSpan(),
                 ],
         ),
       );

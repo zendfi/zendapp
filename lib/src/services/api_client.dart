@@ -1951,6 +1951,42 @@ class ApiClient {
     }
   }
 
+  // ── Human badge ──
+
+  Future<Map<String, dynamic>> getHumanVerification() async {
+    try {
+      final r = await _dio.get('/api/zend/verification/human');
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> startHumanCheck() async {
+    try {
+      final r = await _dio.post('/api/zend/verification/human/start');
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<Map<String, dynamic>> completeHumanCheck({
+    required String challengeId,
+    required String nonce,
+    required Map<String, dynamic> result,
+  }) async {
+    try {
+      final r = await _dio.post(
+        '/api/zend/verification/human/complete',
+        data: {'challenge_id': challengeId, 'nonce': nonce, 'result': result},
+      );
+      return r.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> startBridgeKyc() async {
     try {
       final response = await _dio.post('/api/zend/bridge/kyc/start');

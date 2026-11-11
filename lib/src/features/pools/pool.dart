@@ -53,6 +53,7 @@ class PoolParticipant {
     this.avatarUrl,
     this.contribution = 0.0,
     this.isExternal = false,
+    this.humanVerified = false,
   });
 
   final String id;
@@ -71,6 +72,9 @@ class PoolParticipant {
   final double contribution;
   final bool isExternal;
 
+  /// A real, unique person controls this account.
+  final bool humanVerified;
+
   factory PoolParticipant.fromJson(Map<String, dynamic> json) {
     final displayName = json['display_name'] as String? ?? '';
     return PoolParticipant(
@@ -82,6 +86,7 @@ class PoolParticipant {
       avatarUrl: json['avatar_url'] as String?,
       contribution: (json['contribution'] as num?)?.toDouble() ?? 0.0,
       isExternal: json['is_external'] as bool? ?? false,
+      humanVerified: json['human_verified'] as bool? ?? false,
     );
   }
 

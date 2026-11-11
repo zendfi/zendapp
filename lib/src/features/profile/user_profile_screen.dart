@@ -20,6 +20,7 @@ import 'account_information_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_note.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// Person page — ZEND BETA spec §18-20.
 ///
@@ -55,6 +56,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _zendtag;
   String? _displayName;
   String? _avatarUrl;
+  bool _humanVerified = false;
   bool _loadingIdentity = true;
   String? _identityError;
 
@@ -108,6 +110,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ? profile.displayName
               : handleLabel(profile.zendtag);
           _avatarUrl = profile.avatarUrl;
+          _humanVerified = profile.humanVerified;
           _loadingIdentity = false;
         });
         _loadEdges();
@@ -338,10 +341,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             radius: 40,
                             photoUrl: _avatarUrl,
                             initials: _initial,
+                            verified: _humanVerified,
                           ),
                           const SizedBox(height: 12),
-                          Text(
+                          PersonName(
                             _label,
+                            verified: _humanVerified,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontWeight: FontWeight.w700,

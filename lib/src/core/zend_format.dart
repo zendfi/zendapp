@@ -89,9 +89,8 @@ class AmountEntry {
 
   /// [formatMoney] for a dollar figure on this screen, consistent with the
   /// unit being typed.
-  String format(double usd) => naira
-      ? formatNaira((usd * ngnPerUsd!).roundToDouble())
-      : formatUsd(usd);
+  String format(double usd) =>
+      naira ? formatNaira((usd * ngnPerUsd!).roundToDouble()) : formatUsd(usd);
 }
 
 /// `1234567` → `1,234,567`.
@@ -119,7 +118,9 @@ String formatNaira(double amount) {
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
     (_) => ',',
   );
-  final frac = kobo % 100 == 0 ? '' : '.${(kobo % 100).toString().padLeft(2, '0')}';
+  final frac = kobo % 100 == 0
+      ? ''
+      : '.${(kobo % 100).toString().padLeft(2, '0')}';
   return '${negative ? '−' : ''}₦$whole$frac';
 }
 

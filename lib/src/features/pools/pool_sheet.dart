@@ -15,6 +15,7 @@ import 'pool_progress_bar.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../core/zend_format.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// The Pool Sheet — ZEND BETA spec §34 (LOCKED wireframe): name,
 /// gathered/target, progress bar, Contribute button, participant list.
@@ -321,8 +322,9 @@ class _PoolSheetState extends State<PoolSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                PersonName(
                   p.displayName,
+                  verified: p.humanVerified,
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 15,

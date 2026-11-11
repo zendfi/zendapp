@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'zend_verified_badge.dart';
 
 /// Universal avatar widget.
 ///
@@ -24,6 +25,7 @@ class ZendAvatar extends StatelessWidget {
     this.backgroundColor,
     this.isOnline,
     this.seed,
+    this.verified = false,
   });
 
   /// Stable identity (user id or handle) the generated colour is derived from,
@@ -42,6 +44,10 @@ class ZendAvatar extends StatelessWidget {
   /// Presence indicator: true = online (green dot), false = offline (grey dot),
   /// null = no dot shown.
   final bool? isOnline;
+
+  /// Draws the human badge in the top-right corner. For large avatars only (profile); everywhere
+  /// else the badge sits beside the name.
+  final bool verified;
 
   @override
   Widget build(BuildContext context) {
@@ -83,15 +89,37 @@ class ZendAvatar extends StatelessWidget {
       );
     }
 
+    // ── Human badge corner ────────────────────────────────────────────────
+    final Widget withBadge = verified && radius >= 24
+        ? Stack(
+            clipBehavior: Clip.none,
+            children: [
+              avatar,
+              Positioned(
+                right: -radius * 0.08,
+                top: -radius * 0.08,
+                child: Container(
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
+                  child: VerifiedBadge(size: (radius * 0.5).clamp(14.0, 26.0)),
+                ),
+              ),
+            ],
+          )
+        : avatar;
+
     // ── No presence dot → return avatar directly ──────────────────────────
-    if (isOnline == null) return avatar;
+    if (isOnline == null) return withBadge;
 
     // ── Presence dot overlay ──────────────────────────────────────────────
     final dotSize = (radius * 0.50).clamp(7.0, 14.0);
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        avatar,
+        withBadge,
         Positioned(
           right: -1,
           bottom: -1,

@@ -428,6 +428,26 @@ class SuiZkLoginService {
     );
   }
 
+  /// Pay-to-read (D11): the person's zkLogin signature over a personal message,
+  /// base64. Only Zend's decryption bundle asks for this, to certify a
+  /// 30-minute session key for reading what they bought; it can't move money.
+  Future<String> signPersonalMessage(Uint8List message) async {
+    if (!hasActiveSession) await renewSessionSilently();
+    final session = _requireSession();
+    final proof = await _proofFor(session);
+    final sig = await _signing.signPersonalMessage(
+      message: message,
+      keyPair: session.keyPair,
+    );
+    return _api.assembleSuiZkLoginSignature(
+      sessionId: session.sessionId,
+      idToken: session.idToken,
+      proof: proof,
+      ephemeralSignature: sig.signatureBase64,
+      extendedEphemeralPublicKey: session.keyPair.extendedPublicKeyBase64,
+    );
+  }
+
   /// Offline payments (R21.0): while online, captures this session's
   /// signature prefix so [signOffline] can sign with no network. Returns when
   /// the session (and so offline signing) ends.

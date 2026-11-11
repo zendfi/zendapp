@@ -920,8 +920,18 @@ class _AmountKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keys = [
-      '1', '2', '3', '4', '5', '6', '7', '8', '9',
-      decimal ? '.' : '000', '0', 'del',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      decimal ? '.' : '000',
+      '0',
+      'del',
     ];
 
     return Column(

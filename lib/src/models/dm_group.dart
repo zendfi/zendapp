@@ -8,12 +8,16 @@ class DmGroupMember {
     required this.displayName,
     this.avatarUrl,
     required this.role,
+    this.humanVerified = false,
   });
 
   final String userId;
   final String zendtag;
   final String displayName;
   final String? avatarUrl;
+
+  /// A real, unique person controls this account.
+  final bool humanVerified;
 
   /// `owner`, `admin` or `member`.
   final String role;
@@ -29,6 +33,7 @@ class DmGroupMember {
     zendtag: zendtag,
     displayName: displayName,
     avatarUrl: avatarUrl,
+    humanVerified: humanVerified,
   );
 
   factory DmGroupMember.fromJson(Map<String, dynamic> json) => DmGroupMember(
@@ -37,6 +42,7 @@ class DmGroupMember {
     displayName: json['display_name'] as String? ?? '',
     avatarUrl: json['avatar_url'] as String?,
     role: json['role'] as String? ?? 'member',
+    humanVerified: json['human_verified'] as bool? ?? false,
   );
 }
 

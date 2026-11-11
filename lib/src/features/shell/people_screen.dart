@@ -14,6 +14,7 @@ import '../activity/activity_grouping.dart';
 import '../profile/user_profile_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// People — the identity/relationship gateway tab (ZEND BETA spec §17).
 ///
@@ -270,6 +271,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
           subtitle: handleLabel(tag),
           zendtag: tag,
           avatarUrl: avatarUrl,
+          verified: u['human_verified'] == true,
           avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
           onTap: () => _openProfile(
             zendtag: tag,
@@ -423,6 +425,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
 
 class _PersonRow extends StatelessWidget {
   const _PersonRow({
+    this.verified = false,
     required this.displayName,
     required this.subtitle,
     required this.avatarLabel,
@@ -433,6 +436,7 @@ class _PersonRow extends StatelessWidget {
     this.onToggleFavorite,
   });
 
+  final bool verified;
   final String displayName;
   final String subtitle;
   final String avatarLabel;
@@ -467,8 +471,9 @@ class _PersonRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    PersonName(
                       displayName,
+                      verified: verified,
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,

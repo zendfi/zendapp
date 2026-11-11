@@ -45,3 +45,6 @@ app.*.map.json
 /android/app/release
 redesign.md
 /test/
+
+# Pay-to-read bundle sources (built output is committed in web/ and assets/seal/)
+/seal/node_modules/

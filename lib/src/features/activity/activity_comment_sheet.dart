@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_verified_badge.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
@@ -843,8 +844,9 @@ class CommentRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
+                    PersonName(
                       handleLabel(comment.authorZendtag),
+                      verified: comment.authorHumanVerified,
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 13,

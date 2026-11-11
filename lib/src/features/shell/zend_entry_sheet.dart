@@ -26,6 +26,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_gif.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// The Zend entry point — identity-first, per redesign.md §10-16, merged
 /// with §12-13 (Send/Request) into a single consolidated screen.
@@ -834,6 +835,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             subtitle: handleLabel(tag),
             avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
             avatarUrl: u['avatar_url'] as String?,
+            verified: u['human_verified'] == true,
             onTap: () => _pickSearchResult(u),
           );
         },
@@ -996,7 +998,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           controller: _amountController,
                           focusNode: _amountFocus,
                           // System numpad on phones, keyboard on web.
-                          inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
+                          inputFormatters: [
+                            AmountInputFormatter(naira: _entry.naira),
+                          ],
                           // Whole Naira: no decimal key.
                           keyboardType: TextInputType.numberWithOptions(
                             decimal: !_entry.naira,
@@ -1411,6 +1415,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
 
 class _IdentityRow extends StatelessWidget {
   const _IdentityRow({
+    this.verified = false,
     required this.displayName,
     required this.subtitle,
     required this.avatarLabel,
@@ -1418,6 +1423,7 @@ class _IdentityRow extends StatelessWidget {
     this.avatarUrl,
   });
 
+  final bool verified;
   final String displayName;
   final String subtitle;
   final String avatarLabel;
@@ -1446,8 +1452,9 @@ class _IdentityRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    PersonName(
                       displayName,
+                      verified: verified,
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,

@@ -9,6 +9,7 @@ import '../../design/zend_avatar.dart';
 import '../../design/zend_motion_widgets.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/activity_edge.dart';
+import '../../design/zend_verified_badge.dart';
 import 'zapp_card.dart';
 import 'zapp_card_sheet.dart';
 
@@ -128,6 +129,8 @@ class _ZAppFeedCardState extends State<ZAppFeedCard> {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                                if (poster['human_verified'] == true)
+                                  verifiedBadgeSpan(),
                                 const TextSpan(text: ' on '),
                                 TextSpan(
                                   text: appName,

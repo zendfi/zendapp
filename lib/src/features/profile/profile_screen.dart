@@ -15,6 +15,7 @@ import 'settings_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_modal.dart';
+import 'human_check_banner.dart';
 
 /// You — ZEND BETA spec §29-30 (LOCKED): "You is deliberately boring.
 /// That's a compliment." Avatar + @tag, then exactly three rows —
@@ -104,7 +105,9 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
+                  const HumanCheckBanner(),
+                  const SizedBox(height: 12),
                   Divider(
                     color: zt.border,
                     height: 1,

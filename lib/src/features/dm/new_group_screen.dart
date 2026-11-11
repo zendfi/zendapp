@@ -9,6 +9,7 @@ import '../../models/dm_group.dart';
 import '../../models/dm_thread.dart';
 import '../../navigation/zend_routes.dart';
 import 'dm_thread_screen.dart';
+import '../../design/zend_verified_badge.dart';
 
 const int _kMaxGroupMembers = 20;
 
@@ -273,10 +274,9 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
             photoUrl: c.avatarUrl,
             initials: c.initialLetter,
           ),
-          title: Text(
+          title: PersonName(
             c.displayName.trim().isEmpty ? '@${c.zendtag}' : c.displayName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            verified: c.humanVerified,
             style: TextStyle(
               fontFamily: 'Geist',
               fontWeight: FontWeight.w600,

@@ -17,6 +17,7 @@ import '../send/qr_payment_sheet.dart';
 import 'transaction_receipt_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../design/zend_verified_badge.dart';
 
 /// App-wide search screen.
 ///
@@ -232,6 +233,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 zendtag: u['zendtag'] as String? ?? '',
                                 displayName: u['display_name'] as String? ?? '',
                                 avatarUrl: u['avatar_url'] as String?,
+                                verified: u['human_verified'] == true,
                                 onTap: () {
                                   Navigator.of(context).pop();
                                   pushZendSlide(
@@ -428,6 +430,7 @@ class _SectionHeader extends StatelessWidget {
 
 class _SearchTile extends StatelessWidget {
   const _SearchTile({
+    this.titleVerified = false,
     required this.leading,
     required this.title,
     required this.subtitle,
@@ -436,6 +439,7 @@ class _SearchTile extends StatelessWidget {
   });
 
   final Widget leading;
+  final bool titleVerified;
   final String title;
   final String subtitle;
   final Widget? trailing;
@@ -458,16 +462,15 @@ class _SearchTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
+                  PersonName(
                     title,
+                    verified: titleVerified,
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: zt.textPrimary,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle.isNotEmpty)
                     Text(
@@ -493,12 +496,14 @@ class _SearchTile extends StatelessWidget {
 
 class _UserTile extends StatelessWidget {
   const _UserTile({
+    this.verified = false,
     required this.zendtag,
     required this.displayName,
     this.avatarUrl,
     required this.onTap,
   });
 
+  final bool verified;
   final String zendtag;
   final String displayName;
   final String? avatarUrl;
@@ -517,6 +522,7 @@ class _UserTile extends StatelessWidget {
         photoUrl: avatarUrl,
       ),
       title: name,
+      titleVerified: verified,
       subtitle: handleLabel(zendtag),
       trailing: Icon(
         PhosphorIconsRegular.caretRight,

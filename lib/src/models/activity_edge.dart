@@ -156,6 +156,10 @@ class ActivityEdge {
   final String? recipientDisplayName;
   final String? recipientAvatarUrl;
 
+  /// Whether each side holds the human badge.
+  final bool senderHumanVerified;
+  final bool recipientHumanVerified;
+
   /// Comments on this edge, excluding deleted ones.
   ///
   /// Carried on the edge so the feed can render a count on every row without
@@ -183,10 +187,16 @@ class ActivityEdge {
     this.recipientZendtag,
     this.recipientDisplayName,
     this.recipientAvatarUrl,
+    this.senderHumanVerified = false,
+    this.recipientHumanVerified = false,
     this.commentCount = 0,
   });
 
   bool get isOutgoing => direction == 'outgoing';
+
+  /// Whether the other person on this edge holds the badge.
+  bool get counterpartyHumanVerified =>
+      isOutgoing ? recipientHumanVerified : senderHumanVerified;
 
   /// Signed amount for display, or **null when the amount is withheld**.
   ///
@@ -224,6 +234,9 @@ class ActivityEdge {
       recipientZendtag: json['recipient_zendtag'] as String?,
       recipientDisplayName: json['recipient_display_name'] as String?,
       recipientAvatarUrl: json['recipient_avatar_url'] as String?,
+      senderHumanVerified: json['sender_human_verified'] as bool? ?? false,
+      recipientHumanVerified:
+          json['recipient_human_verified'] as bool? ?? false,
       // `num` rather than `int`: the field crosses as a JSON number and a
       // cached snapshot written by an older build may hold it as a double.
       commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
@@ -253,6 +266,8 @@ class ActivityEdge {
         'recipient_display_name': recipientDisplayName,
       if (recipientAvatarUrl != null)
         'recipient_avatar_url': recipientAvatarUrl,
+      if (senderHumanVerified) 'sender_human_verified': true,
+      if (recipientHumanVerified) 'recipient_human_verified': true,
       // Written unconditionally so a cached feed page restores the count it was
       // displaying rather than briefly showing every row as uncommented.
       'comment_count': commentCount,
@@ -295,6 +310,9 @@ class EdgeComment {
   final String body;
   final DateTime createdAt;
 
+  /// Set for card comments; always false for comments on money activity.
+  final bool authorHumanVerified;
+
   const EdgeComment({
     required this.id,
     required this.authorUserId,
@@ -303,6 +321,7 @@ class EdgeComment {
     this.authorAvatarUrl,
     required this.body,
     required this.createdAt,
+    this.authorHumanVerified = false,
   });
 
   factory EdgeComment.fromJson(Map<String, dynamic> json) {
@@ -314,6 +333,7 @@ class EdgeComment {
       authorAvatarUrl: json['author_avatar_url'] as String?,
       body: json['body'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      authorHumanVerified: json['author_human_verified'] as bool? ?? false,
     );
   }
 }

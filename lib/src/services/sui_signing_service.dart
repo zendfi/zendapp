@@ -23,6 +23,10 @@ import 'package:pointycastle/digests/blake2b.dart';
 /// produces a signature the network rejects.
 const List<int> kSuiTransactionDataIntent = <int>[0, 0, 0];
 
+/// Sui intent prefix for a personal message (scope 3). Used for pay-to-read
+/// session keys (design D11); a transaction can never be signed this way.
+const List<int> kSuiPersonalMessageIntent = <int>[3, 0, 0];
+
 /// Ed25519 scheme flag, prepended to a public key to form the "extended"
 /// ephemeral public key the prover expects.
 const int kSuiEd25519Flag = 0x00;
@@ -83,6 +87,43 @@ class SuiSigningService {
     final output = Uint8List(32);
     digest.doFinal(output, 0);
     return output;
+  }
+
+  /// `blake2b256(intent(3) || bcs(vector<u8> message))`, what Sui verifies a
+  /// personal-message signature against.
+  static Uint8List personalMessageDigest(Uint8List message) {
+    final len = <int>[];
+    var n = message.length;
+    do {
+      var b = n & 0x7f;
+      n >>= 7;
+      if (n != 0) b |= 0x80;
+      len.add(b);
+    } while (n != 0);
+    final input = Uint8List.fromList([
+      ...kSuiPersonalMessageIntent,
+      ...len,
+      ...message,
+    ]);
+    final digest = Blake2bDigest(digestSize: 32);
+    digest.update(input, 0, input.length);
+    final output = Uint8List(32);
+    digest.doFinal(output, 0);
+    return output;
+  }
+
+  /// Signs a personal message (not a transaction) with an ephemeral key.
+  Future<SuiEphemeralSignature> signPersonalMessage({
+    required Uint8List message,
+    required SuiEphemeralKeyPair keyPair,
+  }) async {
+    final digest = personalMessageDigest(message);
+    final signingKeyPair = await _ed25519.newKeyPairFromSeed(keyPair.seed);
+    final signature = await _ed25519.sign(digest, keyPair: signingKeyPair);
+    return SuiEphemeralSignature(
+      signatureBase64: base64.encode(signature.bytes),
+      publicKeyBase64: keyPair.publicKeyBase64,
+    );
   }
 
   /// Generates a fresh ephemeral key pair for a new zkLogin session.

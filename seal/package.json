@@ -1,0 +1,17 @@
+{
+  "name": "zend-seal",
+  "private": true,
+  "type": "module",
+  "description": "Pay-to-read decryption bundle for the Zend app (design D11).",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.mjs"
+  },
+  "dependencies": {
+    "@mysten/seal": "1.5.4",
+    "@mysten/sui": "2.39.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

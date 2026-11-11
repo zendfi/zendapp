@@ -13,9 +13,11 @@ import '../../design/zend_money.dart' show ZendFeel;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
+import '../../navigation/zend_routes.dart' show zendRoute;
 import '../../services/dev_return_redirect_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
+import '../dm/dm_thread_screen.dart';
 import 'my_links_screen.dart' show zlinkServiceOf;
 
 /// Holds a Zlink opened before sign-in, so claiming happens right after the
@@ -31,6 +33,52 @@ class PendingZlink {
     final p = _payload;
     _payload = null;
     return p;
+  }
+}
+
+/// Whether to offer "Message" after collecting or paying a link.
+///
+/// [userId] and [fromApp] come from the claim or pay response (the previews
+/// never carry user ids). Hidden for links made through a ZApp, where the
+/// person may not know who made the link, and when the server only knew the
+/// other side as "Someone" (no name, or a closed account).
+bool zlinkCanMessage({
+  required Object? userId,
+  required Object? fromApp,
+  required Object? name,
+}) =>
+    userId is String &&
+    userId.isNotEmpty &&
+    fromApp != true &&
+    name is String &&
+    name.trim().isNotEmpty &&
+    name != 'Someone';
+
+/// Opens a chat with the other person on a link. Values are captured before
+/// any sheet closes, since the caller's context may be gone by then. Nothing
+/// is sent: the chat opens empty for the person to write in.
+Future<void> _openChatWith({
+  required ZendAppModel model,
+  required NavigatorState navigator,
+  required ScaffoldMessengerState? messenger,
+  required String userId,
+}) async {
+  try {
+    final room = await model.dmService.getOrCreateRoom(userId);
+    if (!navigator.mounted) return;
+    await navigator.push(
+      zendRoute<void>(
+        page: DmThreadScreen(
+          roomId: room.roomId,
+          counterparty: room.counterparty,
+        ),
+      ),
+    );
+  } catch (_) {
+    // Blocked either way, a closed account, or the network.
+    messenger?.showSnackBar(
+      const SnackBar(content: Text("That didn't go through. Try again.")),
+    );
   }
 }
 
@@ -260,11 +308,38 @@ Future<void> _receiveQuietly(
   for (final wait in const [0, 2, 5]) {
     if (wait > 0) await Future<void>.delayed(Duration(seconds: wait));
     try {
-      await service.claim(linkId: id, linkKey: key);
+      final claimed = await service.claim(linkId: id, linkKey: key);
       if (arriving != null) {
         unawaited(model.finishArriving(arriving, landed: true));
       } else {
         model.fetchBalance();
+      }
+      // Now that it has landed, offer a chat with the sender. Same line as
+      // before, with a Message action added.
+      final senderId = claimed['sender_user_id'];
+      if (zlinkCanMessage(
+        userId: senderId,
+        fromApp: claimed['from_app'],
+        name: preview['sender_name'],
+      )) {
+        messenger?.hideCurrentSnackBar();
+        messenger?.showSnackBar(
+          SnackBar(
+            content: Text(
+              '${preview['sender_name']} sent you ${zlinkAmountLabel(preview)}',
+            ),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Message',
+              onPressed: () => _openChatWith(
+                model: model,
+                navigator: navigator,
+                messenger: messenger,
+                userId: senderId as String,
+              ),
+            ),
+          ),
+        );
       }
       return;
     } on ApiException catch (e) {
@@ -328,6 +403,9 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   String? _error;
   bool _paying = false;
   bool _paid = false;
+
+  /// Set from the pay response when "Message" should show on the paid sheet.
+  String? _messageUserId;
   final _amount = TextEditingController();
 
   /// Naira when a rate is known as the sheet opens, else dollars.
@@ -350,6 +428,23 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   void dispose() {
     _amount.dispose();
     super.dispose();
+  }
+
+  /// Closes this sheet and opens the chat. Everything the chat needs is
+  /// captured first, because this sheet's context goes away on pop.
+  void _message(String userId) {
+    final model = ZendScope.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    Navigator.of(context).pop();
+    unawaited(
+      _openChatWith(
+        model: model,
+        navigator: navigator,
+        messenger: messenger,
+        userId: userId,
+      ),
+    );
   }
 
   Future<void> _pay() async {
@@ -383,7 +478,22 @@ class _AskPaySheetState extends State<_AskPaySheet> {
               : 'android',
         );
       }
-      if (mounted) setState(() => _paid = true);
+      // A developer checkout ("Pay with Zend") sends the payer back to the
+      // site, so there's no chat to offer.
+      final payeeId = paid['payee_user_id'];
+      final offerChat =
+          paid['dev_request_id'] == null &&
+          zlinkCanMessage(
+            userId: payeeId,
+            fromApp: paid['from_app'],
+            name: _preview!['payee_name'],
+          );
+      if (mounted) {
+        setState(() {
+          _paid = true;
+          _messageUserId = offerChat ? payeeId as String : null;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(
@@ -408,13 +518,27 @@ class _AskPaySheetState extends State<_AskPaySheet> {
       );
     }
     if (_paid) {
+      final done = PrimaryButton(
+        label: 'Done',
+        onPressed: () => Navigator.of(context).pop(),
+      );
+      final messageUserId = _messageUserId;
       return _SheetFrame(
         icon: PhosphorIconsRegular.checkCircle,
         title: 'Paid ${v['payee_name']}',
-        action: PrimaryButton(
-          label: 'Done',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        action: messageUserId == null
+            ? done
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OutlineActionButton(
+                    label: 'Message ${v['payee_name']}',
+                    onPressed: () => _message(messageUserId),
+                  ),
+                  const SizedBox(height: 12),
+                  done,
+                ],
+              ),
       );
     }
     if (v['status'] != 'active') {

@@ -6,6 +6,7 @@ import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_verified_badge.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
@@ -294,6 +295,7 @@ class _NewChatSheetState extends State<NewChatSheet> {
           displayName: name,
           subtitle: handleLabel(tag),
           avatarUrl: u['avatar_url'] as String?,
+          verified: u['human_verified'] == true,
           avatarLabel: name.isNotEmpty ? name[0].toUpperCase() : '?',
           onTap: tag.isEmpty ? null : () => _startChatByTag(tag),
         );
@@ -442,11 +444,13 @@ class _PersonRow extends StatelessWidget {
     required this.avatarLabel,
     required this.onTap,
     this.avatarUrl,
+    this.verified = false,
   });
 
   final String displayName;
   final String subtitle;
   final String avatarLabel;
+  final bool verified;
   final String? avatarUrl;
   final VoidCallback? onTap;
 
@@ -472,8 +476,9 @@ class _PersonRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    PersonName(
                       displayName,
+                      verified: verified,
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 15,

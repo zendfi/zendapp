@@ -64,6 +64,13 @@ abstract final class ZendFeatures {
   /// event.
   static const bool drop = false;
 
+  /// "Verify you're a real person" and the check mark it earns. The screen and the Settings tile
+  /// stay hidden until the passport scanner is integrated and the server's `HUMAN_BADGE_MODE` is on.
+  /// The check mark itself needs no flag: it only shows when the server says a person has one.
+  ///
+  /// Dev builds can switch it on without editing code: `--dart-define=HUMAN_BADGE=true`.
+  static const bool humanBadge = bool.fromEnvironment('HUMAN_BADGE');
+
   /// Add Cash in currencies other than naira (USD, EUR, GBP, MXN…), which
   /// would run on Bridge.
   ///

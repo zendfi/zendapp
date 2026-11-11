@@ -40,9 +40,10 @@ TransferHistoryEntry? entryFromEdge(
       ? edge.recipientZendtag
       : (isSelfSender ? edge.counterparty.zendtag : selfZendtag);
 
-  if (edge.transactionSignature == null ||
-      senderZendtag == null ||
-      recipientZendtag == null) {
+  // transactionSignature is not required: the server only sends it to the two
+  // people on the payment (activity_authz::redact_for_viewer), so an edge seen
+  // through a mutual never has one and still needs a receipt.
+  if (senderZendtag == null || recipientZendtag == null) {
     return null;
   }
 
@@ -64,7 +65,7 @@ TransferHistoryEntry? entryFromEdge(
     senderZendtag: senderZendtag,
     recipientZendtag: recipientZendtag,
     amountUsdc: edge.amountUsdc ?? '0',
-    transactionSignature: edge.transactionSignature!,
+    transactionSignature: edge.transactionSignature ?? '',
     note: edge.note,
     status: edge.status ?? 'confirmed',
     createdAt: edge.createdAt,

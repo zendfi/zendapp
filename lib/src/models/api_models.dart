@@ -707,6 +707,7 @@ class PublicUserProfile {
     this.bio,
     this.mutualContext,
     this.publicActivityCount = 0,
+    this.humanVerified = false,
   });
 
   final String userId;
@@ -716,6 +717,9 @@ class PublicUserProfile {
   final String? bio;
   final MutualContext? mutualContext;
   final int publicActivityCount;
+
+  /// A real, unique person controls this account.
+  final bool humanVerified;
 
   String get initialLetter =>
       zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
@@ -730,6 +734,7 @@ class PublicUserProfile {
       bio: json['bio'] as String?,
       mutualContext: mcJson != null ? MutualContext.fromJson(mcJson) : null,
       publicActivityCount: json['public_activity_count'] as int? ?? 0,
+      humanVerified: json['human_verified'] as bool? ?? false,
     );
   }
 }

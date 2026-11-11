@@ -22,6 +22,7 @@ import 'new_chat_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../core/zend_format.dart';
+import '../../design/zend_verified_badge.dart';
 
 class DmListScreen extends StatefulWidget {
   const DmListScreen({super.key});
@@ -645,10 +646,11 @@ class _DmThreadTile extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
+                          child: PersonName(
                             cp.displayName.trim().isEmpty
                                 ? handleLabel(cp.zendtag)
                                 : cp.displayName,
+                            verified: cp.humanVerified,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 16,
@@ -657,8 +659,6 @@ class _DmThreadTile extends StatelessWidget {
                                   : FontWeight.w600,
                               color: zt.textPrimary,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),

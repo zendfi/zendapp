@@ -146,8 +146,9 @@ class TransferStatus {
   /// [request]: a placeholder while in flight, the real one once created.
   bool get isRequest => request != null;
 
-  String get amountLabel =>
-      amount == amount.roundToDouble() ? formatMoney(amount) : formatMoney(amount);
+  String get amountLabel => amount == amount.roundToDouble()
+      ? formatMoney(amount)
+      : formatMoney(amount);
 
   /// "@omooba", or the email for a non-Zend recipient.
   String get recipientLabel {
