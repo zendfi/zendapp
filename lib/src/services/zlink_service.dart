@@ -367,6 +367,16 @@ class ZlinkService {
   Future<Map<String, dynamic>> previewAsk(String id) =>
       _api.zlinkGet('/ask/$id');
 
+  /// Bank details to pay an ask link by transfer. The money goes straight to
+  /// the link's owner; nothing passes through this person's balance.
+  /// [amountNgn] only for links where the payer picks the amount.
+  Future<Map<String, dynamic>> askBankPrepare(String id, {double? amountNgn}) =>
+      _api.zlinkPost('/ask/$id/bank/prepare', {'amount_ngn': ?amountNgn});
+
+  /// `waiting`, `paid` or `failed`.
+  Future<String> askBankStatus(String id, String orderId) async =>
+      (await _api.zlinkGet('/ask/$id/bank/$orderId'))['status'] as String;
+
   /// Pays an ask link. The prepared bytes are a plain gasless transfer, checked
   /// with the same verifier the normal send flow uses before signing.
   Future<Map<String, dynamic>> payAsk(

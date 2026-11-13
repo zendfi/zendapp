@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -10,6 +11,8 @@ import '../../models/api_exceptions.dart';
 import '../../services/appkit_service.dart';
 import '../../services/sui_transaction_verifier.dart';
 import '../../services/prize_service.dart';
+import '../../services/unlock_reader.dart' show UnlockException;
+import '../../services/unlock_service.dart';
 import '../../services/zlink_service.dart';
 import 'zapp_confirm_sheet.dart';
 import 'zapp_live.dart';
@@ -65,6 +68,11 @@ class ZAppBridge {
   );
 
   PrizeService get _prizes => PrizeService(
+    api: _model.walletService.apiClient,
+    zkLogin: _model.zkLoginService,
+  );
+
+  UnlockService get _unlocks => UnlockService.shared(
     api: _model.walletService.apiClient,
     zkLogin: _model.zkLoginService,
   );
@@ -251,6 +259,14 @@ class ZAppBridge {
         return _money(() => _prizeJoin(p));
       case 'prize.cancel':
         return _money(() => _prizeCancel(p));
+      case 'unlock.get':
+        return _unlockGet(p);
+      case 'unlock.buy':
+        return _money(() => _unlockBuy(p));
+      case 'unlock.gift':
+        return _money(() => _unlockGift(p));
+      case 'unlock.read':
+        return _unlockRead(p);
       case 'report':
         return _model.walletService.apiClient
             .appkit('POST', '/apps/by-slug/${app.slug}/report', {
@@ -268,6 +284,148 @@ class ZAppBridge {
         return true;
       default:
         throw ZBridgeError('UNKNOWN_METHOD', 'Unknown method $method');
+    }
+  }
+
+  // ── Pay-to-read (R11) ────────────────────────────────────────────────────
+
+  void _needUnlock() {
+    if (!_can('unlock')) {
+      throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "unlock"');
+    }
+  }
+
+  /// A friend from `people.pick` (`pick_…`), or an `@username`.
+  String _person(Map<String, dynamic> p, String k) {
+    final v = _str(p, k);
+    if (v.startsWith('pick_')) {
+      final id = picks[v];
+      if (id == null) {
+        throw const ZBridgeError('INVALID_PARAMS', 'Unknown pick token');
+      }
+      return 'chat:$id';
+    }
+    if (v.startsWith('@')) return v;
+    throw ZBridgeError('INVALID_PARAMS', '$k must be a pick token or @username');
+  }
+
+  static String _priceLabel(Map r) {
+    final ngn = (r['price_ngn'] as num?)?.toDouble();
+    return ngn != null
+        ? formatNaira(ngn)
+        : _money2(((r['amount_usd'] ?? r['price_usd']) as num).toDouble());
+  }
+
+  Future<Object?> _unlockGet(Map<String, dynamic> p) async {
+    _needUnlock();
+    final r = await _unlocks.get(app.slug, _str(p, 'item'));
+    return {
+      'item': r['item'],
+      'title': r['title'],
+      'unlocked': r['unlocked'],
+      'forSale': r['active'],
+      'price': {'usd': r['price_usd'], 'ngn': r['price_ngn']},
+    };
+  }
+
+  /// `zend.unlock.buy`: one payment pays everyone the app named and gives
+  /// the receipt (to the person, or to the friend in `for`).
+  Future<Object?> _unlockBuy(Map<String, dynamic> p) async {
+    _needUnlock();
+    final item = _str(p, 'item');
+    final forWhom = p['for'] == null ? null : _person(p, 'for');
+    final checked = await _unlocks.check(app.slug, item, forWhom: forWhom);
+    final parts = (checked['parts'] as List).cast<Map>();
+    final title = checked['title'] as String?;
+    final who = checked['for'] as String?;
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context,
+      app: app,
+      title: who == null ? 'Unlock' : 'Unlock it for $who',
+      amountLabel: _priceLabel(checked),
+      note: [
+        ?title,
+        who == null
+            ? "It's yours to read, and you can give it to a friend later."
+            : '$who can read it. You won\'t be able to.',
+      ].join('\n'),
+      parts: parts.length < 2
+          ? null
+          : [for (final x in parts) (x['label'] as String, _priceLabel(x))],
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    try {
+      Map<String, dynamic> r;
+      try {
+        r = await _unlocks.buy(app.slug, checked);
+      } on ApiException catch (e) {
+        if (e.errorCode != 'STEP_UP_REQUIRED') rethrow;
+        await _model.zkLoginService.satisfyStepUp();
+        r = await _unlocks.buy(app.slug, checked);
+      }
+      _model.fetchBalance();
+      return {
+        'item': r['item'],
+        'paymentId': r['payment_id'],
+        'receiptId': r['receipt_id'],
+        'status': r['status'],
+      };
+    } on UnlockSafetyStop {
+      throw const ZBridgeError('SAFETY_STOP', kUnlockSafetyStop);
+    }
+  }
+
+  /// `zend.unlock.gift`: hands the person's copy to a friend. No money moves.
+  Future<Object?> _unlockGift(Map<String, dynamic> p) async {
+    _needUnlock();
+    final item = _str(p, 'item');
+    final prepared = await _unlocks.giftPrepare(app.slug, item, _person(p, 'to'));
+    final name = prepared['recipient_name'] as String? ?? 'them';
+    final title = prepared['title'] as String?;
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    final ok = await confirmZAppMoney(
+      context,
+      app: app,
+      title: 'Give your copy to',
+      amountLabel: name,
+      note: [?title, "$name will be able to read it. You won't."].join('\n'),
+    );
+    if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
+    try {
+      final r = await _unlocks.giftSubmit(app.slug, prepared);
+      return {'item': r['item'], 'status': r['status']};
+    } on UnlockSafetyStop {
+      throw const ZBridgeError('SAFETY_STOP', kUnlockSafetyStop);
+    }
+  }
+
+  /// `zend.unlock.read`: the page hands over the encrypted bytes (base64) it
+  /// fetched; Zend opens them on this device if the person holds a receipt.
+  Future<Object?> _unlockRead(Map<String, dynamic> p) async {
+    _needUnlock();
+    final item = _str(p, 'item');
+    final raw = _str(p, 'data');
+    if (raw.length > 14 * 1024 * 1024) {
+      throw const ZBridgeError('TOO_LARGE', 'data must be at most 10 MB');
+    }
+    final Uint8List bytes;
+    try {
+      bytes = base64.decode(raw);
+    } on FormatException {
+      throw const ZBridgeError('INVALID_PARAMS', 'data must be base64');
+    }
+    try {
+      final plain = await _unlocks.read(app.slug, item, bytes);
+      String? text;
+      try {
+        text = utf8.decode(plain);
+      } on FormatException {
+        text = null;
+      }
+      return {'item': item, 'data': base64.encode(plain), 'text': text};
+    } on UnlockException catch (e) {
+      throw ZBridgeError(e.code.toUpperCase(), e.message);
     }
   }
 

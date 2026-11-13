@@ -8,6 +8,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sse_service.dart';
+import '../../services/zlink_service.dart';
 import '../../services/sound_service.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
@@ -56,7 +57,21 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
   void dispose() {
     _countdownTimer?.cancel();
     _sseSub?.cancel();
+    final id = _askId;
+    final links = _linksOnDispose;
+    if (id != null && _state != _ShowQrState.received && links != null) {
+      unawaited(links.cancelAsk(id).catchError((_) {}));
+    }
     super.dispose();
+  }
+
+  /// Captured while the context is usable, for closing the link on dispose.
+  ZlinkService? _linksOnDispose;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _linksOnDispose = _links;
   }
 
   void _subscribeToSse() {
@@ -66,6 +81,13 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
       if (event.type != SseEventType.transferUpdate) return;
 
       final direction = event.data['direction'] as String?;
+      // This code's own ask link was paid (from someone's Zend or by bank).
+      if (direction == 'zlink_paid' &&
+          _askId != null &&
+          event.data['transfer_id'] == _askId) {
+        _onPaymentReceived();
+        return;
+      }
       if (direction != 'received') return;
 
       final amountStr = event.data['amount_usdc'] as String?;
@@ -80,26 +102,43 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     });
   }
 
+  /// The ask link the QR shows. Replaced (and the old one closed) when the
+  /// code refreshes, so a stale code can't be paid after its time is up.
+  String? _askId;
+
+  ZlinkService get _links {
+    final model = ZendScope.of(context);
+    return ZlinkService(
+      api: model.walletService.apiClient,
+      zkLogin: model.zkLoginService,
+    );
+  }
+
+  void _closeCurrent() {
+    final id = _askId;
+    _askId = null;
+    if (id != null && _state != _ShowQrState.received) {
+      unawaited(_links.cancelAsk(id).catchError((_) {}));
+    }
+  }
+
   Future<void> _generateRequest() async {
+    _closeCurrent();
     setState(() => _state = _ShowQrState.generating);
     _countdownTimer?.cancel();
 
     try {
-      final model = ZendScope.of(context);
-      final response = await model.walletService.apiClient.createPaymentRequest(
-        amountUsdc: widget.amountUsdc,
-        description: widget.note,
-        expiresAt: DateTime.now().add(_qrLifetime),
+      final note = widget.note?.trim();
+      final url = await _links.createAskLink(
+        amountUsd: widget.amountUsdc,
+        maxPayments: 1,
+        memo: note == null || note.isEmpty
+            ? null
+            : String.fromCharCodes(note.runes.take(140)),
       );
 
       if (!mounted) return;
-
-      final requestLinkId = response['request_link_id'] as String?;
-      if (requestLinkId == null) {
-        throw Exception('No request_link_id in response');
-      }
-
-      final url = 'https://zdfi.me/@${widget.username}/$requestLinkId';
+      _askId = Uri.parse(url).pathSegments.last;
 
       setState(() {
         _qrUrl = url;

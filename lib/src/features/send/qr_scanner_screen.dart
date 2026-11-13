@@ -5,6 +5,8 @@ import '../../services/qr_image_decoder.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../deeplink/deep_link_handler.dart' show DeepLinkPayload;
+import '../links/zlink_sheets.dart' show openZlink;
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -114,6 +116,28 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (!mounted) return;
       Navigator.of(context).pop();
       showPairingApprovalSheet(context, pairingCode: uri.pathSegments[1]);
+      return;
+    }
+
+    // https://app.usezend.app/a/{id}: a request (ask link). Opens the same
+    // pay sheet as tapping the link.
+    if (uri.host.toLowerCase() == 'app.usezend.app' &&
+        uri.pathSegments.length == 2 &&
+        uri.pathSegments[0] == 'a' &&
+        uri.pathSegments[1].isNotEmpty) {
+      _hasScanned = true;
+      HapticFeedback.mediumImpact();
+      unawaited(_controller.stop());
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      final host = navigator.context;
+      navigator.pop();
+      unawaited(
+        openZlink(
+          host,
+          DeepLinkPayload(zendtag: '', zlinkAskId: uri.pathSegments[1]),
+        ),
+      );
       return;
     }
 

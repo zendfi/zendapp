@@ -9,6 +9,7 @@ import '../../design/zend_keypad.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/sound_service.dart';
+import '../../services/zlink_service.dart';
 import 'payment_request.dart';
 import 'request_qr_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -120,26 +121,29 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     setState(() => _stage = _RequestStage.loading);
 
     PaymentRequest request;
+    final note = _noteController.text.trim();
     try {
-      final response = await model.walletService.apiClient.createPaymentRequest(
-        amountUsdc: _amount,
-        description: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-        expiresAt: null,
-        recipientZendtag: tag,
-        recipientEmail: null,
+      // An ask link: anyone can pay it in Zend, and someone with nothing in
+      // their Zend yet is offered a bank transfer that goes straight to you.
+      final url = await ZlinkService(
+        api: model.walletService.apiClient,
+        zkLogin: model.zkLoginService,
+      ).createAskLink(
+        amountUsd: _amount,
+        maxPayments: 1,
+        // The link holds at most 140 characters of note.
+        memo: note.isEmpty ? null : String.fromCharCodes(note.runes.take(140)),
       );
       request = PaymentRequest(
-        id: response['id'] as String,
-        link: response['link_url'] as String,
-        amount: (response['amount_usdc'] as num?)?.toDouble() ?? _amount,
-        description: _noteController.text.trim(),
+        id: Uri.parse(url).pathSegments.last,
+        link: url,
+        amount: _amount,
+        description: note,
         createdAt: DateTime.now(),
         expiryDate: null,
         status: PaymentRequestStatus.pending,
-        recipientZendtag: response['recipient_zendtag'] as String? ?? tag,
-        recipientEmail: response['recipient_email'] as String?,
+        recipientZendtag: tag,
+        recipientEmail: null,
       );
     } catch (_) {
       if (!mounted) return;

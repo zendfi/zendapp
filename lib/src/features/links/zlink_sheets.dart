@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import '../../core/zend_format.dart';
 import '../../design/zend_keypad.dart';
@@ -18,7 +19,10 @@ import '../../services/dev_return_redirect_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import '../dm/dm_thread_screen.dart';
+import '../wallet/add_cash_sheet.dart' show showAddCashSheet;
 import 'my_links_screen.dart' show zlinkServiceOf;
+
+part 'ask_bank_pay.dart';
 
 /// Holds a Zlink opened before sign-in, so claiming happens right after the
 /// normal "Continue with Google". In memory only: the link key must not be
@@ -411,13 +415,38 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   /// Naira when a rate is known as the sheet opens, else dollars.
   final AmountEntry _entry = AmountEntry.current();
 
+  /// Paying by bank transfer instead of from the balance.
+  bool _byBank = false;
+
+  /// Whether the balance could pay this link, so the bank sheet offers it.
+  bool _balanceCovers = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final model = ZendScope.of(context);
       try {
         final v = await zlinkServiceOf(context).previewAsk(widget.id);
-        if (mounted) setState(() => _preview = v);
+        // Someone new to Zend has nothing to pay from yet, so go straight to
+        // paying by bank. Only once the balance is actually known: a zero
+        // that hasn't loaded yet isn't an empty Zend.
+        if (!model.balanceLoaded) {
+          await model.fetchBalance().timeout(
+            const Duration(seconds: 6),
+            onTimeout: () {},
+          );
+        }
+        final have = model.spendableBalance;
+        final ask = (v['amount_usd'] as num?)?.toDouble();
+        final covers = have > 0 && (ask == null || have >= ask);
+        if (mounted) {
+          setState(() {
+            _preview = v;
+            _balanceCovers = covers;
+            _byBank = model.balanceLoaded && !covers;
+          });
+        }
       } catch (_) {
         if (mounted) setState(() => _error = "This link doesn't exist");
       }
@@ -547,6 +576,14 @@ class _AskPaySheetState extends State<_AskPaySheet> {
         title: 'This link is no longer collecting',
       );
     }
+    if (_byBank) {
+      return _AskBankPay(
+        id: widget.id,
+        preview: v,
+        canPayFromBalance: _balanceCovers,
+        onUseBalance: () => setState(() => _byBank = false),
+      );
+    }
     final fixed = v['amount_usd'] != null;
     return Padding(
       padding: EdgeInsets.only(
@@ -582,6 +619,10 @@ class _AskPaySheetState extends State<_AskPaySheet> {
               label: 'Pay',
               isLoading: _paying,
               onPressed: _paying ? null : _pay,
+            ),
+            TextButton(
+              onPressed: _paying ? null : () => setState(() => _byBank = true),
+              child: const Text('Pay by bank transfer instead'),
             ),
           ],
         ),

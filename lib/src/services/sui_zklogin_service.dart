@@ -10,6 +10,7 @@ import 'sui_oauth_provider.dart' show SuiOAuthPrompt;
 import 'sui_salt_custody_service.dart';
 import 'sui_salt_shares.dart';
 import 'sui_signing_service.dart';
+import 'unlock_service.dart' show UnlockService;
 import 'sui_zklogin_models.dart';
 
 /// Obtains a nonce-bearing OpenID Connect ID token.
@@ -826,6 +827,8 @@ class SuiZkLoginService {
   /// Clears local session state and revokes server-side sessions.
   Future<void> signOut() async {
     _replaceSession(null);
+    // The pay-to-read session was certified by this account.
+    await UnlockService.forgetShared();
     try {
       await _api.revokeAllSuiZkLoginSessions();
     } catch (error) {

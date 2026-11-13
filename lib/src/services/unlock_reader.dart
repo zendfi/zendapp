@@ -95,6 +95,13 @@ class UnlockReader {
     });
   }
 
+  /// The identity [data] was encrypted under (hex, no `0x`), without
+  /// decrypting it.
+  Future<String> identity(Uint8List data) async {
+    final v = await _call('inspect', {'data': base64.encode(data)});
+    return (v as Map)['id'] as String;
+  }
+
   /// Opens [data] (an encrypted object) from [listingId]. [txKindB64] is the
   /// `seal_approve` transaction kind with the person's receipt, from the
   /// backend.
