@@ -192,7 +192,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: ZendColors.accent.withValues(alpha: 0.15),
+                color: ZendColors.accentPop.withValues(alpha: 0.10),
                 border: Border.all(
                   color: ZendColors.accentPop.withValues(alpha: 0.6),
                   width: 2,
@@ -369,7 +369,7 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: primary ? ZendColors.accent : const Color(0x1AE8F4EC),
+          color: primary ? ZendColors.textOnDeep : const Color(0x1AE8F4EC),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
           border: primary ? null : Border.all(color: const Color(0x26E8F4EC)),
         ),
@@ -380,7 +380,7 @@ class _ActionButton extends StatelessWidget {
             fontFamily: 'Geist',
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: primary ? ZendColors.textOnDeep : const Color(0xCCE8F4EC),
+            color: primary ? ZendColors.textPrimary : const Color(0xCCE8F4EC),
           ),
         ),
       ),

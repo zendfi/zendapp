@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'zend_tint.dart';
 import 'zend_tokens.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'zend_verified_badge.dart';
@@ -33,8 +34,8 @@ class ZendAvatar extends StatelessWidget {
   /// [initials] when omitted.
   final String? seed;
 
-  /// Generated-avatar colour for [seed]; stable per person.
-  static Color colorFor(String seed) => _FallbackCircle.colorFor(seed);
+  /// Generated-avatar colour for [seed]; stable per person. See [ZendTint].
+  static Color colorFor(String seed) => ZendTint.of(seed).solid;
 
   final double radius;
   final String? photoUrl;
@@ -128,7 +129,7 @@ class ZendAvatar extends StatelessWidget {
             height: dotSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isOnline! ? ZendColors.positive : const Color(0x66888888),
+              color: isOnline! ? zt.positive : const Color(0x66888888),
               border: Border.all(
                 // Use scaffold background colour so the ring adapts to any surface
                 color: Theme.of(context).scaffoldBackgroundColor,
@@ -161,9 +162,13 @@ class _FallbackCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = radius * 2;
     final hasInitials = initials != null && initials!.isNotEmpty;
-    final bgColor =
-        backgroundColor ??
-        (hasInitials ? colorFor(seed ?? initials!) : zt.bgSecondary);
+    // A person's own colour, the same everywhere they appear. Only generated
+    // avatars carry it; an explicit [backgroundColor] or a missing identity
+    // stays neutral.
+    final tint = backgroundColor == null && hasInitials
+        ? ZendTint.of(seed ?? initials!, isDark: zt.isDark)
+        : null;
+    final bgColor = backgroundColor ?? tint?.solid ?? zt.bgSecondary;
 
     return Container(
       width: size,
@@ -171,15 +176,7 @@ class _FallbackCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         shape: BoxShape.circle,
-        // Generated avatars get a soft two-stop gradient so they read as a
-        // person's mark rather than a flat placeholder disc.
-        gradient: backgroundColor == null && hasInitials
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color.lerp(bgColor, Colors.white, 0.18)!, bgColor],
-              )
-            : null,
+        gradient: tint?.gradient,
       ),
       alignment: Alignment.center,
       child: hasInitials
@@ -189,7 +186,7 @@ class _FallbackCircle extends StatelessWidget {
                 fontFamily: 'Geist',
                 fontSize: radius * 0.72,
                 fontWeight: FontWeight.w600,
-                color: _contrastColor(bgColor),
+                color: tint?.onSolid ?? _contrastColor(bgColor),
                 height: 1.0,
               ),
             )
@@ -199,29 +196,6 @@ class _FallbackCircle extends StatelessWidget {
               color: zt.textSecondary,
             ),
     );
-  }
-
-  /// Deterministic color from initials — same user always gets the same hue.
-  /// Deterministic colour from a stable seed (FNV-1a hash), picked from
-  /// hues spaced far apart so neighbours in a list never look alike.
-  static Color colorFor(String seed) {
-    const palette = [
-      Color(0xFF1F8A55), // green
-      Color(0xFF2563EB), // blue
-      Color(0xFF7C3AED), // violet
-      Color(0xFFDB2777), // pink
-      Color(0xFF0891B2), // cyan
-      Color(0xFFEA580C), // orange
-      Color(0xFFCA8A04), // amber
-      Color(0xFFDC2626), // red
-      Color(0xFF4F46E5), // indigo
-      Color(0xFF0D9488), // teal
-    ];
-    var h = 0x811c9dc5;
-    for (final c in seed.toLowerCase().codeUnits) {
-      h = ((h ^ c) * 0x01000193) & 0xffffffff;
-    }
-    return palette[h % palette.length];
   }
 
   /// White or dark text depending on background luminance.

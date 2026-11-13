@@ -59,9 +59,10 @@ class _ZendMarkState extends State<ZendMark>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                // Ink tile, a touch lighter toward the bottom right.
                 colors: [
-                  ZendColors.bgDeep,
-                  Color.lerp(ZendColors.bgDeep, zt.moneyIn, 0.35)!,
+                  zt.textPrimary,
+                  Color.lerp(zt.textPrimary, zt.bgPrimary, 0.14)!,
                 ],
               ),
             ),
@@ -78,9 +79,9 @@ class _ZendMarkState extends State<ZendMark>
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Colors.white.withValues(alpha: 0),
-                                Colors.white.withValues(alpha: 0.18),
-                                Colors.white.withValues(alpha: 0),
+                                zt.bgPrimary.withValues(alpha: 0),
+                                zt.bgPrimary.withValues(alpha: 0.18),
+                                zt.bgPrimary.withValues(alpha: 0),
                               ],
                             ),
                           ),
@@ -95,7 +96,7 @@ class _ZendMarkState extends State<ZendMark>
         ),
         child: Center(
           child: ColorFiltered(
-            colorFilter: ColorFilter.mode(zt.moneyIn, BlendMode.srcIn),
+            colorFilter: ColorFilter.mode(zt.bgPrimary, BlendMode.srcIn),
             child: Image.asset(
               'assets/icons/zend-icon-navbar.png',
               width: s * 0.46,

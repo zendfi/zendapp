@@ -125,15 +125,18 @@ class _RequestDrawerSheetState extends State<RequestDrawerSheet> {
     try {
       // An ask link: anyone can pay it in Zend, and someone with nothing in
       // their Zend yet is offered a bank transfer that goes straight to you.
-      final url = await ZlinkService(
-        api: model.walletService.apiClient,
-        zkLogin: model.zkLoginService,
-      ).createAskLink(
-        amountUsd: _amount,
-        maxPayments: 1,
-        // The link holds at most 140 characters of note.
-        memo: note.isEmpty ? null : String.fromCharCodes(note.runes.take(140)),
-      );
+      final url =
+          await ZlinkService(
+            api: model.walletService.apiClient,
+            zkLogin: model.zkLoginService,
+          ).createAskLink(
+            amountUsd: _amount,
+            maxPayments: 1,
+            // The link holds at most 140 characters of note.
+            memo: note.isEmpty
+                ? null
+                : String.fromCharCodes(note.runes.take(140)),
+          );
       request = PaymentRequest(
         id: Uri.parse(url).pathSegments.last,
         link: url,

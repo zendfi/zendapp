@@ -227,8 +227,6 @@ class _RequestConfirmationContentState
 
             PrimaryButton(
               label: 'Copy link',
-              backgroundColor: zt.accent,
-              foregroundColor: ZendColors.textOnDeep,
               onPressed: _copyLink,
             ),
             const SizedBox(height: 12),

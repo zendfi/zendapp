@@ -191,17 +191,28 @@ class UnlockService {
 
   /// Price, parts and a ticket for the confirm sheet. [forWhom] is
   /// `chat:<user id>` or `@username` when buying for someone else.
-  Future<Map<String, dynamic>> check(String app, String item, {String? forWhom}) =>
-      _api.appkit('POST', _path(app, '/check'), {'item': item, 'for': ?forWhom});
+  Future<Map<String, dynamic>> check(
+    String app,
+    String item, {
+    String? forWhom,
+  }) => _api.appkit('POST', _path(app, '/check'), {
+    'item': item,
+    'for': ?forWhom,
+  });
 
   /// After the person confirmed [checked]: prepare, check, sign, submit.
-  Future<Map<String, dynamic>> buy(String app, Map<String, dynamic> checked) async {
+  Future<Map<String, dynamic>> buy(
+    String app,
+    Map<String, dynamic> checked,
+  ) async {
     final ticket = checked['ticket'] as String;
     final prepared = await _api.appkit('POST', _path(app, '/prepare'), {
       'ticket': ticket,
     });
     final tx = _tx(prepared);
-    final shown = BigInt.from(((checked['amount_usd'] as num) * 1000000).round());
+    final shown = BigInt.from(
+      ((checked['amount_usd'] as num) * 1000000).round(),
+    );
     if (BigInt.parse(prepared['price_base'] as String) != shown) {
       throw const UnlockSafetyStop('price changed');
     }
@@ -230,8 +241,14 @@ class UnlockService {
   }
 
   /// Who the gift goes to (`recipient_name`), for the confirm sheet.
-  Future<Map<String, dynamic>> giftPrepare(String app, String item, String to) =>
-      _api.appkit('POST', _path(app, '/gift/prepare'), {'item': item, 'to': to});
+  Future<Map<String, dynamic>> giftPrepare(
+    String app,
+    String item,
+    String to,
+  ) => _api.appkit('POST', _path(app, '/gift/prepare'), {
+    'item': item,
+    'to': to,
+  });
 
   Future<Map<String, dynamic>> giftSubmit(
     String app,

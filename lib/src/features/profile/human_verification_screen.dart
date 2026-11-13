@@ -30,11 +30,13 @@ class _DebugHumanCheckLauncher implements HumanCheckLauncher {
 
   @override
   Future<Map<String, dynamic>?> scan({required String nonce}) async {
-    final ctrl = TextEditingController(text: 'test-passport-1');
+    final ctrl = TextEditingController();
     final id = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Test passport id (debug only)'),
+        title: const Text(
+          'Debug check: leave empty for a plain liveness pass, or enter a test passport id',
+        ),
         content: TextField(controller: ctrl, autofocus: true),
         actions: [
           TextButton(
@@ -48,8 +50,8 @@ class _DebugHumanCheckLauncher implements HumanCheckLauncher {
         ],
       ),
     );
-    if (id == null || id.isEmpty) return null;
-    return {'test_id': id};
+    if (id == null) return null;
+    return id.isEmpty ? {'live': true} : {'test_id': id};
   }
 }
 

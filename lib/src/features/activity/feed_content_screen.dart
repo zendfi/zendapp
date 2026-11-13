@@ -1111,9 +1111,10 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                       radius: 24,
                       photoUrl: avatarUrl,
                       initials: avatarInitial,
-                      seed: isDirect && !isOutgoing
-                          ? edge.counterparty.id
-                          : null,
+                      // Each person keeps one colour across the feed.
+                      seed: isDirect
+                          ? (isOutgoing ? null : edge.counterparty.id)
+                          : edge.senderZendtag,
                     ),
                     const SizedBox(width: 14),
                     Expanded(

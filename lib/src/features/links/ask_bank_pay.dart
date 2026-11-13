@@ -47,8 +47,9 @@ class _AskBankPayState extends State<_AskBankPay> {
     return v == null || !v.isFinite || v <= 0 ? null : v;
   }
 
-  void _pickCountry() =>
-      setState(() => _stage = _fixed ? _BankStage.preparing : _BankStage.amount);
+  void _pickCountry() => setState(
+    () => _stage = _fixed ? _BankStage.preparing : _BankStage.amount,
+  );
 
   Future<void> _prepare() async {
     final ngn = _fixed ? null : _typedNgn;
@@ -61,10 +62,9 @@ class _AskBankPayState extends State<_AskBankPay> {
       _error = null;
     });
     try {
-      final d = await zlinkServiceOf(context).askBankPrepare(
-        widget.id,
-        amountNgn: ngn,
-      );
+      final d = await zlinkServiceOf(
+        context,
+      ).askBankPrepare(widget.id, amountNgn: ngn);
       if (!mounted) return;
       setState(() {
         _details = d;
@@ -99,7 +99,8 @@ class _AskBankPayState extends State<_AskBankPay> {
         } else if (s == 'failed') {
           _poll?.cancel();
           setState(() {
-            _error = "That transfer didn't go through. If money left your "
+            _error =
+                "That transfer didn't go through. If money left your "
                 'bank, it will be returned.';
             _stage = _BankStage.failed;
           });
@@ -118,7 +119,9 @@ class _AskBankPayState extends State<_AskBankPay> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: switch (_stage) {
         _BankStage.country => _countryStep(),
         _BankStage.amount => _amountStep(),
@@ -207,7 +210,10 @@ class _AskBankPayState extends State<_AskBankPay> {
           autofocus: true,
           inputFormatters: const [AmountInputFormatter(naira: true)],
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: 'Amount', prefixText: '₦'),
+          decoration: const InputDecoration(
+            hintText: 'Amount',
+            prefixText: '₦',
+          ),
           onChanged: (_) => setState(() => _error = null),
         ),
         const SizedBox(height: 16),
@@ -227,7 +233,11 @@ class _AskBankPayState extends State<_AskBankPay> {
       contentPadding: EdgeInsets.zero,
       title: Text(
         label,
-        style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+        style: TextStyle(
+          fontFamily: 'Geist',
+          fontSize: 13,
+          color: zt.textSecondary,
+        ),
       ),
       subtitle: Text(
         value,
@@ -253,14 +263,22 @@ class _AskBankPayState extends State<_AskBankPay> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           row('Bank', d['bank_name'] as String? ?? ''),
-          row('Account number', d['account_number'] as String? ?? '', copy: true),
+          row(
+            'Account number',
+            d['account_number'] as String? ?? '',
+            copy: true,
+          ),
           row('Account name', d['account_name'] as String? ?? ''),
           row('Amount', ngn, copy: true),
           const SizedBox(height: 12),
           Text(
             'Send the exact amount. A different amount can delay the transfer.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -287,12 +305,15 @@ class _AskBankPayState extends State<_AskBankPay> {
   /// The moment to show what Zend is: the payment worked, and the same
   /// account can now hold, send and receive money.
   Widget _paidStep() {
-    final ngn = formatNaira(((_details?['amount_ngn'] as num?) ?? 0).toDouble());
+    final ngn = formatNaira(
+      ((_details?['amount_ngn'] as num?) ?? 0).toDouble(),
+    );
     final navigator = Navigator.of(context, rootNavigator: true);
     return _SheetFrame(
       icon: PhosphorIconsRegular.checkCircle,
       title: '$ngn reached $_payee',
-      body: 'Next time, pay anyone on Zend in a tap. Add money once and it '
+      body:
+          'Next time, pay anyone on Zend in a tap. Add money once and it '
           'stays in your Zend until you send it.',
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

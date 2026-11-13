@@ -6,6 +6,8 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_link_card.dart';
+import '../../design/zend_tint.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/zlink_service.dart';
 
@@ -223,9 +225,7 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                         _filterLabel(f),
                         style: TextStyle(
                           fontFamily: 'Geist',
-                          color: active
-                              ? ZendColors.textOnDeep
-                              : zt.textSecondary,
+                          color: active ? zt.onAccent : zt.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -339,22 +339,30 @@ class _LinkTile extends StatelessWidget {
         : isGive
         ? (link['recipient_hint'] as String? ?? 'Money link')
         : 'Collecting';
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: Border.all(color: zt.border),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    // Sent by you, so the tint comes from who it's for, keeping each Link in
+    // the list its own colour.
+    final seed =
+        (link['recipient_hint'] as String?) ??
+        (link['memo'] as String?) ??
+        (link['id'] as String? ?? '');
+    final tint = ZendTint.of(seed, isDark: zt.isDark);
+    // A give Link nobody has opened yet carries the one signal dot.
+    final waiting =
+        isGive && active && (link['uses_left'] ?? 1) == (link['uses_total'] ?? 1);
+    return ZendLinkCard(
+      seed: seed,
+      waiting: waiting,
+      muted: !active,
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: zt.bgSecondary,
+            backgroundColor: active ? tint.solid : zt.bgSecondary,
             child: Icon(
               isGive
                   ? PhosphorIconsRegular.gift
                   : PhosphorIconsRegular.handCoins,
-              color: zt.textPrimary,
+              color: active ? tint.onSolid : zt.textSecondary,
               size: 20,
             ),
           ),

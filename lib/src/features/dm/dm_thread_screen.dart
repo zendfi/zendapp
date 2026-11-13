@@ -1311,7 +1311,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                     ),
                     constraints: const BoxConstraints(minWidth: 18),
                     decoration: BoxDecoration(
-                      color: zt.accent,
+                      color: zt.signal,
                       borderRadius: BorderRadius.circular(9),
                       border: Border.all(
                         color: Theme.of(context).scaffoldBackgroundColor,
@@ -1323,11 +1323,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           ? '9+'
                           : '$_unseenWhileScrolledUp',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: zt.onSignal,
                         height: 1.3,
                       ),
                     ),

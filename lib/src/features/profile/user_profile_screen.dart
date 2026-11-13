@@ -57,6 +57,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _displayName;
   String? _avatarUrl;
   bool _humanVerified = false;
+  bool _idVerified = false;
   bool _loadingIdentity = true;
   String? _identityError;
 
@@ -111,6 +112,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               : handleLabel(profile.zendtag);
           _avatarUrl = profile.avatarUrl;
           _humanVerified = profile.humanVerified;
+          _idVerified = profile.idVerified;
           _loadingIdentity = false;
         });
         _loadEdges();
@@ -354,6 +356,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               color: zt.textPrimary,
                             ),
                           ),
+                          if (_idVerified) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID verified',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: zt.textSecondary,
+                              ),
+                            ),
+                          ],
                           if (!_loadingEdges) ...[
                             const SizedBox(height: 4),
                             Text(

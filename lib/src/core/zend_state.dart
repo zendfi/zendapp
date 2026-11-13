@@ -4,12 +4,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../design/zend_tokens.dart';
 import '../features/pools/pool.dart';
 import '../features/request/payment_request.dart';
 import '../features/send/transfer_status_controller.dart';
 import '../models/api_models.dart';
 import '../models/email_intent.dart';
+import '../models/handle_label.dart';
 import '../models/recent_contact.dart';
 import '../models/activity_edge.dart';
 import '../models/add_cash_models.dart';
@@ -138,6 +138,26 @@ class ActivityCommentNotification {
   final String edgeId;
   final String authorZendtag;
   final String body;
+}
+
+/// Money from a person that just arrived, for the receive moment.
+class ReceiveMoment {
+  const ReceiveMoment({
+    required this.id,
+    required this.amount,
+    required this.from,
+    this.note,
+  });
+
+  /// Transfer id, so the shell plays each arrival once.
+  final String id;
+
+  /// In USD, as the balance is held; shown in Naira by `formatMoney`.
+  final double amount;
+
+  /// "@tolu", or "Someone" when the sender isn't known.
+  final String from;
+  final String? note;
 }
 
 class StreakNotification {
@@ -543,6 +563,20 @@ class ZendAppModel extends ChangeNotifier {
       case SseEventType.transferUpdate:
         // A transfer happened — badge the Activity tab and refresh data.
         activityUnreadCount++;
+        // Money from a person: the shell plays the receive moment.
+        if (event.data['direction'] == 'received') {
+          final amount = double.tryParse('${event.data['amount_usdc'] ?? ''}');
+          if (amount != null && amount > 0) {
+            final tag = event.data['counterparty_zendtag'] as String? ?? '';
+            pendingReceiveMoment = ReceiveMoment(
+              id: event.data['transfer_id'] as String? ?? '',
+              amount: amount,
+              from: tag.isEmpty ? 'Someone' : handleLabel(tag),
+              note: event.data['note'] as String?,
+            );
+            notifyListeners();
+          }
+        }
         // Immediately patch any matching pending entry to 'confirmed' so open
         // receipt sheets update live without waiting for fetchHistory() to complete.
         _patchTransferStatus(event.data);
@@ -1245,6 +1279,12 @@ class ZendAppModel extends ChangeNotifier {
   /// theatre. See `FundsArrivedBanner` in zend_shell.dart.
   FundsArrivedNotification? pendingFundsArrived;
 
+  /// Money from a person waiting for the shell to play the receive moment.
+  /// Cleared by the shell once shown.
+  ReceiveMoment? pendingReceiveMoment;
+
+  void clearPendingReceiveMoment() => pendingReceiveMoment = null;
+
   /// Pending Activity_Edge reaction notification from SSE — shown as an
   /// in-app banner (Threaded_Activity_View listens for this).
   ActivityReactionNotification? pendingActivityReaction;
@@ -1657,7 +1697,7 @@ class ZendAppModel extends ChangeNotifier {
           avatarLabel: counterparty.isNotEmpty
               ? counterparty[0].toUpperCase()
               : '?',
-          amountColor: isSent ? null : ZendColors.positive,
+          amountColor: null,
           entry: entry,
           avatarUrl: avatarUrl,
           createdAt: entry.createdAt,
@@ -1750,7 +1790,7 @@ class ZendAppModel extends ChangeNotifier {
               amount: amtStr,
               time: _formatTimestamp(createdAt),
               avatarLabel: '₦',
-              amountColor: ZendColors.positive,
+              amountColor: null,
               entry: null,
               bankOrder: order,
               createdAt: createdAt,
@@ -1782,7 +1822,7 @@ class ZendAppModel extends ChangeNotifier {
           amount: amtStr,
           time: _formatTimestamp(createdAt),
           avatarLabel: '₿',
-          amountColor: ZendColors.positive,
+          amountColor: null,
           entry: null,
           bankOrder: order,
           createdAt: createdAt,

@@ -39,9 +39,8 @@ class ZendAmount extends StatelessWidget {
             direction == MoneyDirection.incoming ? amount.abs() : -amount.abs(),
             signed: true,
           );
-    return Text(
+    return ZendLoudAmountText(
       text,
-      maxLines: 1,
       semanticsLabel: hidden
           ? 'Amount hidden'
           : '${direction == MoneyDirection.incoming
@@ -50,6 +49,70 @@ class ZendAmount extends StatelessWidget {
                 ? 'Sent '
                 : ''}${formatMoney(amount.abs())}',
       style: style.copyWith(color: color),
+    );
+  }
+}
+
+/// Draws a formatted amount ("₦2,000", "+\$12.50") so the digits lead: at
+/// display sizes the sign and currency symbol drop to ~55% and sit on the
+/// top line, and cents shrink the same way. Small sizes render plainly.
+class ZendLoudAmountText extends StatelessWidget {
+  const ZendLoudAmountText(
+    this.text, {
+    super.key,
+    required this.style,
+    this.semanticsLabel,
+  });
+
+  final String text;
+  final TextStyle style;
+  final String? semanticsLabel;
+
+  /// Sizes at or above this get the small-symbol treatment.
+  static const double loudFrom = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = style.fontSize ?? 14;
+    final m = RegExp(r'^([^0-9•]*)([0-9,]*)(\.[0-9]+)?(.*)$').firstMatch(text);
+    if (size < loudFrom || m == null || (m.group(2) ?? '').isEmpty) {
+      return Text(
+        text,
+        maxLines: 1,
+        semanticsLabel: semanticsLabel,
+        style: style,
+      );
+    }
+    final small = style.copyWith(fontSize: size * 0.55, letterSpacing: 0);
+    // Lift the small glyphs so their tops line up with the digits' cap
+    // height (~0.7em) instead of sitting on the baseline.
+    final lift = Offset(0, -size * 0.31);
+    WidgetSpan raised(String s, {double gap = 0}) => WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: Transform.translate(
+        offset: lift,
+        child: Padding(
+          padding: EdgeInsets.only(right: gap),
+          child: Text(s, style: small),
+        ),
+      ),
+    );
+    final prefix = m.group(1) ?? '';
+    final cents = m.group(3);
+    final rest = m.group(4) ?? '';
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (prefix.isNotEmpty) raised(prefix, gap: size * 0.04),
+          TextSpan(text: m.group(2)),
+          if (cents != null) raised(cents),
+          if (rest.isNotEmpty) TextSpan(text: rest),
+        ],
+      ),
+      maxLines: 1,
+      semanticsLabel: semanticsLabel ?? text,
+      style: style,
     );
   }
 }
@@ -74,14 +137,17 @@ class ZendRollingAmount extends StatelessWidget {
     final s = style.copyWith(color: zt.textPrimary);
     if (hidden) return Text('•••', style: s, semanticsLabel: 'Balance hidden');
     if (ZendMotion.reduced(context)) {
-      return Text(formatMoney(amount), style: s);
+      return ZendLoudAmountText(formatMoney(amount), style: s);
     }
     return TweenAnimationBuilder<double>(
       tween: Tween(end: amount),
       duration: ZendMotion.celebrate,
       curve: ZendMotion.springSnappy,
-      builder: (context, v, _) =>
-          Text(formatMoney(v), style: s, semanticsLabel: formatMoney(amount)),
+      builder: (context, v, _) => ZendLoudAmountText(
+        formatMoney(v),
+        style: s,
+        semanticsLabel: formatMoney(amount),
+      ),
     );
   }
 }
@@ -234,7 +300,15 @@ class _Popped extends StatelessWidget {
 abstract final class ZendFeel {
   static void keypadTap() => HapticFeedback.selectionClick();
   static void reaction() => HapticFeedback.lightImpact();
-  static void received() => HapticFeedback.mediumImpact();
+  /// Money arrived: a quick "ba-dum" that lands harder than a tap, so it
+  /// can be felt with the phone face down.
+  static Future<void> received() async {
+    await HapticFeedback.lightImpact();
+    await Future<void>.delayed(const Duration(milliseconds: 70));
+    await HapticFeedback.mediumImpact();
+    await Future<void>.delayed(const Duration(milliseconds: 140));
+    await HapticFeedback.heavyImpact();
+  }
   static Future<void> sendConfirmed() async {
     await HapticFeedback.mediumImpact();
     await Future<void>.delayed(const Duration(milliseconds: 90));
@@ -248,24 +322,33 @@ abstract final class ZendFeel {
   }
 }
 
-/// Soft green glow behind a key moment (balance, received payment, status
-/// check) — used instead of gradients everywhere.
+/// Soft glow behind a key moment. Colourless by default: the identity keeps
+/// brand colour off money, so the glow only shows when a caller passes a
+/// person's tint (see `ZendTint`).
 class ZendGlow extends StatelessWidget {
-  const ZendGlow({super.key, required this.child, this.radius = 120});
+  const ZendGlow({
+    super.key,
+    required this.child,
+    this.radius = 120,
+    this.color,
+  });
 
   final Widget child;
   final double radius;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final c = color;
+    if (c == null) return child;
     final zt = ZendTheme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
           radius: 0.5,
           colors: [
-            zt.moneyIn.withValues(alpha: zt.isDark ? 0.16 : 0.10),
-            zt.moneyIn.withValues(alpha: 0),
+            c.withValues(alpha: zt.isDark ? 0.22 : 0.14),
+            c.withValues(alpha: 0),
           ],
         ),
       ),

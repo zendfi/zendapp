@@ -272,9 +272,7 @@ class _LegacyActivityListViewState extends State<LegacyActivityListView> {
                         label,
                         style: TextStyle(
                           fontFamily: 'Geist',
-                          color: active
-                              ? ZendColors.textOnDeep
-                              : zt.textSecondary,
+                          color: active ? zt.onAccent : zt.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),

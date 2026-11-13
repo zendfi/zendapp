@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/add_cash_models.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_motion_widgets.dart' show showReceiveMoment;
 import '../../design/zend_tokens.dart';
 import '../../models/payment_request_notification.dart';
 import '../../navigation/zend_shell_controller.dart';
@@ -58,6 +59,7 @@ class _ZendShellState extends State<ZendShell> {
   String? _lastCommentBannerKey;
   Timer? _fundsBannerTimer;
   String? _lastFundsBannerKey;
+  String? _lastReceiveMomentId;
   // DM banner
   Map<String, dynamic>? _pendingDmBanner;
   Timer? _dmBannerTimer;
@@ -322,6 +324,25 @@ class _ZendShellState extends State<ZendShell> {
       }
     } else {
       _lastReactionBannerKey = null;
+    }
+
+    // Money from a person: play the receive moment once per arrival, after
+    // this frame (an overlay can't be inserted mid-build).
+    final receive = model.pendingReceiveMoment;
+    if (receive != null && receive.id != _lastReceiveMomentId) {
+      _lastReceiveMomentId = receive.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        model.clearPendingReceiveMoment();
+        unawaited(
+          showReceiveMoment(
+            context,
+            amount: receive.amount,
+            from: receive.from,
+            note: receive.note,
+          ),
+        );
+      });
     }
 
     final pendingFunds = model.pendingFundsArrived;
@@ -650,15 +671,17 @@ class _ZendFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ink by mode: soft black on the warm page, off-white on true black.
+    final zt = ZendTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 56,
         height: 56,
-        decoration: const BoxDecoration(
-          color: ZendColors.bgDeep,
+        decoration: BoxDecoration(
+          color: zt.accent,
           shape: BoxShape.circle,
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
               blurRadius: 12,
@@ -668,10 +691,7 @@ class _ZendFab extends StatelessWidget {
         ),
         child: Center(
           child: ColorFiltered(
-            colorFilter: const ColorFilter.mode(
-              ZendColors.accentPop,
-              BlendMode.srcIn,
-            ),
+            colorFilter: ColorFilter.mode(zt.onAccent, BlendMode.srcIn),
             child: Image.asset(
               'assets/icons/zend-icon-navbar.png',
               width: 26,
@@ -864,7 +884,7 @@ class _BottomNavIcon extends StatelessWidget {
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: ZendColors.destructive,
+                              color: ZendTheme.of(context).signal,
                               borderRadius: BorderRadius.circular(
                                 ZendRadii.pill,
                               ),
@@ -879,7 +899,7 @@ class _BottomNavIcon extends StatelessWidget {
                               style: ZendTextStyles.tabularNumeric.copyWith(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: ZendTheme.of(context).onSignal,
                                 height: 1.0,
                               ),
                             ),

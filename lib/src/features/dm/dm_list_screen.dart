@@ -666,8 +666,9 @@ class _DmThreadTile extends StatelessWidget {
                           _relativeTime(thread.lastMessageAt),
                           style: ZendTextStyles.tabularNumeric.copyWith(
                             fontSize: 12,
+                            fontWeight: hasUnread ? FontWeight.w600 : null,
                             color: hasUnread
-                                ? zt.accent
+                                ? zt.textPrimary
                                 : zt.textSecondary.withValues(alpha: 0.7),
                           ),
                         ),
@@ -713,7 +714,7 @@ class _DmThreadTile extends StatelessWidget {
                             // uneven/wrong padding around the number.
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: zt.accent,
+                              color: zt.signal,
                               borderRadius: BorderRadius.circular(
                                 ZendRadii.pill,
                               ),
@@ -725,7 +726,7 @@ class _DmThreadTile extends StatelessWidget {
                               style: ZendTextStyles.tabularNumeric.copyWith(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: zt.onSignal,
                               ),
                               textAlign: TextAlign.center,
                             ),

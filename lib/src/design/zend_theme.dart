@@ -99,24 +99,27 @@ ThemeData buildZendTheme() {
       textStyle: const TextStyle(
         fontFamily: 'Geist',
         fontSize: 12,
-        color: Colors.white,
+        color: ZendColors.bgPrimary,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: ZendColors.textPrimary,
         borderRadius: BorderRadius.circular(8),
       ),
     ),
-    hoverColor: const Color(0x0A000000),
+    hoverColor: const Color(0x0A1C1A17),
     highlightColor: Colors.transparent,
-    splashColor: const Color(0x14000000),
-    focusColor: const Color(0x0A000000),
+    splashColor: const Color(0x141C1A17),
+    focusColor: const Color(0x0A1C1A17),
     useMaterial3: true,
     fontFamily: 'Geist',
+    // Ink is the primary colour: buttons, switches and selection are soft
+    // black on the warm page. Colour comes from people, not the chrome.
     colorScheme: const ColorScheme.light(
       primary: ZendColors.accent,
-      secondary: ZendColors.accentBright,
+      secondary: ZendColors.accent,
       surface: ZendColors.bgPrimary,
-      onPrimary: ZendColors.textOnDeep,
+      onPrimary: ZendColors.bgPrimary,
+      onSecondary: ZendColors.bgPrimary,
       onSurface: ZendColors.textPrimary,
       error: ZendColors.destructive,
     ),
@@ -155,8 +158,12 @@ ThemeData buildZendTheme() {
 ThemeData buildZendDarkTheme() {
   final base = ThemeData.dark(useMaterial3: true);
 
-  const darkTextPrimary = Color(0xFFF0F0F0);
-  const darkTextSecondary = Color(0xFF8A8A8A);
+  // Warm off-white on true black (OLED-native).
+  const darkTextPrimary = Color(0xFFF4F0E8);
+  const darkTextSecondary = Color(0xFFA39D92);
+  const darkInk = Color(0xFF100F0D);
+  const darkSurface1 = Color(0xFF121110);
+  const darkSurface2 = Color(0xFF1D1B18);
 
   final textTheme = base.textTheme
       .apply(
@@ -243,44 +250,45 @@ ThemeData buildZendDarkTheme() {
       textStyle: const TextStyle(
         fontFamily: 'Geist',
         fontSize: 12,
-        color: Colors.white,
+        color: darkTextPrimary,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2C30),
+        color: const Color(0xFF2A2723),
         borderRadius: BorderRadius.circular(8),
       ),
     ),
-    hoverColor: const Color(0x0FFFFFFF),
+    hoverColor: const Color(0x0FF4F0E8),
     highlightColor: Colors.transparent,
-    splashColor: const Color(0x1AFFFFFF),
-    focusColor: const Color(0x0FFFFFFF),
+    splashColor: const Color(0x1AF4F0E8),
+    focusColor: const Color(0x0FF4F0E8),
     useMaterial3: true,
     fontFamily: 'Geist',
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF52B788),
-      secondary: Color(0xFF95D5B2),
-      surface: Color(0xFF0D0D0D),
-      onPrimary: Color(0xFF0D0D0D),
+      primary: darkTextPrimary,
+      secondary: darkTextPrimary,
+      surface: Colors.black,
+      onPrimary: darkInk,
+      onSecondary: darkInk,
       onSurface: darkTextPrimary,
-      error: Color(0xFFE05C3A),
+      error: Color(0xFFFF6B5E),
     ),
-    scaffoldBackgroundColor: const Color(0xFF0D0D0D),
+    scaffoldBackgroundColor: Colors.black,
     textTheme: textTheme,
     splashFactory: NoSplash.splashFactory,
     dividerTheme: const DividerThemeData(
-      color: Color(0xFF2A2A2A),
+      color: Color(0xFF26231F),
       thickness: 1,
     ),
-    cardColor: const Color(0xFF1E1E1E),
-    // Subtle dark scrim behind sheets/dialogs — helps distinguish sheet from background
+    cardColor: darkSurface1,
+    // Sheets sit one step above the true-black page so their edge reads.
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Color(0xFF0D0D0D),
-      modalBackgroundColor: Color(0xFF0D0D0D),
-      modalBarrierColor: Color(0x80000000),
+      backgroundColor: darkSurface1,
+      modalBackgroundColor: darkSurface1,
+      modalBarrierColor: Color(0x99000000),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF161616),
+      fillColor: darkSurface2,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(

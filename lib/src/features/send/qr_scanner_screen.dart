@@ -302,7 +302,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 // ── Scanner overlay painter ────────────────────────────────────────────────
 
 /// Draws a semi-transparent dark scrim over the full canvas with a clear
-/// centered square scan window, plus four corner brackets in [ZendColors.accent].
+/// centered square scan window, plus four corner brackets in off-white.
 ///
 /// Uses [PathFillType.evenOdd] so the scan window "punches through" the scrim.
 class _ScannerOverlay extends CustomPainter {
@@ -340,7 +340,7 @@ class _ScannerOverlay extends CustomPainter {
 
     // ── Corner brackets ────────────────────────────────────────────────────
     final bracketPaint = Paint()
-      ..color = ZendColors.accent
+      ..color = ZendColors.accentPop
       ..style = PaintingStyle.stroke
       ..strokeWidth = _bracketThickness
       ..strokeCap = StrokeCap.square;
@@ -442,8 +442,8 @@ class _PermissionDeniedOverlay extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: onOpenSettings,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ZendColors.accent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: ZendColors.textOnDeep,
+                  foregroundColor: ZendColors.textPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                   ),
@@ -533,19 +533,19 @@ class _TorchButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           color: torchOn
-              ? ZendColors.accent.withValues(alpha: 0.9)
+              ? ZendColors.accentPop.withValues(alpha: 0.95)
               : Colors.white.withValues(alpha: 0.15),
           shape: BoxShape.circle,
           border: Border.all(
             color: torchOn
-                ? ZendColors.accent
+                ? ZendColors.accentPop
                 : Colors.white.withValues(alpha: 0.3),
             width: 1.5,
           ),
         ),
         child: Icon(
           PhosphorIconsRegular.flashlight,
-          color: Colors.white,
+          color: torchOn ? ZendColors.textPrimary : Colors.white,
           size: 24,
         ),
       ),

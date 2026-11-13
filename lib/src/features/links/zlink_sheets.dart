@@ -10,7 +10,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_modal.dart';
-import '../../design/zend_money.dart' show ZendFeel;
+import '../../design/zend_motion_widgets.dart' show showReceiveMoment;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -312,7 +312,19 @@ Future<void> _receiveQuietly(
   await balanceReady;
   final amount = (preview['amount_usd'] as num?)?.toDouble() ?? 0;
   final arriving = amount > 0 ? model.beginArriving(amount) : null;
-  ZendFeel.received();
+  // The arrival is felt and seen before the collect finishes underneath; if
+  // it doesn't land, the balance steps back and the sheet below explains.
+  if (amount > 0 && navigator.mounted) {
+    unawaited(
+      showReceiveMoment(
+        navigator.context,
+        amount: amount,
+        from: (preview['sender_name'] as String?) ?? 'Someone',
+        note: preview['memo'] as String?,
+        viaLink: true,
+      ),
+    );
+  }
   messenger?.showSnackBar(
     SnackBar(
       content: Text(

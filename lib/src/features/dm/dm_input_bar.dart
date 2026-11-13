@@ -463,10 +463,10 @@ class _DmInputBarState extends State<DmInputBar>
                                       color: zt.accent,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       PhosphorIconsRegular.paperPlaneTilt,
                                       size: 16,
-                                      color: Colors.white,
+                                      color: zt.onAccent,
                                     ),
                                   ),
                                 )

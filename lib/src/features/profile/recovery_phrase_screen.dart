@@ -338,7 +338,7 @@ class _ConfirmStage extends StatelessWidget {
                 ),
               ),
               child: loading
-                  ? ZendLoader(size: 20, strokeWidth: 2, color: Colors.white)
+                  ? ZendLoader(size: 20, strokeWidth: 2, color: zt.onAccent)
                   : const Text(
                       'Show recovery phrase',
                       style: TextStyle(

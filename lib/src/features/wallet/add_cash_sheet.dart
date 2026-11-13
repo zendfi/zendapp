@@ -623,12 +623,14 @@ class _AddCashSheetState extends State<AddCashSheet> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
-                        style: ZendTextStyles.displayXl.copyWith(
+                        style: ZendTextStyles.amountInput(
+                            _amountController.text,
+                          ).copyWith(
                           color: zt.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0',
-                          hintStyle: ZendTextStyles.displayXl.copyWith(
+                          hintStyle: ZendTextStyles.amountInput('0').copyWith(
                             color: zt.textSecondary,
                           ),
                           border: InputBorder.none,
@@ -673,7 +675,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
               onPressed: canContinue ? _prepareNgn : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: zt.accent,
-                foregroundColor: ZendColors.textOnDeep,
+                foregroundColor: zt.onAccent,
                 disabledBackgroundColor: zt.border,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -681,11 +683,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 ),
               ),
               child: _preparing
-                  ? const ZendLoader(
-                      size: 20,
-                      strokeWidth: 2,
-                      color: ZendColors.textOnDeep,
-                    )
+                  ? ZendLoader(size: 20, strokeWidth: 2, color: zt.onAccent)
                   : const Text(
                       'Continue',
                       style: TextStyle(

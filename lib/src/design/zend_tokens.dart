@@ -4,41 +4,52 @@ import 'package:flutter/material.dart';
 /// needs to react to light/dark mode — this class exists for the rare spot
 /// that genuinely wants one fixed value regardless of mode (e.g. a splash
 /// screen that renders before Theme is available).
+///
+/// Identity: warm neutrals, ink as the action colour, and colour that comes
+/// from people (see `zend_tint.dart`), not from the brand. The one brand hue
+/// left is [signal], kept to dots and badges.
 class ZendColors {
-  static const bgPrimary = Color(0xFFFAFAF8);
-  static const bgSecondary = Color(0xFFF2F0EA);
+  /// Warm off-white page, never pure #FFF.
+  static const bgPrimary = Color(0xFFF7F4EE);
+  static const bgSecondary = Color(0xFFEFEBE3);
 
-  /// Restrained-accent rule: this green is only for a primary CTA fill, a
-  /// sent-message bubble, or a positive-state indicator (a completed
-  /// transfer, a success tick). It never fills chrome, nav, icons, or cards.
-  /// Everything else in the app stays neutral so these moments stay legible
-  /// as "this needs your attention" rather than becoming wallpaper.
-  static const accent = Color(0xFF16A34A);
-  static const accentBright = Color(0xFF22C55E);
-  static const accentPop = Color(0xFFDCFCE7);
+  /// Ink. Primary actions are soft black on light surfaces. Screens with a
+  /// permanently dark background use [textOnDeep] fills instead.
+  static const accent = Color(0xFF1C1A17);
 
-  static const textPrimary = Color(0xFF1A1A1A);
-  // True neutral gray, not the old green-tinted #6B7A6E — with containers
-  // stripped back to hairline dividers, a tinted secondary text color reads
-  // as a mistake rather than a choice; there's no card fill left to justify it.
-  static const textSecondary = Color(0xFF8C8C86);
-  static const textOnDeep = Color(0xFFF0F0F0);
+  /// Warm stone grey that keeps 4.3:1 or better on both the off-white page
+  /// and true black, for the few spots that hold one colour regardless of
+  /// mode (progress bars, loaders, selection rings).
+  static const accentBright = Color(0xFF7A7368);
 
-  static const positive = Color(0xFF22C55E);
+  /// Light-on-dark highlight for permanently dark surfaces (PIN dots, the
+  /// in-app banners, the Zend button).
+  static const accentPop = Color(0xFFF4F0E8);
 
-  /// Negative amounts render in near-black, not red — a deliberate "boring"
-  /// choice so a debit doesn't read as an alarm. [destructive] is reserved
-  /// for actual destructive actions (delete, remove card), not routine
-  /// negative numbers.
-  static const negative = Color(0xFF1A1A1A);
-  static const destructive = Color(0xFFC94F2A);
+  /// Soft black, never pure #000.
+  static const textPrimary = Color(0xFF1C1A17);
+  static const textSecondary = Color(0xFF6B655C);
+  static const textOnDeep = Color(0xFFF4F0E8);
 
-  // Lightened from #E5E2DA — this now doubles as a hairline row divider
-  // (transaction lists, settings rows), not just an outlined-button stroke,
-  // so it needs to sit closer to invisible.
-  static const border = Color(0xFFECECE8);
-  static const bgDeep = Color(0xFF122018);
-  static const bgAccentSurface = Color(0xFF0A1A0D);
+  /// Success ticks and online dots only. Amounts never use it: a `+` sign
+  /// carries direction.
+  static const positive = Color(0xFF2F8F55);
+
+  /// Negative amounts render in ink, not red, so a debit doesn't read as an
+  /// alarm. [destructive] is for delete/remove actions and errors.
+  static const negative = Color(0xFF1C1A17);
+  static const destructive = Color(0xFFB42318);
+
+  /// The single small signal: unread badges, notification dots, and Links
+  /// nobody has collected yet. Dots and badges only, never fills or text.
+  static const signal = Color(0xFFFF4D1A);
+  static const onSignal = Color(0xFF1C1A17);
+
+  static const border = Color(0xFFE8E2D7);
+
+  /// Permanently dark surfaces (PIN setup, QR, onboarding success).
+  static const bgDeep = Color(0xFF171512);
+  static const bgAccentSurface = Color(0xFF201E1A);
 }
 
 class ZendTheme {
@@ -54,10 +65,13 @@ class ZendTheme {
     required this.textSecondary,
     required this.border,
     required this.accent,
+    required this.onAccent,
     required this.accentBright,
     required this.accentPop,
     required this.positive,
     required this.destructive,
+    required this.signal,
+    required this.onSignal,
     required this.isDark,
   });
 
@@ -67,98 +81,99 @@ class ZendTheme {
   final Color bgElevated;
   final Color bgAccentSurface;
 
-  /// Chat-thread canvas colour — deliberately distinct from [bgPrimary] (the
-  /// app-wide scaffold background) and from [bubbleReceived], so a message
-  /// thread reads as its own surface with bubbles sitting visibly *on* it
-  /// rather than blending into a near-identical background. Mirrors the
-  /// WhatsApp/iMessage pattern where the chat canvas and the bubble fill are
-  /// always a few percent apart in luminance.
+  /// Chat-thread canvas colour, a few percent apart from [bubbleReceived] so
+  /// bubbles read as objects sitting on it.
   final Color chatBg;
 
-  /// Fill colour for incoming (received) text/payment bubbles. Kept separate
-  /// from [bgSecondary] — which is reused all over the app for cards, input
-  /// fills, sheets, etc — so bumping bubble contrast never risks regressing
-  /// any of those unrelated surfaces. Always neutral: only the *sent* side
-  /// of a thread carries [accentBright].
+  /// Fill for incoming (received) text and payment bubbles.
   final Color bubbleReceived;
 
   final Color textPrimary;
   final Color textSecondary;
   final Color border;
 
-  /// Text/icon-safe brand green — passes AA contrast on [bgPrimary]/[bgCard],
-  /// so it's the one to reach for on links, active tab labels, or an icon
-  /// that needs to read as "on-brand" without a filled background behind it.
+  /// Ink: the primary action fill, active states, selected chips. Soft black
+  /// in light mode, warm off-white in dark mode. Always pair a fill with
+  /// [onAccent], never a hardcoded white.
   final Color accent;
 
-  /// Higher-chroma green for filled surfaces: the primary CTA button, the
-  /// sent-message bubble, a positive/success indicator. Never used for body
-  /// text directly — pair it with a dark-on-fill text colour, not white.
+  /// Text and icons on an [accent] fill.
+  final Color onAccent;
+
+  /// Same ink as [accent]; kept so existing call sites keep compiling.
   final Color accentBright;
 
-  /// Soft, low-chroma green wash for chips, badges, and success banners —
-  /// a background tint, never a text colour.
+  /// Low-contrast warm wash for chips and "selected by me" states. A
+  /// background, never a text colour.
   final Color accentPop;
 
+  /// Success ticks and online dots. Not used for amounts.
   final Color positive;
   final Color destructive;
+
+  /// The one small brand signal: unread badges, notification dots, Links
+  /// nobody has collected yet. Keep it to dots and badges (well under 1% of
+  /// the screen) so it stays a signal.
+  final Color signal;
+
+  /// Text on a [signal] badge.
+  final Color onSignal;
+
   final bool isDark;
 
   static const _light = ZendTheme._(
-    bgPrimary: Color(0xFFFAFAF8),
-    // Slightly less warm than before — with textSecondary and border now
-    // true-neutral, a strongly beige secondary surface started to clash.
-    bgSecondary: Color(0xFFF4F3EF),
-    // Cards render pure white against the warm off-white page — that small
-    // luminance gap is what makes a card read as an object sitting *on* the
-    // page rather than a tinted rectangle blending into it.
-    bgCard: Color(0xFFFFFFFF),
-    bgElevated: Color(0xFFFFFFFF),
-    bgAccentSurface: Color(0xFFF2F0EA),
-    // Warm beige canvas (WhatsApp-style wallpaper tone) with a crisp white
-    // bubble on top — the ~7% luminance gap is what makes bubbles read as
-    // distinct objects instead of blending into the page.
-    chatBg: Color(0xFFEDE8DC),
-    bubbleReceived: Color(0xFFFFFFFF),
-    textPrimary: Color(0xFF1A1A1A),
-    // Darkened from #8C8C86 (~3.3:1) to pass 4.5:1 on bgPrimary.
-    textSecondary: Color(0xFF6B6B66),
-    border: Color(0xFFECECE8),
-    accent: Color(0xFF16A34A),
-    accentBright: Color(0xFF22C55E),
-    accentPop: Color(0xFFDCFCE7),
-    positive: Color(0xFF22C55E),
-    destructive: Color(0xFFC94F2A),
+    // Warm off-white page with slightly lighter cards on top. Neither is
+    // pure white: the warmth is what keeps it friendly rather than clinical.
+    bgPrimary: Color(0xFFF7F4EE),
+    bgSecondary: Color(0xFFEFEBE3),
+    bgCard: Color(0xFFFDFBF7),
+    bgElevated: Color(0xFFFDFBF7),
+    bgAccentSurface: Color(0xFFEFEBE3),
+    chatBg: Color(0xFFECE6DA),
+    bubbleReceived: Color(0xFFFDFBF7),
+    // Soft black (15.8:1 on the page) and warm grey (5.3:1).
+    textPrimary: Color(0xFF1C1A17),
+    textSecondary: Color(0xFF6B655C),
+    border: Color(0xFFE8E2D7),
+    accent: Color(0xFF1C1A17),
+    onAccent: Color(0xFFF7F4EE),
+    accentBright: Color(0xFF1C1A17),
+    accentPop: Color(0xFFE6DFD2),
+    positive: Color(0xFF2F8F55),
+    destructive: Color(0xFFB42318),
+    signal: Color(0xFFFF4D1A),
+    onSignal: Color(0xFF1C1A17),
     isDark: false,
   );
 
-  // Design revamp palette: green-tinted black with three layers (base,
-  // surface 1, surface 2) instead of flat neutral gray. Green only ever means
-  // money arriving or the primary action.
-  // Neutral near-black layers; green is reserved for money in and the
-  // primary action so it reads as a signal, not a wash.
+  // True black base: native on OLED phones and saves battery there. Raised
+  // surfaces are warm near-blacks so sheets and cards still separate.
   static const _dark = ZendTheme._(
-    bgPrimary: Color(0xFF0E0F10), // Base
-    bgSecondary: Color(0xFF17181A), // Surface 1
-    bgCard: Color(0xFF17181A),
-    bgElevated: Color(0xFF212327), // Surface 2
-    bgAccentSurface: Color(0xFF13261A),
-    chatBg: Color(0xFF121314),
-    bubbleReceived: Color(0xFF212327),
-    textPrimary: Color(0xFFF2F3F4),
-    textSecondary: Color(0xFFA1A1AA), // passes 4.5:1 on Base
-    border: Color(0xFF26282C),
-    accent: Color(0xFF1FD16A),
-    accentBright: Color(0xFF1FD16A),
-    accentPop: Color(0xFF123A22),
-    positive: Color(0xFF1FD16A),
-    destructive: Color(0xFFFF5A5F),
+    bgPrimary: Color(0xFF000000),
+    bgSecondary: Color(0xFF121110),
+    bgCard: Color(0xFF121110),
+    bgElevated: Color(0xFF1D1B18),
+    bgAccentSurface: Color(0xFF1D1B18),
+    chatBg: Color(0xFF000000),
+    bubbleReceived: Color(0xFF1D1B18),
+    // Warm off-white (18.5:1 on black) and warm grey (7.8:1).
+    textPrimary: Color(0xFFF4F0E8),
+    textSecondary: Color(0xFFA39D92),
+    border: Color(0xFF26231F),
+    accent: Color(0xFFF4F0E8),
+    onAccent: Color(0xFF100F0D),
+    accentBright: Color(0xFFF4F0E8),
+    accentPop: Color(0xFF2A2723),
+    positive: Color(0xFF4CC38A),
+    destructive: Color(0xFFFF6B5E),
+    signal: Color(0xFFFF5C2B),
+    onSignal: Color(0xFF100F0D),
     isDark: true,
   );
 
-  /// Sent chat bubble fill. Darker than [accent] in dark mode so a long
-  /// thread of your own messages doesn't glare; light mode unchanged.
-  Color get bubbleSent => isDark ? const Color(0xFF15934B) : accent;
+  /// Sent chat bubble fill. Always dark enough for white text: ink in light
+  /// mode, a warm charcoal in dark mode so it doesn't glare on true black.
+  Color get bubbleSent => isDark ? const Color(0xFF34312C) : accent;
 
   /// Payment in progress.
   Color get pending =>
@@ -167,9 +182,9 @@ class ZendTheme {
   /// Sent amounts stay neutral, never red.
   Color get moneyOut => textPrimary;
 
-  /// Received amounts and the primary action.
-  Color get moneyIn =>
-      isDark ? const Color(0xFF1FD16A) : const Color(0xFF15803D);
+  /// Received amounts are ink too. The `+` sign carries the direction, and
+  /// the receive moment (haptics, motion, the note) carries the feeling.
+  Color get moneyIn => textPrimary;
 
   static ZendTheme of(BuildContext context) {
     final brightness = Theme.of(context).brightness;
@@ -246,33 +261,50 @@ class ZendTextStyles {
   static const _display = 'Geist';
   static const _tabular = [FontFeature.tabularFigures()];
 
-  /// 56/60 heavy — Home balance.
+  // Type is the brand: amounts are the loudest thing on any screen. Tight
+  // negative tracking at these sizes is what makes Geist read as confident
+  // rather than generic. Draw them through ZendAmount/ZendRollingAmount,
+  // which also shrink the currency sign so the digits lead.
+
+  /// 72/72 bold: Home balance and the receive moment.
   static const displayXl = TextStyle(
     fontFamily: _display,
-    fontSize: 56,
-    height: 60 / 56,
+    fontSize: 72,
+    height: 1.0,
     fontWeight: FontWeight.w700,
-    letterSpacing: -1.5,
+    letterSpacing: -3.2,
     fontFeatures: _tabular,
   );
 
-  /// 40/44 heavy — Receipt and send amount.
+  /// [displayXl] for an amount being typed: steps down as the figure grows
+  /// so "1,000,000" still fits a 360dp phone without the field scrolling.
+  static TextStyle amountInput(String text) {
+    final n = text.length;
+    final size = n <= 6
+        ? 72.0
+        : n <= 8
+        ? 60.0
+        : 48.0;
+    return displayXl.copyWith(fontSize: size, letterSpacing: -size * 0.044);
+  }
+
+  /// 52/56 bold: receipt and send amount.
   static const displayL = TextStyle(
     fontFamily: _display,
-    fontSize: 40,
-    height: 44 / 40,
+    fontSize: 52,
+    height: 56 / 52,
     fontWeight: FontWeight.w700,
-    letterSpacing: -1,
+    letterSpacing: -2.2,
     fontFeatures: _tabular,
   );
 
-  /// 24/28 bold — Feed card amounts.
+  /// 24/28 bold: feed card amounts.
   static const amountM = TextStyle(
     fontFamily: _display,
     fontSize: 24,
     height: 28 / 24,
-    fontWeight: FontWeight.w600,
-    letterSpacing: -0.5,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.8,
     fontFeatures: _tabular,
   );
 

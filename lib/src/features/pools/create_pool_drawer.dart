@@ -862,7 +862,7 @@ class _SelectableContactTile extends StatelessWidget {
                   fontFamily: 'Geist',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: selected ? ZendColors.textOnDeep : zt.textPrimary,
+                  color: selected ? zt.onAccent : zt.textPrimary,
                 ),
               ),
             ),

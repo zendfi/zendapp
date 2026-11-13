@@ -21,12 +21,13 @@ class _CustomisationPanelState extends State<CustomisationPanel> {
   static const int _noteMaxLength = 280;
 
   static const List<Color> _paletteColors = [
+    // Ink plus a few of the people tints (see ZendTint.palette).
     ZendColors.accent,
-    ZendColors.accentBright,
-    ZendColors.accentPop,
-    ZendColors.destructive,
-    Color(0xFF4A90D9),
-    Color(0xFFE8A838),
+    Color(0xFFE04E45),
+    Color(0xFFD9652A),
+    Color(0xFF2E9A5E),
+    Color(0xFF4F74E3),
+    Color(0xFF8662E8),
   ];
 
   late final TextEditingController _noteController;

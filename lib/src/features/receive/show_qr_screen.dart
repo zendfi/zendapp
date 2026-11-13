@@ -499,7 +499,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                 onTap: widget.onDone,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: ZendColors.accent,
+                    color: ZendColors.textOnDeep,
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                   ),
                   alignment: Alignment.center,
@@ -509,7 +509,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                       fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: ZendColors.textOnDeep,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
                 ),
@@ -566,7 +566,7 @@ class _ErrorView extends StatelessWidget {
                 onTap: onRetry,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: ZendColors.accent,
+                    color: ZendColors.textOnDeep,
                     borderRadius: BorderRadius.circular(ZendRadii.pill),
                   ),
                   alignment: Alignment.center,
@@ -576,7 +576,7 @@ class _ErrorView extends StatelessWidget {
                       fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: ZendColors.textOnDeep,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
                 ),

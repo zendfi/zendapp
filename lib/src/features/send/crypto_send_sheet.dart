@@ -676,7 +676,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 onPressed: canGetQuote ? _getQuote : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: zt.accent,
-                  foregroundColor: ZendColors.textOnDeep,
+                  foregroundColor: zt.onAccent,
                   disabledBackgroundColor: zt.border,
                   elevation: 0,
                   shape: RoundedRectangleBorder(

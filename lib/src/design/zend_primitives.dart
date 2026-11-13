@@ -30,19 +30,22 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.backgroundColor,
-    this.foregroundColor = ZendColors.textOnDeep,
+    this.foregroundColor,
     this.isLoading = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
+
+  /// Defaults to ink ([ZendTheme.accent]) with [ZendTheme.onAccent] text.
   final Color? backgroundColor;
-  final Color foregroundColor;
+  final Color? foregroundColor;
   final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final fg = foregroundColor ?? zt.onAccent;
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -50,14 +53,14 @@ class PrimaryButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? zt.accent,
-          foregroundColor: foregroundColor,
+          foregroundColor: fg,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(ZendRadii.pill),
           ),
         ),
         child: isLoading
-            ? ZendLoader(size: 20, strokeWidth: 2, color: foregroundColor)
+            ? ZendLoader(size: 20, strokeWidth: 2, color: fg)
             : Text(
                 label,
                 style: const TextStyle(
@@ -205,12 +208,14 @@ class ZendLoader extends StatefulWidget {
     super.key,
     this.size = 22,
     this.strokeWidth = 2,
-    this.color = ZendColors.accentPop,
-  }); // accentPop = #95D5B2 — works on both themes
+    this.color,
+  });
 
   final double size;
   final double strokeWidth;
-  final Color color;
+
+  /// Defaults to [ZendTheme.textSecondary], readable on either mode.
+  final Color? color;
 
   @override
   State<ZendLoader> createState() => _ZendLoaderState();
@@ -246,7 +251,7 @@ class _ZendLoaderState extends State<ZendLoader>
           return CustomPaint(
             painter: _ZendLoaderPainter(
               progress: _controller.value,
-              color: widget.color,
+              color: widget.color ?? ZendTheme.of(context).textSecondary,
               strokeWidth: widget.strokeWidth,
             ),
           );

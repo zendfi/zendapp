@@ -1006,12 +1006,14 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             decimal: !_entry.naira,
                           ),
                           textAlign: TextAlign.left,
-                          style: ZendTextStyles.displayXl.copyWith(
+                          style: ZendTextStyles.amountInput(
+                            _amountController.text,
+                          ).copyWith(
                             color: zt.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: '0',
-                            hintStyle: ZendTextStyles.displayXl.copyWith(
+                            hintStyle: ZendTextStyles.amountInput('0').copyWith(
                               color: zt.textSecondary,
                             ),
                             // Explicitly borderless/unfilled — the global
@@ -1290,7 +1292,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               onPressed: canAct ? _armZendConfirm : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: zt.accent,
-                foregroundColor: ZendColors.textOnDeep,
+                foregroundColor: zt.onAccent,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
@@ -1355,20 +1357,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               onPressed: _preflighting ? null : _commitZend,
               style: ElevatedButton.styleFrom(
                 backgroundColor: zt.accent,
-                foregroundColor: ZendColors.textOnDeep,
+                foregroundColor: zt.onAccent,
                 disabledBackgroundColor: zt.accent,
-                disabledForegroundColor: ZendColors.textOnDeep,
+                disabledForegroundColor: zt.onAccent,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
               ),
               child: _preflighting
-                  ? const ZendLoader(
-                      size: 20,
-                      strokeWidth: 2,
-                      color: ZendColors.textOnDeep,
-                    )
+                  ? ZendLoader(size: 20, strokeWidth: 2, color: zt.onAccent)
                   : Text(
                       'Zend $_amountLabel to $target',
                       maxLines: 1,

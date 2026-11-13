@@ -306,7 +306,10 @@ class ZAppBridge {
       return 'chat:$id';
     }
     if (v.startsWith('@')) return v;
-    throw ZBridgeError('INVALID_PARAMS', '$k must be a pick token or @username');
+    throw ZBridgeError(
+      'INVALID_PARAMS',
+      '$k must be a pick token or @username',
+    );
   }
 
   static String _priceLabel(Map r) {
@@ -380,7 +383,11 @@ class ZAppBridge {
   Future<Object?> _unlockGift(Map<String, dynamic> p) async {
     _needUnlock();
     final item = _str(p, 'item');
-    final prepared = await _unlocks.giftPrepare(app.slug, item, _person(p, 'to'));
+    final prepared = await _unlocks.giftPrepare(
+      app.slug,
+      item,
+      _person(p, 'to'),
+    );
     final name = prepared['recipient_name'] as String? ?? 'them';
     final title = prepared['title'] as String?;
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');

@@ -139,7 +139,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                         const SizedBox(height: 28),
                         PrimaryButton(
                           label: 'Go to ZendApp',
-                          backgroundColor: ZendColors.accentBright,
+                          backgroundColor: ZendColors.textOnDeep,
                           foregroundColor: ZendColors.textPrimary,
                           onPressed: _onGoToZendApp,
                         ),
