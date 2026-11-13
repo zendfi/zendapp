@@ -1218,6 +1218,11 @@ class ZendAppModel extends ChangeNotifier {
   // told us. Cleared on `setAuthenticated` and `signOut` so they
   // don't leak across sessions.
   bool pendingWaitlistMatch = false;
+
+  /// Set when a new account was opened from a request (ask) link: the
+  /// username prompt is held back so it doesn't sit on top of paying, and
+  /// offered once the payment is done (see `openZlink`). Session only.
+  bool zendtagOfferAfterAsk = false;
   String? pendingReservedZendtag;
   String? pendingWaitlistFullName;
 
@@ -2088,6 +2093,7 @@ class ZendAppModel extends ChangeNotifier {
     currentDisplayName = null;
     currentAvatarUrl = null;
     zendtagIsPlaceholder = false;
+    zendtagOfferAfterAsk = false;
     isZkLoginAccount = false;
     username = 'blessed';
     balanceHidden = false;

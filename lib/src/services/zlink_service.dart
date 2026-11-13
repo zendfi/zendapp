@@ -370,8 +370,15 @@ class ZlinkService {
   /// Bank details to pay an ask link by transfer. The money goes straight to
   /// the link's owner; nothing passes through this person's balance.
   /// [amountNgn] only for links where the payer picks the amount.
+  ///
+  /// Slow on purpose: the server waits up to 90 s for the bank provider's
+  /// one-time code before it can open the order.
   Future<Map<String, dynamic>> askBankPrepare(String id, {double? amountNgn}) =>
-      _api.zlinkPost('/ask/$id/bank/prepare', {'amount_ngn': ?amountNgn});
+      _api.zlinkPost(
+        '/ask/$id/bank/prepare',
+        {'amount_ngn': ?amountNgn},
+        const Duration(seconds: 120),
+      );
 
   /// `waiting`, `paid` or `failed`.
   Future<String> askBankStatus(String id, String orderId) async =>

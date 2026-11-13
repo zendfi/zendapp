@@ -897,12 +897,13 @@ class ApiClient {
   Future<Map<String, dynamic>> zlinkPost(
     String path, [
     Map<String, dynamic>? body,
+    Duration receiveTimeout = const Duration(seconds: 60),
   ]) async {
     try {
       final response = await _dio.post(
         '/api/zend/v2/zlinks$path',
         data: body ?? const <String, dynamic>{},
-        options: Options(receiveTimeout: const Duration(seconds: 60)),
+        options: Options(receiveTimeout: receiveTimeout),
       );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {

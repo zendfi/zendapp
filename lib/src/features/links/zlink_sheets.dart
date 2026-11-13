@@ -19,6 +19,7 @@ import '../../services/dev_return_redirect_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import '../dm/dm_thread_screen.dart';
+import '../onboarding/zendtag_prompt_sheet.dart' show showZendtagPromptSheet;
 import '../wallet/add_cash_sheet.dart' show showAddCashSheet;
 import 'my_links_screen.dart' show zlinkServiceOf;
 
@@ -102,11 +103,25 @@ Future<void> openZlink(BuildContext context, DeepLinkPayload payload) {
       payload.zlinkKey ?? '',
     );
   }
-  return showZendModalSheet<void>(
+  return _openAsk(context, payload.zlinkAskId!);
+}
+
+Future<void> _openAsk(BuildContext context, String id) async {
+  final model = ZendScope.of(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+  await showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _AskPaySheet(id: payload.zlinkAskId!),
+    builder: (_) => _AskPaySheet(id: id),
   );
+  // A new account that arrived through this link: the username offer was
+  // held back so paying came first. Offer it now that the sheet is closed,
+  // once, and only if they still have no username.
+  if (!model.zendtagOfferAfterAsk) return;
+  model.zendtagOfferAfterAsk = false;
+  await Future<void>.delayed(const Duration(milliseconds: 400));
+  if (!navigator.mounted || !model.zendtagIsPlaceholder) return;
+  await showZendtagPromptSheet(navigator.context);
 }
 
 /// One line for the welcome screen: "Tolu sent you ₦8,000". Empty otherwise.
@@ -431,20 +446,29 @@ class _AskPaySheetState extends State<_AskPaySheet> {
         // Someone new to Zend has nothing to pay from yet, so go straight to
         // paying by bank. Only once the balance is actually known: a zero
         // that hasn't loaded yet isn't an empty Zend.
-        if (!model.balanceLoaded) {
+        // Right after creating an account the first reads can fail while the
+        // session settles, so give it a few tries.
+        for (final wait in const [0, 2, 4]) {
+          if (model.balanceLoaded) break;
+          if (wait > 0) await Future<void>.delayed(Duration(seconds: wait));
           await model.fetchBalance().timeout(
             const Duration(seconds: 6),
             onTimeout: () {},
           );
         }
+        final known = model.balanceLoaded;
         final have = model.spendableBalance;
         final ask = (v['amount_usd'] as num?)?.toDouble();
         final covers = have > 0 && (ask == null || have >= ask);
         if (mounted) {
           setState(() {
             _preview = v;
-            _balanceCovers = covers;
-            _byBank = model.balanceLoaded && !covers;
+            // Still unknown: offer paying from the balance too, in case
+            // there is money there.
+            _balanceCovers = covers || !known;
+            // Unknown means most likely a brand-new account, which can only
+            // pay by bank, so that's the safer default.
+            _byBank = !covers;
           });
         }
       } catch (_) {

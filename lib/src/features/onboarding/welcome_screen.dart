@@ -159,6 +159,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       // the user can act on.
       model.transferService.accountUsesLocalKeyRail = false;
 
+      // Read before setAuthenticated, which hands the held link to the app.
+      // A request (ask) link opens the pay sheet the moment sign-in finishes;
+      // the username offer waits until that sheet closes (see openZlink)
+      // rather than stacking on top of paying.
+      final linkOpensSheet = PendingZlink.peek?.isZlinkAsk == true;
+
       model.setAuthenticated(
         userId: result.userId,
         zendtag: result.zendtag,
@@ -166,18 +172,26 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         zendtagIsPlaceholder: result.zendtagIsPlaceholder,
       );
 
-      await navigator.pushAndRemoveUntil(
-        zendRoute<void>(page: const ZendShell()),
-        (route) => false,
+      // Not awaited: this future only completes when the shell is popped,
+      // which never happens, so anything after an await never ran.
+      unawaited(
+        navigator.pushAndRemoveUntil(
+          zendRoute<void>(page: const ZendShell()),
+          (route) => false,
+        ),
       );
 
       // Offered *after* the shell is in place, so the account is already usable
       // behind the sheet and dismissing it costs the user nothing. Returning
       // users, and anyone who has already declined, are never asked.
-      if (!mounted || !result.shouldOfferZendtag) return;
-      final shellContext = navigator.context;
-      if (!shellContext.mounted) return;
-      await showZendtagPromptSheet(shellContext);
+      if (!result.shouldOfferZendtag) return;
+      if (linkOpensSheet) {
+        model.zendtagOfferAfterAsk = true;
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      if (!navigator.mounted || !model.zendtagIsPlaceholder) return;
+      await showZendtagPromptSheet(navigator.context);
     } on SuiOAuthException catch (e) {
       // Covers a cancelled or failed Google round-trip.
       if (!mounted) return;
