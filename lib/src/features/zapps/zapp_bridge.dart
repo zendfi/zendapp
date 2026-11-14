@@ -3,11 +3,16 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_format.dart' show formatMoney, formatNaira;
 import '../../core/zend_state.dart';
 import '../../models/api_exceptions.dart';
+import '../../models/dm_thread.dart' show DmCounterparty;
+import '../../navigation/zend_routes.dart' show zendRoute;
+import '../dm/dm_thread_screen.dart';
+import 'zapp_share_stub.dart' if (dart.library.js_interop) 'zapp_share_web.dart';
 import '../../services/appkit_service.dart';
 import '../../services/sui_transaction_verifier.dart';
 import '../../services/prize_service.dart';
@@ -205,6 +210,8 @@ class ZAppBridge {
               ? null
               : _model.currentZendtag,
           'name': _model.currentDisplayName,
+          // Already shared with every app (verifySession returns it too).
+          'avatar': _model.currentAvatarUrl,
           'scopes': session['scopes'],
           // Short-lived; the app's server exchanges it at /apps/token/verify.
           'appSession': session['app_session'],
@@ -217,6 +224,12 @@ class ZAppBridge {
         return _money(() => _createLink(p));
       case 'people.pick':
         return _pickPeople(p);
+      case 'people.connect':
+        return _connectPerson(p);
+      case 'people.chat':
+        return _openChat(p);
+      case 'share':
+        return _share(p);
       case 'random':
         return _random(p);
       case 'allowance.request':
@@ -468,6 +481,140 @@ class ZAppBridge {
       });
     }
     return out;
+  }
+
+  // ── Friends and sharing (owambe-core R1-R3) ──────────────────────────────
+
+  void _needConnect() {
+    if (!_can('connect')) {
+      throw const ZBridgeError('PERMISSION_DENIED', 'Manifest lacks "connect"');
+    }
+  }
+
+  /// `zend.people.connect`: no confirm sheet (the game's button is the tap),
+  /// but Zend always says what it did in the user's name, with a way into
+  /// the chat.
+  Future<Object?> _connectPerson(Map<String, dynamic> p) async {
+    _needConnect();
+    final appUserId = _str(p, 'appUserId');
+    final r = await _appkit.connectPerson(
+      app.slug,
+      appUserId: appUserId,
+      interactionId: _str(p, 'interactionId'),
+      note: p['note'] as String?,
+    );
+    final person = Map<String, dynamic>.from(r['person'] as Map? ?? const {});
+    final name = person['name'] as String? ?? 'them';
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            r['status'] == 'friends'
+                ? "You and $name are friends now."
+                : 'Added $name.',
+          ),
+          action: SnackBarAction(
+            label: 'Chat',
+            onPressed: () => _openChat({'appUserId': appUserId}).ignore(),
+          ),
+        ),
+      );
+    }
+    return {
+      'status': r['status'],
+      'person': {
+        'appUserId': person['app_user_id'],
+        'name': person['name'],
+        'username': person['username'],
+        'avatar': person['avatar'],
+      },
+    };
+  }
+
+  bool _chatOpen = false;
+
+  /// `zend.people.chat`: Zend's own chat over the app; the page only learns
+  /// whether it opened, once it's closed again.
+  Future<Object?> _openChat(Map<String, dynamic> p) async {
+    _needConnect();
+    if (_chatOpen) throw const ZBridgeError('BUSY', 'A chat is already open');
+    final r = await _appkit.chatWith(app.slug, _str(p, 'appUserId'));
+    if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
+    _chatOpen = true;
+    try {
+      await Navigator.of(context, rootNavigator: true).push(
+        zendRoute<void>(
+          page: DmThreadScreen(
+            roomId: r['room_id'] as String,
+            counterparty: DmCounterparty.fromJson(
+              Map<String, dynamic>.from(r['counterparty'] as Map),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      _chatOpen = false;
+    }
+    return {'opened': true};
+  }
+
+  bool _sharing = false;
+
+  /// Links an app may share: its own origins, or its Zend app and
+  /// interaction links.
+  bool _shareableUrl(Uri u) {
+    if (u.scheme != 'https') return false;
+    if (app.allows(u)) return true;
+    if (u.host != 'app.usezend.app' || u.port != 443) return false;
+    final s = u.pathSegments;
+    return (s.length == 2 && s[0] == 'apps' && s[1] == app.slug) ||
+        (s.length == 2 && s[0] == 'i' && s[1].startsWith('int_'));
+  }
+
+  /// `zend.share`: the phone's share sheet, or a copied link where there is
+  /// none.
+  Future<Object?> _share(Map<String, dynamic> p) async {
+    final text = _str(p, 'text').trim();
+    if (text.isEmpty || text.characters.length > 280) {
+      throw const ZBridgeError('INVALID_PARAMS', 'text must be 1-280 characters');
+    }
+    final rawUrl = p['url'];
+    Uri? url;
+    if (rawUrl != null) {
+      url = rawUrl is String ? Uri.tryParse(rawUrl) : null;
+      if (url == null || !_shareableUrl(url)) {
+        throw const ZBridgeError(
+          'INVALID_URL',
+          "url must be on the app's origins or its app.usezend.app link",
+        );
+      }
+    }
+    if (_sharing) throw const ZBridgeError('BUSY', 'Another share is open');
+    _sharing = true;
+    final body = url == null ? text : '$text\n$url';
+    try {
+      if (deviceCanShare()) {
+        try {
+          final r = await Share.share(body);
+          return {
+            'status': r.status == ShareResultStatus.dismissed
+                ? 'dismissed'
+                : 'shared',
+          };
+        } catch (_) {
+          // No usable share sheet after all: copy instead.
+        }
+      }
+      await Clipboard.setData(ClipboardData(text: body));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Link copied')));
+      }
+      return {'status': 'copied'};
+    } finally {
+      _sharing = false;
+    }
   }
 
   static String _randomToken() {

@@ -11,15 +11,26 @@ import 'package:web/web.dart' as web;
 /// it replay the initial route, which rebuilt the app from the splash screen
 /// and landed on Feed. With no extra entry, the browser's back button reaches
 /// Flutter as an ordinary back press, which the ZApp screen handles by closing.
-VoidCallback enterZAppUrl(String slug) {
+VoidCallback enterZAppUrl(
+  String slug, [
+  Map<String, String> params = const {},
+]) {
   final target = '/apps/$slug';
+  // Launch params (already filtered by the caller) stay in the address bar.
+  final search = params.isEmpty
+      ? ''
+      : '?${Uri(queryParameters: params).query}';
   final loc = web.window.location;
   // Opened straight from a link: there's no Zend page behind it, so go home.
   final previous = loc.pathname == target
       ? '/${loc.hash}'
       : '${loc.pathname}${loc.search}${loc.hash}';
-  if (loc.pathname != target) {
-    web.window.history.replaceState(web.window.history.state, '', target);
+  if (loc.pathname != target || loc.search != search) {
+    web.window.history.replaceState(
+      web.window.history.state,
+      '',
+      '$target$search',
+    );
   }
   var active = true;
   return () {

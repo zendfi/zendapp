@@ -6,6 +6,25 @@ import 'package:flutter/services.dart';
 import 'url_fragment_stub.dart'
     if (dart.library.js_interop) 'url_fragment_web.dart';
 
+/// Launch params Zend only sets itself; a link can't fake them.
+const zappReservedParams = {'interaction', 'start', 'from'};
+
+final _zappParamKey = RegExp(r'^[a-z][a-z0-9_]{0,31}$');
+
+/// The params an app link may pass to its ZApp (owambe-core R4.2): up to 8,
+/// keys like `room` or `ref_2`, values of at most 256 characters, nothing
+/// reserved. Everything else is dropped.
+Map<String, String> zappLinkParams(Map<String, String> raw) {
+  final out = <String, String>{};
+  for (final e in raw.entries) {
+    if (out.length >= 8) break;
+    if (zappReservedParams.contains(e.key)) continue;
+    if (!_zappParamKey.hasMatch(e.key) || e.value.length > 256) continue;
+    out[e.key] = e.value;
+  }
+  return out;
+}
+
 /// Handles incoming deep links for ZendApp.
 ///
 /// Supported patterns:
@@ -90,7 +109,13 @@ class DeepLinkHandler {
         }
         // app.usezend.app/apps/{slug} — open a ZApp; /i/{id} — open an interaction.
         if (uri.pathSegments[0] == 'apps' && id.isNotEmpty) {
-          return DeepLinkPayload(zendtag: '', zappSlug: id);
+          // `?room=…` and the like reach the app; see [zappLinkParams].
+          final params = zappLinkParams(uri.queryParameters);
+          return DeepLinkPayload(
+            zendtag: '',
+            zappSlug: id,
+            zappQuery: params.isEmpty ? null : params,
+          );
         }
         if (uri.pathSegments[0] == 'i' && id.startsWith('int_')) {
           return DeepLinkPayload(zendtag: '', interactionId: id);
@@ -190,6 +215,10 @@ class DeepLinkPayload {
   final String? zappSlug;
   final String? interactionId;
 
+  /// Launch params from an app link (`/apps/{slug}?room=…`), already
+  /// filtered by [zappLinkParams].
+  final Map<String, String>? zappQuery;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
@@ -202,6 +231,7 @@ class DeepLinkPayload {
     this.zlinkAskId,
     this.zappSlug,
     this.interactionId,
+    this.zappQuery,
   });
 
   bool get isZApp => zappSlug != null || interactionId != null;

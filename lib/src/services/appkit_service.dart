@@ -111,6 +111,27 @@ class AppKitService {
   Future<Map<String, dynamic>> postCard(Map<String, dynamic> params) =>
       _api.appkit('POST', '/apps/cards', params);
 
+  /// Adds someone the user shared [interactionId] with (owambe-core R1).
+  Future<Map<String, dynamic>> connectPerson(
+    String slug, {
+    required String appUserId,
+    required String interactionId,
+    String? note,
+  }) => _api.appkit('POST', '/apps/people/connect', {
+    'app': slug,
+    'app_user_id': appUserId,
+    'interaction_id': interactionId,
+    'note': ?note,
+  });
+
+  /// The chat with someone the user already chats with: `room_id` and
+  /// `counterparty`, for the client only (owambe-core R2).
+  Future<Map<String, dynamic>> chatWith(String slug, String appUserId) =>
+      _api.appkit('POST', '/apps/people/chat', {
+        'app': slug,
+        'app_user_id': appUserId,
+      });
+
   Future<List<Map<String, dynamic>>> feed() async =>
       ((await _api.appkit('GET', '/apps/feed'))['cards'] as List? ?? [])
           .cast<Map<String, dynamic>>();

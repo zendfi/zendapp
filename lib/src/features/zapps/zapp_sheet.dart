@@ -31,7 +31,7 @@ const _scopeCopy = {
 /// Opens a ZApp from `/apps/{slug}` or an interaction from `/i/{id}`.
 Future<void> openZAppLink(BuildContext context, DeepLinkPayload p) async {
   if (p.zappSlug != null) {
-    await openZApp(context, p.zappSlug!);
+    await openZApp(context, p.zappSlug!, query: p.zappQuery);
     return;
   }
   final svc = AppKitService(ZendScope.of(context).walletService.apiClient);
@@ -125,7 +125,12 @@ class _ZAppScreenState extends State<_ZAppScreen> {
   void initState() {
     super.initState();
     // Browser back arrives as a normal back press (see PopScope below).
-    _leaveUrl = enterZAppUrl(widget.slug);
+    // Launch params like `?room=` stay in the address bar so a refresh or a
+    // copied URL lands in the same place; reserved ones are Zend's own.
+    _leaveUrl = enterZAppUrl(
+      widget.slug,
+      zappLinkParams(widget.query ?? const {}),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
