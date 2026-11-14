@@ -106,10 +106,10 @@ ThemeData buildZendTheme() {
         borderRadius: BorderRadius.circular(8),
       ),
     ),
-    hoverColor: const Color(0x0A1C1A17),
+    hoverColor: const Color(0x0A0F0F0E),
     highlightColor: Colors.transparent,
-    splashColor: const Color(0x141C1A17),
-    focusColor: const Color(0x0A1C1A17),
+    splashColor: const Color(0x140F0F0E),
+    focusColor: const Color(0x0A0F0F0E),
     useMaterial3: true,
     fontFamily: 'Geist',
     // Ink is the primary colour: buttons, switches and selection are soft
@@ -158,12 +158,12 @@ ThemeData buildZendTheme() {
 ThemeData buildZendDarkTheme() {
   final base = ThemeData.dark(useMaterial3: true);
 
-  // Warm off-white on true black (OLED-native).
-  const darkTextPrimary = Color(0xFFF4F0E8);
-  const darkTextSecondary = Color(0xFFA39D92);
-  const darkInk = Color(0xFF100F0D);
-  const darkSurface1 = Color(0xFF121110);
-  const darkSurface2 = Color(0xFF1D1B18);
+  // Off-white on true black (OLED-native).
+  const darkTextPrimary = Color(0xFFF7F6F3);
+  const darkTextSecondary = Color(0xFFA3A3A0);
+  const darkInk = Color(0xFF0A0A0A);
+  const darkSurface1 = Color(0xFF141414);
+  const darkSurface2 = Color(0xFF1F1F1E);
 
   final textTheme = base.textTheme
       .apply(
@@ -253,14 +253,14 @@ ThemeData buildZendDarkTheme() {
         color: darkTextPrimary,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2723),
+        color: const Color(0xFF2A2A28),
         borderRadius: BorderRadius.circular(8),
       ),
     ),
-    hoverColor: const Color(0x0FF4F0E8),
+    hoverColor: const Color(0x0FF7F6F3),
     highlightColor: Colors.transparent,
-    splashColor: const Color(0x1AF4F0E8),
-    focusColor: const Color(0x0FF4F0E8),
+    splashColor: const Color(0x1AF7F6F3),
+    focusColor: const Color(0x0FF7F6F3),
     useMaterial3: true,
     fontFamily: 'Geist',
     colorScheme: const ColorScheme.dark(
@@ -270,13 +270,13 @@ ThemeData buildZendDarkTheme() {
       onPrimary: darkInk,
       onSecondary: darkInk,
       onSurface: darkTextPrimary,
-      error: Color(0xFFFF6B5E),
+      error: Color(0xFFFF5A4F),
     ),
     scaffoldBackgroundColor: Colors.black,
     textTheme: textTheme,
     splashFactory: NoSplash.splashFactory,
     dividerTheme: const DividerThemeData(
-      color: Color(0xFF26231F),
+      color: Color(0xFF2A2A28),
       thickness: 1,
     ),
     cardColor: darkSurface1,

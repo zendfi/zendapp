@@ -319,16 +319,16 @@ class _ActiveState extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: ZendColors.accentBright.withValues(alpha: 0.15),
+              color: zt.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(ZendRadii.pill),
             ),
             child: Text(
               _apyDisplay,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: ZendColors.accentBright,
+                color: zt.accent,
               ),
             ),
           ),
@@ -377,7 +377,7 @@ class _ActiveState extends StatelessWidget {
                 zt: zt,
                 label: 'Earned',
                 value: _formatUsd(position.netYieldUsd),
-                valueColor: ZendColors.accentBright,
+                valueColor: zt.accent,
               ),
             ),
           ],

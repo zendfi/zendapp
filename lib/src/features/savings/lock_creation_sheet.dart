@@ -185,7 +185,7 @@ class _LockCreationSheetState extends State<LockCreationSheet> {
 
   Widget _buildStage() {
     if (_processing) {
-      return const Center(child: ZendLoader(color: ZendColors.accentBright));
+      return Center(child: ZendLoader(color: ZendTheme.of(context).accent));
     }
 
     return switch (_stage) {
@@ -480,10 +480,10 @@ class _ConfirmStage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       PhosphorIconsRegular.lockKey,
                       size: 18,
-                      color: ZendColors.accentBright,
+                      color: zt.accent,
                     ),
                     const SizedBox(width: ZendSpacing.xs),
                     Text(

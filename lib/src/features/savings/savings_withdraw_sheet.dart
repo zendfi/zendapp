@@ -382,10 +382,10 @@ class _GoalLockedStage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               PhosphorIconsRegular.lockKey,
               size: 48,
-              color: ZendColors.accentBright,
+              color: zt.accent,
             ),
             const SizedBox(height: ZendSpacing.md),
             Text(
@@ -727,7 +727,7 @@ class _ConfirmStage extends StatelessWidget {
           _BreakdownRow(
             label: 'Money earned',
             value: _fmt(position.grossYieldUsd),
-            valueColor: ZendColors.accentBright,
+            valueColor: zt.accent,
           ),
           const SizedBox(height: ZendSpacing.xs),
           _BreakdownRow(
@@ -896,7 +896,7 @@ class _ProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ZendLoader(color: ZendColors.accentBright),
+          ZendLoader(color: ZendTheme.of(context).accent),
           const SizedBox(height: 20),
           Text(
             'Cashing out...',

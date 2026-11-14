@@ -217,7 +217,7 @@ class _CandidateTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isClosest
-                ? ZendColors.accentBright.withValues(alpha: 0.4)
+                ? zt.accent.withValues(alpha: 0.4)
                 : zt.border,
             width: isClosest ? 1.5 : 1.0,
           ),
@@ -267,19 +267,19 @@ class _CandidateTile extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: ZendColors.accentBright.withValues(alpha: 0.12),
+                      color: zt.accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       'CLOSEST',
                       style: ZendTextStyles.tabularNumeric.copyWith(
                         fontSize: 9,
-                        color: ZendColors.accentBright,
+                        color: zt.accent,
                         letterSpacing: 0.6,
                       ),
                     ),
                   ),
-                _SignalBars(bars: bars, activeColor: ZendColors.accentBright),
+                _SignalBars(bars: bars, activeColor: zt.accent),
               ],
             ),
           ],

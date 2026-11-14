@@ -9,7 +9,6 @@ import '../features/request/payment_request.dart';
 import '../features/send/transfer_status_controller.dart';
 import '../models/api_models.dart';
 import '../models/email_intent.dart';
-import '../models/handle_label.dart';
 import '../models/recent_contact.dart';
 import '../models/activity_edge.dart';
 import '../models/add_cash_models.dart';

@@ -173,7 +173,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             painter: GoalProgressPainter(
                               progress: progress,
                               bgColor: zt.border,
-                              fgColor: ZendColors.accentBright,
+                              fgColor: zt.accent,
                               strokeWidth: 6,
                             ),
                           ),
@@ -199,7 +199,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   _StatRow(
                     label: 'Earned',
                     value: formatMoney(yield_),
-                    valueColor: ZendColors.accentBright,
+                    valueColor: zt.accent,
                     zt: zt,
                   ),
                   if (_pocket.goalDeadline != null) ...[
@@ -217,15 +217,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     Container(
                       padding: const EdgeInsets.all(ZendSpacing.sm),
                       decoration: BoxDecoration(
-                        color: ZendColors.accentBright.withValues(alpha: 0.1),
+                        color: zt.accent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(ZendRadii.md),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             PhosphorIconsRegular.lockKey,
                             size: 16,
-                            color: ZendColors.accentBright,
+                            color: zt.accent,
                           ),
                           const SizedBox(width: ZendSpacing.xs),
                           Expanded(

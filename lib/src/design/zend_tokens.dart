@@ -9,47 +9,45 @@ import 'package:flutter/material.dart';
 /// from people (see `zend_tint.dart`), not from the brand. The one brand hue
 /// left is [signal], kept to dots and badges.
 class ZendColors {
-  /// Warm off-white page, never pure #FFF.
-  static const bgPrimary = Color(0xFFF7F4EE);
-  static const bgSecondary = Color(0xFFEFEBE3);
+  /// Barely-warm off-white page, never pure #FFF.
+  static const bgPrimary = Color(0xFFFAF9F7);
+  static const bgSecondary = Color(0xFFF0EFEC);
 
   /// Ink. Primary actions are soft black on light surfaces. Screens with a
   /// permanently dark background use [textOnDeep] fills instead.
-  static const accent = Color(0xFF1C1A17);
+  static const accent = Color(0xFF0F0F0E);
 
-  /// Warm stone grey that keeps 4.3:1 or better on both the off-white page
-  /// and true black, for the few spots that hold one colour regardless of
-  /// mode (progress bars, loaders, selection rings).
-  static const accentBright = Color(0xFF7A7368);
+  /// Same ink as [accent]. Mode-aware code should use [ZendTheme.accent].
+  static const accentBright = Color(0xFF0F0F0E);
 
   /// Light-on-dark highlight for permanently dark surfaces (PIN dots, the
   /// in-app banners, the Zend button).
-  static const accentPop = Color(0xFFF4F0E8);
+  static const accentPop = Color(0xFFF7F6F3);
 
   /// Soft black, never pure #000.
-  static const textPrimary = Color(0xFF1C1A17);
-  static const textSecondary = Color(0xFF6B655C);
-  static const textOnDeep = Color(0xFFF4F0E8);
+  static const textPrimary = Color(0xFF0F0F0E);
+  static const textSecondary = Color(0xFF5C5B57);
+  static const textOnDeep = Color(0xFFF7F6F3);
 
   /// Success ticks and online dots only. Amounts never use it: a `+` sign
   /// carries direction.
-  static const positive = Color(0xFF2F8F55);
+  static const positive = Color(0xFF12A150);
 
   /// Negative amounts render in ink, not red, so a debit doesn't read as an
   /// alarm. [destructive] is for delete/remove actions and errors.
-  static const negative = Color(0xFF1C1A17);
-  static const destructive = Color(0xFFB42318);
+  static const negative = Color(0xFF0F0F0E);
+  static const destructive = Color(0xFFD92D20);
 
   /// The single small signal: unread badges, notification dots, and Links
   /// nobody has collected yet. Dots and badges only, never fills or text.
   static const signal = Color(0xFFFF4D1A);
-  static const onSignal = Color(0xFF1C1A17);
+  static const onSignal = Color(0xFF0F0F0E);
 
-  static const border = Color(0xFFE8E2D7);
+  static const border = Color(0xFFE6E4DF);
 
   /// Permanently dark surfaces (PIN setup, QR, onboarding success).
-  static const bgDeep = Color(0xFF171512);
-  static const bgAccentSurface = Color(0xFF201E1A);
+  static const bgDeep = Color(0xFF111111);
+  static const bgAccentSurface = Color(0xFF1E1E1D);
 }
 
 class ZendTheme {
@@ -122,27 +120,27 @@ class ZendTheme {
   final bool isDark;
 
   static const _light = ZendTheme._(
-    // Warm off-white page with slightly lighter cards on top. Neither is
-    // pure white: the warmth is what keeps it friendly rather than clinical.
-    bgPrimary: Color(0xFFF7F4EE),
-    bgSecondary: Color(0xFFEFEBE3),
-    bgCard: Color(0xFFFDFBF7),
-    bgElevated: Color(0xFFFDFBF7),
-    bgAccentSurface: Color(0xFFEFEBE3),
-    chatBg: Color(0xFFECE6DA),
-    bubbleReceived: Color(0xFFFDFBF7),
-    // Soft black (15.8:1 on the page) and warm grey (5.3:1).
-    textPrimary: Color(0xFF1C1A17),
-    textSecondary: Color(0xFF6B655C),
-    border: Color(0xFFE8E2D7),
-    accent: Color(0xFF1C1A17),
-    onAccent: Color(0xFFF7F4EE),
-    accentBright: Color(0xFF1C1A17),
-    accentPop: Color(0xFFE6DFD2),
-    positive: Color(0xFF2F8F55),
-    destructive: Color(0xFFB42318),
+    // Crisp, barely-warm off-white with near-white cards. Warmth is a hint,
+    // not a beige wash: contrast is what keeps monochrome alive.
+    bgPrimary: Color(0xFFFAF9F7),
+    bgSecondary: Color(0xFFF0EFEC),
+    bgCard: Color(0xFFFEFEFD),
+    bgElevated: Color(0xFFFEFEFD),
+    bgAccentSurface: Color(0xFFF0EFEC),
+    chatBg: Color(0xFFEFEEEA),
+    bubbleReceived: Color(0xFFFEFEFD),
+    // Soft black (18:1 on the page) and a near-neutral grey (6.5:1).
+    textPrimary: Color(0xFF0F0F0E),
+    textSecondary: Color(0xFF5C5B57),
+    border: Color(0xFFE6E4DF),
+    accent: Color(0xFF0F0F0E),
+    onAccent: Color(0xFFFAF9F7),
+    accentBright: Color(0xFF0F0F0E),
+    accentPop: Color(0xFFEAE9E5),
+    positive: Color(0xFF12A150),
+    destructive: Color(0xFFD92D20),
     signal: Color(0xFFFF4D1A),
-    onSignal: Color(0xFF1C1A17),
+    onSignal: Color(0xFF0F0F0E),
     isDark: false,
   );
 
@@ -150,30 +148,31 @@ class ZendTheme {
   // surfaces are warm near-blacks so sheets and cards still separate.
   static const _dark = ZendTheme._(
     bgPrimary: Color(0xFF000000),
-    bgSecondary: Color(0xFF121110),
-    bgCard: Color(0xFF121110),
-    bgElevated: Color(0xFF1D1B18),
-    bgAccentSurface: Color(0xFF1D1B18),
+    bgSecondary: Color(0xFF141414),
+    bgCard: Color(0xFF141414),
+    bgElevated: Color(0xFF1F1F1E),
+    bgAccentSurface: Color(0xFF1F1F1E),
     chatBg: Color(0xFF000000),
-    bubbleReceived: Color(0xFF1D1B18),
-    // Warm off-white (18.5:1 on black) and warm grey (7.8:1).
-    textPrimary: Color(0xFFF4F0E8),
-    textSecondary: Color(0xFFA39D92),
-    border: Color(0xFF26231F),
-    accent: Color(0xFFF4F0E8),
-    onAccent: Color(0xFF100F0D),
-    accentBright: Color(0xFFF4F0E8),
-    accentPop: Color(0xFF2A2723),
-    positive: Color(0xFF4CC38A),
-    destructive: Color(0xFFFF6B5E),
+    bubbleReceived: Color(0xFF1F1F1E),
+    // Off-white (19:1 on black) and a neutral grey (8.3:1).
+    textPrimary: Color(0xFFF7F6F3),
+    textSecondary: Color(0xFFA3A3A0),
+    border: Color(0xFF2A2A28),
+    accent: Color(0xFFF7F6F3),
+    onAccent: Color(0xFF0A0A0A),
+    accentBright: Color(0xFFF7F6F3),
+    accentPop: Color(0xFF2A2A28),
+    positive: Color(0xFF2FD27A),
+    destructive: Color(0xFFFF5A4F),
     signal: Color(0xFFFF5C2B),
-    onSignal: Color(0xFF100F0D),
+    onSignal: Color(0xFF0A0A0A),
     isDark: true,
   );
 
-  /// Sent chat bubble fill. Always dark enough for white text: ink in light
-  /// mode, a warm charcoal in dark mode so it doesn't glare on true black.
-  Color get bubbleSent => isDark ? const Color(0xFF34312C) : accent;
+  /// Sent chat bubble: solid ink, inverted per mode (black on light,
+  /// off-white on true black). Text on it uses [onBubbleSent].
+  Color get bubbleSent => accent;
+  Color get onBubbleSent => onAccent;
 
   /// Payment in progress.
   Color get pending =>

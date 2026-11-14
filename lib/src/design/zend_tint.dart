@@ -16,20 +16,21 @@ class ZendTint {
   final Color solid;
   final bool isDark;
 
-  /// Hues spaced far apart so neighbours in a list never look alike. White
-  /// initials clear 3.5:1 on every hue except amber, which gets dark
-  /// initials instead (see [onSolid]).
+  /// Saturated hues spaced far apart so neighbours in a list never look
+  /// alike. They're the only strong colour in the app, so they stay vivid.
+  /// White initials clear 3:1 (large text) on all but amber, which gets dark
+  /// initials (see [onSolid]).
   static const palette = <Color>[
-    Color(0xFFE04E45), // red
-    Color(0xFFD9652A), // orange
-    Color(0xFFD9A421), // amber
-    Color(0xFF2E9A5E), // green
-    Color(0xFF15928F), // teal
-    Color(0xFF2F8FCF), // sky
-    Color(0xFF4F74E3), // blue
-    Color(0xFF8662E8), // violet
-    Color(0xFFC95BD6), // orchid
-    Color(0xFFE2558E), // pink
+    Color(0xFFEF3B36), // red
+    Color(0xFFF25C05), // orange
+    Color(0xFFF5A300), // amber
+    Color(0xFF0FA958), // green
+    Color(0xFF0A9E9A), // teal
+    Color(0xFF0A8FE8), // sky
+    Color(0xFF4757FF), // blue
+    Color(0xFF8650F5), // violet
+    Color(0xFFC93AE0), // orchid
+    Color(0xFFF0306F), // pink
   ];
 
   /// Stable tint for [seed] (FNV-1a hash, case-insensitive).
@@ -52,22 +53,25 @@ class ZendTint {
   LinearGradient get gradient => LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color.lerp(solid, Colors.white, 0.22)!, solid],
+    colors: [
+      Color.lerp(solid, Colors.white, 0.10)!,
+      Color.lerp(solid, Colors.black, 0.10)!,
+    ],
   );
 
   /// Initials or icons on [solid].
   Color get onSolid => solid.computeLuminance() > 0.4
-      ? const Color(0xFF1C1A17)
+      ? const Color(0xFF0F0F0E)
       : Colors.white;
 
   /// Quiet card fill in the person's colour, on the off-white page or true
   /// black.
   Color get wash => isDark
-      ? Color.lerp(solid, Colors.black, 0.80)!
-      : Color.lerp(solid, const Color(0xFFFDFBF7), 0.86)!;
+      ? Color.lerp(solid, Colors.black, 0.70)!
+      : Color.lerp(solid, Colors.white, 0.76)!;
 
   /// Hairline outline for a [wash] card.
-  Color get edge => solid.withValues(alpha: isDark ? 0.40 : 0.30);
+  Color get edge => solid.withValues(alpha: isDark ? 0.55 : 0.45);
 
   /// Text and icons on [wash] (passes 4.5:1).
   Color get ink => isDark

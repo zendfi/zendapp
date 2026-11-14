@@ -485,7 +485,7 @@ class _ProcessingStage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ZendLoader(color: ZendColors.accentBright),
+          ZendLoader(color: ZendTheme.of(context).accent),
           const SizedBox(height: 20),
           Text(
             'Saving \$${amount.toStringAsFixed(2)}...',

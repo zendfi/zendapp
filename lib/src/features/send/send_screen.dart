@@ -587,7 +587,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                   border: fill > 0
                       ? Border.all(
-                          color: ZendColors.accentBright.withValues(alpha: 0.6),
+                          color: ZendTheme.of(context).accent.withValues(alpha: 0.6),
                           width: 1.5,
                         )
                       : Border.all(color: const Color(0x26F0F0F0)),
@@ -606,7 +606,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                               widthFactor: fill,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: ZendColors.accentBright.withValues(
+                                  color: ZendTheme.of(context).accent.withValues(
                                     alpha: 0.18,
                                   ),
                                 ),
@@ -623,7 +623,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                             PhosphorIconsRegular.lightning,
                             size: 14,
                             color: fill > 0
-                                ? ZendColors.accentBright
+                                ? ZendTheme.of(context).accent
                                 : ZendColors.textOnDeep.withValues(alpha: 0.7),
                           ),
                           const SizedBox(width: 4),
@@ -635,7 +635,7 @@ class _DropHoldButtonState extends State<_DropHoldButton>
                               fontFamily: 'Geist',
                               fontSize: 14,
                               color: fill > 0
-                                  ? ZendColors.accentBright
+                                  ? ZendTheme.of(context).accent
                                   : ZendColors.textOnDeep,
                             ),
                           ),

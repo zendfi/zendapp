@@ -306,7 +306,7 @@ class _CountryPill extends StatelessWidget {
                   '◉',
                   style: TextStyle(
                     fontSize: 10,
-                    color: ZendColors.accentBright,
+                    color: ZendColors.textOnDeep,
                   ),
                 ),
               ),

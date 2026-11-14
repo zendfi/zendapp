@@ -191,7 +191,7 @@ class _GoalCreationSheetState extends State<GoalCreationSheet> {
 
   Widget _buildStage() {
     if (_processing) {
-      return const Center(child: ZendLoader(color: ZendColors.accentBright));
+      return Center(child: ZendLoader(color: ZendTheme.of(context).accent));
     }
 
     return switch (_stage) {
@@ -394,11 +394,11 @@ class _NameEmojiStage extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? ZendColors.accentBright.withValues(alpha: 0.2)
+                          ? zt.accent.withValues(alpha: 0.2)
                           : zt.bgSecondary,
                       borderRadius: BorderRadius.circular(ZendRadii.md),
                       border: isSelected
-                          ? Border.all(color: ZendColors.accentBright, width: 2)
+                          ? Border.all(color: zt.accent, width: 2)
                           : null,
                     ),
                     alignment: Alignment.center,
@@ -681,11 +681,11 @@ class _ModeOption extends StatelessWidget {
         padding: const EdgeInsets.all(ZendSpacing.md),
         decoration: BoxDecoration(
           color: isSelected
-              ? ZendColors.accentBright.withValues(alpha: 0.1)
+              ? zt.accent.withValues(alpha: 0.1)
               : zt.bgSecondary,
           borderRadius: BorderRadius.circular(ZendRadii.xl),
           border: isSelected
-              ? Border.all(color: ZendColors.accentBright, width: 2)
+              ? Border.all(color: zt.accent, width: 2)
               : Border.all(color: zt.border),
         ),
         child: Row(
@@ -695,14 +695,14 @@ class _ModeOption extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? ZendColors.accentBright.withValues(alpha: 0.2)
+                    ? zt.accent.withValues(alpha: 0.2)
                     : zt.bgPrimary,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 20,
-                color: isSelected ? ZendColors.accentBright : zt.textSecondary,
+                color: isSelected ? zt.accent : zt.textSecondary,
               ),
             ),
             const SizedBox(width: ZendSpacing.sm),
@@ -732,9 +732,9 @@ class _ModeOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(
+              Icon(
                 PhosphorIconsRegular.checkCircle,
-                color: ZendColors.accentBright,
+                color: zt.accent,
                 size: 20,
               ),
           ],

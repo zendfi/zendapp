@@ -627,7 +627,7 @@ class GoalCard extends StatelessWidget {
                         painter: GoalProgressPainter(
                           progress: progress,
                           bgColor: zt.border,
-                          fgColor: ZendColors.accentBright,
+                          fgColor: zt.accent,
                           strokeWidth: 4,
                         ),
                       ),
@@ -799,7 +799,7 @@ class LockCard extends StatelessWidget {
                     ? PhosphorIconsRegular.lockKeyOpen
                     : PhosphorIconsRegular.lockKey,
                 size: 20,
-                color: isExpired ? ZendColors.accentBright : zt.textSecondary,
+                color: isExpired ? zt.accent : zt.textSecondary,
               ),
               const SizedBox(width: ZendSpacing.xs),
               Text(
@@ -808,7 +808,7 @@ class LockCard extends StatelessWidget {
                   fontFamily: 'Geist',
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: isExpired ? ZendColors.accentBright : zt.textPrimary,
+                  color: isExpired ? zt.accent : zt.textPrimary,
                 ),
               ),
             ],

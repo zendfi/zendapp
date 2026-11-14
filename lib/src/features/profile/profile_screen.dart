@@ -415,13 +415,13 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  color: ZendColors.accentBright,
+                  color: ZendTheme.of(context).accent,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   PhosphorIconsRegular.pencilSimple,
                   size: 10,
-                  color: Colors.white,
+                  color: ZendTheme.of(context).onAccent,
                 ),
               ),
             ),

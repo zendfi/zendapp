@@ -681,7 +681,7 @@ class _TextBubble extends StatelessWidget {
                               PhosphorIconsRegular.arrowBendUpRight,
                               size: 11,
                               color: isMe
-                                  ? Colors.white.withValues(alpha: 0.65)
+                                  ? zt.onBubbleSent.withValues(alpha: 0.65)
                                   : zt.textSecondary,
                             ),
                             const SizedBox(width: 3),
@@ -691,7 +691,7 @@ class _TextBubble extends StatelessWidget {
                                 fontFamily: 'Geist',
                                 fontSize: 11.5,
                                 color: isMe
-                                    ? Colors.white.withValues(alpha: 0.65)
+                                    ? zt.onBubbleSent.withValues(alpha: 0.65)
                                     : zt.textSecondary,
                               ),
                             ),
@@ -706,7 +706,7 @@ class _TextBubble extends StatelessWidget {
                             PhosphorIconsRegular.prohibitInset,
                             size: 13,
                             color: isMe
-                                ? Colors.white.withValues(alpha: 0.6)
+                                ? zt.onBubbleSent.withValues(alpha: 0.6)
                                 : zt.textSecondary,
                           ),
                           const SizedBox(width: 5),
@@ -716,7 +716,7 @@ class _TextBubble extends StatelessWidget {
                               fontFamily: 'Geist',
                               fontSize: 14,
                               color: isMe
-                                  ? Colors.white.withValues(alpha: 0.6)
+                                  ? zt.onBubbleSent.withValues(alpha: 0.6)
                                   : zt.textSecondary,
                             ),
                           ),
@@ -739,7 +739,7 @@ class _TextBubble extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: 'Geist',
                                   fontSize: 15.5,
-                                  color: isMe ? Colors.white : zt.textPrimary,
+                                  color: isMe ? zt.onBubbleSent : zt.textPrimary,
                                   height: 1.35,
                                   // Message content is arbitrary user text and
                                   // can be pure emoji (e.g. "🔥🔥🔥") — without
@@ -814,7 +814,7 @@ class _MessageMeta extends StatelessWidget {
             PhosphorIconsRegular.lockKeyOpen,
             size: 10,
             color: isMe
-                ? Colors.white.withValues(alpha: 0.65)
+                ? zt.onBubbleSent.withValues(alpha: 0.65)
                 : ZendColors.destructive,
           ),
           const SizedBox(width: 3),
@@ -823,7 +823,7 @@ class _MessageMeta extends StatelessWidget {
             style: ZendTextStyles.tabularNumeric.copyWith(
               fontSize: 9.5,
               color: isMe
-                  ? Colors.white.withValues(alpha: 0.65)
+                  ? zt.onBubbleSent.withValues(alpha: 0.65)
                   : ZendColors.destructive,
             ),
           ),
@@ -834,7 +834,7 @@ class _MessageMeta extends StatelessWidget {
           style: ZendTextStyles.tabularNumeric.copyWith(
             fontSize: 10,
             color: isMe
-                ? Colors.white.withValues(alpha: 0.65)
+                ? zt.onBubbleSent.withValues(alpha: 0.65)
                 : zt.textSecondary,
           ),
         ),
@@ -949,12 +949,14 @@ class _StatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only drawn on your own (ink) bubbles.
+    final on = ZendTheme.of(context).onBubbleSent;
     switch (status) {
       case DmLocalStatus.sending:
         return Icon(
           PhosphorIconsRegular.clock,
           size: 11,
-          color: Colors.white.withValues(alpha: 0.6),
+          color: on.withValues(alpha: 0.6),
         );
       case DmLocalStatus.delivered:
         // Single check — sent/delivered but not yet read. WhatsApp/iMessage
@@ -963,17 +965,11 @@ class _StatusIcon extends StatelessWidget {
         return Icon(
           PhosphorIconsRegular.check,
           size: 12,
-          color: Colors.white.withValues(alpha: 0.6),
+          color: on.withValues(alpha: 0.6),
         );
       case DmLocalStatus.read:
-        // Double tick, tinted — the read-receipt state. Uses the app's
-        // accentPop colour (not WhatsApp's blue) so it still reads as
-        // "seen" while staying on-brand.
-        return const Icon(
-          PhosphorIconsRegular.checks,
-          size: 13,
-          color: ZendColors.accentPop,
-        );
+        // Double tick at full strength: "seen" reads by weight, not hue.
+        return Icon(PhosphorIconsBold.checks, size: 13, color: on);
       case DmLocalStatus.failed:
         return GestureDetector(
           onTap: onRetry,

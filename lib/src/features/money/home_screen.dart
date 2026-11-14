@@ -274,12 +274,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: ZendColors.accentBright.withValues(
+                                    color: ZendTheme.of(context).accent.withValues(
                                       alpha: 0.15,
                                     ),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: ZendColors.accentBright.withValues(
+                                      color: ZendTheme.of(context).accent.withValues(
                                         alpha: 0.3,
                                       ),
                                     ),
@@ -290,9 +290,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Container(
                                         width: 6,
                                         height: 6,
-                                        decoration: const BoxDecoration(
+                                        decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: ZendColors.accentBright,
+                                          color: ZendTheme.of(context).accent,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
@@ -301,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         style: ZendTextStyles.tabularNumeric
                                             .copyWith(
                                               fontSize: 10,
-                                              color: ZendColors.accentBright,
+                                              color: ZendTheme.of(context).accent,
                                             ),
                                       ),
                                     ],
