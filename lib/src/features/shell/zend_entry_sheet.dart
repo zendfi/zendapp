@@ -1008,14 +1008,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           textAlign: TextAlign.left,
                           style: ZendTextStyles.amountInput(
                             _amountController.text,
-                          ).copyWith(
-                            color: zt.textPrimary,
-                          ),
+                          ).copyWith(color: zt.textPrimary),
                           decoration: InputDecoration(
                             hintText: '0',
-                            hintStyle: ZendTextStyles.amountInput('0').copyWith(
-                              color: zt.textSecondary,
-                            ),
+                            hintStyle: ZendTextStyles.amountInput(
+                              '0',
+                            ).copyWith(color: zt.textSecondary),
                             // Explicitly borderless/unfilled — the global
                             // InputDecorationTheme fills and pill-rounds inputs
                             // by default, which would draw a capsule around the
@@ -1148,7 +1146,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             setState(() {});
                           },
                           child: Container(
-                            width: 44,
+                            // At least the single-emoji width, growing to fit a
+                            // note of several emoji. A fixed 44px made those
+                            // overflow the chip, overlap and get cropped.
+                            constraints: const BoxConstraints(minWidth: 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: _noteController.text.trim() == e
@@ -1160,6 +1162,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             ),
                             child: Text(
                               e,
+                              maxLines: 1,
+                              softWrap: false,
                               style: ZendTextStyles.emoji.copyWith(
                                 fontSize: 22,
                               ),

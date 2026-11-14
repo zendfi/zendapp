@@ -67,11 +67,23 @@ class ZendTint {
   /// Quiet card fill in the person's colour, on the off-white page or true
   /// black.
   Color get wash => isDark
-      ? Color.lerp(solid, Colors.black, 0.70)!
+      ? Color.lerp(solid, Colors.black, 0.62)!
       : Color.lerp(solid, Colors.white, 0.76)!;
 
   /// Hairline outline for a [wash] card.
   Color get edge => solid.withValues(alpha: isDark ? 0.55 : 0.45);
+
+  /// The person's name drawn on a neutral card (the Telegram move: names
+  /// carry the person's colour). 4.2:1 or better on cards in both modes.
+  Color get name => isDark
+      ? Color.lerp(solid, Colors.white, 0.30)!
+      : Color.lerp(solid, Colors.black, 0.32)!;
+
+  /// Fill for something that person said (a payment note), lighter than
+  /// [wash] so body text in ink reads at 15:1.
+  Color get noteFill => isDark
+      ? Color.lerp(solid, Colors.black, 0.72)!
+      : Color.lerp(solid, Colors.white, 0.82)!;
 
   /// Text and icons on [wash] (passes 4.5:1).
   Color get ink => isDark

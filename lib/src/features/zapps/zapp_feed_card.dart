@@ -204,7 +204,7 @@ class _ReactionRow extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: r.reactedByMe ? zt.accentPop : zt.bgElevated,
+                  color: r.reactedByMe ? zt.accent : (zt.isDark ? zt.bgElevated : zt.bgSecondary),
                   borderRadius: BorderRadius.circular(ZendRadii.chip),
                 ),
                 child: Text.rich(
@@ -217,7 +217,9 @@ class _ReactionRow extends StatelessWidget {
                       TextSpan(text: ' ${r.count}'),
                     ],
                   ),
-                  style: ZendTextStyles.micro.copyWith(color: zt.textPrimary),
+                  style: ZendTextStyles.micro.copyWith(
+                    color: r.reactedByMe ? zt.onAccent : zt.textPrimary,
+                  ),
                 ),
               ),
             ),

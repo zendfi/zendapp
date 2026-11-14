@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter/services.dart';
 
 import '../../core/zend_format.dart';
+import '../../design/zend_avatar.dart';
+import '../../design/zend_country_flag.dart';
 import '../../design/zend_keypad.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -16,6 +18,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart' show zendRoute;
 import '../../services/dev_return_redirect_service.dart';
+import '../../services/sound_service.dart';
 import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import '../dm/dm_thread_screen.dart';
@@ -23,7 +26,7 @@ import '../onboarding/zendtag_prompt_sheet.dart' show showZendtagPromptSheet;
 import '../wallet/add_cash_sheet.dart' show showAddCashSheet;
 import 'my_links_screen.dart' show zlinkServiceOf;
 
-part 'ask_bank_pay.dart';
+part 'ask_pay_sheet.dart';
 
 /// Holds a Zlink opened before sign-in, so claiming happens right after the
 /// normal "Continue with Google". In memory only: the link key must not be
@@ -112,6 +115,8 @@ Future<void> _openAsk(BuildContext context, String id) async {
   await showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
+    backgroundColor: Colors.transparent,
     builder: (_) => _AskPaySheet(id: id),
   );
   // A new account that arrived through this link: the username offer was
@@ -420,253 +425,3 @@ String _closedBody(Map<String, dynamic> preview) {
   };
 }
 
-/// Shows what's being asked and pays on confirmation. Paying is a real choice,
-/// so unlike claiming it always needs a tap.
-class _AskPaySheet extends StatefulWidget {
-  const _AskPaySheet({required this.id});
-  final String id;
-  @override
-  State<_AskPaySheet> createState() => _AskPaySheetState();
-}
-
-class _AskPaySheetState extends State<_AskPaySheet> {
-  Map<String, dynamic>? _preview;
-  String? _error;
-  bool _paying = false;
-  bool _paid = false;
-
-  /// Set from the pay response when "Message" should show on the paid sheet.
-  String? _messageUserId;
-  final _amount = TextEditingController();
-
-  /// Naira when a rate is known as the sheet opens, else dollars.
-  final AmountEntry _entry = AmountEntry.current();
-
-  /// Paying by bank transfer instead of from the balance.
-  bool _byBank = false;
-
-  /// Whether the balance could pay this link, so the bank sheet offers it.
-  bool _balanceCovers = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final model = ZendScope.of(context);
-      try {
-        final v = await zlinkServiceOf(context).previewAsk(widget.id);
-        // Someone new to Zend has nothing to pay from yet, so go straight to
-        // paying by bank. Only once the balance is actually known: a zero
-        // that hasn't loaded yet isn't an empty Zend.
-        // Right after creating an account the first reads can fail while the
-        // session settles, so give it a few tries.
-        for (final wait in const [0, 2, 4]) {
-          if (model.balanceLoaded) break;
-          if (wait > 0) await Future<void>.delayed(Duration(seconds: wait));
-          await model.fetchBalance().timeout(
-            const Duration(seconds: 6),
-            onTimeout: () {},
-          );
-        }
-        final known = model.balanceLoaded;
-        final have = model.spendableBalance;
-        final ask = (v['amount_usd'] as num?)?.toDouble();
-        final covers = have > 0 && (ask == null || have >= ask);
-        if (mounted) {
-          setState(() {
-            _preview = v;
-            // Still unknown: offer paying from the balance too, in case
-            // there is money there.
-            _balanceCovers = covers || !known;
-            // Unknown means most likely a brand-new account, which can only
-            // pay by bank, so that's the safer default.
-            _byBank = !covers;
-          });
-        }
-      } catch (_) {
-        if (mounted) setState(() => _error = "This link doesn't exist");
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _amount.dispose();
-    super.dispose();
-  }
-
-  /// Closes this sheet and opens the chat. Everything the chat needs is
-  /// captured first, because this sheet's context goes away on pop.
-  void _message(String userId) {
-    final model = ZendScope.of(context);
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    Navigator.of(context).pop();
-    unawaited(
-      _openChatWith(
-        model: model,
-        navigator: navigator,
-        messenger: messenger,
-        userId: userId,
-      ),
-    );
-  }
-
-  Future<void> _pay() async {
-    final fixed = _preview!['amount_usd'] as num?;
-    final amount = fixed?.toDouble() ?? _entry.usd(_amount.text);
-    if (amount <= 0) {
-      setState(() => _error = 'Enter an amount');
-      return;
-    }
-    final model = ZendScope.of(context);
-    final service = zlinkServiceOf(context);
-    setState(() {
-      _paying = true;
-      _error = null;
-    });
-    try {
-      final paid = await service.payAsk(widget.id, amountUsd: amount);
-      model.fetchBalance();
-      // "Pay with Zend" from a developer's site: send the payer back there.
-      final token = paid['return_token'] as String?;
-      final redirect = paid['redirect_url'] as String?;
-      final devId = paid['dev_request_id'] as String?;
-      if (token != null && redirect != null && devId != null) {
-        await DevReturnRedirectService.redirectAndReportOutcome(
-          apiClient: model.walletService.apiClient,
-          requestId: devId,
-          redirectUrl: redirect,
-          token: token,
-          platform: defaultTargetPlatform == TargetPlatform.iOS
-              ? 'ios'
-              : 'android',
-        );
-      }
-      // A developer checkout ("Pay with Zend") sends the payer back to the
-      // site, so there's no chat to offer.
-      final payeeId = paid['payee_user_id'];
-      final offerChat =
-          paid['dev_request_id'] == null &&
-          zlinkCanMessage(
-            userId: payeeId,
-            fromApp: paid['from_app'],
-            name: _preview!['payee_name'],
-          );
-      if (mounted) {
-        setState(() {
-          _paid = true;
-          _messageUserId = offerChat ? payeeId as String : null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => _error = e is ZlinkException
-              ? e.message
-              : "Payment didn't go through. Try again.",
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _paying = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final v = _preview;
-    if (v == null) {
-      return _SheetFrame(
-        icon: PhosphorIconsRegular.handCoins,
-        title: _error ?? 'Loading…',
-        action: _error == null ? const CircularProgressIndicator() : null,
-      );
-    }
-    if (_paid) {
-      final done = PrimaryButton(
-        label: 'Done',
-        onPressed: () => Navigator.of(context).pop(),
-      );
-      final messageUserId = _messageUserId;
-      return _SheetFrame(
-        icon: PhosphorIconsRegular.checkCircle,
-        title: 'Paid ${v['payee_name']}',
-        action: messageUserId == null
-            ? done
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OutlineActionButton(
-                    label: 'Message ${v['payee_name']}',
-                    onPressed: () => _message(messageUserId),
-                  ),
-                  const SizedBox(height: 12),
-                  done,
-                ],
-              ),
-      );
-    }
-    if (v['status'] != 'active') {
-      return const _SheetFrame(
-        icon: PhosphorIconsRegular.warningCircle,
-        title: 'This link is no longer collecting',
-      );
-    }
-    if (_byBank) {
-      return _AskBankPay(
-        id: widget.id,
-        preview: v,
-        canPayFromBalance: _balanceCovers,
-        onUseBalance: () => setState(() => _byBank = false),
-      );
-    }
-    final fixed = v['amount_usd'] != null;
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _SheetFrame(
-        icon: PhosphorIconsRegular.handCoins,
-        title: fixed
-            ? 'Pay ${v['payee_name']} ${zlinkAmountLabel(v)}'
-            : 'Pay ${v['payee_name']}',
-        body: [
-          v['memo'] as String?,
-          _error,
-        ].whereType<String>().join('\n').ifEmpty,
-        action: Column(
-          children: [
-            if (!fixed)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: TextField(
-                  controller: _amount,
-                  inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
-                  keyboardType: TextInputType.numberWithOptions(
-                    decimal: !_entry.naira,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Amount',
-                    prefixText: _entry.symbol,
-                  ),
-                ),
-              ),
-            PrimaryButton(
-              label: 'Pay',
-              isLoading: _paying,
-              onPressed: _paying ? null : _pay,
-            ),
-            TextButton(
-              onPressed: _paying ? null : () => setState(() => _byBank = true),
-              child: const Text('Pay by bank transfer instead'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-extension on String {
-  String? get ifEmpty => isEmpty ? null : this;
-}

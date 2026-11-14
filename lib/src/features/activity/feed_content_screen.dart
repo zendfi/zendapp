@@ -8,6 +8,7 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_verified_badge.dart';
 import '../../design/zend_primitives.dart';
+import '../../design/zend_tint.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_money.dart';
 import '../../design/zend_motion_widgets.dart';
@@ -967,6 +968,21 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     final emojiNote = isEmojiNote(edge.note) ? edge.note!.trim() : null;
     final totalReactions = _reactions.fold<int>(0, (sum, r) => sum + r.count);
 
+    // People carry their own colour (see ZendTint): names in the person's
+    // tint, notes in a bubble of it. The card itself stays neutral.
+    TextStyle nameStyle(String? seed) => TextStyle(
+      fontWeight: FontWeight.w700,
+      color: seed == null || seed.isEmpty
+          ? null
+          : ZendTint.of(seed, isDark: zt.isDark).name,
+    );
+    final noteSeed = isDirect
+        ? (isOutgoing ? null : edge.counterparty.id)
+        : edge.senderZendtag;
+    final noteTint = noteSeed == null || noteSeed.isEmpty
+        ? null
+        : ZendTint.of(noteSeed, isDark: zt.isDark);
+
     late final String avatarInitial;
     late final String? avatarUrl;
     late final Widget headline;
@@ -980,6 +996,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
 
       final verb = feedVerbFor(edge);
       final subject = counterparty.displayLabel;
+      final themStyle = nameStyle(counterparty.id);
       headline = RichText(
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -996,7 +1013,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   ),
                   TextSpan(
                     text: subject,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: themStyle,
                   ),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
@@ -1006,7 +1023,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   TextSpan(text: isOutgoing ? 'You contributed to ' : ''),
                   TextSpan(
                     text: subject,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: themStyle,
                   ),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
@@ -1016,7 +1033,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   TextSpan(text: isOutgoing ? 'You $verb ' : ''),
                   TextSpan(
                     text: subject,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: themStyle,
                   ),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
@@ -1053,13 +1070,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
               ? [
                   TextSpan(
                     text: senderLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: nameStyle(senderTag),
                   ),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' sent a Vibe ✨ to '),
                   TextSpan(
                     text: recipientLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: nameStyle(recipientTag),
                   ),
                   if (edge.recipientHumanVerified) verifiedBadgeSpan(),
                 ]
@@ -1067,7 +1084,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
               ? [
                   TextSpan(
                     text: senderLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: nameStyle(senderTag),
                   ),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' contributed to a pool'),
@@ -1075,13 +1092,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
               : [
                   TextSpan(
                     text: senderLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: nameStyle(senderTag),
                   ),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   TextSpan(text: ' $verb '),
                   TextSpan(
                     text: recipientLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: nameStyle(recipientTag),
                   ),
                   if (edge.recipientHumanVerified) verifiedBadgeSpan(),
                 ],
@@ -1155,16 +1172,32 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                 ] else if (edge.note?.isNotEmpty == true &&
                     !isVibe &&
                     !isMediaNote(edge.note)) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    edge.note!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 14,
-                      height: 1.3,
-                      color: zt.textPrimary.withValues(alpha: 0.88),
+                  const SizedBox(height: 10),
+                  // The note as a speech bubble in its author's colour.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: noteTint?.noteFill ?? zt.bgSecondary,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      edge.note!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        height: 1.3,
+                        color: zt.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -1191,8 +1224,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                             ),
                             decoration: BoxDecoration(
                               color: r.reactedByMe
-                                  ? zt.accentPop
-                                  : zt.bgElevated,
+                                  ? zt.accent
+                                  : (zt.isDark ? zt.bgElevated : zt.bgSecondary),
                               borderRadius: BorderRadius.circular(
                                 ZendRadii.chip,
                               ),
@@ -1210,7 +1243,9 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                                 ],
                               ),
                               style: ZendTextStyles.micro.copyWith(
-                                color: zt.textPrimary,
+                                color: r.reactedByMe
+                                    ? zt.onAccent
+                                    : zt.textPrimary,
                               ),
                             ),
                           ),

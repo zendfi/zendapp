@@ -10,8 +10,8 @@ import 'package:flutter/material.dart';
 /// left is [signal], kept to dots and badges.
 class ZendColors {
   /// Barely-warm off-white page, never pure #FFF.
-  static const bgPrimary = Color(0xFFFAF9F7);
-  static const bgSecondary = Color(0xFFF0EFEC);
+  static const bgPrimary = Color(0xFFF2F1ED);
+  static const bgSecondary = Color(0xFFE8E6E1);
 
   /// Ink. Primary actions are soft black on light surfaces. Screens with a
   /// permanently dark background use [textOnDeep] fills instead.
@@ -43,7 +43,7 @@ class ZendColors {
   static const signal = Color(0xFFFF4D1A);
   static const onSignal = Color(0xFF0F0F0E);
 
-  static const border = Color(0xFFE6E4DF);
+  static const border = Color(0xFFE2E0DA);
 
   /// Permanently dark surfaces (PIN setup, QR, onboarding success).
   static const bgDeep = Color(0xFF111111);
@@ -120,23 +120,24 @@ class ZendTheme {
   final bool isDark;
 
   static const _light = ZendTheme._(
-    // Crisp, barely-warm off-white with near-white cards. Warmth is a hint,
-    // not a beige wash: contrast is what keeps monochrome alive.
-    bgPrimary: Color(0xFFFAF9F7),
-    bgSecondary: Color(0xFFF0EFEC),
-    bgCard: Color(0xFFFEFEFD),
-    bgElevated: Color(0xFFFEFEFD),
-    bgAccentSurface: Color(0xFFF0EFEC),
-    chatBg: Color(0xFFEFEEEA),
-    bubbleReceived: Color(0xFFFEFEFD),
-    // Soft black (18:1 on the page) and a near-neutral grey (6.5:1).
+    // Barely-warm off-white page with near-white cards on top. The page sits
+    // a step darker (1.13:1) so cards, bubbles and chips visibly lift off it;
+    // with no brand colour, that separation is what keeps it from looking flat.
+    bgPrimary: Color(0xFFF2F1ED),
+    bgSecondary: Color(0xFFE8E6E1),
+    bgCard: Color(0xFFFFFEFC),
+    bgElevated: Color(0xFFFFFEFC),
+    bgAccentSurface: Color(0xFFE8E6E1),
+    chatBg: Color(0xFFE8E6E0),
+    bubbleReceived: Color(0xFFFFFEFC),
+    // Soft black (17:1 on the page) and a near-neutral grey (6:1).
     textPrimary: Color(0xFF0F0F0E),
     textSecondary: Color(0xFF5C5B57),
-    border: Color(0xFFE6E4DF),
+    border: Color(0xFFE2E0DA),
     accent: Color(0xFF0F0F0E),
-    onAccent: Color(0xFFFAF9F7),
+    onAccent: Color(0xFFFFFEFC),
     accentBright: Color(0xFF0F0F0E),
-    accentPop: Color(0xFFEAE9E5),
+    accentPop: Color(0xFFE3E1DB),
     positive: Color(0xFF12A150),
     destructive: Color(0xFFD92D20),
     signal: Color(0xFFFF4D1A),
