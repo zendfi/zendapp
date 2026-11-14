@@ -260,7 +260,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                       decoration: BoxDecoration(
                         color: active
                             ? ZendColors.accentPop
-                            : const Color(0x33E8F4EC),
+                            : const Color(0x33F7F6F3),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -323,7 +323,7 @@ class _PinMigrationScreenState extends State<PinMigrationScreen>
                 style: const TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: Color(0x99F7F6F3),
                 ),
               ),
               SizedBox(height: compact ? 28 : 44),
@@ -411,7 +411,7 @@ class _OldPinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66F7F6F3),
                 width: 2,
               ),
             ),
@@ -443,7 +443,7 @@ class _NewPinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66F7F6F3),
                 width: 2,
               ),
             ),

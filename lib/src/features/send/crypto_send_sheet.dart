@@ -590,12 +590,12 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? zt.accent.withValues(alpha: 0.08)
+                                ? zt.bgSecondary
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(ZendRadii.md),
                             border: isSelected
                                 ? Border.all(
-                                    color: zt.accent.withValues(alpha: 0.3),
+                                    color: zt.accent,
                                   )
                                 : null,
                           ),

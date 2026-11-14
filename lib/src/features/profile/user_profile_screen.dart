@@ -495,7 +495,7 @@ class _PersonActivityRow extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final amountLabel = edge.amountHidden
         ? 'Hidden'
-        : '\$${edge.amountUsdc ?? '0'}';
+        : formatMoney(double.tryParse(edge.amountUsdc ?? '') ?? 0);
 
     return Material(
       color: zt.bgSecondary,

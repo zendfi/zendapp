@@ -602,9 +602,7 @@ class _BankSendReceiptSheetState extends State<_BankSendReceiptSheet> {
       _ => 'Processing',
     };
 
-    final amountStr = amountUsdc == amountUsdc.roundToDouble()
-        ? formatUsd(amountUsdc)
-        : formatUsd(amountUsdc);
+    final amountStr = formatMoney(amountUsdc);
 
     final fiatSymbol = switch (fiatCurrency) {
       'NGN' => '₦',
@@ -929,7 +927,7 @@ class _BankShareCard extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF14532D), Color(0xFF0A1A0D)],
+              colors: [Color(0xFF2A2A28), Color(0xFF0A0A0A)],
             ),
           ),
           child: Column(
@@ -980,13 +978,16 @@ class _BankShareCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: done
-                      ? const Color(0xFF1FD16A).withValues(alpha: 0.22)
+                      ? const Color(0xFFF7F6F3)
                       : Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
                   status,
-                  style: ZendTextStyles.micro.copyWith(color: fg),
+                  style: ZendTextStyles.micro.copyWith(
+                    color: done ? const Color(0xFF0F0F0E) : fg,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

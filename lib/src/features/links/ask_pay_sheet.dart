@@ -569,7 +569,7 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   }
 
   Widget _buildAmount(ZendTheme zt, {required bool bank}) {
-    final naira = bank || _entry.naira;
+    final naira = bank || _entry.whole;
     final symbol = bank ? '₦' : _entry.symbol;
     final typed = bank ? (_typedNgn ?? 0) : _entry.usd(_amount.text);
     final max = (_v['max_amount_usd'] as num?)?.toDouble();
@@ -609,7 +609,7 @@ class _AskPaySheetState extends State<_AskPaySheet> {
                       child: TextField(
                         controller: _amount,
                         focusNode: _amountFocus,
-                        inputFormatters: [AmountInputFormatter(naira: naira)],
+                        inputFormatters: [AmountInputFormatter(whole: naira)],
                         keyboardType: TextInputType.numberWithOptions(
                           decimal: !naira,
                         ),

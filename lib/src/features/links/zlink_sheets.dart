@@ -90,9 +90,15 @@ Future<void> _openChatWith({
   }
 }
 
+/// A link's amount for this person. Its Naira figure only when they see
+/// Naira, or when the link was priced in Naira (that's the real price);
+/// otherwise their own currency.
 String zlinkAmountLabel(Map<String, dynamic> preview) {
   final kobo = preview['ngn_quote_kobo'] as num?;
-  if (kobo != null) return formatNaira((kobo / 100).roundToDouble());
+  if (kobo != null &&
+      (DisplayCurrency.isNaira || preview['priced_in_ngn'] == true)) {
+    return formatNaira((kobo / 100).roundToDouble());
+  }
   final usd = (preview['amount_usd'] ?? preview['max_amount_usd']) as num?;
   return usd == null ? 'money' : formatMoney(usd.toDouble());
 }

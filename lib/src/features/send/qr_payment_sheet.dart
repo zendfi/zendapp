@@ -231,7 +231,7 @@ class _QrPaymentSheetState extends State<QrPaymentSheet>
     final next = applyAmountKey(
       _digits,
       value == 'del' ? '<' : value,
-      naira: _entry.naira,
+      whole: _entry.whole,
     );
     if (next != null) setState(() => _digits = next);
   }
@@ -745,7 +745,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                 color: ZendTheme.of(context).textPrimary,
               ),
             ),
-            if (widget.fxPreviewNgn != null && !NairaRate.active) ...[
+            if (widget.fxPreviewNgn != null && !DisplayCurrency.isNaira) ...[
               const SizedBox(height: 4),
               Text(
                 '≈ ₦${_formatNgn(widget.fxPreviewNgn!)}',
@@ -785,7 +785,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
           if (_isOpenIntent) ...[
             const Spacer(),
             _AmountKeypad(
-              decimal: !widget.entry.naira,
+              decimal: !widget.entry.whole,
               onTap: widget.onAmountKey,
               keyHeight: compact ? 52 : 64,
             ),

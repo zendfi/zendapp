@@ -879,7 +879,7 @@ class _PendingIntentSheetState extends State<_PendingIntentSheet> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: zt.accent.withValues(alpha: 0.12),
+                  color: zt.onAccent,
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(

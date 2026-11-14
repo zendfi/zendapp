@@ -60,7 +60,7 @@ class RecoverySetupScreen extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: zt.accent.withValues(alpha: 0.12),
+                    color: zt.onAccent,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

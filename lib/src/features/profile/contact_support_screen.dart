@@ -33,7 +33,7 @@ class ContactSupportScreen extends StatelessWidget {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: zt.accentBright.withValues(alpha: 0.08),
+                        color: zt.bgSecondary,
                         borderRadius: BorderRadius.circular(ZendRadii.xl),
                       ),
                       child: Row(

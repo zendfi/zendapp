@@ -256,7 +256,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
           child: Icon(
             PhosphorIconsRegular.bluetooth,
             size: 80,
-            color: Color(0x44E8F4EC),
+            color: Color(0x44F7F6F3),
           ),
         );
     }
@@ -308,7 +308,7 @@ class _NfcWriteScreenState extends State<NfcWriteScreen>
       style: const TextStyle(
         fontFamily: 'Geist',
         fontSize: 15,
-        color: Color(0x99E8F4EC),
+        color: Color(0x99F7F6F3),
         height: 1.5,
       ),
     );
@@ -369,9 +369,9 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: primary ? ZendColors.textOnDeep : const Color(0x1AE8F4EC),
+          color: primary ? ZendColors.textOnDeep : const Color(0x1AF7F6F3),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: primary ? null : Border.all(color: const Color(0x26E8F4EC)),
+          border: primary ? null : Border.all(color: const Color(0x26F7F6F3)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -380,7 +380,7 @@ class _ActionButton extends StatelessWidget {
             fontFamily: 'Geist',
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: primary ? ZendColors.textPrimary : const Color(0xCCE8F4EC),
+            color: primary ? ZendColors.textPrimary : const Color(0xCCF7F6F3),
           ),
         ),
       ),

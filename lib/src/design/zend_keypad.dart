@@ -2,15 +2,15 @@ import 'package:flutter/services.dart';
 
 /// Applies one key ('0'-'9', '.', '<' for delete) to an amount string.
 /// Dollars: max two decimals, one dot, seven digits, no leading zero.
-/// Naira ([naira]): whole Naira only, nine digits, grouped with commas
+/// Whole units ([whole], e.g. Naira, Yen): no decimals, nine digits, grouped with commas
 /// (`13,700`). Returns null when the key is rejected.
-String? applyAmountKey(String t, String key, {bool naira = false}) {
-  if (naira) {
+String? applyAmountKey(String t, String key, {bool whole = false}) {
+  if (whole) {
     final raw = t.replaceAll(',', '');
     if (key == '<') {
       return raw.isEmpty ? null : _group(raw.substring(0, raw.length - 1));
     }
-    // "000" is the Naira keypad's spare key: ₦5 → ₦5,000 in one tap.
+    // "000" is the whole-units keypad's spare key: ₦5 → ₦5,000 in one tap.
     if (key == '000') {
       if (raw.isEmpty || raw == '0' || raw.length + 3 > 9) return null;
       return _group('${raw}000');
@@ -33,20 +33,20 @@ String _group(String digits) {
 
 /// Keeps a typed or pasted amount valid with the same rules as
 /// [applyAmountKey]. Dollars: digits and one "." only (a "," is read as
-/// "."), two decimals, seven digits, no leading zero. Naira ([naira]): whole
-/// Naira, nine digits, shown with thousands commas. Used with the system
+/// "."), two decimals, seven digits, no leading zero. Whole units ([whole]): no
+/// decimals, nine digits, shown with thousands commas. Used with the system
 /// numpad.
 class AmountInputFormatter extends TextInputFormatter {
-  const AmountInputFormatter({this.naira = false});
+  const AmountInputFormatter({this.whole = false});
 
-  final bool naira;
+  final bool whole;
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (naira) {
+    if (whole) {
       // Whole Naira: drop separators, refuse anything but digits.
       var raw = newValue.text.replaceAll(',', '');
       if (raw.contains('.')) raw = raw.substring(0, raw.indexOf('.'));

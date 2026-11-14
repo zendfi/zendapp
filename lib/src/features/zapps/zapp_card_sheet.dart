@@ -398,16 +398,14 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: r.reactedByMe
-                                        ? zt.accent.withValues(alpha: 0.18)
+                                        ? zt.accent
                                         : zt.bgSecondary,
                                     borderRadius: BorderRadius.circular(
                                       ZendRadii.pill,
                                     ),
                                     border: r.reactedByMe
                                         ? Border.all(
-                                            color: zt.accent.withValues(
-                                              alpha: 0.5,
-                                            ),
+                                            color: zt.accent,
                                           )
                                         : null,
                                   ),
@@ -424,7 +422,7 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                                         style: ZendTextStyles.tabularNumeric
                                             .copyWith(
                                               fontSize: 11,
-                                              color: zt.textSecondary,
+                                              color: r.reactedByMe ? zt.onAccent : zt.textSecondary,
                                             ),
                                       ),
                                     ],

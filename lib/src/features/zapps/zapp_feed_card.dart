@@ -231,7 +231,7 @@ class _ReactionRow extends StatelessWidget {
           size: 15,
           color: comments > 0
               ? zt.accent
-              : zt.textSecondary.withValues(alpha: 0.6),
+              : zt.textSecondary,
         ),
         if (comments > 0) ...[
           const SizedBox(width: 4),

@@ -136,7 +136,7 @@ class _DmForwardSheetState extends State<_DmForwardSheet> {
                   hintStyle: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
-                    color: zt.textSecondary.withValues(alpha: 0.7),
+                    color: zt.textSecondary,
                   ),
                   prefixIcon: Icon(
                     PhosphorIconsRegular.magnifyingGlass,

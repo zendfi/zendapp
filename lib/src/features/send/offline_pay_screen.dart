@@ -289,9 +289,9 @@ class _OfflinePayScreenState extends State<OfflinePayScreen> {
             TextField(
               controller: _amount,
               focusNode: _amountFocus,
-              inputFormatters: [AmountInputFormatter(naira: _entry.naira)],
+              inputFormatters: [AmountInputFormatter(whole: _entry.whole)],
               keyboardType: TextInputType.numberWithOptions(
-                decimal: !_entry.naira,
+                decimal: !_entry.whole,
               ),
               decoration: InputDecoration(
                 labelText: 'Amount',

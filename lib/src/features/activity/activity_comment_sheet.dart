@@ -535,16 +535,14 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: r.reactedByMe
-                                        ? zt.accent.withValues(alpha: 0.18)
+                                        ? zt.accent
                                         : zt.bgSecondary,
                                     borderRadius: BorderRadius.circular(
                                       ZendRadii.pill,
                                     ),
                                     border: r.reactedByMe
                                         ? Border.all(
-                                            color: zt.accent.withValues(
-                                              alpha: 0.5,
-                                            ),
+                                            color: zt.accent,
                                           )
                                         : null,
                                   ),
@@ -561,7 +559,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                         style: ZendTextStyles.tabularNumeric
                                             .copyWith(
                                               fontSize: 11,
-                                              color: zt.textSecondary,
+                                              color: r.reactedByMe ? zt.onAccent : zt.textSecondary,
                                             ),
                                       ),
                                     ],
@@ -1015,12 +1013,12 @@ class _CommentSheetReactionChipState extends State<CommentSheetReactionChip> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: widget.selected
-                ? zt.accent.withValues(alpha: 0.18)
+                ? zt.bgSecondary
                 : zt.bgSecondary,
             borderRadius: BorderRadius.circular(ZendRadii.lg),
             border: widget.selected
                 ? Border.all(
-                    color: zt.accent.withValues(alpha: 0.6),
+                    color: zt.accent,
                     width: 1.5,
                   )
                 : null,

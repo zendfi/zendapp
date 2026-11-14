@@ -13,6 +13,8 @@ import 'bridge_kyc_screen.dart';
 import 'human_verification_screen.dart';
 import 'change_pin_screen.dart';
 import 'connected_apps_screen.dart';
+import 'currency_picker_sheet.dart';
+import '../../core/zend_format.dart' show DisplayCurrency;
 import 'connected_banks_screen.dart';
 import 'delete_account_screen.dart';
 import 'security_settings_screen.dart';
@@ -80,6 +82,12 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     _TileGroup(
                       tiles: [
+                        _Tile(
+                          icon: PhosphorIconsRegular.coins,
+                          label: 'Currency',
+                          subtitle: currencyLabel(DisplayCurrency.code),
+                          onTap: () => showCurrencyPickerSheet(context),
+                        ),
                         _Tile(
                           icon: PhosphorIconsRegular.bank,
                           label: 'Connected banks',

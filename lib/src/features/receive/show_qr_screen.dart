@@ -248,7 +248,7 @@ class _GeneratingView extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 15,
-              color: Color(0x99E8F4EC),
+              color: Color(0x99F7F6F3),
             ),
           ),
         ],
@@ -288,7 +288,7 @@ class _ShowingView extends StatelessWidget {
               IconButton(
                 icon: const Icon(
                   PhosphorIconsRegular.xCircle,
-                  color: Color(0x99E8F4EC),
+                  color: Color(0x99F7F6F3),
                 ),
                 onPressed: onDismiss,
               ),
@@ -315,7 +315,7 @@ class _ShowingView extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'Geist',
               fontSize: 15,
-              color: Color(0x99E8F4EC),
+              color: Color(0x99F7F6F3),
             ),
           ),
         ],
@@ -333,9 +333,9 @@ class _ShowingView extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: progress,
                 strokeWidth: 2.5,
-                backgroundColor: const Color(0x1AE8F4EC),
+                backgroundColor: const Color(0x1AF7F6F3),
                 valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0x4052B788),
+                  Color(0xFFF7F6F3),
                 ),
               ),
             ),
@@ -358,7 +358,7 @@ class _ShowingView extends StatelessWidget {
                     ),
                     dataModuleStyle: const QrDataModuleStyle(
                       dataModuleShape: QrDataModuleShape.circle,
-                      color: Color(0xFFE8F4EC),
+                      color: Color(0xFFF7F6F3),
                     ),
                   ),
                   // Center logo badge
@@ -385,7 +385,7 @@ class _ShowingView extends StatelessWidget {
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 14,
-            color: Color(0x66E8F4EC),
+            color: Color(0x66F7F6F3),
           ),
         ),
 
@@ -476,7 +476,7 @@ class _ReceivedViewState extends State<_ReceivedView>
               widget.amountFormatted,
               style: ZendTextStyles.tabularNumeric.copyWith(
                 fontSize: 20,
-                color: Color(0x99E8F4EC),
+                color: Color(0x99F7F6F3),
               ),
             ),
             if (widget.note != null && widget.note!.isNotEmpty) ...[
@@ -487,7 +487,7 @@ class _ReceivedViewState extends State<_ReceivedView>
                 style: const TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x66E8F4EC),
+                  color: Color(0x66F7F6F3),
                 ),
               ),
             ],
@@ -545,7 +545,7 @@ class _ErrorView extends StatelessWidget {
             const Icon(
               PhosphorIconsRegular.wifiSlash,
               size: 48,
-              color: Color(0x44E8F4EC),
+              color: Color(0x44F7F6F3),
             ),
             const SizedBox(height: 20),
             Text(
@@ -554,7 +554,7 @@ class _ErrorView extends StatelessWidget {
               style: const TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 15,
-                color: Color(0x99E8F4EC),
+                color: Color(0x99F7F6F3),
                 height: 1.5,
               ),
             ),
@@ -590,7 +590,7 @@ class _ErrorView extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x66E8F4EC),
+                  color: Color(0x66F7F6F3),
                 ),
               ),
             ),

@@ -422,7 +422,7 @@ class _DmListScreenState extends State<DmListScreen> {
                   hintStyle: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
-                    color: zt.textSecondary.withValues(alpha: 0.7),
+                    color: zt.textSecondary,
                   ),
                   prefixIcon: Icon(
                     PhosphorIconsRegular.magnifyingGlass,
@@ -669,7 +669,7 @@ class _DmThreadTile extends StatelessWidget {
                             fontWeight: hasUnread ? FontWeight.w600 : null,
                             color: hasUnread
                                 ? zt.textPrimary
-                                : zt.textSecondary.withValues(alpha: 0.7),
+                                : zt.textSecondary,
                           ),
                         ),
                       ],
@@ -877,7 +877,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 13,
-              color: zt.textSecondary.withValues(alpha: 0.7),
+              color: zt.textSecondary,
             ),
           ),
         ],

@@ -1384,8 +1384,15 @@ class ZendAppModel extends ChangeNotifier {
     unawaited(refreshNairaRate());
   }
 
-  /// Refreshes the Naira rate used for display ([formatMoney]) and rebuilds
-  /// when it changed. Cheap to call often; the service throttles it.
+  /// Changes the currency amounts are shown in, everywhere, and redraws.
+  Future<void> setDisplayCurrency(String code) async {
+    await fxService.setCurrency(code);
+    notifyListeners();
+  }
+
+  /// Refreshes the rates and the person's currency used for display
+  /// ([formatMoney]) and rebuilds when it changed. Cheap to call often; the
+  /// service throttles it.
   Future<void> refreshNairaRate() async {
     if (await fxService.refreshNairaRate()) notifyListeners();
   }
@@ -2133,6 +2140,7 @@ class ZendAppModel extends ChangeNotifier {
     currentAvatarUrl = null;
     zendtagIsPlaceholder = false;
     zendtagOfferAfterAsk = false;
+    fxService.forgetCurrency();
     isZkLoginAccount = false;
     username = 'blessed';
     balanceHidden = false;

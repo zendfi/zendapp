@@ -727,7 +727,7 @@ class ZendBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final activeColor = zt.accent;
-    final inactiveColor = zt.textSecondary.withValues(alpha: 0.7);
+    final inactiveColor = zt.textSecondary;
     final badgeBorderColor = zt.bgPrimary;
 
     return ColoredBox(
@@ -980,13 +980,13 @@ class _PaymentRequestBannerState extends State<_PaymentRequestBanner>
                     width: 36,
                     height: 36,
                     decoration: const BoxDecoration(
-                      color: Color(0x1A4ADE80),
+                      color: ZendColors.accentPop,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       PhosphorIconsRegular.currencyDollar,
                       size: 20,
-                      color: ZendColors.accentPop,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1130,7 +1130,7 @@ class _ActivityReactionBannerState extends State<_ActivityReactionBanner>
                     height: 36,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
-                      color: Color(0x1A4ADE80),
+                      color: ZendColors.accentPop,
                       shape: BoxShape.circle,
                     ),
                     child: Text(n.emoji, style: const TextStyle(fontSize: 18)),
@@ -1229,13 +1229,13 @@ class _ActivityCommentBannerState extends State<_ActivityCommentBanner>
                     height: 36,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
-                      color: Color(0x1A4ADE80),
+                      color: ZendColors.accentPop,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       PhosphorIconsRegular.chatDots,
                       size: 16,
-                      color: ZendColors.accentPop,
+                      color: ZendColors.textPrimary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1352,13 +1352,13 @@ class _DmMessageBannerState extends State<_DmMessageBanner>
                       width: 36,
                       height: 36,
                       decoration: const BoxDecoration(
-                        color: Color(0x1A4ADE80),
+                        color: ZendColors.accentPop,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         PhosphorIconsRegular.chatDots,
                         size: 18,
-                        color: ZendColors.accentPop,
+                        color: ZendColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1728,14 +1728,14 @@ class _FundsArrivedBannerState extends State<_FundsArrivedBanner>
                     Container(
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(
-                        color: ZendColors.positive.withValues(alpha: 0.16),
+                      decoration: const BoxDecoration(
+                        color: ZendColors.accentPop,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         PhosphorIconsRegular.arrowDown,
                         size: 20,
-                        color: ZendColors.positive,
+                        color: ZendColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -2019,7 +2019,7 @@ class _EmptyDetail extends StatelessWidget {
               Icon(
                 icon,
                 size: 40,
-                color: zt.textSecondary.withValues(alpha: 0.6),
+                color: zt.textSecondary,
               ),
               const SizedBox(height: 16),
               Text(

@@ -320,7 +320,8 @@ class _ReactionPickerRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                 decoration: alreadyReacted
                     ? BoxDecoration(
-                        color: zt.accent.withValues(alpha: 0.18),
+                        color: zt.bgSecondary,
+                        border: Border.all(color: zt.accent, width: 1.5),
                         borderRadius: BorderRadius.circular(ZendRadii.pill),
                       )
                     : null,

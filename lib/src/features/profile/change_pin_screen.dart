@@ -244,7 +244,7 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                       decoration: BoxDecoration(
                         color: active
                             ? ZendColors.accentPop
-                            : const Color(0x33E8F4EC),
+                            : const Color(0x33F7F6F3),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -269,7 +269,7 @@ class _ChangePinScreenState extends State<ChangePinScreen>
                 style: const TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: Color(0x99F7F6F3),
                 ),
               ),
               SizedBox(height: compact ? 32 : 48),
@@ -348,7 +348,7 @@ class _PinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66F7F6F3),
                 width: 2,
               ),
             ),

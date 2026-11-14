@@ -10,6 +10,7 @@
 /// the per-thread feed).
 library;
 
+import '../../core/zend_format.dart';
 import '../../core/zend_state.dart';
 import '../../models/activity_edge.dart';
 import '../../models/api_models.dart';
@@ -103,7 +104,7 @@ ZendTransaction zendTransactionFromEdge(
     note: edge.note ?? '',
     amount: edge.amountHidden
         ? 'Hidden'
-        : '${edge.isOutgoing ? '-' : '+'}\$${edge.amountUsdc ?? '0'}',
+        : formatMoney((edge.isOutgoing ? -1 : 1) * (double.tryParse(edge.amountUsdc ?? '') ?? 0), signed: true),
     time: '',
     avatarLabel: avatarLabel,
     avatarUrl: avatarUrl,

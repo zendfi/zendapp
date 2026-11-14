@@ -84,7 +84,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
             const OnboardingProgressBar(
               step: 5,
               totalSteps: 6,
-              trackColor: Color(0x1AE8F4EC),
+              trackColor: Color(0x1AF7F6F3),
               fillColor: ZendColors.accentPop,
             ),
             Expanded(
@@ -99,7 +99,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                       children: [
                         const CircleAvatar(
                           radius: 34,
-                          backgroundColor: Color(0x33E8F4EC),
+                          backgroundColor: Color(0x33F7F6F3),
                           child: Icon(
                             PhosphorIconsRegular.userCircle,
                             color: ZendColors.textOnDeep,

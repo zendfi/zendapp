@@ -14,16 +14,7 @@ String generateRequestId() {
   );
 }
 
-String buildRequestLink(String username, String requestId) {
-  return 'zdfi.me/@$username/$requestId';
-}
-
-String formatRequestAmount(double amount) {
-  if (amount == amount.truncateToDouble()) {
-    return '\$${amount.toInt()}';
-  }
-  return formatUsd(amount);
-}
+String formatRequestAmount(double amount) => formatMoney(amount);
 
 double? validateAmountInput(String input) {
   final trimmed = input.trim();

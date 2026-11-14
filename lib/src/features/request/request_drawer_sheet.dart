@@ -332,9 +332,9 @@ class _RequestAmountStage extends StatelessWidget {
                     controller: amountController,
                     focusNode: amountFocus,
                     readOnly: amountReadOnly,
-                    inputFormatters: [AmountInputFormatter(naira: entry.naira)],
+                    inputFormatters: [AmountInputFormatter(whole: entry.whole)],
                     keyboardType: TextInputType.numberWithOptions(
-                      decimal: !entry.naira,
+                      decimal: !entry.whole,
                     ),
                     textAlign: TextAlign.center,
                     style: TextStyle(

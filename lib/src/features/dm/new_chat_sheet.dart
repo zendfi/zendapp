@@ -326,7 +326,7 @@ class _NewChatSheetState extends State<NewChatSheet> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: zt.accent.withValues(alpha: 0.12),
+                      color: zt.onAccent,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -369,7 +369,7 @@ class _NewChatSheetState extends State<NewChatSheet> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: zt.accent.withValues(alpha: 0.12),
+                        color: zt.onAccent,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,

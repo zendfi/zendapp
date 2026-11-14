@@ -1,3 +1,4 @@
+import '../../core/zend_format.dart';
 import '../../design/zend_keypad.dart';
 import 'dart:async';
 
@@ -95,7 +96,11 @@ class _AddCashSheetState extends State<AddCashSheet> {
     super.dispose();
   }
 
-  double get _amountUsd => double.tryParse(_amountController.text.trim()) ?? 0;
+  /// Bank transfers here are in Naira, so the amount is typed in Naira
+  /// (dollars only when no Naira rate is known yet).
+  final AmountEntry _entry = AmountEntry.naira();
+
+  double get _amountUsd => _entry.usd(_amountController.text);
 
   void _goTo(_Stage stage) {
     setState(() => _stage = stage);
@@ -606,7 +611,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      '\$',
+                      _entry.symbol,
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 32,
@@ -619,9 +624,9 @@ class _AddCashSheetState extends State<AddCashSheet> {
                       child: TextField(
                         controller: _amountController,
                         focusNode: _amountFocus,
-                        inputFormatters: const [AmountInputFormatter()],
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
+                        inputFormatters: [AmountInputFormatter(whole: _entry.whole)],
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: !_entry.whole,
                         ),
                         style: ZendTextStyles.amountInput(
                             _amountController.text,
@@ -649,14 +654,14 @@ class _AddCashSheetState extends State<AddCashSheet> {
                 ),
                 const SizedBox(height: 8),
                 if (tooSmall)
-                  _InlineError('Minimum is \$${_minUsd.toStringAsFixed(2)}')
+                  _InlineError('Minimum is ${_entry.format(_minUsd)}')
                 else if (tooBig)
-                  _InlineError('Maximum is \$${_maxUsd.toStringAsFixed(0)}')
+                  _InlineError('Maximum is ${_entry.format(_maxUsd)}')
                 else if (_ngnError != null)
                   _InlineError(_ngnError!)
                 else
                   Text(
-                    "You'll see the exact naira amount next.",
+                    "You'll see the bank details next.",
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 13,
@@ -734,7 +739,7 @@ class _AddCashSheetState extends State<AddCashSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'You get \$${inst.usdcAmount.toStringAsFixed(2)} '
+                        'You get ${formatMoney(inst.usdcAmount)} '
                         '· ₦${_formatMoney(inst.exchangeRate)}/\$',
                         style: TextStyle(
                           fontFamily: 'Geist',

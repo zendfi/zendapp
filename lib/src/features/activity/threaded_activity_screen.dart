@@ -1001,7 +1001,7 @@ class _UserThreadTile extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: zt.accent.withValues(alpha: 0.12),
+                    color: zt.onAccent,
                     borderRadius: BorderRadius.circular(ZendRadii.md),
                   ),
                   child: Icon(
@@ -1280,7 +1280,7 @@ class _UserThreadTile extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: zt.accent.withValues(alpha: 0.12),
+                              color: zt.onAccent,
                               borderRadius: BorderRadius.circular(
                                 ZendRadii.pill,
                               ),
@@ -1379,10 +1379,10 @@ class _PoolThreadTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: zt.accent.withValues(alpha: 0.15),
+                backgroundColor: zt.accent,
                 child: Icon(
                   PhosphorIconsRegular.usersThree,
-                  color: zt.accent,
+                  color: zt.onAccent,
                   size: 20,
                 ),
               ),
@@ -1412,8 +1412,8 @@ class _PoolThreadTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       thread.edges.length == 1
-                          ? 'One contribution · \$${thread.runningTotal.toStringAsFixed(2)}'
-                          : '${thread.edges.length} contributions · \$${thread.runningTotal.toStringAsFixed(2)} total',
+                          ? 'One contribution · ${formatMoney(thread.runningTotal)}'
+                          : '${thread.edges.length} contributions · ${formatMoney(thread.runningTotal)} total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: ZendTextStyles.tabularNumeric.copyWith(
@@ -1430,7 +1430,7 @@ class _PoolThreadTile extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: zt.accent.withValues(alpha: 0.12),
+                            color: zt.onAccent,
                             borderRadius: BorderRadius.circular(ZendRadii.pill),
                           ),
                           child: Text(
@@ -1464,7 +1464,7 @@ class _PoolThreadTile extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: zt.accent.withValues(alpha: 0.12),
+                  color: zt.onAccent,
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
                 child: Text(
@@ -1586,7 +1586,7 @@ class _PoolContributorSheetState extends State<_PoolContributorSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '\$${gathered.toStringAsFixed(2)} of \$${target.toStringAsFixed(2)}',
+            '${formatMoney(gathered)} of ${formatMoney(target)}',
             style: TextStyle(
               fontFamily: 'Geist',
               fontWeight: FontWeight.w700,

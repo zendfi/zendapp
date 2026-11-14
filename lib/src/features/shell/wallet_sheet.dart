@@ -192,7 +192,7 @@ class _WalletSheetState extends State<WalletSheet> {
                         trailing: model.savingsLoading
                             ? null
                             : Text(
-                                '\$${model.savingsBalance.toStringAsFixed(model.savingsBalance == model.savingsBalance.roundToDouble() ? 0 : 2)}',
+                                formatMoney(model.savingsBalance),
                                 style: ZendTextStyles.tabularNumeric.copyWith(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,

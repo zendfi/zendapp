@@ -497,7 +497,7 @@ class _PublicPostRowState extends State<_PublicPostRow> {
 
     final showAmount =
         !widget.edge.amountHidden && widget.edge.amountUsdc != null;
-    final amountLabel = '\$${widget.edge.amountUsdc ?? '0'}';
+    final amountLabel = formatMoney(double.tryParse(widget.edge.amountUsdc ?? '') ?? 0);
     final edge = widget.edge;
     final isVibe = isVibeEdge(edge);
     final isPoolContrib = edge.edgeKind == ActivityEdgeKind.poolContribution;
@@ -652,21 +652,24 @@ class _PublicPostRowState extends State<_PublicPostRow> {
                               ),
                               decoration: BoxDecoration(
                                 color: r.reactedByMe
-                                    ? zt.accent.withValues(alpha: 0.18)
+                                    ? zt.accent
                                     : zt.bgPrimary,
                                 borderRadius: BorderRadius.circular(
                                   ZendRadii.pill,
                                 ),
                                 border: r.reactedByMe
                                     ? Border.all(
-                                        color: zt.accent.withValues(alpha: 0.5),
+                                        color: zt.accent,
                                       )
                                     : Border.all(color: zt.border),
                               ),
                               child: Text(
                                 '${r.emoji} ${r.count}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
+                                  color: r.reactedByMe
+                                      ? zt.onAccent
+                                      : zt.textPrimary,
                                   decoration: TextDecoration.none,
                                 ),
                               ),

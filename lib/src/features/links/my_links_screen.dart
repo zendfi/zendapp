@@ -301,7 +301,10 @@ class _LinkTile extends StatelessWidget {
 
   String _money() {
     final kobo = link['ngn_quote_kobo'] as num?;
-    if (kobo != null) return formatNaira((kobo / 100).roundToDouble());
+    if (kobo != null &&
+        (DisplayCurrency.isNaira || link['priced_in_ngn'] == true)) {
+      return formatNaira((kobo / 100).roundToDouble());
+    }
     final usd = (link['amount_usd'] ?? link['max_amount_usd']) as num?;
     return usd == null ? 'Any amount' : formatMoney(usd.toDouble());
   }

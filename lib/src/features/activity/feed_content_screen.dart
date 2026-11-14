@@ -1263,7 +1263,7 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                       size: 15,
                       color: edge.commentCount > 0
                           ? zt.accent
-                          : zt.textSecondary.withValues(alpha: 0.6),
+                          : zt.textSecondary,
                     ),
                     if (edge.commentCount > 0) ...[
                       const SizedBox(width: 4),

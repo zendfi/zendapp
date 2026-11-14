@@ -198,7 +198,7 @@ class _PinRestoreScreenState extends State<PinRestoreScreen>
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: Color(0x99F7F6F3),
                 ),
               ),
               SizedBox(height: compact ? 36 : 52),

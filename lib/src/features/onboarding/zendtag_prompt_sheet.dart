@@ -298,7 +298,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                   child: Text(
                     "Don't ask again — use my email",
                     style: TextStyle(
-                      color: zt.textSecondary.withValues(alpha: 0.7),
+                      color: zt.textSecondary,
                       fontSize: 13,
                     ),
                   ),

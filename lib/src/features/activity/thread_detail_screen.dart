@@ -605,12 +605,12 @@ class _ReactionPickerChipState extends State<_ReactionPickerChip> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: widget.selected
-                ? zt.accent.withValues(alpha: 0.18)
+                ? zt.bgSecondary
                 : zt.bgPrimary,
             borderRadius: BorderRadius.circular(ZendRadii.lg),
             border: widget.selected
                 ? Border.all(
-                    color: zt.accent.withValues(alpha: 0.6),
+                    color: zt.accent,
                     width: 1.5,
                   )
                 : null,
@@ -825,16 +825,14 @@ class _FeedPost extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: r.reactedByMe
-                                      ? zt.accent.withValues(alpha: 0.18)
+                                      ? zt.accent
                                       : zt.bgPrimary,
                                   borderRadius: BorderRadius.circular(
                                     ZendRadii.pill,
                                   ),
                                   border: r.reactedByMe
                                       ? Border.all(
-                                          color: zt.accent.withValues(
-                                            alpha: 0.5,
-                                          ),
+                                          color: zt.accent,
                                         )
                                       : null,
                                 ),
@@ -851,7 +849,7 @@ class _FeedPost extends StatelessWidget {
                                       style: ZendTextStyles.tabularNumeric
                                           .copyWith(
                                             fontSize: 11,
-                                            color: zt.textSecondary,
+                                            color: r.reactedByMe ? zt.onAccent : zt.textSecondary,
                                           ),
                                     ),
                                   ],
@@ -909,14 +907,14 @@ class _FeedPost extends StatelessWidget {
                           Icon(
                             PhosphorIconsRegular.shareNetwork,
                             size: 12,
-                            color: zt.textSecondary.withValues(alpha: 0.7),
+                            color: zt.textSecondary,
                           ),
                           const SizedBox(width: 3),
                           Text(
                             'Public',
                             style: ZendTextStyles.tabularNumeric.copyWith(
                               fontSize: 10.5,
-                              color: zt.textSecondary.withValues(alpha: 0.7),
+                              color: zt.textSecondary,
                             ),
                           ),
                         ],
@@ -977,10 +975,10 @@ class _ShareOptionState extends State<_ShareOption> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: zt.accent.withValues(alpha: 0.12),
+                  color: zt.accent,
                   borderRadius: BorderRadius.circular(ZendRadii.md),
                 ),
-                child: Icon(widget.icon, size: 18, color: zt.accent),
+                child: Icon(widget.icon, size: 18, color: zt.onAccent),
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -97,28 +97,6 @@ class QrPaymentIntent {
     return parsed;
   }
 
-  /// Builds a fixed-amount `zdfi.me` URL for the given [zendtag] and [amount].
-  ///
-  /// Example: `buildFixedAmountUrl('alice', 10.5, 'Coffee')` →
-  /// `https://zdfi.me/@alice?amount=10.5&note=Coffee`
-  static String buildFixedAmountUrl(
-    String zendtag,
-    double amount,
-    String? note,
-  ) {
-    final params = <String, String>{'amount': amount.toString()};
-    if (note != null && note.isNotEmpty) {
-      params['note'] = note;
-    }
-    final uri = Uri(
-      scheme: 'https',
-      host: 'zdfi.me',
-      path: '/@$zendtag',
-      queryParameters: params,
-    );
-    return uri.toString();
-  }
-
   @override
   String toString() =>
       'QrPaymentIntent(zendtag: $zendtag, amountUsdc: $amountUsdc, '

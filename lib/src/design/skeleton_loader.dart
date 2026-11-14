@@ -227,14 +227,12 @@ class _SkeletonBubbleRow extends StatelessWidget {
     );
 
     // A solid block, not a bubble containing placeholder text. The sent side
-    // keeps a faint accent tint because that colour difference is the clearest
-    // structural signal in the real thread; it is dropped to a low alpha so the
-    // skeleton still reads as absent content rather than as a rendered message.
+    // is one grey step darker so the thread's left/right shape still reads.
     final bubble = Container(
       width: bubbleWidth,
       height: height,
       decoration: BoxDecoration(
-        color: isMe ? zt.accent.withValues(alpha: 0.16) : zt.bgSecondary,
+        color: isMe ? zt.accentPop : zt.bgSecondary,
         borderRadius: radius,
       ),
     );

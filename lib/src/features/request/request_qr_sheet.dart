@@ -46,7 +46,7 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
 
   String get _link => widget.request.link;
 
-  String _formatAmount(double amount) => formatUsd(amount);
+  String _formatAmount(double amount) => formatMoney(amount);
 
   Future<Uint8List> _captureQr() async {
     await Future<void>.delayed(Duration.zero);
@@ -184,12 +184,10 @@ class _RequestQrSheetState extends State<RequestQrSheet> {
                 child: Builder(
                   builder: (ctx) {
                     final zt = ZendTheme.of(ctx);
-                    final moduleColor = zt.isDark
-                        ? const Color(0xFFE8F4EC)
-                        : const Color(0xFF122018);
-                    final eyeColor = zt.isDark
-                        ? const Color(0xFF52B788)
-                        : const Color(0xFF2D6A4F);
+                    // Pure ink so the code scans and reads as Zend in
+                    // grayscale.
+                    final moduleColor = zt.textPrimary;
+                    final eyeColor = zt.textPrimary;
                     return Stack(
                       alignment: Alignment.center,
                       children: [

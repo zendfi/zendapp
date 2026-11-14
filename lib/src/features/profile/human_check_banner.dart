@@ -51,7 +51,7 @@ class _HumanCheckBannerState extends State<HumanCheckBanner> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Material(
-        color: zt.accent.withValues(alpha: 0.10),
+        color: zt.accent,
         borderRadius: BorderRadius.circular(ZendRadii.xl),
         child: InkWell(
           borderRadius: BorderRadius.circular(ZendRadii.xl),
@@ -63,7 +63,7 @@ class _HumanCheckBannerState extends State<HumanCheckBanner> {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                Icon(PhosphorIconsFill.sealCheck, color: zt.accent, size: 22),
+                Icon(PhosphorIconsFill.sealCheck, color: zt.onAccent, size: 22),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -72,14 +72,14 @@ class _HumanCheckBannerState extends State<HumanCheckBanner> {
                       fontFamily: 'Geist',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: zt.textPrimary,
+                      color: zt.onAccent,
                     ),
                   ),
                 ),
                 Icon(
                   PhosphorIconsRegular.caretRight,
                   size: 14,
-                  color: zt.textSecondary,
+                  color: zt.onAccent.withValues(alpha: 0.7),
                 ),
               ],
             ),

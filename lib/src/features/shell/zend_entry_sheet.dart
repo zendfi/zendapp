@@ -999,11 +999,11 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           focusNode: _amountFocus,
                           // System numpad on phones, keyboard on web.
                           inputFormatters: [
-                            AmountInputFormatter(naira: _entry.naira),
+                            AmountInputFormatter(whole: _entry.whole),
                           ],
                           // Whole Naira: no decimal key.
                           keyboardType: TextInputType.numberWithOptions(
-                            decimal: !_entry.naira,
+                            decimal: !_entry.whole,
                           ),
                           textAlign: TextAlign.left,
                           style: ZendTextStyles.amountInput(
@@ -1115,7 +1115,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: gifIdFromNote(_noteController.text) != null
-                                ? zt.accentPop
+                                ? zt.accent
                                 : zt.bgSecondary,
                             borderRadius: BorderRadius.circular(ZendRadii.chip),
                           ),
@@ -1124,7 +1124,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             semanticsLabel: 'Add a GIF',
                             style: ZendTextStyles.micro.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: zt.textPrimary,
+                              color: gifIdFromNote(_noteController.text) != null
+                                  ? zt.onAccent
+                                  : zt.textPrimary,
                             ),
                           ),
                         ),
@@ -1153,11 +1155,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: _noteController.text.trim() == e
-                                  ? zt.accentPop
-                                  : zt.bgSecondary,
+                              color: zt.bgSecondary,
                               borderRadius: BorderRadius.circular(
                                 ZendRadii.chip,
+                              ),
+                              // The picked emoji gets a solid ink ring.
+                              border: Border.all(
+                                color: _noteController.text.trim() == e
+                                    ? zt.accent
+                                    : Colors.transparent,
+                                width: 2,
                               ),
                             ),
                             child: Text(

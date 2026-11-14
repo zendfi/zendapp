@@ -100,7 +100,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 style: s(14),
                 decoration: InputDecoration(
                   hintText: 'Search apps',
-                  hintStyle: s(14, c: zt.textSecondary.withValues(alpha: 0.7)),
+                  hintStyle: s(14, c: zt.textSecondary),
                   prefixIcon: Icon(
                     PhosphorIconsRegular.magnifyingGlass,
                     color: zt.textSecondary,

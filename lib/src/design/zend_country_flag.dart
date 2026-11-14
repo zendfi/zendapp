@@ -115,7 +115,7 @@ class ZendPinDotsOrSpinner extends StatelessWidget {
     required this.filledCount,
     required this.loading,
     this.dotColor = ZendColors.accentPop,
-    this.emptyBorderColor = const Color(0x66E8F4EC),
+    this.emptyBorderColor = const Color(0x66F7F6F3),
     this.spinnerColor = ZendColors.accentPop,
   });
 

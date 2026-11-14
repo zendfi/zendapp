@@ -70,7 +70,7 @@ class _RequestConfirmationContentState
         ),
         dataModuleStyle: const QrDataModuleStyle(
           dataModuleShape: QrDataModuleShape.circle,
-          color: Color(0xFFE8F4EC),
+          color: Color(0xFFF7F6F3),
         ),
       );
       final imageData = await painter.toImageData(512);
@@ -202,7 +202,7 @@ class _RequestConfirmationContentState
                     ),
                     dataModuleStyle: const QrDataModuleStyle(
                       dataModuleShape: QrDataModuleShape.circle,
-                      color: Color(0xFFE8F4EC),
+                      color: Color(0xFFF7F6F3),
                     ),
                   ),
                   Container(

@@ -53,7 +53,7 @@ class _RailSelectStage extends StatelessWidget {
   final void Function(_BankSendRail) onSelect;
 
   String get _amountStr =>
-      amount == amount.roundToDouble() ? formatUsd(amount) : formatUsd(amount);
+      formatMoney(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -191,9 +191,7 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final amountStr = widget.amount == widget.amount.roundToDouble()
-        ? formatUsd(widget.amount)
-        : formatUsd(widget.amount);
+    final amountStr = formatMoney(widget.amount);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -696,9 +694,7 @@ class _ConfirmationStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final amountStr = amountUsdc == amountUsdc.roundToDouble()
-        ? formatUsd(amountUsdc)
-        : formatUsd(amountUsdc);
+    final amountStr = formatMoney(amountUsdc);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -891,9 +887,7 @@ class _PinStage extends StatelessWidget {
   final ValueChanged<String> onKey;
   final VoidCallback onBack;
 
-  String get _amountStr => amountUsdc == amountUsdc.roundToDouble()
-      ? formatUsd(amountUsdc)
-      : formatUsd(amountUsdc);
+  String get _amountStr => formatMoney(amountUsdc);
 
   @override
   Widget build(BuildContext context) {
@@ -1174,9 +1168,7 @@ class _SuccessStageState extends State<_SuccessStage>
           : '$_fiatSymbol${widget.fiatAmount!.toStringAsFixed(2)}';
       return '$fiatStr on its way to ${widget.bankName}';
     }
-    final amtStr = widget.amountUsdc == widget.amountUsdc.roundToDouble()
-        ? formatUsd(widget.amountUsdc)
-        : formatUsd(widget.amountUsdc);
+    final amtStr = formatMoney(widget.amountUsdc);
     return '$amtStr on its way to ${widget.bankName}';
   }
 
@@ -1236,7 +1228,7 @@ class _SuccessStageState extends State<_SuccessStage>
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
-                color: zt.textSecondary.withValues(alpha: 0.7),
+                color: zt.textSecondary,
               ),
             ),
             const SizedBox(height: 32),

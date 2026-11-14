@@ -115,8 +115,8 @@ class _RecoveryNationalIdScreenState extends State<RecoveryNationalIdScreen> {
   Widget build(BuildContext context) {
     // textOnDeepSecondary / textOnDeepMuted / bgDeepElevated are not in ZendColors —
     // we use the raw hex values that match the existing lock screen style.
-    const textOnDeepSecondary = Color(0x99E8F4EC);
-    const textOnDeepMuted = Color(0x66E8F4EC);
+    const textOnDeepSecondary = Color(0x99F7F6F3);
+    const textOnDeepMuted = Color(0x66F7F6F3);
     const bgDeepElevated = Color(0xFF1C2E22);
 
     return Scaffold(

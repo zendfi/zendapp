@@ -1,3 +1,4 @@
+import '../../design/zend_keypad.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -901,11 +902,11 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     // regardless of amount.
     final quoteContent = switch (quotedMsg.type) {
       DmMessageType.payment =>
-        '💸 \$${(double.tryParse(quotedMsg.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '💸 ${formatMoney(double.tryParse(quotedMsg.paymentData?.amountUsdc ?? '') ?? 0.0)}',
       DmMessageType.vibe =>
-        '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '${quotedMsg.vibeData?.displayEmoji ?? '✨'} Vibe · ${formatMoney(double.tryParse(quotedMsg.vibeData?.amountUsdc ?? '') ?? 0.0)}',
       DmMessageType.paymentRequest =>
-        '💬 Payment request · \$${(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '💬 Payment request · ${formatMoney(double.tryParse(quotedMsg.paymentRequestData?.amountUsdc ?? '') ?? 0.0)}',
       DmMessageType.appCard =>
         '${quotedMsg.appCardData?['app_name'] ?? 'App'}: ${(quotedMsg.appCardData?['slots'] as Map?)?['title'] ?? ''}',
       // Use displayContent, not content — if the quoted message hasn't
@@ -1608,6 +1609,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
   void _showRequestAmountSheet() {
     final zt = ZendTheme.of(context);
     final amountCtrl = TextEditingController();
+    // Typed in the person's own currency; sent in dollars.
+    final entry = AmountEntry.current();
     final noteCtrl = TextEditingController();
     String? errorMsg;
 
@@ -1699,7 +1702,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              '\$',
+                              entry.symbol,
                               style: TextStyle(
                                 fontFamily: 'Geist',
                                 fontWeight: FontWeight.w700,
@@ -1712,10 +1715,12 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                               child: TextField(
                                 controller: amountCtrl,
                                 autofocus: true,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                inputFormatters: [
+                                  AmountInputFormatter(whole: entry.whole),
+                                ],
+                                keyboardType: TextInputType.numberWithOptions(
+                                  decimal: !entry.whole,
+                                ),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'Geist',
@@ -1805,10 +1810,8 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          final parsed = double.tryParse(
-                            amountCtrl.text.trim(),
-                          );
-                          if (parsed == null || parsed < 0.01) {
+                          final parsed = entry.usd(amountCtrl.text);
+                          if (parsed < 0.01) {
                             setModalState(
                               () => errorMsg = 'Enter a valid amount',
                             );
@@ -3060,15 +3063,15 @@ class _ReplyStrip extends StatelessWidget {
     final (IconData typeIcon, String preview) = switch (message.type) {
       DmMessageType.payment => (
         PhosphorIconsRegular.arrowsLeftRight,
-        '💸 \$${(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '💸 ${formatMoney(double.tryParse(message.paymentData?.amountUsdc ?? '') ?? 0.0)}',
       ),
       DmMessageType.vibe => (
         PhosphorIconsRegular.star,
-        '${message.vibeData?.displayEmoji ?? '✨'} Vibe · \$${(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '${message.vibeData?.displayEmoji ?? '✨'} Vibe · ${formatMoney(double.tryParse(message.vibeData?.amountUsdc ?? '') ?? 0.0)}',
       ),
       DmMessageType.paymentRequest => (
         PhosphorIconsRegular.receipt,
-        '💬 Payment request · \$${(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0).toStringAsFixed(2)}',
+        '💬 Payment request · ${formatMoney(double.tryParse(message.paymentRequestData?.amountUsdc ?? '') ?? 0.0)}',
       ),
       _ => (PhosphorIconsRegular.chatCircle, message.displayContent ?? ''),
     };

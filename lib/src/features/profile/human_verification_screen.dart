@@ -208,7 +208,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: zt.accent.withValues(alpha: 0.12),
+                      color: status == 'active' ? zt.bgSecondary : zt.accent,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -217,7 +217,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
                         : Icon(
                             PhosphorIconsRegular.identificationBadge,
                             size: 34,
-                            color: zt.accent,
+                            color: zt.onAccent,
                           ),
                   ),
                 ),

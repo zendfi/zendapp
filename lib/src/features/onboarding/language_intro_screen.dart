@@ -180,7 +180,7 @@ class _LanguageIntroScreenState extends State<LanguageIntroScreen> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 13,
-                      color: zt.textSecondary.withValues(alpha: 0.7),
+                      color: zt.textSecondary,
                       letterSpacing: 0.3,
                     ),
                   ),

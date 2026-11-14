@@ -193,7 +193,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
                   hintStyle: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
-                    color: zt.textSecondary.withValues(alpha: 0.7),
+                    color: zt.textSecondary,
                   ),
                   prefixIcon: Icon(
                     PhosphorIconsRegular.magnifyingGlass,

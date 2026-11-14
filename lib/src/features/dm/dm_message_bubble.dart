@@ -909,7 +909,7 @@ class _QuotePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
 
-    final borderColor = isMe ? zt.accent.withValues(alpha: 0.15) : zt.border;
+    final borderColor = isMe ? zt.accent : zt.border;
 
     return GestureDetector(
       onTap: onTap,
@@ -1009,17 +1009,12 @@ class DmPaymentBubble extends StatelessWidget {
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
 
-    // Monochromatic: sent uses the accent surface with a hairline accent border,
-    // received uses the same elevated bubbleReceived fill as text bubbles so
-    // payment bubbles pop off the chat canvas exactly like text ones. The
-    // border on sent creates clear visual separation even when
-    // bgAccentSurface is very dark in dark mode.
-    final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;
-    final sentBorder = isMe
-        ? Border.all(color: zt.accent.withValues(alpha: 0.25), width: 0.8)
-        : null;
+    // Money bubbles are cards on the chat canvas: yours carry a solid ink
+    // outline, theirs sit plain, so it's clear at a glance who paid.
+    final bg = zt.bubbleReceived;
+    final sentBorder = isMe ? Border.all(color: zt.accent, width: 1.5) : null;
     final labelColor = zt.textSecondary;
-    final noteColor = zt.textPrimary.withValues(alpha: 0.75);
+    final noteColor = zt.textPrimary;
     final iconColor = isMe ? zt.accent : zt.textSecondary;
 
     // Sender bubbles align right, recipient bubbles align left.
@@ -1039,10 +1034,8 @@ class DmPaymentBubble extends StatelessWidget {
               isFirst: isFirst,
               isLast: isLast,
               color: bg,
-              borderColor: sentBorder != null
-                  ? zt.accent.withValues(alpha: 0.25)
-                  : null,
-              borderWidth: sentBorder != null ? 0.8 : 0,
+              borderColor: sentBorder != null ? zt.accent : null,
+              borderWidth: sentBorder != null ? 1.5 : 0,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
                 child: Column(
@@ -1155,11 +1148,11 @@ class DmPaymentRequestBubble extends StatelessWidget {
     final amountFormatted = formatMoney(double.tryParse(amountStr) ?? 0);
     final isPending = rd?.isPending ?? true;
 
-    final bg = isMe ? zt.bgAccentSurface : zt.bubbleReceived;
+    final bg = zt.bubbleReceived;
     final hasBorder = isMe;
     final amountColor = zt.textPrimary;
     final labelColor = zt.textSecondary;
-    final noteColor = zt.textPrimary.withValues(alpha: 0.75);
+    final noteColor = zt.textPrimary;
     final accentColor = zt.accent;
 
     // Sender bubbles align right, recipient bubbles align left.
@@ -1179,8 +1172,8 @@ class DmPaymentRequestBubble extends StatelessWidget {
               isFirst: isFirst,
               isLast: isLast,
               color: bg,
-              borderColor: hasBorder ? zt.accent.withValues(alpha: 0.25) : null,
-              borderWidth: hasBorder ? 0.8 : 0,
+              borderColor: hasBorder ? zt.accent : null,
+              borderWidth: hasBorder ? 1.5 : 0,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
                 child: Column(

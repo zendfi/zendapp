@@ -1,3 +1,4 @@
+import '../../core/zend_format.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -347,7 +348,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               ),
                               title: pool.name,
                               subtitle:
-                                  '\$${pool.gathered.toStringAsFixed(2)} of \$${pool.targetAmount.toStringAsFixed(2)}',
+                                  '${formatMoney(pool.gathered)} of ${formatMoney(pool.targetAmount)}',
                               onTap: () {
                                 Navigator.of(context).pop();
                                 Navigator.of(context).push(

@@ -165,7 +165,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
             const OnboardingProgressBar(
               step: 6,
               totalSteps: 6,
-              trackColor: Color(0x1AE8F4EC),
+              trackColor: Color(0x1AF7F6F3),
               fillColor: ZendColors.accentPop,
             ),
             Expanded(
@@ -189,7 +189,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                             decoration: BoxDecoration(
                               color: active
                                   ? ZendColors.accentPop
-                                  : const Color(0x33E8F4EC),
+                                  : const Color(0x33F7F6F3),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -216,7 +216,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                       style: const TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 14,
-                        color: Color(0x99E8F4EC),
+                        color: Color(0x99F7F6F3),
                       ),
                     ),
                     SizedBox(height: compact ? 28 : 44),
@@ -305,7 +305,7 @@ class _PinDots extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? ZendColors.accentPop : Colors.transparent,
               border: Border.all(
-                color: filled ? ZendColors.accentPop : const Color(0x66E8F4EC),
+                color: filled ? ZendColors.accentPop : const Color(0x66F7F6F3),
                 width: 2,
               ),
             ),

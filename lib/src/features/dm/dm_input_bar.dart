@@ -656,7 +656,7 @@ class _DmInputBarState extends State<DmInputBar>
                 '\$0.01 – \$5',
                 style: ZendTextStyles.tabularNumeric.copyWith(
                   fontSize: 10,
-                  color: zt.textSecondary.withValues(alpha: 0.6),
+                  color: zt.textSecondary,
                 ),
               ),
             ],

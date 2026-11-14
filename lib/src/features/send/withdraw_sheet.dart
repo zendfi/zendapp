@@ -205,7 +205,7 @@ class _AmountStage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Balance: \$${model.balance.toStringAsFixed(2)}',
+            'Balance: ${formatMoney(model.balance)}',
             style: ZendTextStyles.tabularNumeric.copyWith(
               fontSize: 12,
               color: insufficientBalance
@@ -228,7 +228,7 @@ class _AmountStage extends StatelessWidget {
                   )
                 : belowMinimum
                 ? Text(
-                    'Minimum withdrawal is \$0.50',
+                    'Minimum withdrawal is ${formatMoney(0.5)}',
                     textAlign: TextAlign.center,
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 11,
@@ -261,7 +261,7 @@ class _AmountStage extends StatelessWidget {
               label: canContinue
                   ? 'Continue'
                   : belowMinimum
-                  ? 'Minimum \$0.50'
+                  ? 'Minimum ${formatMoney(0.5)}'
                   : 'Enter amount',
               onPressed: canContinue ? onContinue : null,
             ),

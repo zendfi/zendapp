@@ -169,7 +169,7 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.of(context).size.height < 760;
-    const textOnDeepSecondary = Color(0x99E8F4EC);
+    const textOnDeepSecondary = Color(0x99F7F6F3);
 
     return Scaffold(
       backgroundColor: ZendColors.bgDeep,

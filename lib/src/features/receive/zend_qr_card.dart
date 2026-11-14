@@ -175,8 +175,8 @@ class _CardFace extends StatelessWidget {
 
   static const Color _bg = Color(0xFF1C2B1E);
   static const Color _border = Color(0xFF2D4030);
-  static const Color _textOnDeep = Color(0xFFE8F4EC);
-  static const Color _textMuted = Color(0x99E8F4EC);
+  static const Color _textOnDeep = Color(0xFFF7F6F3);
+  static const Color _textMuted = Color(0x99F7F6F3);
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +260,7 @@ class _CardFace extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            Container(height: 1, color: const Color(0x26E8F4EC)),
+            Container(height: 1, color: const Color(0x26F7F6F3)),
             const SizedBox(height: 16),
 
             const Text(
@@ -301,24 +301,24 @@ class _CardButton extends StatelessWidget {
       child: Container(
         height: 46,
         decoration: BoxDecoration(
-          color: const Color(0x1AE8F4EC),
+          color: const Color(0x1AF7F6F3),
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: Border.all(color: const Color(0x26E8F4EC)),
+          border: Border.all(color: const Color(0x26F7F6F3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (loading)
-              ZendLoader(size: 16, strokeWidth: 1.5, color: Color(0x99E8F4EC))
+              ZendLoader(size: 16, strokeWidth: 1.5, color: Color(0x99F7F6F3))
             else
-              Icon(icon, size: 16, color: const Color(0x99E8F4EC)),
+              Icon(icon, size: 16, color: const Color(0x99F7F6F3)),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
-                color: Color(0xCCE8F4EC),
+                color: Color(0xCCF7F6F3),
               ),
             ),
           ],

@@ -280,7 +280,7 @@ class _LockScreenState extends State<_LockScreen>
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
-                    color: Color(0x99E8F4EC),
+                    color: Color(0x99F7F6F3),
                   ),
                 ),
                 SizedBox(height: compact ? 36 : 52),
@@ -336,7 +336,7 @@ class _LockScreenState extends State<_LockScreen>
                     ),
                     label: const Text('Use biometrics'),
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0x99E8F4EC),
+                      foregroundColor: const Color(0x99F7F6F3),
                       textStyle: const TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 13,
@@ -353,7 +353,7 @@ class _LockScreenState extends State<_LockScreen>
                   ),
                   child: const Text(
                     'Forgot PIN?',
-                    style: TextStyle(color: Color(0x66E8F4EC)),
+                    style: TextStyle(color: Color(0x66F7F6F3)),
                   ),
                 ),
                 SizedBox(height: compact ? 24 : 36),

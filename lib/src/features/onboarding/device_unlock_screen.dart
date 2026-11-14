@@ -229,7 +229,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 14,
-                  color: Color(0x99E8F4EC),
+                  color: Color(0x99F7F6F3),
                 ),
               ),
               SizedBox(height: compact ? 36 : 52),
@@ -282,7 +282,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                   icon: const Icon(PhosphorIconsRegular.fingerprint, size: 20),
                   label: const Text('Use biometrics'),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0x99E8F4EC),
+                    foregroundColor: const Color(0x99F7F6F3),
                     textStyle: const TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 13,
@@ -300,7 +300,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 },
                 child: const Text(
                   'PIN settings',
-                  style: TextStyle(color: Color(0x66E8F4EC)),
+                  style: TextStyle(color: Color(0x66F7F6F3)),
                 ),
               ),
               TextButton(
@@ -313,7 +313,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 },
                 child: const Text(
                   'Use phone number instead',
-                  style: TextStyle(color: Color(0x66E8F4EC)),
+                  style: TextStyle(color: Color(0x66F7F6F3)),
                 ),
               ),
               TextButton(
@@ -321,7 +321,7 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                     pushZendSlide(context, const ForgotPinScreen()),
                 child: const Text(
                   'Forgot PIN?',
-                  style: TextStyle(color: Color(0x66E8F4EC)),
+                  style: TextStyle(color: Color(0x66F7F6F3)),
                 ),
               ),
               SizedBox(height: compact ? 12 : 24),

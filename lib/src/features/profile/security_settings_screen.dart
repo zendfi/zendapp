@@ -1,3 +1,4 @@
+import '../../core/zend_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -189,7 +190,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: zt.accent.withValues(alpha: 0.12),
+                      color: zt.onAccent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -429,7 +430,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                               icon: PhosphorIconsRegular.receiptX,
                               label: 'Require PIN for larger sends',
                               subtitle: _pinThresholdEnabled
-                                  ? 'PIN required for sends over \$${_pinThresholdAmount.toStringAsFixed(0)}'
+                                  ? 'PIN required for sends over ${formatMoney(_pinThresholdAmount)}'
                                   : 'PIN required for sends over a set amount',
                               value: _pinThresholdEnabled,
                               zt: zt,
@@ -455,7 +456,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                             _pinPerPaymentEnabled
                                 ? 'PIN is required before every send.'
                                 : _pinThresholdEnabled
-                                ? 'Sends below \$${_pinThresholdAmount.toStringAsFixed(0)} go through instantly. PIN required above.'
+                                ? 'Sends below ${formatMoney(_pinThresholdAmount)} go through instantly. PIN required above.'
                                 : 'Sends go through instantly once the app is unlocked. No extra PIN needed.',
                             style: TextStyle(
                               fontFamily: 'Geist',
@@ -586,7 +587,7 @@ class _BiometricStep extends StatelessWidget {
           height: 26,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: zt.accent.withValues(alpha: 0.12),
+            color: zt.onAccent,
             shape: BoxShape.circle,
           ),
           child: Text(

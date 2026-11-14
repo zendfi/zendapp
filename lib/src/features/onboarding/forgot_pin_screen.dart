@@ -194,7 +194,7 @@ class _RequestView extends StatelessWidget {
             fontFamily: 'Geist',
             fontSize: 15,
             height: 1.5,
-            color: Color(0x99E8F4EC), // textOnDeepSecondary
+            color: Color(0x99F7F6F3), // textOnDeepSecondary
           ),
         ),
         const SizedBox(height: 24),
@@ -218,7 +218,7 @@ class _RequestView extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 14,
-                    color: Color(0x99E8F4EC),
+                    color: Color(0x99F7F6F3),
                   ),
                 ),
               ),
@@ -283,7 +283,7 @@ class _OtpView extends StatelessWidget {
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 15,
-            color: Color(0x99E8F4EC),
+            color: Color(0x99F7F6F3),
           ),
         ),
         const SizedBox(height: 32),

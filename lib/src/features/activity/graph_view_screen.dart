@@ -460,10 +460,10 @@ class _GraphNodeWidget extends StatelessWidget {
           zt: zt,
           child: CircleAvatar(
             radius: radius,
-            backgroundColor: zt.accent.withValues(alpha: 0.18),
+            backgroundColor: zt.accent,
             child: Icon(
               PhosphorIconsRegular.usersThree,
-              color: zt.accent,
+              color: zt.onAccent,
               size: radius * 0.9,
             ),
           ),
