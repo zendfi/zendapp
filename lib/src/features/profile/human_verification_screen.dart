@@ -7,13 +7,14 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_verified_badge.dart';
 import '../../models/api_exceptions.dart';
+import 'liveness_check_launcher.dart';
 
 /// Runs the passport scan on the phone and returns the result for the server to check, or null if
 /// the person backed out. Set by the app once a scanner is integrated; until then the screen says
 /// scanning isn't in this version, and never starts a check it can't finish.
 abstract class HumanCheckLauncher {
   bool get isAvailable;
-  Future<Map<String, dynamic>?> scan({required String nonce});
+  Future<Map<String, dynamic>?> scan({required Map<String, dynamic> challenge});
 }
 
 HumanCheckLauncher? humanCheckLauncher;
@@ -29,7 +30,9 @@ class _DebugHumanCheckLauncher implements HumanCheckLauncher {
   bool get isAvailable => true;
 
   @override
-  Future<Map<String, dynamic>?> scan({required String nonce}) async {
+  Future<Map<String, dynamic>?> scan({
+    required Map<String, dynamic> challenge,
+  }) async {
     final ctrl = TextEditingController();
     final id = await showDialog<String>(
       context: context,
@@ -76,9 +79,12 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  HumanCheckLauncher? get _launcher =>
-      humanCheckLauncher ??
-      (kDebugMode ? _DebugHumanCheckLauncher(context) : null);
+  HumanCheckLauncher? get _launcher {
+    if (humanCheckLauncher != null) return humanCheckLauncher;
+    final live = LivenessCheckLauncher(Navigator.of(context));
+    if (!kIsWeb && live.isAvailable) return live;
+    return kDebugMode ? _DebugHumanCheckLauncher(context) : null;
+  }
 
   Future<void> _load() async {
     final api = ZendScope.read(context).walletService.apiClient;
@@ -102,7 +108,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
     });
     try {
       final challenge = await api.startHumanCheck();
-      final result = await launcher.scan(nonce: challenge['nonce'] as String);
+      final result = await launcher.scan(challenge: challenge);
       if (result == null) return; // backed out
       final s = await api.completeHumanCheck(
         challengeId: challenge['challenge_id'] as String,
@@ -174,7 +180,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
       ),
       _ => (
         'Show you\'re a real person',
-        'Scan your passport to get a check mark next to your name. Your passport details stay on your phone. Zend never sees them.',
+        'Take a quick selfie check to get a check mark next to your name. It shows you\'re a real person. It doesn\'t need an ID.',
       ),
     };
 
@@ -184,7 +190,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
         : kIsWeb
         ? 'Open the Zend app on your phone to verify.'
         : !canScan
-        ? 'Passport scanning is coming to this version soon.'
+        ? 'The selfie check is coming to this version soon.'
         : null;
 
     return Scaffold(
