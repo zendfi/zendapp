@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -82,7 +82,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
   HumanCheckLauncher? get _launcher {
     if (humanCheckLauncher != null) return humanCheckLauncher;
     final live = LivenessCheckLauncher(Navigator.of(context));
-    if (!kIsWeb && live.isAvailable) return live;
+    if (live.isAvailable) return live;
     return kDebugMode ? _DebugHumanCheckLauncher(context) : null;
   }
 
@@ -150,7 +150,7 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
     final reason = _reasonCopy(_status?['reason'] as String?);
     final available = _status?['available'] == true;
     final launcher = _launcher;
-    final canScan = !kIsWeb && launcher != null && launcher.isAvailable;
+    final canScan = launcher != null && launcher.isAvailable;
 
     TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? c}) =>
         TextStyle(
@@ -187,8 +187,6 @@ class _HumanVerificationScreenState extends State<HumanVerificationScreen> {
     final needsAction = status != 'active';
     final String? blocker = !available
         ? 'This isn\'t available yet.'
-        : kIsWeb
-        ? 'Open the Zend app on your phone to verify.'
         : !canScan
         ? 'The selfie check is coming to this version soon.'
         : null;
