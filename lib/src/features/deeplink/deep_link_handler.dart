@@ -95,6 +95,12 @@ class DeepLinkHandler {
       // https://app.usezend.app/a/{id}      — ask link (pay).
       // Web rewrites the host to zdfi.me before parsing, so accept both.
       const zlinkHosts = {'app.usezend.app', 'zdfi.me'};
+      // https://app.usezend.app/cash#{code} — cash; the bare page asks for a code.
+      if (zlinkHosts.contains(uri.host) &&
+          uri.pathSegments.length == 1 &&
+          uri.pathSegments[0] == 'cash') {
+        return DeepLinkPayload(zendtag: '', cashCode: uri.fragment);
+      }
       if (zlinkHosts.contains(uri.host) && uri.pathSegments.length == 2) {
         final id = uri.pathSegments[1];
         if (uri.pathSegments[0] == 'z' && id.isNotEmpty) {
@@ -223,6 +229,10 @@ class DeepLinkPayload {
   /// Ask link id (`zl_...`).
   final String? zlinkAskId;
 
+  /// Cash (`app.usezend.app/cash#<code>`): the code from the fragment, or ''
+  /// for the bare page, which asks for one. A bearer secret, like [zlinkKey].
+  final String? cashCode;
+
   /// ZApp slug (`/apps/{slug}`) or interaction id (`/i/{id}`).
   final String? zappSlug;
   final String? interactionId;
@@ -242,6 +252,7 @@ class DeepLinkPayload {
     this.zlinkGiveId,
     this.zlinkKey,
     this.zlinkAskId,
+    this.cashCode,
     this.zappSlug,
     this.interactionId,
     this.zappQuery,
@@ -251,7 +262,8 @@ class DeepLinkPayload {
 
   bool get isZlinkGive => zlinkGiveId != null;
   bool get isZlinkAsk => zlinkAskId != null;
-  bool get isZlink => isZlinkGive || isZlinkAsk;
+  bool get isCash => cashCode != null;
+  bool get isZlink => isZlinkGive || isZlinkAsk || isCash;
 
   bool get isCliPairing => cliPairingCode != null;
   bool get isBotPairing => botPairingCode != null;

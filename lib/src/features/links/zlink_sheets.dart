@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/cash_code.dart';
 import '../../core/zend_format.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_country_flag.dart';
@@ -23,6 +24,7 @@ import '../../services/zlink_service.dart';
 import '../deeplink/deep_link_handler.dart';
 import '../dm/dm_thread_screen.dart';
 import '../onboarding/zendtag_prompt_sheet.dart' show showZendtagPromptSheet;
+import 'cash_widgets.dart' show showCashCodeEntrySheet;
 import '../wallet/add_cash_sheet.dart' show showAddCashSheet;
 import 'my_links_screen.dart' show zlinkServiceOf;
 
@@ -105,6 +107,7 @@ String zlinkAmountLabel(Map<String, dynamic> preview) {
 
 /// Opens the right sheet for a Zlink payload. Caller ensures the user is signed in.
 Future<void> openZlink(BuildContext context, DeepLinkPayload payload) {
+  if (payload.isCash) return _receiveCash(context, payload.cashCode!);
   if (payload.isZlinkGive) {
     return _receiveQuietly(
       context,
@@ -157,7 +160,21 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
     if (p == null || !p.isZlink) return;
     try {
       final service = zlinkServiceOf(context);
-      if (p.isZlinkGive) {
+      if (p.isCash) {
+        final code = cashCodeFromFragment(p.cashCode!);
+        if (code == null) return;
+        // Turning the code into its key takes a few seconds; say so.
+        setState(() {
+          _text = 'Opening your cash…';
+          _sub = null;
+        });
+        final v = await service.openCash(code);
+        final active = v['status'] == 'active';
+        _text = active
+            ? '${v['sender_name']} sent you ${zlinkAmountLabel(v)}'
+            : _closedText(v['status'] as String?, cash: true);
+        _sub = active ? "It'll be in your balance as soon as you're in." : null;
+      } else if (p.isZlinkGive) {
         final v = await service.previewGive(p.zlinkGiveId!);
         final active = v['status'] == 'active';
         _text = active
@@ -169,7 +186,19 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
         _text = '${v['payee_name']} is asking for ${zlinkAmountLabel(v)}';
       }
       if (mounted) setState(() {});
-    } catch (_) {}
+    } on ApiException catch (e) {
+      if (!mounted || !p.isCash) return;
+      setState(() {
+        _text = e.errorCode == 'CASH_NOT_FOUND'
+            ? "That code doesn't match any cash"
+            : "We couldn't open this cash";
+        _sub = e.errorCode == 'CASH_NOT_FOUND'
+            ? 'Check it and try again.'
+            : 'Try again in a moment.';
+      });
+    } catch (_) {
+      if (mounted && p.isCash) setState(() => _text = null);
+    }
   }
 
   @override
@@ -209,9 +238,11 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
   }
 }
 
-String _closedText(String? status) => switch (status) {
+String _closedText(String? status, {bool cash = false}) => switch (status) {
+  'claimed' when cash => 'This cash has already been collected',
   'claimed' => 'This money has already been received',
   'returned' => 'The sender took this back',
+  _ when cash => 'This cash has expired',
   _ => 'This link has expired',
 };
 
@@ -268,6 +299,19 @@ class _SheetFrame extends StatelessWidget {
 /// spinner, nothing to tap. It moves into the balance in the background and a
 /// quiet "Tolu sent you ₦8,000" appears once it's there, the way a normal
 /// payment does. Only a link that can't be used gets a screen of its own.
+void _explain(NavigatorState navigator, String title, String body) {
+  if (!navigator.mounted) return;
+  showZendModalSheet<void>(
+    context: navigator.context,
+    builder: (c) => _SheetFrame(
+      icon: PhosphorIconsRegular.info,
+      title: title,
+      body: body,
+      action: PrimaryButton(label: 'OK', onPressed: () => Navigator.of(c).pop()),
+    ),
+  );
+}
+
 Future<void> _receiveQuietly(
   BuildContext context,
   String id,
@@ -275,28 +319,12 @@ Future<void> _receiveQuietly(
 ) async {
   final model = ZendScope.of(context);
   final service = zlinkServiceOf(context);
-  final messenger = ScaffoldMessenger.maybeOf(context);
   final navigator = Navigator.of(context, rootNavigator: true);
-
-  void explain(String title, String body) {
-    if (!navigator.mounted) return;
-    showZendModalSheet<void>(
-      context: navigator.context,
-      builder: (c) => _SheetFrame(
-        icon: PhosphorIconsRegular.info,
-        title: title,
-        body: body,
-        action: PrimaryButton(
-          label: 'OK',
-          onPressed: () => Navigator.of(c).pop(),
-        ),
-      ),
-    );
-  }
 
   final key = parseZlinkKey(keyFragment);
   if (key == null) {
-    explain(
+    _explain(
+      navigator,
       'This link is incomplete',
       'Ask the person who sent it to share it again.',
     );
@@ -309,11 +337,84 @@ Future<void> _receiveQuietly(
   try {
     preview = await service.previewGive(id);
   } catch (_) {
-    explain("We couldn't open this link", 'Open it again in a moment.');
+    _explain(navigator, "We couldn't open this link", 'Open it again in a moment.');
     return;
   }
+  if (!context.mounted) return;
+  await _collect(context, id, key, preview, balanceReady);
+}
+
+/// Cash: the code from the link, or typed. Opening it takes a few seconds
+/// (the code is turned into its key on this device), then it arrives like
+/// any link.
+Future<void> _receiveCash(BuildContext context, String fragment) async {
+  final model = ZendScope.of(context);
+  final service = zlinkServiceOf(context);
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+
+  var code = fragment.isEmpty ? null : cashCodeFromFragment(fragment);
+  if (fragment.isNotEmpty && code == null) {
+    _explain(
+      navigator,
+      'This code is incomplete',
+      'Ask the person who sent it to share it again, or type the code.',
+    );
+    return;
+  }
+  code ??= await showCashCodeEntrySheet(navigator.context);
+  if (code == null || !navigator.mounted) return;
+
+  messenger?.showSnackBar(
+    const SnackBar(
+      content: Text('Opening your cash…'),
+      duration: Duration(seconds: 20),
+    ),
+  );
+  final balanceReady = model.fetchBalance();
+  Map<String, dynamic> preview;
+  Uint8List key;
+  try {
+    preview = await service.openCash(code);
+    key = await code.seed();
+  } on ApiException catch (e) {
+    messenger?.hideCurrentSnackBar();
+    if (e.errorCode == 'CASH_NOT_FOUND') {
+      _explain(navigator, "That code doesn't match any cash", 'Check it and try again.');
+    } else {
+      _explain(navigator, "We couldn't open this cash", 'Try again in a moment.');
+    }
+    return;
+  } catch (_) {
+    messenger?.hideCurrentSnackBar();
+    _explain(navigator, "We couldn't open this cash", 'Try again in a moment.');
+    return;
+  }
+  messenger?.hideCurrentSnackBar();
+  final id = preview['id'] as String?;
+  if (id == null || !navigator.mounted) return;
+  await _collect(navigator.context, id, key, preview, balanceReady);
+}
+
+Future<void> _collect(
+  BuildContext context,
+  String id,
+  Uint8List key,
+  Map<String, dynamic> preview,
+  Future<void> balanceReady,
+) async {
+  final model = ZendScope.of(context);
+  final service = zlinkServiceOf(context);
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final cash = preview['cash'] == true;
+  void explain(String title, String body) => _explain(navigator, title, body);
+
   if (preview['status'] != 'active') {
-    explain(_closedText(preview['status'] as String?), _closedBody(preview));
+    explain(
+      _closedText(preview['status'] as String?, cash: cash),
+      _closedBody(preview),
+    );
     return;
   }
 
@@ -392,9 +493,11 @@ Future<void> _receiveQuietly(
         }
         messenger?.hideCurrentSnackBar();
         messenger?.showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'This is your own link. You can take it back from My Links.',
+              cash
+                  ? 'This is your own cash. You can take it back from My Links.'
+                  : 'This is your own link. You can take it back from My Links.',
             ),
           ),
         );
@@ -418,15 +521,19 @@ Future<void> _receiveQuietly(
     "That didn't go through",
     last is ZlinkException
         ? last.message
+        : cash
+        ? 'The money is still waiting for you. Open the code again in a moment.'
         : 'The money is still waiting for you. Open the link again in a moment.',
   );
 }
 
 String _closedBody(Map<String, dynamic> preview) {
   final name = preview['sender_name'] as String? ?? 'the sender';
+  final cash = preview['cash'] == true;
   return switch (preview['status']) {
     'claimed' => 'If it was meant for you, ask $name about it.',
     'returned' => 'Ask $name to send it again if it was meant for you.',
+    _ when cash => 'The money went back to $name.',
     _ => 'Links last a few days. The money went back to $name.',
   };
 }

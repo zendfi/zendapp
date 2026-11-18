@@ -7,9 +7,11 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_link_card.dart';
+import '../../design/zend_note.dart' show noteText;
 import '../../design/zend_tint.dart';
 import '../../design/zend_tokens.dart';
 import '../../services/zlink_service.dart';
+import 'cash_widgets.dart' show showCashCardSheet;
 
 ZlinkService zlinkServiceOf(BuildContext context) {
   final model = ZendScope.of(context);
@@ -83,6 +85,31 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
 
   Future<void> _share(Map<String, dynamic> link) async {
     final service = zlinkServiceOf(context);
+    if (link['cash'] == true) {
+      // Cash: the card again, with its code. Kept only on the device that
+      // made it, like any link key.
+      final local = await service.localLink(
+        link['id'] as String,
+        claimPubkey: link['claim_pubkey'] as String?,
+      );
+      final code = local?.cash;
+      if (!mounted) return;
+      if (code == null) {
+        _snack('This cash was made on another device. Share it from there.');
+        return;
+      }
+      await showCashCardSheet(
+        context,
+        code: code,
+        amountUsd: (link['amount_usd'] as num?)?.toDouble() ?? 0,
+        uses: link['uses_total'] as int? ?? 1,
+        memo: link['memo'] as String?,
+        expiresAt:
+            DateTime.tryParse(link['expires_at'] as String? ?? '') ??
+            DateTime.now(),
+      );
+      return;
+    }
     String? url;
     if (link['kind'] == 'ask') {
       url = link['url'] as String? ?? zlinkAskUrl(link['id'] as String);
@@ -337,8 +364,11 @@ class _LinkTile extends StatelessWidget {
     final zt = ZendTheme.of(context);
     final isGive = link['kind'] == 'give';
     final active = link['status'] == 'active';
+    final cash = link['cash'] == true;
     final title = (link['memo'] as String?)?.isNotEmpty == true
-        ? link['memo'] as String
+        ? noteText(link['memo'] as String)
+        : cash
+        ? 'Cash'
         : isGive
         ? (link['recipient_hint'] as String? ?? 'Money link')
         : 'Collecting';
@@ -362,7 +392,9 @@ class _LinkTile extends StatelessWidget {
             radius: 20,
             backgroundColor: active ? tint.solid : zt.bgSecondary,
             child: Icon(
-              isGive
+              cash
+                  ? PhosphorIconsRegular.money
+                  : isGive
                   ? PhosphorIconsRegular.gift
                   : PhosphorIconsRegular.handCoins,
               color: active ? tint.onSolid : zt.textSecondary,

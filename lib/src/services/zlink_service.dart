@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../core/cash_code.dart';
 import 'api_client.dart';
 import 'sui_transaction_decoder.dart';
 import 'sui_transaction_verifier.dart';
@@ -33,11 +34,14 @@ class ZlinkException implements Exception {
 /// A give link this device created. The seed is the link key; it lives only in
 /// secure storage and in the URL fragment, never on Zend's servers.
 class CreatedGiveLink {
-  const CreatedGiveLink({required this.id, required this.seed});
+  const CreatedGiveLink({required this.id, required this.seed, this.cash});
   final String id;
   final Uint8List seed;
 
-  String get url => zlinkGiveUrl(id, seed);
+  /// Set when this link is cash: its key comes from this code.
+  final CashCode? cash;
+
+  String get url => cash?.url ?? zlinkGiveUrl(id, seed);
 }
 
 String zlinkGiveUrl(String id, Uint8List seed) =>
@@ -181,6 +185,9 @@ class ZlinkService {
   static final Ed25519 _ed25519 = Ed25519();
   static const _keyPrefix = 'zlink_key:';
   static const _pubPrefix = 'zlink_pub:';
+  // Cash: the code itself, so My Links can show the card again on this device.
+  static const _cashPrefix = 'zlink_cash:';
+  static const _cashPubPrefix = 'zlink_cashpub:';
   static const _pinnedAddressKey = 'zlink_pinned_address';
 
   // ── Own address (pinned) ──────────────────────────────────────────────────
@@ -246,8 +253,12 @@ class ZlinkService {
     Duration? expiresIn,
     String? app,
     String? reference,
+    CashCode? cash,
   }) async {
-    final keyPair = await _ed25519.newKeyPair();
+    // Cash: the key comes from the code (slow on purpose, see CashCode.seed).
+    final keyPair = cash == null
+        ? await _ed25519.newKeyPair()
+        : await _ed25519.newKeyPairFromSeed(await cash.seed());
     final seed = Uint8List.fromList(await keyPair.extractPrivateKeyBytes());
     final publicKey = (await keyPair.extractPublicKey()).bytes;
     final sender = await _myAddress();
@@ -267,6 +278,7 @@ class ZlinkService {
         if (expiresIn != null) 'expires_in_secs': expiresIn.inSeconds,
         'app': ?app,
         'reference': ?reference,
+        'cash_prefix': ?cash?.prefix,
       }),
     );
     final tx = _txOf(prepared);
@@ -283,6 +295,9 @@ class ZlinkService {
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join();
     await _storage.write(key: '$_pubPrefix$pubHex', value: base64.encode(seed));
+    if (cash != null) {
+      await _storage.write(key: '$_cashPubPrefix$pubHex', value: cash.compact);
+    }
     final result = await _signAndSubmit('/give/submit', tx);
     final id = result['id'] as String?;
     if (id == null) {
@@ -292,7 +307,32 @@ class ZlinkService {
     }
     await _storage.write(key: '$_keyPrefix$id', value: base64.encode(seed));
     await _storage.delete(key: '$_pubPrefix$pubHex');
-    return CreatedGiveLink(id: id, seed: seed);
+    if (cash != null) {
+      await _storage.write(key: '$_cashPrefix$id', value: cash.compact);
+      await _storage.delete(key: '$_cashPubPrefix$pubHex');
+    }
+    return CreatedGiveLink(id: id, seed: seed, cash: cash);
+  }
+
+  // ── Cash ──────────────────────────────────────────────────────────────────
+
+  /// A free lookup for a new cash code. The code (and its slow key) can be
+  /// made as soon as this returns, before the amount is even typed.
+  Future<CashCode> newCashCode() async {
+    final data = await _api.zlinkPost('/cash/reserve');
+    return CashCode.generate(data['prefix'] as String);
+  }
+
+  /// Opens cash by its code: proves the code with a signature from its key and
+  /// gets back what a link preview has (`id`, `sender_name`, `amount_usd`,
+  /// `status`…). Works signed out. A wrong code fails with `CASH_NOT_FOUND`.
+  Future<Map<String, dynamic>> openCash(CashCode code) async {
+    final keyPair = await _ed25519.newKeyPairFromSeed(await code.seed());
+    final signature = await _ed25519.sign(code.openMessage, keyPair: keyPair);
+    return _api.zlinkPost('/cash/open', {
+      'prefix': code.prefix,
+      'signature': base64.encode(signature.bytes),
+    });
   }
 
   /// The locally stored key for a link this device created, for re-sharing.
@@ -307,9 +347,22 @@ class ZlinkService {
       }
     }
     if (raw == null) return null;
+    var cash = await _storage.read(key: '$_cashPrefix$id');
+    if (cash == null && claimPubkey != null) {
+      cash = await _storage.read(
+        key: '$_cashPubPrefix${claimPubkey.toLowerCase()}',
+      );
+      if (cash != null) {
+        await _storage.write(key: '$_cashPrefix$id', value: cash);
+        await _storage.delete(
+          key: '$_cashPubPrefix${claimPubkey.toLowerCase()}',
+        );
+      }
+    }
     return CreatedGiveLink(
       id: id,
       seed: Uint8List.fromList(base64.decode(raw)),
+      cash: cash == null ? null : CashCode.tryParse(cash),
     );
   }
 
@@ -343,6 +396,7 @@ class ZlinkService {
     _verify(tx, sender: sender, function: 'reclaim');
     await _signAndSubmit('/give/$linkId/reclaim/submit', tx);
     await _storage.delete(key: '$_keyPrefix$linkId');
+    await _storage.delete(key: '$_cashPrefix$linkId');
   }
 
   // ── Ask links ─────────────────────────────────────────────────────────────

@@ -76,6 +76,16 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     _handleRaw(rawValue);
   }
 
+  /// Leaves the camera for the cash code sheet (an empty code asks for one).
+  void _typeCashCode() {
+    _hasScanned = true;
+    unawaited(_controller.stop());
+    final navigator = Navigator.of(context);
+    final host = navigator.context;
+    navigator.pop();
+    unawaited(openZlink(host, const DeepLinkPayload(zendtag: '', cashCode: '')));
+  }
+
   /// Web: decode a QR from an uploaded image (laptop webcams are awkward to
   /// point at a phone).
   Future<void> _uploadImage() async {
@@ -116,6 +126,24 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (!mounted) return;
       Navigator.of(context).pop();
       showPairingApprovalSheet(context, pairingCode: uri.pathSegments[1]);
+      return;
+    }
+
+    // https://app.usezend.app/cash#{code}: cash. Collects like tapping it.
+    if (uri.host.toLowerCase() == 'app.usezend.app' &&
+        uri.pathSegments.length == 1 &&
+        uri.pathSegments[0] == 'cash' &&
+        uri.fragment.isNotEmpty) {
+      _hasScanned = true;
+      HapticFeedback.mediumImpact();
+      unawaited(_controller.stop());
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      final host = navigator.context;
+      navigator.pop();
+      unawaited(
+        openZlink(host, DeepLinkPayload(zendtag: '', cashCode: uri.fragment)),
+      );
       return;
     }
 
@@ -272,25 +300,48 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: kIsWeb
-                  ? TextButton.icon(
-                      onPressed: _uploadImage,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.white24,
-                        minimumSize: const Size(44, 48),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(ZendRadii.pill),
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  kIsWeb
+                      ? TextButton.icon(
+                          onPressed: _uploadImage,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.white24,
+                            minimumSize: const Size(44, 48),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                ZendRadii.pill,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(PhosphorIconsRegular.image),
+                          label: const Text(
+                            'Upload a QR image',
+                            style: TextStyle(fontFamily: 'Geist'),
+                          ),
+                        )
+                      : _TorchButton(torchOn: _torchOn, onTap: _toggleTorch),
+                  const SizedBox(height: 12),
+                  // Cash read out or written down: type it instead.
+                  TextButton(
+                    onPressed: _typeCashCode,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: const Text(
+                      'Type a cash code',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontWeight: FontWeight.w600,
                       ),
-                      icon: const Icon(PhosphorIconsRegular.image),
-                      label: const Text(
-                        'Upload a QR image',
-                        style: TextStyle(fontFamily: 'Geist'),
-                      ),
-                    )
-                  : _TorchButton(torchOn: _torchOn, onTap: _toggleTorch),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -2,6 +2,8 @@ import 'dart:async';
 
 // kIsWeb and debugPrint live in foundation.dart; material.dart does not
 // re-export them.
+import '../deeplink/deep_link_handler.dart' show DeepLinkPayload;
+import '../links/cash_widgets.dart' show showCashCodeEntrySheet;
 import '../links/zlink_sheets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +37,17 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
+  /// Bumped when a typed cash code becomes the pending link, so the line
+  /// above the button reloads for it.
+  int _pendingVersion = 0;
+
+  Future<void> _enterCashCode() async {
+    final code = await showCashCodeEntrySheet(context);
+    if (code == null || !mounted) return;
+    PendingZlink.store(DeepLinkPayload(zendtag: '', cashCode: code.compact));
+    setState(() => _pendingVersion++);
+  }
+
   bool _busy = false;
   String? _error;
 
@@ -335,7 +348,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // "Tolu sent you ₦8,000" when opened from a Zlink.
-                      const ZlinkWelcomeLine(),
+                      ZlinkWelcomeLine(key: ValueKey(_pendingVersion)),
                       PrimaryButton(
                         label: 'Continue with Google',
                         // Also busy while the pre-warm is in flight, so the
@@ -362,7 +375,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(color: zt.textSecondary, fontSize: 13),
                       ),
-                      const SizedBox(height: 24),
+                      // Someone was handed a cash code: it opens here, and
+                      // lands in their balance once they're in.
+                      TextButton(
+                        onPressed: _busy ? null : _enterCashCode,
+                        child: Text(
+                          'Have a cash code?',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: zt.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),

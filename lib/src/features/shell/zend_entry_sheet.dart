@@ -18,7 +18,9 @@ import '../../models/recent_contact.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/cash_code.dart';
 import '../../services/zlink_service.dart';
+import '../links/cash_widgets.dart';
 import '../send/send_flow_sheet.dart';
 import '../send/send_shared_widgets.dart' show VisibilityPill;
 import '../send/transfer_status_controller.dart';
@@ -89,7 +91,9 @@ class ZendEntrySheet extends StatefulWidget {
   State<ZendEntrySheet> createState() => _ZendEntrySheetState();
 }
 
-enum _EntryStage { identity, amount }
+/// [card]: cash was made; the sheet shows the card to share (cash has no
+/// recipient for the banner to report to, and the sender needs the code).
+enum _EntryStage { identity, amount, card }
 
 class _ZendEntrySheetState extends State<ZendEntrySheet> {
   late _EntryStage _stage;
@@ -139,6 +143,22 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   String? _email;
   String? _displayName;
   String? _avatarUrl;
+
+  // ── Cash ("Anyone") ──────────────────────────────────────────────────
+  /// Sending to whoever holds a code, instead of to a person.
+  bool _cash = false;
+
+  /// The code for this cash, reserved when "Anyone" is tapped. Its key takes
+  /// seconds to make, so that starts then too, while the amount is typed.
+  Future<CashCode>? _cashCode;
+  CashTerms _cashTerms = const CashTerms();
+  bool _makingCash = false;
+  CreatedGiveLink? _cashMade;
+  DateTime? _cashExpiresAt;
+
+  /// Per person, as made. Not [_amount]: that is capped by the balance,
+  /// which drops as soon as the cash is made.
+  double _cashAmount = 0;
 
   @override
   void initState() {
@@ -215,6 +235,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _searchFocus.requestFocus();
       case _EntryStage.amount:
         _amountFocus.requestFocus();
+      case _EntryStage.card:
+        FocusManager.instance.primaryFocus?.unfocus();
     }
   }
 
@@ -404,7 +426,90 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     _goToStage(_EntryStage.amount);
   }
 
-  void _changeIdentity() => _goToStage(_EntryStage.identity);
+  void _changeIdentity() {
+    _cash = false;
+    _goToStage(_EntryStage.identity);
+  }
+
+  /// "Anyone": cash with a code. Reserves the code and starts its key now.
+  void _pickAnyone() {
+    final model = ZendScope.of(context);
+    setState(() {
+      _cash = true;
+      _zendtag = null;
+      _email = null;
+      _avatarUrl = null;
+      _displayName = 'Anyone';
+    });
+    // `ignore` only stops an early failure being reported as unhandled;
+    // _makeCash still awaits it and says what went wrong.
+    _cashCode ??= _reserveCash(model)..ignore();
+    _goToStage(_EntryStage.amount);
+  }
+
+  Future<CashCode> _reserveCash(ZendAppModel model) async {
+    final service = ZlinkService(
+      api: model.walletService.apiClient,
+      zkLogin: model.zkLoginService,
+    );
+    final code = await service.newCashCode();
+    // Errors surface when the cash is made, not here.
+    unawaited(code.seed().then((_) {}, onError: (_) {}));
+    return code;
+  }
+
+  /// Cash: what leaves the balance (the amount is per person).
+  double get _sendTotal => _cash ? _amount * _cashTerms.uses : _amount;
+
+  Future<void> _makeCash() async {
+    if (_makingCash) return;
+    final model = ZendScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final amount = _amount;
+    final note = _note;
+    final terms = _cashTerms;
+    setState(() => _makingCash = true);
+    try {
+      final code = await (_cashCode ??= _reserveCash(model));
+      final service = ZlinkService(
+        api: model.walletService.apiClient,
+        zkLogin: model.zkLoginService,
+      );
+      final link = await service.createGiveLink(
+        amountUsd: amount,
+        uses: terms.uses,
+        expiresIn: Duration(days: terms.days),
+        // The link holds at most 140 characters of note.
+        memo: note == null ? null : String.fromCharCodes(note.runes.take(140)),
+        cash: code,
+      );
+      model.fetchBalance();
+      unawaited(ZendFeel.sendConfirmed());
+      if (!mounted) return;
+      setState(() {
+        _cashMade = link;
+        _cashAmount = amount;
+        _cashExpiresAt = DateTime.now().add(Duration(days: terms.days));
+        _makingCash = false;
+      });
+      _goToStage(_EntryStage.card);
+    } catch (e) {
+      // A fresh code for the next try: this one may be half set up.
+      _cashCode = null;
+      final message = e is ZlinkException
+          ? e.message
+          : e is ApiException
+          ? e.userMessage
+          : "That didn't go through. Try again.";
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      if (mounted) {
+        setState(() {
+          _makingCash = false;
+          _confirmingZend = false;
+        });
+      }
+    }
+  }
 
   String? get _note =>
       _noteController.text.trim().isEmpty ? null : _noteController.text.trim();
@@ -421,7 +526,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     // Catch an over-balance send here, with the real numbers, instead of
     // after the round trip as a failed banner.
     final available = ZendScope.of(context).sendableBalance;
-    if (_amount > available + 0.000001) {
+    if (_sendTotal > available + 0.000001) {
       ZendFeel.error();
       setState(
         () => _amountError =
@@ -453,6 +558,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   Future<void> _commitZend() async {
     final amount = _amount;
     if (amount <= 0 || _preflighting) return;
+    if (_cash) {
+      await _makeCash();
+      return;
+    }
 
     final model = ZendScope.of(context);
     final note = _note;
@@ -717,6 +826,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   child: switch (_stage) {
                     _EntryStage.identity => _buildIdentityStage(zt),
                     _EntryStage.amount => _buildAmountStage(zt),
+                    _EntryStage.card => _buildCardStage(zt),
                   },
                 ),
               ),
@@ -806,6 +916,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
             ),
           ],
           const SizedBox(height: 16),
+          // Cash: someone without Zend, or whoever the sender hands a code to.
+          // Links are made with Google sign-in, so only those accounts get it.
+          if (_query.isEmpty && model.isZkLoginAccount) ...[
+            _AnyoneRow(onTap: _pickAnyone),
+            const SizedBox(height: 8),
+          ],
           Expanded(child: _buildIdentityResults(zt, model.recentContacts)),
         ],
       ),
@@ -919,13 +1035,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            ZendAvatar(
-                              radius: 28,
-                              initials: (_displayName?.isNotEmpty ?? false)
-                                  ? _displayName![0].toUpperCase()
-                                  : '?',
-                              photoUrl: _avatarUrl,
-                            ),
+                            if (_cash)
+                              const _CashMark(radius: 28)
+                            else
+                              ZendAvatar(
+                                radius: 28,
+                                initials: (_displayName?.isNotEmpty ?? false)
+                                    ? _displayName![0].toUpperCase()
+                                    : '?',
+                                photoUrl: _avatarUrl,
+                              ),
                             if (widget.prefilledRecipient == null)
                               Positioned(
                                 right: -2,
@@ -959,9 +1078,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                             color: zt.textPrimary,
                           ),
                         ),
-                        if (_email != null)
+                        if (_email != null || _cash)
                           Text(
-                            _email!,
+                            _cash ? 'Cash with a code' : _email!,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 12,
@@ -1048,6 +1167,18 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   // read. The editable field below hides at the same time,
                   // so the note appears in exactly one place per state
                   // rather than twice.
+                  // Cash for several people: the amount is each person's.
+                  if (_cash && _cashTerms.uses > 1 && _amountError == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        '$_amountLabel each · ${_cashTerms.uses} people',
+                        textAlign: TextAlign.center,
+                        style: ZendTextStyles.caption.copyWith(
+                          color: zt.textSecondary,
+                        ),
+                      ),
+                    ),
                   if (_amountError != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
@@ -1196,10 +1327,21 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: VisibilityPill(
-                        value: _visibility,
-                        onChanged: (next) => setState(() => _visibility = next),
-                      ),
+                      // Cash has no one to hide the payment from; this slot
+                      // says who can collect it and for how long instead.
+                      child: _cash
+                          ? CashTermsPill(
+                              value: _cashTerms,
+                              onChanged: (next) => setState(() {
+                                _cashTerms = next;
+                                _amountError = null;
+                              }),
+                            )
+                          : VisibilityPill(
+                              value: _visibility,
+                              onChanged: (next) =>
+                                  setState(() => _visibility = next),
+                            ),
                     ),
                   )
                 : Container(
@@ -1266,6 +1408,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     return Row(
       key: const ValueKey('actions'),
       children: [
+        // Cash has no one to request from.
+        if (!_cash) ...[
         Expanded(
           child: Opacity(
             opacity: canAct ? 1 : 0.4,
@@ -1294,6 +1438,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           ),
         ),
         const SizedBox(width: 10),
+        ],
         Expanded(
           child: SizedBox(
             height: 52,
@@ -1365,7 +1510,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           child: SizedBox(
             height: 52,
             child: ElevatedButton(
-              onPressed: _preflighting ? null : _commitZend,
+              onPressed: _preflighting || _makingCash ? null : _commitZend,
               style: ElevatedButton.styleFrom(
                 backgroundColor: zt.accent,
                 foregroundColor: zt.onAccent,
@@ -1376,10 +1521,12 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
               ),
-              child: _preflighting
+              child: _preflighting || _makingCash
                   ? ZendLoader(size: 20, strokeWidth: 2, color: zt.onAccent)
                   : Text(
-                      'Zend $_amountLabel to $target',
+                      _cash
+                          ? 'Zend ${_entry.format(_sendTotal)} as cash'
+                          : 'Zend $_amountLabel to $target',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1396,7 +1543,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         // relying only on that would leave someone who simply changed their
         // mind with no obvious way back.
         GestureDetector(
-          onTap: _preflighting ? null : _disarmZendConfirm,
+          onTap: _preflighting || _makingCash ? null : _disarmZendConfirm,
           child: Container(
             width: 52,
             height: 52,
@@ -1412,6 +1559,46 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Card stage (cash made) ────────────────────────────────────────────
+  // The money has left the balance; nothing here goes back a step. The card
+  // stays in My Links for re-sharing, and can be taken back from there.
+  Widget _buildCardStage(ZendTheme zt) {
+    final link = _cashMade;
+    final code = link?.cash;
+    return Padding(
+      key: const ValueKey('card'),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 48),
+              const Spacer(),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: Icon(PhosphorIconsRegular.x, color: zt.textSecondary),
+              ),
+            ],
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: code == null
+                  ? const SizedBox.shrink()
+                  : CashCardView(
+                      code: code,
+                      amountUsd: _cashAmount,
+                      uses: _cashTerms.uses,
+                      memo: _note,
+                      expiresAt: _cashExpiresAt ?? DateTime.now(),
+                      onDone: () => Navigator.of(context).pop(),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1473,6 +1660,77 @@ class _IdentityRow extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The mark cash takes where a person's avatar would be.
+class _CashMark extends StatelessWidget {
+  const _CashMark({required this.radius});
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: zt.bgSecondary,
+      child: Icon(
+        PhosphorIconsRegular.money,
+        size: radius * 0.9,
+        color: zt.textPrimary,
+      ),
+    );
+  }
+}
+
+/// "Anyone": first in the who list, shaped like a person row.
+class _AnyoneRow extends StatelessWidget {
+  const _AnyoneRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZendRadii.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              const _CashMark(radius: 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Anyone',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: zt.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Cash with a code. Whoever has it can collect.',
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 13,
