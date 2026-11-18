@@ -748,7 +748,15 @@ class _SplashWithSessionRestoreState extends State<_SplashWithSessionRestore> {
       // moment — LanguageIntroScreen.shouldShow() persists its own
       // once-per-install flag, so a user who signs out and back in lands
       // straight on WelcomeScreen instead of replaying it.
-      final showIntro = await LanguageIntroScreen.shouldShow();
+      //
+      // Someone who arrived through a link skips it: the welcome screen says
+      // "Kemi sent you $20", and that comes first.
+      final initial = DeepLinkHandler.initialLink;
+      final arrivedByLink =
+          initial != null && (initial.isZlink || initial.isZApp);
+      if (arrivedByLink) await LanguageIntroScreen.markSeen();
+      final showIntro =
+          !arrivedByLink && await LanguageIntroScreen.shouldShow();
       if (!mounted) return;
       _finishSplashAndNavigate(
         showIntro ? const LanguageIntroScreen() : const WelcomeScreen(),

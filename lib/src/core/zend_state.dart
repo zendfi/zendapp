@@ -1252,10 +1252,25 @@ class ZendAppModel extends ChangeNotifier {
   // don't leak across sessions.
   bool pendingWaitlistMatch = false;
 
-  /// Set when a new account was opened from a request (ask) link: the
-  /// username prompt is held back so it doesn't sit on top of paying, and
-  /// offered once the payment is done (see `openZlink`). Session only.
-  bool zendtagOfferAfterAsk = false;
+  /// Set when a new account was opened from a money link (send, request or
+  /// cash): the username prompt is held back so it doesn't sit on top of the
+  /// money, and offered once the link is done (see `openZlink`). Session only.
+  bool zendtagOfferAfterLink = false;
+
+  /// Set before [setAuthenticated] when someone signs in to open a link they
+  /// arrived through. The notifications prompt then waits until the link is
+  /// done ([releaseHeldPushPrompt]) instead of popping up over the money.
+  bool holdPromptsForLink = false;
+  bool _pushPromptHeld = false;
+
+  /// Runs the notifications setup held back by [holdPromptsForLink]. Safe to
+  /// call more than once.
+  void releaseHeldPushPrompt() {
+    holdPromptsForLink = false;
+    if (!_pushPromptHeld) return;
+    _pushPromptHeld = false;
+    unawaited(pushNotificationService.initialize());
+  }
   String? pendingReservedZendtag;
   String? pendingWaitlistFullName;
 
@@ -1953,7 +1968,14 @@ class ZendAppModel extends ChangeNotifier {
         notifyListeners();
       };
     }
-    unawaited(pushNotificationService.initialize());
+    if (holdPromptsForLink) {
+      // The link opens first; its flow releases this when it's done. The
+      // timer covers a link that never gets to open.
+      _pushPromptHeld = true;
+      Future<void>.delayed(const Duration(seconds: 60), releaseHeldPushPrompt);
+    } else {
+      unawaited(pushNotificationService.initialize());
+    }
     // Fire the onAuthenticated hook so app.dart can dispatch any pending
     // notification destination that was parked before authentication.
     onAuthenticated?.call();
@@ -2139,7 +2161,9 @@ class ZendAppModel extends ChangeNotifier {
     currentDisplayName = null;
     currentAvatarUrl = null;
     zendtagIsPlaceholder = false;
-    zendtagOfferAfterAsk = false;
+    zendtagOfferAfterLink = false;
+    holdPromptsForLink = false;
+    _pushPromptHeld = false;
     fxService.forgetCurrency();
     isZkLoginAccount = false;
     username = 'blessed';

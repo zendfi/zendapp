@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/z/:id", "destination": "/api/link-preview?kind=give&id=:id" },
+    { "source": "/a/:id", "destination": "/api/link-preview?kind=ask&id=:id" },
+    { "source": "/cash", "destination": "/api/link-preview?kind=cash" },
     {
       "source": "/((?!assets/|canvaskit/|icons/|auth\\.html|auth\\.js|.*\\.(?:js|mjs|wasm|json|png|ico|txt)$).*)",
       "destination": "/index.html"

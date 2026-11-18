@@ -37,6 +37,13 @@ class LanguageIntroScreen extends StatefulWidget {
     return !(prefs.getBool(_kLanguageIntroSeenKey) ?? false);
   }
 
+  /// Skips it for good on this install (someone who arrived through a link
+  /// went straight to the money instead).
+  static Future<void> markSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kLanguageIntroSeenKey, true);
+  }
+
   @override
   State<LanguageIntroScreen> createState() => _LanguageIntroScreenState();
 }

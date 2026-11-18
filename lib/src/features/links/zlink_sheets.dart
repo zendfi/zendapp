@@ -107,36 +107,59 @@ String zlinkAmountLabel(Map<String, dynamic> preview) {
 }
 
 /// Opens the right sheet for a Zlink payload. Caller ensures the user is signed in.
-Future<void> openZlink(BuildContext context, DeepLinkPayload payload) {
-  if (payload.isCash) return _receiveCash(context, payload.cashCode!);
-  if (payload.isZlinkGive) {
-    return _receiveQuietly(
-      context,
-      payload.zlinkGiveId!,
-      payload.zlinkKey ?? '',
-    );
-  }
-  return _openAsk(context, payload.zlinkAskId!);
-}
-
-Future<void> _openAsk(BuildContext context, String id) async {
+Future<void> openZlink(BuildContext context, DeepLinkPayload payload) async {
   final model = ZendScope.of(context);
   final navigator = Navigator.of(context, rootNavigator: true);
-  await showZendModalSheet<void>(
+  try {
+    if (payload.isCash) {
+      await _receiveCash(context, payload.cashCode!);
+    } else if (payload.isZlinkGive) {
+      await _receiveQuietly(
+        context,
+        payload.zlinkGiveId!,
+        payload.zlinkKey ?? '',
+      );
+    } else {
+      await _openAsk(context, payload.zlinkAskId!);
+    }
+  } finally {
+    await _afterLinkArrival(model, navigator, payload);
+  }
+}
+
+/// Someone who just signed up through this link: the username offer and the
+/// notifications prompt were held back so the money came first. Offer them
+/// now, once, after the arrival moment has played out.
+Future<void> _afterLinkArrival(
+  ZendAppModel model,
+  NavigatorState navigator,
+  DeepLinkPayload payload,
+) async {
+  final offerName = model.zendtagOfferAfterLink;
+  final heldPush = model.holdPromptsForLink;
+  if (!offerName && !heldPush) return;
+  model.zendtagOfferAfterLink = false;
+  // Money that arrived keeps its moment (the count-up and "sent you" plays
+  // for a few seconds); a closed pay sheet needs only a beat.
+  await Future<void>.delayed(
+    payload.isZlinkAsk
+        ? const Duration(milliseconds: 400)
+        : const Duration(milliseconds: 2500),
+  );
+  if (offerName && navigator.mounted && model.zendtagIsPlaceholder) {
+    await showZendtagPromptSheet(navigator.context);
+  }
+  model.releaseHeldPushPrompt();
+}
+
+Future<void> _openAsk(BuildContext context, String id) {
+  return showZendModalSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
     builder: (_) => _AskPaySheet(id: id),
   );
-  // A new account that arrived through this link: the username offer was
-  // held back so paying came first. Offer it now that the sheet is closed,
-  // once, and only if they still have no username.
-  if (!model.zendtagOfferAfterAsk) return;
-  model.zendtagOfferAfterAsk = false;
-  await Future<void>.delayed(const Duration(milliseconds: 400));
-  if (!navigator.mounted || !model.zendtagIsPlaceholder) return;
-  await showZendtagPromptSheet(navigator.context);
 }
 
 /// One line for the welcome screen: "Tolu sent you ₦8,000". Empty otherwise.

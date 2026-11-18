@@ -1,11 +1,11 @@
 {
-    "name": "Zend! App",
-    "short_name": "Zend!",
+    "name": "Zend",
+    "short_name": "Zend",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Zend! App",
+    "description": "The internet's social money network.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -181,10 +181,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       model.transferService.accountUsesLocalKeyRail = false;
 
       // Read before setAuthenticated, which hands the held link to the app.
-      // A request (ask) link opens the pay sheet the moment sign-in finishes;
-      // the username offer waits until that sheet closes (see openZlink)
-      // rather than stacking on top of paying.
-      final linkOpensSheet = PendingZlink.peek?.isZlinkAsk == true;
+      // A money link (send, request, cash) opens the moment sign-in finishes;
+      // the username offer and the notifications prompt wait until it's done
+      // (see openZlink) rather than stacking on top of the money.
+      final arrivedByLink = PendingZlink.peek?.isZlink == true;
+      model.holdPromptsForLink = arrivedByLink;
 
       model.setAuthenticated(
         userId: result.userId,
@@ -206,8 +207,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       // behind the sheet and dismissing it costs the user nothing. Returning
       // users, and anyone who has already declined, are never asked.
       if (!result.shouldOfferZendtag) return;
-      if (linkOpensSheet) {
-        model.zendtagOfferAfterAsk = true;
+      if (arrivedByLink) {
+        model.zendtagOfferAfterLink = true;
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 600));
