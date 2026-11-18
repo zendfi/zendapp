@@ -369,12 +369,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 14),
-                      Text(
-                        'Signing in creates your account if you don’t have one yet.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: zt.textSecondary, fontSize: 13),
-                      ),
+                      const SizedBox(height: 8),
                       // Someone was handed a cash code: it opens here, and
                       // lands in their balance once they're in.
                       TextButton(
