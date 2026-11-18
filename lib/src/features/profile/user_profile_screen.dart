@@ -57,6 +57,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _displayName;
   String? _avatarUrl;
   bool _humanVerified = false;
+  bool _automated = false;
   bool _idVerified = false;
   bool _loadingIdentity = true;
   String? _identityError;
@@ -112,6 +113,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               : handleLabel(profile.zendtag);
           _avatarUrl = profile.avatarUrl;
           _humanVerified = profile.humanVerified;
+          _automated = profile.automated;
           _idVerified = profile.idVerified;
           _loadingIdentity = false;
         });
@@ -349,6 +351,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           PersonName(
                             _label,
                             verified: _humanVerified,
+                            automated: _automated,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontWeight: FontWeight.w700,

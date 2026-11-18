@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import 'sui_deposit_retry.dart';
 import 'sui_transaction_verifier.dart' show normaliseSuiAddress;
 import 'sui_zklogin_service.dart';
 import 'zlink_service.dart' show verifyZlinkTransaction;
@@ -61,17 +62,20 @@ class PrizeService {
     String? interactionId,
   }) async {
     final me = await _me();
-    final prepared = await _api.appkit('POST', '/apps/prizes/prepare', {
-      'app': app,
-      'amount_usd': amountUsd,
-      'price_ngn': ?priceNgn,
-      'join_in_secs': joinInSecs,
-      'resolve_in_secs': resolveInSecs,
-      'max_players': maxPlayers,
-      'dispute_secs': ?disputeSecs,
-      'reference': ?reference,
-      'interaction_id': ?interactionId,
-    });
+    final prepared = await withSuiDepositRetry(
+      _zkLogin,
+      () => _api.appkit('POST', '/apps/prizes/prepare', {
+        'app': app,
+        'amount_usd': amountUsd,
+        'price_ngn': ?priceNgn,
+        'join_in_secs': joinInSecs,
+        'resolve_in_secs': resolveInSecs,
+        'max_players': maxPlayers,
+        'dispute_secs': ?disputeSecs,
+        'reference': ?reference,
+        'interaction_id': ?interactionId,
+      }),
+    );
     final tx = _tx(prepared);
     _verify(
       tx,

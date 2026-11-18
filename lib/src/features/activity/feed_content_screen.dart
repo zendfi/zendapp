@@ -32,7 +32,7 @@ import '../../design/zend_gif.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed.
-String _formatBalance(double balance) => formatMoney(balance);
+String _formatBalance(double balance) => formatBalance(balance);
 
 /// Feed — ZEND BETA spec §5-7, §21-24: a single flat, reverse-chronological
 /// timeline mixing the viewer's own private Activities with the

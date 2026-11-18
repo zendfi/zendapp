@@ -694,7 +694,7 @@ class _QrConfirmStageState extends State<_QrConfirmStage> {
                     ZendLoader(size: 12)
                   else
                     Text(
-                      formatMoney(balance),
+                      formatBalance(balance),
                       style: ZendTextStyles.tabularNumeric.copyWith(
                         fontSize: 12,
                         color: ZendTheme.of(context).textSecondary,

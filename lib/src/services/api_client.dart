@@ -2742,6 +2742,34 @@ class ApiClient {
     }
   }
 
+  // ── Automated accounts ─────────────────────────────────────────────────────
+
+  /// What the approval screen shows for a `zdfi.me/bot-auth/{code}` link.
+  Future<Map<String, dynamic>> getBotSessionByCode(String code) async {
+    try {
+      final r = await _dio.get('/api/zend/bots/sessions/by-code/$code');
+      return Map<String, dynamic>.from(r.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> approveBotSession(String sessionId) async {
+    try {
+      await _dio.post('/api/zend/bots/sessions/$sessionId/approve');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> denyBotSession(String sessionId) async {
+    try {
+      await _dio.post('/api/zend/bots/sessions/$sessionId/deny');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   // ── Email intents ────────────────────────────────────────────────────────────
 
   /// Creates a new email intent (pending USDC send to an email address).

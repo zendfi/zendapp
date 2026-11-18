@@ -334,7 +334,9 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$name on $_appName',
+                        widget.card['template'] == 'post'
+                            ? name
+                            : '$name on $_appName',
                         style: TextStyle(
                           fontFamily: 'Geist',
                           fontSize: 16,

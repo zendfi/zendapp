@@ -43,8 +43,29 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
   /// enforce their own higher minimum on the server, with a clear message.
   static const double _minWithdrawUsdc = 0.5;
 
-  double get _parsedAmount =>
+  double get _typedAmount =>
       _digits.isEmpty ? 0 : (double.tryParse(_digits) ?? 0);
+
+  /// What withdraws: the typed amount, except that typing the balance as
+  /// shown (rounded down, or a cent over) means all of it, to the cent. Banks
+  /// pay whole cents, so a fraction of a cent stays in the balance.
+  double get _parsedAmount {
+    final typed = _typedAmount;
+    final all = floorToCent(ZendScope.of(context).balance);
+    if (typed > 0 && all > 0 && (typed - all).abs() < 0.01 + 1e-9) return all;
+    return typed;
+  }
+
+  /// Fills in everything that can be withdrawn.
+  void _useAll() {
+    final all = floorToCent(ZendScope.of(context).balance);
+    if (all <= 0) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      final s = all.toStringAsFixed(2);
+      _digits = s.endsWith('.00') ? s.substring(0, s.length - 3) : s;
+    });
+  }
 
   bool get _insufficientBalance {
     final model = ZendScope.of(context);
@@ -127,6 +148,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                       belowMinimum: _belowMinimum,
                       canContinue: _canContinue,
                       onKey: _onKey,
+                      onUseAll: _useAll,
                       onContinue: () =>
                           setState(() => _stage = _WithdrawStage.destination),
                     )
@@ -157,6 +179,7 @@ class _AmountStage extends StatelessWidget {
     required this.belowMinimum,
     required this.canContinue,
     required this.onKey,
+    required this.onUseAll,
     required this.onContinue,
   });
 
@@ -167,6 +190,7 @@ class _AmountStage extends StatelessWidget {
   final bool belowMinimum;
   final bool canContinue;
   final ValueChanged<String> onKey;
+  final VoidCallback onUseAll;
   final VoidCallback onContinue;
 
   String get _wholePart {
@@ -204,13 +228,18 @@ class _AmountStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'Balance: ${formatMoney(model.balance)}',
-            style: ZendTextStyles.tabularNumeric.copyWith(
-              fontSize: 12,
-              color: insufficientBalance
-                  ? ZendColors.destructive
-                  : zt.textSecondary,
+          // In dollars, like the keypad, and rounded down: never more than
+          // can be withdrawn. Tap to withdraw all of it.
+          GestureDetector(
+            onTap: onUseAll,
+            child: Text(
+              'Balance: ${formatUsd(floorToCent(model.balance))} · Use all',
+              style: ZendTextStyles.tabularNumeric.copyWith(
+                fontSize: 12,
+                color: insufficientBalance
+                    ? ZendColors.destructive
+                    : zt.textSecondary,
+              ),
             ),
           ),
           // Fixed-height status row — never shifts the layout regardless of
@@ -228,7 +257,7 @@ class _AmountStage extends StatelessWidget {
                   )
                 : belowMinimum
                 ? Text(
-                    'Minimum withdrawal is ${formatMoney(0.5)}',
+                    'Minimum withdrawal is ${formatUsd(0.5)}',
                     textAlign: TextAlign.center,
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 11,
@@ -261,7 +290,7 @@ class _AmountStage extends StatelessWidget {
               label: canContinue
                   ? 'Continue'
                   : belowMinimum
-                  ? 'Minimum ${formatMoney(0.5)}'
+                  ? 'Minimum ${formatUsd(0.5)}'
                   : 'Enter amount',
               onPressed: canContinue ? onContinue : null,
             ),

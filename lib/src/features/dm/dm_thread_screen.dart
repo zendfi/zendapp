@@ -2388,6 +2388,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                                 ? handleLabel(cp.zendtag)
                                                 : cp.displayName),
                                       verified: !_isGroup && cp.humanVerified,
+                                      automated: !_isGroup && cp.automated,
                                       style: TextStyle(
                                         fontFamily: 'Geist',
                                         fontSize: 16,

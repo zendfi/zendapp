@@ -156,7 +156,7 @@ class _WalletSheetState extends State<WalletSheet> {
                               model.balanceHidden
                                   ? '••••••'
                                   : model.balanceKnown
-                                  ? formatMoney(model.displayBalance)
+                                  ? formatBalance(model.displayBalance)
                                   : '—',
                               style: TextStyle(
                                 fontFamily: 'Geist',

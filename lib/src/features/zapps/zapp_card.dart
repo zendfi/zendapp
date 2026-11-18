@@ -109,7 +109,7 @@ class _ZAppCardState extends State<ZAppCard> {
     final zt = ZendTheme.of(context);
     final template = widget.card['template'] as String?;
     final slots = Map<String, dynamic>.from(widget.card['slots'] as Map? ?? {});
-    final known = const {'result', 'invite', 'status'}.contains(template);
+    final known = const {'result', 'invite', 'status', 'post'}.contains(template);
     TextStyle s(double size, {FontWeight w = FontWeight.w400, Color? c}) =>
         TextStyle(
           fontFamily: 'Geist',
@@ -139,6 +139,8 @@ class _ZAppCardState extends State<ZAppCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // A bot's post has no app behind it, so there is no app line.
+          if (template != 'post')
           Row(
             children: [
               Icon(
@@ -157,7 +159,7 @@ class _ZAppCardState extends State<ZAppCard> {
                 Text(_stateLabel(_state!), style: s(11, c: zt.textSecondary)),
             ],
           ),
-          SizedBox(height: bubble ? 4 : 8),
+          if (template != 'post') SizedBox(height: bubble ? 4 : 8),
           if (known && slots['media'] is String) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),

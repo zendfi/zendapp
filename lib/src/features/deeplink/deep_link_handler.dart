@@ -135,6 +135,15 @@ class DeepLinkHandler {
         }
       }
 
+      // https://zdfi.me/bot-auth/{code} — approve a new automated account made from the CLI.
+      if (uri.host == 'zdfi.me' &&
+          uri.pathSegments.length == 2 &&
+          uri.pathSegments[0] == 'bot-auth') {
+        final code = uri.pathSegments[1];
+        if (code.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', botPairingCode: code);
+        }
+      }
       // https://zdfi.me/pool/{short_code} — Pool discovery deep link.
       if (uri.host == 'zdfi.me' &&
           uri.pathSegments.length == 2 &&
@@ -200,6 +209,9 @@ class DeepLinkPayload {
   /// are not meaningful — check this field first.
   final String? cliPairingCode;
 
+  /// Non-null only for `zdfi.me/bot-auth/{code}` links (approve a new automated account).
+  final String? botPairingCode;
+
   /// Non-null only for `zdfi.me/pool/{code}` links — pool discovery deep link.
   final String? poolShortCode;
 
@@ -225,6 +237,7 @@ class DeepLinkPayload {
     this.amountUsdc,
     this.note,
     this.cliPairingCode,
+    this.botPairingCode,
     this.poolShortCode,
     this.zlinkGiveId,
     this.zlinkKey,
@@ -241,6 +254,7 @@ class DeepLinkPayload {
   bool get isZlink => isZlinkGive || isZlinkAsk;
 
   bool get isCliPairing => cliPairingCode != null;
+  bool get isBotPairing => botPairingCode != null;
   bool get isPoolLink => poolShortCode != null;
 
   @override

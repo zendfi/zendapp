@@ -22,6 +22,22 @@ class VerifiedBadge extends StatelessWidget {
   }
 }
 
+/// Marks an automated (bot) account. A neutral robot, deliberately not the check mark, so it can
+/// never be read as verification.
+class AutomatedBadge extends StatelessWidget {
+  const AutomatedBadge({super.key, this.size = 15});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Semantics(
+      label: 'Automated account',
+      child: Icon(PhosphorIconsRegular.robot, size: size, color: zt.textSecondary),
+    );
+  }
+}
+
 /// A name with the badge after it when [verified]. Single line, ellipsised, so a long name (an
 /// email-style handle, say) shortens instead of pushing the badge off the row.
 class PersonName extends StatelessWidget {
@@ -29,6 +45,7 @@ class PersonName extends StatelessWidget {
     this.name, {
     super.key,
     this.verified = false,
+    this.automated = false,
     this.style,
     this.badgeSize,
     this.maxLines = 1,
@@ -37,6 +54,7 @@ class PersonName extends StatelessWidget {
 
   final String name;
   final bool verified;
+  final bool automated;
   final TextStyle? style;
   final double? badgeSize;
   final int maxLines;
@@ -51,14 +69,17 @@ class PersonName extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       textAlign: textAlign,
     );
-    if (!verified) return text;
+    if (!verified && !automated) return text;
     final fontSize = style?.fontSize ?? 14;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(child: text),
         const SizedBox(width: 4),
-        VerifiedBadge(size: badgeSize ?? (fontSize * 1.05).clamp(12.0, 22.0)),
+        if (automated)
+          AutomatedBadge(size: badgeSize ?? (fontSize * 1.05).clamp(12.0, 22.0))
+        else
+          VerifiedBadge(size: badgeSize ?? (fontSize * 1.05).clamp(12.0, 22.0)),
       ],
     );
   }
@@ -70,5 +91,14 @@ InlineSpan verifiedBadgeSpan({double size = 14}) => WidgetSpan(
   child: Padding(
     padding: const EdgeInsets.only(left: 3),
     child: VerifiedBadge(size: size),
+  ),
+);
+
+/// The automated-account mark as an inline span, for names inside a `RichText`.
+InlineSpan automatedBadgeSpan({double size = 14}) => WidgetSpan(
+  alignment: PlaceholderAlignment.middle,
+  child: Padding(
+    padding: const EdgeInsets.only(left: 3),
+    child: AutomatedBadge(size: size),
   ),
 );

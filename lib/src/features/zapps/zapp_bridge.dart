@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../services/sui_deposit_retry.dart';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -879,10 +880,13 @@ class ZAppBridge {
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
 
-    Future<Map<String, dynamic>> prepare() => api.appkit(
-      'POST',
-      '/apps/by-slug/${app.slug}/split/prepare',
-      {'ticket': ticket},
+    Future<Map<String, dynamic>> prepare() => withSuiDepositRetry(
+      _model.zkLoginService,
+      () => api.appkit(
+        'POST',
+        '/apps/by-slug/${app.slug}/split/prepare',
+        {'ticket': ticket},
+      ),
     );
     Map<String, dynamic> prepared;
     try {

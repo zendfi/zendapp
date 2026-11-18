@@ -8,6 +8,7 @@ class DmCounterparty {
     required this.displayName,
     this.avatarUrl,
     this.humanVerified = false,
+    this.automated = false,
   });
 
   final String userId;
@@ -17,6 +18,9 @@ class DmCounterparty {
 
   /// A real, unique person controls this account.
   final bool humanVerified;
+
+  /// An automated (bot) account.
+  final bool automated;
 
   String get initialLetter =>
       zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
@@ -28,6 +32,7 @@ class DmCounterparty {
       displayName: json['display_name'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String?,
       humanVerified: json['human_verified'] as bool? ?? false,
+      automated: json['automated'] as bool? ?? false,
     );
   }
 }

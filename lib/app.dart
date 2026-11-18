@@ -35,6 +35,7 @@ import 'src/services/pending_notification_service.dart';
 import 'src/features/send/qr_payment_sheet.dart';
 import 'src/features/send/dev_payment_modal_sheet.dart';
 import 'src/features/pairing/pairing_approval_sheet.dart';
+import 'src/features/pairing/bot_approval_sheet.dart';
 import 'src/services/qr_scanner_state.dart';
 import 'src/services/push_notification_service.dart';
 
@@ -399,6 +400,17 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       return;
     }
 
+    // Approve a new automated account — zdfi.me/bot-auth/{code}.
+    if (payload.isBotPairing) {
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      if (context == null) return;
+      showBotApprovalSheet(context, pairingCode: payload.botPairingCode!);
+      return;
+    }
     // Pool discovery deep link — zdfi.me/pool/{short_code}
     if (payload.isPoolLink) {
       if (!widget.model.isAuthenticated ||

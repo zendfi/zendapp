@@ -137,16 +137,16 @@ class ZendRollingAmount extends StatelessWidget {
     final s = style.copyWith(color: zt.textPrimary);
     if (hidden) return Text('•••', style: s, semanticsLabel: 'Balance hidden');
     if (ZendMotion.reduced(context)) {
-      return ZendLoudAmountText(formatMoney(amount), style: s);
+      return ZendLoudAmountText(formatBalance(amount), style: s);
     }
     return TweenAnimationBuilder<double>(
       tween: Tween(end: amount),
       duration: ZendMotion.celebrate,
       curve: ZendMotion.springSnappy,
       builder: (context, v, _) => ZendLoudAmountText(
-        formatMoney(v),
+        formatBalance(v),
         style: s,
-        semanticsLabel: formatMoney(amount),
+        semanticsLabel: formatBalance(amount),
       ),
     );
   }

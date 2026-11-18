@@ -131,13 +131,17 @@ class _ZAppFeedCardState extends State<ZAppFeedCard> {
                                 ),
                                 if (poster['human_verified'] == true)
                                   verifiedBadgeSpan(),
-                                const TextSpan(text: ' on '),
-                                TextSpan(
-                                  text: appName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                                if (poster['automated'] == true)
+                                  automatedBadgeSpan(),
+                                if (widget.card['template'] != 'post') ...[
+                                  const TextSpan(text: ' on '),
+                                  TextSpan(
+                                    text: appName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ),

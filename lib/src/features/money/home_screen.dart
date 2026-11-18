@@ -408,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         model.balanceHidden
                                             ? '••••••'
-                                            : formatMoney(value),
+                                            : formatBalance(value),
                                         style: TextStyle(
                                           fontFamily: 'Geist',
                                           color: ZendColors.textOnDeep,
@@ -465,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   model.balanceHidden
                                       ? '••••••'
                                       : model.balanceKnown
-                                      ? formatMoney(model.displayBalance)
+                                      ? formatBalance(model.displayBalance)
                                       : '—',
                                   style: TextStyle(
                                     fontFamily: 'Geist',

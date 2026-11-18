@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'sui_deposit_retry.dart';
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
@@ -252,19 +253,22 @@ class ZlinkService {
     final sender = await _myAddress();
 
     final perClaim = BigInt.from((amountUsd * 1000000).round());
-    final prepared = await _api.zlinkPost('/give/prepare', {
-      'claim_pubkey': publicKey
-          .map((b) => b.toRadixString(16).padLeft(2, '0'))
-          .join(),
-      'amount_usd': amountUsd,
-      'uses': uses,
-      'memo': ?memo,
-      'recipient_hint': ?recipientHint,
-      'ngn_quote_kobo': ?ngnQuoteKobo,
-      if (expiresIn != null) 'expires_in_secs': expiresIn.inSeconds,
-      'app': ?app,
-      'reference': ?reference,
-    });
+    final prepared = await withSuiDepositRetry(
+      _zkLogin,
+      () => _api.zlinkPost('/give/prepare', {
+        'claim_pubkey': publicKey
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join(),
+        'amount_usd': amountUsd,
+        'uses': uses,
+        'memo': ?memo,
+        'recipient_hint': ?recipientHint,
+        'ngn_quote_kobo': ?ngnQuoteKobo,
+        if (expiresIn != null) 'expires_in_secs': expiresIn.inSeconds,
+        'app': ?app,
+        'reference': ?reference,
+      }),
+    );
     final tx = _txOf(prepared);
     _verify(
       tx,
@@ -389,9 +393,10 @@ class ZlinkService {
     required double amountUsd,
   }) async {
     final payer = await _myAddress();
-    final prepared = await _api.zlinkPost('/ask/$id/pay/prepare', {
-      'amount_usd': amountUsd,
-    });
+    final prepared = await withSuiDepositRetry(
+      _zkLogin,
+      () => _api.zlinkPost('/ask/$id/pay/prepare', {'amount_usd': amountUsd}),
+    );
     final tx = _txOf(prepared);
     try {
       verifyGaslessUsdcTransfer(

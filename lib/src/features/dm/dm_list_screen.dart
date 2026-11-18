@@ -651,6 +651,7 @@ class _DmThreadTile extends StatelessWidget {
                                 ? handleLabel(cp.zendtag)
                                 : cp.displayName,
                             verified: cp.humanVerified,
+                            automated: cp.automated,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 16,

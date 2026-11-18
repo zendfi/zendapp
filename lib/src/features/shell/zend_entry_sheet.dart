@@ -425,7 +425,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       ZendFeel.error();
       setState(
         () => _amountError =
-            "You only have ${_entry.format(available)}. Add money or send less.",
+            "You only have ${_entry.formatBalance(available)}. Add money or send less.",
       );
       return;
     }

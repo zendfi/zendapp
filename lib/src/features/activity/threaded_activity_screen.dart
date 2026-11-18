@@ -28,7 +28,7 @@ import '../../design/zend_note.dart';
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed, no thousands separator logic beyond what's already
 /// legible at this size (this is a glance-value, not a statement).
-String _formatBalance(double balance) => formatMoney(balance);
+String _formatBalance(double balance) => formatBalance(balance);
 
 /// Phase 2 Threaded_Activity_View — groups a User's visible Activity_Edges
 /// by Counterparty (Req 11) instead of showing a flat chronological list.

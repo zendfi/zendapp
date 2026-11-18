@@ -709,6 +709,7 @@ class PublicUserProfile {
     this.publicActivityCount = 0,
     this.humanVerified = false,
     this.idVerified = false,
+    this.automated = false,
   });
 
   final String userId;
@@ -725,6 +726,9 @@ class PublicUserProfile {
   /// The person chose to show a passed identity check.
   final bool idVerified;
 
+  /// An automated (bot) account.
+  final bool automated;
+
   String get initialLetter =>
       zendtag.isNotEmpty ? zendtag[0].toUpperCase() : '?';
 
@@ -740,6 +744,7 @@ class PublicUserProfile {
       publicActivityCount: json['public_activity_count'] as int? ?? 0,
       humanVerified: json['human_verified'] as bool? ?? false,
       idVerified: json['id_verified'] as bool? ?? false,
+      automated: json['automated'] as bool? ?? false,
     );
   }
 }

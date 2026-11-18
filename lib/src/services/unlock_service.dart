@@ -6,6 +6,7 @@
 /// through [UnlockReader], on this device.
 library;
 
+import 'sui_deposit_retry.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -206,9 +207,10 @@ class UnlockService {
     Map<String, dynamic> checked,
   ) async {
     final ticket = checked['ticket'] as String;
-    final prepared = await _api.appkit('POST', _path(app, '/prepare'), {
-      'ticket': ticket,
-    });
+    final prepared = await withSuiDepositRetry(
+      _zk,
+      () => _api.appkit('POST', _path(app, '/prepare'), {'ticket': ticket}),
+    );
     final tx = _tx(prepared);
     final shown = BigInt.from(
       ((checked['amount_usd'] as num) * 1000000).round(),

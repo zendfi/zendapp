@@ -177,11 +177,16 @@ class AmountEntry {
   /// typing the balance as shown sends all of it.
   double usd(String text, {double? cap}) {
     final t = typed(text);
+    if (t <= 0) return t;
     final r = perUsd;
-    if (r == null || t <= 0) return t;
-    final usd = (t / r * 1000000).round() / 1000000;
-    final unit = whole ? 1.0 : 0.01;
-    if (cap != null && cap > 0 && (usd - cap).abs() * r <= unit) return cap;
+    final usd = r == null ? t : (t / r * 1000000).round() / 1000000;
+    // One shown unit (a cent, or one whole Naira/Yen...) in dollars.
+    final unitUsd = r == null ? 0.01 : (whole ? 1.0 : 0.01) / r;
+    // Typing the balance as shown (rounded down, or the old rounded-up
+    // figure) sends all of it, rather than failing by a fraction.
+    if (cap != null && cap > 0 && (usd - cap).abs() < unitUsd + 1e-9) {
+      return cap;
+    }
     return usd;
   }
 
@@ -197,6 +202,13 @@ class AmountEntry {
   /// unit being typed.
   String format(double usd) =>
       perUsd == null ? formatUsd(usd) : formatCurrency(usd * perUsd!, code);
+
+  /// [format] for a balance: rounded down, so it's never more than is there.
+  String formatBalance(double usd) {
+    final local = perUsd == null ? usd : usd * perUsd!;
+    final c = perUsd == null ? 'USD' : code;
+    return formatCurrency(_floorShown(local, c), c);
+  }
 }
 
 /// `1234567` → `1,234,567`.
@@ -206,12 +218,25 @@ String groupThousands(String digits) =>
 /// An amount already in [code]: `₦13,700`, `€9.20`, `KES 1,290`. Whole-unit
 /// currencies drop the cents; so do others once over 1,000 (except the few
 /// where cents still matter at that size).
+/// Whether [amount] in [code] is shown without cents.
+bool _showsWhole(double amount, String code) {
+  if (code == 'USD') return false;
+  const keepCents = {'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'SGD', 'KWD', 'BHD', 'OMR', 'JOD'};
+  return CurrencyStyle.of(code).whole ||
+      (amount.abs() >= 1000 && !keepCents.contains(code));
+}
+
+/// [amount] rounded down to what's shown for [code]: whole units or cents.
+double _floorShown(double amount, String code) {
+  if (amount <= 0) return amount;
+  return _showsWhole(amount, code)
+      ? (amount + 1e-7).floorToDouble()
+      : (amount * 100 + 1e-6).floorToDouble() / 100;
+}
+
 String formatCurrency(double amount, String code, {bool signed = false}) {
   if (code == 'USD') return formatUsd(amount, signed: signed);
-  final style = CurrencyStyle.of(code);
-  const keepCents = {'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'SGD', 'KWD', 'BHD', 'OMR', 'JOD'};
-  final whole =
-      style.whole || (amount.abs() >= 1000 && !keepCents.contains(code));
+  final whole = _showsWhole(amount, code);
   final abs = amount.abs();
   final body = whole
       ? groupThousands(abs.round().toString())
@@ -224,6 +249,25 @@ String formatCurrency(double amount, String code, {bool signed = false}) {
   if (signed) return '${amount < 0 ? '−' : '+'}$text';
   return amount < 0 ? '−$text' : text;
 }
+
+/// How Zend shows a balance: like [formatMoney], but rounded **down**, so it's
+/// never more than is there. A balance of $1.2378 shows as $1.23, not $1.24,
+/// and typing what's shown always works (amount entry treats it as "all of
+/// it", see [AmountEntry.usd]).
+String formatBalance(double usd) {
+  final local = DisplayCurrency.fromUsd(usd);
+  if (local == null || DisplayCurrency.code == 'USD') {
+    return formatUsd(_floorShown(usd, 'USD'));
+  }
+  return formatCurrency(
+    _floorShown(local, DisplayCurrency.code),
+    DisplayCurrency.code,
+  );
+}
+
+/// A dollar balance rounded down to the cent: what can actually be sent on
+/// screens that take dollars.
+double floorToCent(double usd) => _floorShown(usd, 'USD');
 
 /// How Zend shows a balance or payment: in the person's currency when it has
 /// a rate (`₦13,700`, `€9.20`), dollars otherwise. Screens where someone
