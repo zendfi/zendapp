@@ -13,6 +13,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_modal.dart';
+import '../../design/zend_money.dart' show ZendFeel;
 import '../../design/zend_motion_widgets.dart' show showReceiveMoment;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -353,17 +354,31 @@ Future<void> _receiveCash(BuildContext context, String fragment) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   final navigator = Navigator.of(context, rootNavigator: true);
 
-  var code = fragment.isEmpty ? null : cashCodeFromFragment(fragment);
-  if (fragment.isNotEmpty && code == null) {
-    _explain(
-      navigator,
-      'This code is incomplete',
-      'Ask the person who sent it to share it again, or type the code.',
+  final balanceReady = model.fetchBalance();
+
+  // Typed, or a link whose code is damaged: the code sheet opens it, and
+  // says what's wrong right under the code, with the text kept to fix.
+  Future<void> typeIt({String? initial}) async {
+    if (!navigator.mounted) return;
+    final opened = await showCashCodeEntrySheet(
+      navigator.context,
+      open: service.openCash,
+      initial: initial,
     );
+    if (opened == null || !navigator.mounted) return;
+    final id = opened.preview['id'] as String?;
+    if (id == null) return;
+    // Already made while opening; this is the cached key.
+    final key = await opened.code.seed();
+    if (!navigator.mounted) return;
+    await _collect(navigator.context, id, key, opened.preview, balanceReady);
+  }
+
+  final code = fragment.isEmpty ? null : cashCodeFromFragment(fragment);
+  if (code == null) {
+    await typeIt(initial: fragment.isEmpty ? null : Uri.decodeComponent(fragment));
     return;
   }
-  code ??= await showCashCodeEntrySheet(navigator.context);
-  if (code == null || !navigator.mounted) return;
 
   messenger?.showSnackBar(
     const SnackBar(
@@ -371,23 +386,51 @@ Future<void> _receiveCash(BuildContext context, String fragment) async {
       duration: Duration(seconds: 20),
     ),
   );
-  final balanceReady = model.fetchBalance();
   Map<String, dynamic> preview;
   Uint8List key;
   try {
     preview = await service.openCash(code);
     key = await code.seed();
-  } on ApiException catch (e) {
+  } catch (e) {
     messenger?.hideCurrentSnackBar();
-    if (e.errorCode == 'CASH_NOT_FOUND') {
-      _explain(navigator, "That code doesn't match any cash", 'Check it and try again.');
-    } else {
-      _explain(navigator, "We couldn't open this cash", 'Try again in a moment.');
-    }
-    return;
-  } catch (_) {
-    messenger?.hideCurrentSnackBar();
-    _explain(navigator, "We couldn't open this cash", 'Try again in a moment.');
+    ZendFeel.error();
+    final notFound = e is ApiException && e.errorCode == 'CASH_NOT_FOUND';
+    if (!navigator.mounted) return;
+    // Recoverable either way: fix the code, or try again.
+    await showZendModalSheet<void>(
+      context: navigator.context,
+      builder: (c) => _SheetFrame(
+        icon: PhosphorIconsRegular.info,
+        title: notFound
+            ? "That code doesn't match any cash"
+            : "We couldn't open this cash",
+        body: notFound
+            ? 'Check the code with the person who sent it, or type it in.'
+            : 'Check your connection and try again.',
+        action: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PrimaryButton(
+              label: notFound ? 'Type the code' : 'Try again',
+              onPressed: () {
+                Navigator.of(c).pop();
+                if (notFound) {
+                  unawaited(typeIt(initial: code.compact));
+                } else if (navigator.mounted) {
+                  unawaited(_receiveCash(navigator.context, fragment));
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.of(c).pop(),
+              child: const Text('Not now'),
+            ),
+          ],
+        ),
+      ),
+    );
     return;
   }
   messenger?.hideCurrentSnackBar();

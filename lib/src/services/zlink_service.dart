@@ -6,6 +6,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/cash_code.dart';
+import '../models/api_exceptions.dart' show ApiException, ZendException;
 import 'api_client.dart';
 import 'sui_transaction_decoder.dart';
 import 'sui_transaction_verifier.dart';
@@ -33,10 +34,32 @@ class ZlinkException implements Exception {
 
 /// A give link this device created. The seed is the link key; it lives only in
 /// secure storage and in the URL fragment, never on Zend's servers.
+/// The signed link was sent but no answer came back (timeout, dropped
+/// connection, server error): the money may or may not have moved. Never
+/// shown as a failure, and never retried blindly; look for the link by
+/// [claimPubkey] in My Links instead (see [ZlinkService.findMadeLink]).
+class ZlinkSubmitUncertain implements Exception {
+  const ZlinkSubmitUncertain(this.claimPubkey);
+  final String claimPubkey;
+  @override
+  String toString() => 'ZlinkSubmitUncertain';
+}
+
 class CreatedGiveLink {
-  const CreatedGiveLink({required this.id, required this.seed, this.cash});
+  const CreatedGiveLink({
+    required this.id,
+    required this.seed,
+    this.cash,
+    this.pending = false,
+  });
+
+  /// Empty while [pending].
   final String id;
   final Uint8List seed;
+
+  /// Made and paid for, but not listed yet: it shows in My Links (and its
+  /// code opens it) once Zend has caught up, usually within seconds.
+  final bool pending;
 
   /// Set when this link is cash: its key comes from this code.
   final CashCode? cash;
@@ -298,9 +321,36 @@ class ZlinkService {
     if (cash != null) {
       await _storage.write(key: '$_cashPubPrefix$pubHex', value: cash.compact);
     }
-    final result = await _signAndSubmit('/give/submit', tx);
+    // Signing can fail without anything moving; sending the signed bytes is
+    // the step after which the money may have moved, so its failures are
+    // reported apart (see ZlinkSubmitUncertain).
+    final signature = await _zkLogin.signPreparedTransaction(
+      transactionDataBcsBase64: tx,
+    );
+    final Map<String, dynamic> result;
+    try {
+      result = await _api.zlinkPost('/give/submit', {
+        'transaction_data_bcs': tx,
+        'signature': signature,
+      });
+    } on ApiException catch (e) {
+      // A 4xx is refused before anything runs (expired or mismatched
+      // prepare, a failed run). A 5xx may have come after it ran.
+      if (e.statusCode >= 500) throw ZlinkSubmitUncertain(pubHex);
+      rethrow;
+    } on ZendException {
+      // Timed out or the connection dropped: unknown.
+      throw ZlinkSubmitUncertain(pubHex);
+    } catch (_) {
+      throw ZlinkSubmitUncertain(pubHex);
+    }
     final id = result['id'] as String?;
     if (id == null) {
+      // It ran; the link row appears once the indexer sees it. Cash already
+      // has everything it needs to share (the code), so it carries on.
+      if (cash != null) {
+        return CreatedGiveLink(id: '', seed: seed, cash: cash, pending: true);
+      }
       throw const ZlinkException(
         'Your link is being set up. It will appear in My Links in a moment.',
       );
@@ -494,6 +544,23 @@ class ZlinkService {
   }
 
   // ── My Links ──────────────────────────────────────────────────────────────
+
+  /// After [ZlinkSubmitUncertain]: the link this device made with
+  /// [claimPubkey], once My Links lists it. Null if it isn't there (yet).
+  Future<CreatedGiveLink?> findMadeLink(String claimPubkey) async {
+    final links = await myLinks();
+    final want = claimPubkey.toLowerCase().replaceFirst('0x', '');
+    for (final l in links) {
+      final pk = (l['claim_pubkey'] as String?)?.toLowerCase().replaceFirst(
+        '0x',
+        '',
+      );
+      if (l['kind'] == 'give' && pk == want) {
+        return localLink(l['id'] as String, claimPubkey: want);
+      }
+    }
+    return null;
+  }
 
   Future<List<Map<String, dynamic>>> myLinks() async {
     final data = await _api.zlinkGet('');

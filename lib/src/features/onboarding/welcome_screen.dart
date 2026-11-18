@@ -4,6 +4,7 @@ import 'dart:async';
 // re-export them.
 import '../deeplink/deep_link_handler.dart' show DeepLinkPayload;
 import '../links/cash_widgets.dart' show showCashCodeEntrySheet;
+import '../links/my_links_screen.dart' show zlinkServiceOf;
 import '../links/zlink_sheets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -42,9 +43,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   int _pendingVersion = 0;
 
   Future<void> _enterCashCode() async {
-    final code = await showCashCodeEntrySheet(context);
-    if (code == null || !mounted) return;
-    PendingZlink.store(DeepLinkPayload(zendtag: '', cashCode: code.compact));
+    // Opens it right in the sheet (signed out is fine), so a wrong code is
+    // fixed there; the line above the button then says who sent what.
+    final opened = await showCashCodeEntrySheet(
+      context,
+      open: zlinkServiceOf(context).openCash,
+    );
+    if (opened == null || !mounted) return;
+    PendingZlink.store(
+      DeepLinkPayload(zendtag: '', cashCode: opened.code.compact),
+    );
     setState(() => _pendingVersion++);
   }
 

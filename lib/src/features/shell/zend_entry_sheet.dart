@@ -13,7 +13,9 @@ import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
-import '../../models/api_exceptions.dart' show ApiException;
+import '../../models/api_exceptions.dart' show ApiException, friendlyError;
+import '../../design/zend_error_modal.dart';
+import '../../services/sound_service.dart';
 import '../../models/recent_contact.dart';
 import '../../services/payment_rail_models.dart' show TransferVisibility;
 import 'package:share_plus/share_plus.dart';
@@ -22,7 +24,8 @@ import '../../core/cash_code.dart';
 import '../../services/zlink_service.dart';
 import '../links/cash_widgets.dart';
 import '../send/send_flow_sheet.dart';
-import '../send/send_shared_widgets.dart' show VisibilityPill;
+import '../send/send_shared_widgets.dart'
+    show SendUncertainStage, VisibilityPill;
 import '../send/transfer_status_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
@@ -91,9 +94,11 @@ class ZendEntrySheet extends StatefulWidget {
   State<ZendEntrySheet> createState() => _ZendEntrySheetState();
 }
 
-/// [card]: cash was made; the sheet shows the card to share (cash has no
-/// recipient for the banner to report to, and the sender needs the code).
-enum _EntryStage { identity, amount, card }
+/// Cash only, after the confirming tap (cash has no recipient for the banner
+/// to report to, and the sender needs the code, so it stays in the sheet):
+/// [making] while it's made, [confirming] when no answer came back after it
+/// was sent, [card] once it's made.
+enum _EntryStage { identity, amount, making, confirming, card }
 
 class _ZendEntrySheetState extends State<ZendEntrySheet> {
   late _EntryStage _stage;
@@ -153,7 +158,7 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   Future<CashCode>? _cashCode;
   CashTerms _cashTerms = const CashTerms();
   bool _makingCash = false;
-  CreatedGiveLink? _cashMade;
+  CreatedGiveLink? _made;
   DateTime? _cashExpiresAt;
 
   /// Per person, as made. Not [_amount]: that is capped by the balance,
@@ -235,6 +240,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         _searchFocus.requestFocus();
       case _EntryStage.amount:
         _amountFocus.requestFocus();
+      case _EntryStage.making:
+      case _EntryStage.confirming:
       case _EntryStage.card:
         FocusManager.instance.primaryFocus?.unfocus();
     }
@@ -461,6 +468,16 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   /// Cash: what leaves the balance (the amount is per person).
   double get _sendTotal => _cash ? _amount * _cashTerms.uses : _amount;
 
+  ZlinkService _links(ZendAppModel model) => ZlinkService(
+    api: model.walletService.apiClient,
+    zkLogin: model.zkLoginService,
+  );
+
+  /// Second tap on "Zend … as cash". Same outcomes as any send (spec §16):
+  ///   * made: the send moment plays and the card appears;
+  ///   * refused before anything moved: an error modal, back on the amount;
+  ///   * no answer after the money was sent: "We're checking that now",
+  ///     resolved against My Links, never shown as a failure or retried.
   Future<void> _makeCash() async {
     if (_makingCash) return;
     final model = ZendScope.of(context);
@@ -469,13 +486,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     final note = _note;
     final terms = _cashTerms;
     setState(() => _makingCash = true);
+    _goToStage(_EntryStage.making);
     try {
       final code = await (_cashCode ??= _reserveCash(model));
-      final service = ZlinkService(
-        api: model.walletService.apiClient,
-        zkLogin: model.zkLoginService,
-      );
-      final link = await service.createGiveLink(
+      final link = await _links(model).createGiveLink(
         amountUsd: amount,
         uses: terms.uses,
         expiresIn: Duration(days: terms.days),
@@ -483,32 +497,145 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         memo: note == null ? null : String.fromCharCodes(note.runes.take(140)),
         cash: code,
       );
-      model.fetchBalance();
-      unawaited(ZendFeel.sendConfirmed());
-      if (!mounted) return;
-      setState(() {
-        _cashMade = link;
-        _cashAmount = amount;
-        _cashExpiresAt = DateTime.now().add(Duration(days: terms.days));
-        _makingCash = false;
-      });
-      _goToStage(_EntryStage.card);
+      if (!mounted) {
+        // The sheet was closed while it was being made.
+        unawaited(model.fetchBalance());
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Your cash is ready in My Links.')),
+        );
+        return;
+      }
+      _cashMade(link, amount, note, terms);
+    } on ZlinkSubmitUncertain catch (e) {
+      ZendAnalytics.track(ZendEvent.sendFailed, {'kind': 'cash_uncertain'});
+      if (!mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              "We're still checking your cash. Look in My Links before making it again.",
+            ),
+          ),
+        );
+        return;
+      }
+      await _confirmCash(e.claimPubkey, amount, note, terms);
     } catch (e) {
-      // A fresh code for the next try: this one may be half set up.
-      _cashCode = null;
-      final message = e is ZlinkException
-          ? e.message
-          : e is ApiException
-          ? e.userMessage
-          : "That didn't go through. Try again.";
-      messenger.showSnackBar(SnackBar(content: Text(message)));
-      if (mounted) {
-        setState(() {
-          _makingCash = false;
-          _confirmingZend = false;
-        });
+      if (!mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text("Couldn't make that cash. ${friendlyError(e)}")),
+        );
+        return;
+      }
+      _cashFailed(e);
+    }
+  }
+
+  void _cashMade(
+    CreatedGiveLink link,
+    double amount,
+    String? note,
+    CashTerms terms,
+  ) {
+    final model = ZendScope.of(context);
+    unawaited(model.fetchBalance());
+    // This code is used now; the next cash gets its own.
+    _cashCode = null;
+    ZendAnalytics.track(ZendEvent.sendCompleted, {'kind': 'cash'});
+    unawaited(SoundService.playZentSuccess());
+    unawaited(
+      showSendCelebration(
+        context,
+        amount: amount * terms.uses,
+        emoji: isEmojiNote(note) ? note!.trim() : null,
+      ),
+    );
+    setState(() {
+      _made = link;
+      _cashAmount = amount;
+      _cashExpiresAt = DateTime.now().add(Duration(days: terms.days));
+      _makingCash = false;
+    });
+    _goToStage(_EntryStage.card);
+  }
+
+  /// No answer after the signed cash went out. Looks for it in My Links
+  /// for about 18 seconds, the same window a normal send gets.
+  Future<void> _confirmCash(
+    String claimPubkey,
+    double amount,
+    String? note,
+    CashTerms terms,
+  ) async {
+    if (!mounted) return;
+    _goToStage(_EntryStage.confirming);
+    final service = _links(ZendScope.of(context));
+    for (var attempt = 0; attempt < 6; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      try {
+        final found = await service.findMadeLink(claimPubkey);
+        if (found?.cash != null && mounted) {
+          _cashMade(found!, amount, note, terms);
+          return;
+        }
+      } catch (_) {
+        // Still offline: keep looking within the window.
       }
     }
+    if (!mounted) return;
+    _cashCode = null;
+    setState(() => _makingCash = false);
+    final navigator = Navigator.of(context);
+    unawaited(ZendScope.of(context).fetchBalance());
+    await showZendErrorModal(
+      context,
+      title: "We're still checking",
+      message:
+          "We can't confirm this went through yet. Check My Links before "
+          'making it again. If it went through, the card is there.',
+      dismissLabel: 'OK',
+      onDismiss: () {
+        if (navigator.mounted) navigator.pop();
+      },
+    );
+  }
+
+  /// Refused before anything moved.
+  void _cashFailed(Object e) {
+    if (!mounted) return;
+    ZendFeel.error();
+    ZendAnalytics.track(ZendEvent.sendFailed, {'kind': 'cash'});
+    final api = e is ApiException ? e : null;
+    // The reserved code is still good for another try unless the server let
+    // it go (or the reservation itself failed).
+    if (api == null || api.errorCode == 'CASH_CODE_EXPIRED') _cashCode = null;
+    final message = e is ZlinkException ? e.message : friendlyError(e);
+    // Limits and rules won't change by trying again; the network and a
+    // timed-out prepare can.
+    final retry =
+        e is! ZlinkException &&
+        (api == null ||
+            api.retryable == true ||
+            api.statusCode >= 500 ||
+            const {
+              'CASH_CODE_EXPIRED',
+              'PREPARE_EXPIRED',
+              'SUI_ADDRESS_BALANCE_INSUFFICIENT',
+            }.contains(api.errorCode));
+    setState(() {
+      _makingCash = false;
+      _confirmingZend = false;
+    });
+    _goToStage(_EntryStage.amount);
+    showZendErrorModal(
+      context,
+      title: "Couldn't make that cash",
+      message: message.contains("hasn't moved")
+          ? message
+          : "$message Your money hasn't moved.",
+      onRetry: retry ? _makeCash : null,
+      dismissLabel: retry ? 'Cancel' : 'OK',
+    );
   }
 
   String? get _note =>
@@ -826,6 +953,10 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   child: switch (_stage) {
                     _EntryStage.identity => _buildIdentityStage(zt),
                     _EntryStage.amount => _buildAmountStage(zt),
+                    _EntryStage.making => _buildMakingStage(zt),
+                    _EntryStage.confirming => const SendUncertainStage(
+                      key: ValueKey('confirming'),
+                    ),
                     _EntryStage.card => _buildCardStage(zt),
                   },
                 ),
@@ -1565,8 +1696,45 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
   // ── Card stage (cash made) ────────────────────────────────────────────
   // The money has left the balance; nothing here goes back a step. The card
   // stays in My Links for re-sharing, and can be taken back from there.
+  /// While cash is made: its key, the server, the sign-off. A few seconds.
+  Widget _buildMakingStage(ZendTheme zt) {
+    return Center(
+      key: const ValueKey('making'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ZendLoader(size: 32),
+            const SizedBox(height: 20),
+            Text(
+              'Making ${_entry.format(_sendTotal)} in cash',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'This takes a few seconds.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 14,
+                color: zt.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCardStage(ZendTheme zt) {
-    final link = _cashMade;
+    final link = _made;
     final code = link?.cash;
     return Padding(
       key: const ValueKey('card'),
@@ -1588,6 +1756,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
               child: code == null
                   ? const SizedBox.shrink()
                   : CashCardView(
+                      ready: link?.pending != true,
+                      justMade: true,
                       code: code,
                       amountUsd: _cashAmount,
                       uses: _cashTerms.uses,

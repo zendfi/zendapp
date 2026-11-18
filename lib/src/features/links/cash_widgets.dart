@@ -21,7 +21,8 @@ import '../../core/zend_format.dart';
 import '../../design/zend_gif.dart' show gifIdFromNote;
 import '../../design/zend_link_card.dart';
 import '../../design/zend_modal.dart';
-import '../../design/zend_money.dart' show isEmojiNote;
+import '../../design/zend_money.dart' show ZendFeel, isEmojiNote;
+import '../../models/api_exceptions.dart' show ApiException;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 
@@ -264,7 +265,17 @@ class CashCardView extends StatefulWidget {
     this.uses = 1,
     this.memo,
     this.onDone,
+    this.justMade = false,
+    this.ready = true,
   });
+
+  /// Shown right after making it: a "Cash ready" header, like a send's
+  /// "Sent", above the card.
+  final bool justMade;
+
+  /// False while Zend is still catching up on a just-made cash: it can be
+  /// shared now, and opens a few seconds later.
+  final bool ready;
 
   final CashCode code;
 
@@ -329,6 +340,37 @@ class _CashCardViewState extends State<CashCardView> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.justMade) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                PhosphorIconsFill.checkCircle,
+                size: 22,
+                color: ZendColors.positive,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Cash ready',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: zt.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.uses > 1
+                ? '${formatMoney(widget.amountUsd * widget.uses)} left your balance. Share it below.'
+                : '${formatMoney(widget.amountUsd)} left your balance. Share it below.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+          ),
+          const SizedBox(height: 16),
+        ],
         RepaintBoundary(
           key: _cardKey,
           child: _CashCardFace(
@@ -340,6 +382,19 @@ class _CashCardViewState extends State<CashCardView> {
           ),
         ),
         const SizedBox(height: 14),
+        if (!widget.ready) ...[
+          Text(
+            'You can share it now. It opens in a few seconds.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: zt.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
         Text(
           "Anyone with this code can collect it. Share it only with who it's for.",
           textAlign: TextAlign.center,
@@ -537,26 +592,49 @@ class _CashCodeFormatter extends TextInputFormatter {
   }
 }
 
-/// "Have a cash code?" Returns the code once it's complete and passes its
-/// check character, or null if closed.
-Future<CashCode?> showCashCodeEntrySheet(BuildContext context) {
-  return showZendModalSheet<CashCode>(
+/// A code that opened: the code, and what it holds (a link preview: `id`,
+/// `sender_name`, `amount_usd`, `status`, …).
+class CashOpened {
+  const CashOpened(this.code, this.preview);
+  final CashCode code;
+  final Map<String, dynamic> preview;
+}
+
+/// "Have a cash code?" The sheet opens the code itself with [open], so a
+/// wrong code is said right under what was typed, with the text kept to fix,
+/// instead of closing first. Returns once a code opens, or null if closed.
+Future<CashOpened?> showCashCodeEntrySheet(
+  BuildContext context, {
+  required Future<Map<String, dynamic>> Function(CashCode code) open,
+  String? initial,
+}) {
+  return showZendModalSheet<CashOpened>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _CashCodeEntry(),
+    builder: (_) => _CashCodeEntry(open: open, initial: initial),
   );
 }
 
 class _CashCodeEntry extends StatefulWidget {
-  const _CashCodeEntry();
+  const _CashCodeEntry({required this.open, this.initial});
+  final Future<Map<String, dynamic>> Function(CashCode code) open;
+  final String? initial;
   @override
   State<_CashCodeEntry> createState() => _CashCodeEntryState();
 }
 
 class _CashCodeEntryState extends State<_CashCodeEntry> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(
+    text: widget.initial == null
+        ? ''
+        : CashCode.group(CashCode.normalise(widget.initial!)),
+  );
+  bool _opening = false;
+
+  /// What the server said about the last code tried. Cleared on any edit.
+  String? _openError;
 
   @override
   void dispose() {
@@ -564,11 +642,41 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
     super.dispose();
   }
 
-  String? get _problem => switch (CashCode.check(_controller.text)) {
-    CashCodeProblem.badCharacter => "That isn't a letter or number used in codes.",
-    CashCodeProblem.typo => 'That code has a typo. Check it again.',
-    CashCodeProblem.tooLong || CashCodeProblem.incomplete || null => null,
-  };
+  String? get _problem =>
+      _openError ??
+      switch (CashCode.check(_controller.text)) {
+        CashCodeProblem.badCharacter =>
+          "That isn't a letter or number used in codes.",
+        CashCodeProblem.typo => 'That code has a typo. Check it again.',
+        CashCodeProblem.tooLong || CashCodeProblem.incomplete || null => null,
+      };
+
+  Future<void> _collect(CashCode code) async {
+    if (_opening) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _opening = true;
+      _openError = null;
+    });
+    try {
+      final preview = await widget.open(code);
+      if (!mounted) return;
+      Navigator.of(context).pop(CashOpened(code, preview));
+    } catch (e) {
+      if (!mounted) return;
+      ZendFeel.error();
+      final api = e is ApiException ? e : null;
+      setState(() {
+        _opening = false;
+        _openError = switch (api?.errorCode) {
+          'CASH_NOT_FOUND' =>
+            "That code doesn't match any cash. Check it and try again.",
+          'RATE_LIMITED' => "You've tried a lot of codes. Wait a few minutes.",
+          _ => "We couldn't check that code. Try again.",
+        };
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -623,9 +731,10 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                     textCapitalization: TextCapitalization.characters,
                     keyboardType: TextInputType.visiblePassword,
                     inputFormatters: [_CashCodeFormatter()],
-                    onChanged: (_) => setState(() {}),
+                    readOnly: _opening,
+                    onChanged: (_) => setState(() => _openError = null),
                     onSubmitted: (_) {
-                      if (code != null) Navigator.of(context).pop(code);
+                      if (code != null) _collect(code);
                     },
                     style: ZendTextStyles.tabularNumeric.copyWith(
                       fontSize: 22,
@@ -649,22 +758,31 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                   ),
                 ),
                 SizedBox(
-                  height: 28,
-                  child: problem == null
-                      ? null
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
+                  height: 36,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _opening
+                        ? Text(
+                            'Opening your cash. This takes a few seconds.',
+                            textAlign: TextAlign.center,
+                            style: ZendTextStyles.caption.copyWith(color: zt.textSecondary),
+                          )
+                        : problem == null
+                        ? null
+                        : Text(
                             problem,
                             textAlign: TextAlign.center,
                             style: ZendTextStyles.caption.copyWith(color: zt.destructive),
                           ),
-                        ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 PrimaryButton(
                   label: 'Collect',
-                  onPressed: code == null ? null : () => Navigator.of(context).pop(code),
+                  isLoading: _opening,
+                  onPressed: code == null || _openError != null
+                      ? null
+                      : () => _collect(code),
                 ),
               ],
             ),
