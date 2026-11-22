@@ -52,8 +52,7 @@ class _RailSelectStage extends StatelessWidget {
   final double amount;
   final void Function(_BankSendRail) onSelect;
 
-  String get _amountStr =>
-      formatMoney(amount);
+  String get _amountStr => formatMoney(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +67,8 @@ class _RailSelectStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 26,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -1.04,
               color: zt.textPrimary,
             ),
           ),
@@ -218,7 +218,8 @@ class _NgnBankInputStageState extends State<_NgnBankInputStage> {
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.55,
                         color: zt.textPrimary,
                       ),
                     ),
@@ -379,7 +380,8 @@ class _BankPickerStageState extends State<_BankPickerStage> {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.55,
                   color: zt.textPrimary,
                 ),
               ),
@@ -494,7 +496,8 @@ class _IntlAccountStage extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.55,
                   color: zt.textPrimary,
                 ),
               ),
@@ -717,7 +720,8 @@ class _ConfirmationStage extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.55,
                   color: zt.textPrimary,
                 ),
               ),
@@ -914,7 +918,8 @@ class _PinStage extends StatelessWidget {
             'Confirm with PIN',
             style: TextStyle(
               fontFamily: 'Geist',
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.55,
               fontSize: 22,
               color: zt.textPrimary,
             ),
@@ -1144,7 +1149,7 @@ class _SuccessStageState extends State<_SuccessStage>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _scale = CurvedAnimation(parent: _ctrl, curve: ZendMotion.bounce);
     _ctrl.forward();
   }
 
@@ -1206,7 +1211,8 @@ class _SuccessStageState extends State<_SuccessStage>
               'On its way!',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.8,
                 fontSize: 40,
                 color: zt.textPrimary,
               ),
@@ -1282,7 +1288,8 @@ class _ErrorStage extends StatelessWidget {
               'Oops',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.44,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -1448,7 +1455,8 @@ class _AddIntlAccountStageState extends State<_AddIntlAccountStage> {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.55,
                   color: zt.textPrimary,
                 ),
               ),

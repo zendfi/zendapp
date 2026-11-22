@@ -94,16 +94,13 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
-        );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.linear));
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchSession());
   }
@@ -421,7 +418,8 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                 'Approve CLI access?',
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -1.04,
                   fontSize: 26,
                   color: zt.textPrimary,
                 ),
@@ -513,7 +511,8 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                   'CLI access approved',
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.96,
                     fontSize: 24,
                     color: zt.textPrimary,
                   ),
@@ -540,7 +539,8 @@ class _PairingApprovalSheetState extends State<PairingApprovalSheet>
                   'Access denied',
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.96,
                     fontSize: 24,
                     color: zt.textPrimary,
                   ),

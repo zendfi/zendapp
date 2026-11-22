@@ -5,15 +5,22 @@ import 'package:flutter/material.dart';
 ///
 /// The app chrome stays neutral; colour on screen comes from the people and
 /// activity in it. Use [ZendTint.of] for the colour, then:
-/// - [solid] and [gradient] for an avatar disc,
+/// - [pastel] with [onPastel] initials for an avatar disc (the same discs
+///   zend-site draws, so a person looks the same on the site and in the app),
 /// - [wash] and [edge] for a card that belongs to that person (a Link card),
 /// - [ink] for text or icons sitting on [wash].
 @immutable
 class ZendTint {
-  const ZendTint._(this.solid, this.isDark);
+  const ZendTint._(this.solid, this.pastel, this.isDark);
 
-  /// The tint at full strength.
+  /// The tint at full strength. The source for [name], [ink], [wash] and
+  /// [edge]; not drawn as a fill on its own.
   final Color solid;
+
+  /// Soft avatar fill, from zend-site's people tints (`lib/people.ts`). Same
+  /// in both modes so a person keeps one face. Initials go on it in
+  /// [onPastel].
+  final Color pastel;
   final bool isDark;
 
   /// Saturated hues spaced far apart so neighbours in a list never look
@@ -33,9 +40,26 @@ class ZendTint {
     Color(0xFFF0306F), // pink
   ];
 
+  /// Avatar fills, one per [palette] hue in the same order, so a person's
+  /// pastel disc and their name colour stay the same family.
+  static const pastels = <Color>[
+    Color(0xFFEBA3A3), // red
+    Color(0xFFF2A08B), // orange (coral)
+    Color(0xFFF4B740), // amber
+    Color(0xFF93CBA0), // green
+    Color(0xFF9ED9CC), // teal
+    Color(0xFF8DBDEB), // sky
+    Color(0xFFA9C4F5), // blue
+    Color(0xFFC9AAF0), // violet
+    Color(0xFFD7B4F3), // orchid
+    Color(0xFFF5C3D2), // pink
+  ];
+
   /// Stable tint for [seed] (FNV-1a hash, case-insensitive).
-  static ZendTint of(String seed, {bool isDark = false}) =>
-      ZendTint._(palette[_hash(seed) % palette.length], isDark);
+  static ZendTint of(String seed, {bool isDark = false}) {
+    final i = _hash(seed) % palette.length;
+    return ZendTint._(palette[i], pastels[i], isDark);
+  }
 
   /// Same as [of], reading the mode from the current theme.
   static ZendTint ofContext(BuildContext context, String seed) =>
@@ -49,20 +73,9 @@ class ZendTint {
     return h;
   }
 
-  /// Two-stop avatar gradient: lighter at the top left.
-  LinearGradient get gradient => LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color.lerp(solid, Colors.white, 0.10)!,
-      Color.lerp(solid, Colors.black, 0.10)!,
-    ],
-  );
-
-  /// Initials or icons on [solid].
-  Color get onSolid => solid.computeLuminance() > 0.4
-      ? const Color(0xFF0F0F0E)
-      : Colors.white;
+  /// Initials or icons on [pastel]: always ink. Every pastel clears 7:1
+  /// against it.
+  Color get onPastel => const Color(0xFF0F0F0E);
 
   /// Quiet card fill in the person's colour, on the off-white page or true
   /// black.

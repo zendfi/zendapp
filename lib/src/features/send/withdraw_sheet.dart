@@ -223,7 +223,8 @@ class _AmountStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 22,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.55,
               color: zt.textPrimary,
             ),
           ),
@@ -342,7 +343,8 @@ class _DestinationStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 24,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.96,
               color: zt.textPrimary,
             ),
           ),

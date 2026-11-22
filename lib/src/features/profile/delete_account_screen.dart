@@ -146,7 +146,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                       'Delete account',
                       style: TextStyle(
                         fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.96,
                         fontSize: 24,
                         color: zt.textPrimary,
                       ),
@@ -472,7 +473,8 @@ class _Heading extends StatelessWidget {
     style: TextStyle(
       fontFamily: 'Geist',
       fontSize: 22,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.55,
       color: zt.textPrimary,
     ),
   );

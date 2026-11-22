@@ -24,7 +24,9 @@ class ZendScrollPage extends StatelessWidget {
   }
 }
 
-class PrimaryButton extends StatelessWidget {
+/// The ink pill (zend-site `.pill-ink`): soft ink shadow under it, and it
+/// presses down to 0.98 and springs back on release.
+class PrimaryButton extends StatefulWidget {
   const PrimaryButton({
     super.key,
     required this.label,
@@ -43,32 +45,68 @@ class PrimaryButton extends StatelessWidget {
   final bool isLoading;
 
   @override
+  State<PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<PrimaryButton> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (_down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final fg = foregroundColor ?? zt.onAccent;
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? zt.accent,
-          foregroundColor: fg,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
+    final fg = widget.foregroundColor ?? zt.onAccent;
+    final enabled = widget.onPressed != null && !widget.isLoading;
+    // The ink shadow belongs to the ink fill; a custom fill (a light button
+    // on a permanently dark screen) stays flat.
+    final shadow = enabled && widget.backgroundColor == null
+        ? ZendShadows.pill(zt)
+        : const <BoxShadow>[];
+    final reduced = ZendMotion.reduced(context);
+
+    return Listener(
+      onPointerDown: enabled ? (_) => _set(true) : null,
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
+      child: AnimatedScale(
+        scale: _down && !reduced ? 0.98 : 1,
+        duration: _down ? const Duration(milliseconds: 120) : ZendMotion.quick,
+        curve: _down ? ZendMotion.ease : ZendMotion.bounce,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(ZendRadii.pill),
+            boxShadow: shadow,
           ),
-        ),
-        child: isLoading
-            ? ZendLoader(size: 20, strokeWidth: 2, color: fg)
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: widget.isLoading ? null : widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.backgroundColor ?? zt.accent,
+                foregroundColor: fg,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ZendRadii.pill),
                 ),
               ),
+              child: widget.isLoading
+                  ? ZendLoader(size: 20, strokeWidth: 2, color: fg)
+                  : Text(
+                      widget.label,
+                      style: const TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.16,
+                      ),
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -393,5 +431,54 @@ class ZendBackspaceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(PhosphorIconsRegular.backspace, color: color, size: size);
+  }
+}
+
+/// Section label with the signal dot in front (zend-site's `.kicker`): a 6px
+/// orange dot, then the label at 14 w500 in the muted grey. One per content
+/// section. Pass [dot] false for a run of labels on one screen (Settings), so
+/// the orange stays scarce.
+class ZendKicker extends StatelessWidget {
+  const ZendKicker(this.label, {super.key, this.dot = true, this.padding});
+
+  final String label;
+  final bool dot;
+
+  /// Defaults to a small left inset that lines the label up with list rows.
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Padding(
+      padding: padding ?? const EdgeInsets.only(left: 4),
+      child: Semantics(
+        header: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dot) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: zt.signal,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: ZendTextStyles.kicker.copyWith(color: zt.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

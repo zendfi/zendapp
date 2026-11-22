@@ -286,7 +286,7 @@ class _Popped extends StatelessWidget {
       builder: (context, t, child) {
         final local = ((t - start) / (1 - start)).clamp(0.0, 1.0);
         return Transform.scale(
-          scale: 0.4 + 0.6 * Curves.elasticOut.transform(local),
+          scale: 0.4 + 0.6 * ZendMotion.bounce.transform(local),
           child: child,
         );
       },
@@ -300,6 +300,7 @@ class _Popped extends StatelessWidget {
 abstract final class ZendFeel {
   static void keypadTap() => HapticFeedback.selectionClick();
   static void reaction() => HapticFeedback.lightImpact();
+
   /// Money arrived: a quick "ba-dum" that lands harder than a tap, so it
   /// can be felt with the phone face down.
   static Future<void> received() async {
@@ -309,6 +310,7 @@ abstract final class ZendFeel {
     await Future<void>.delayed(const Duration(milliseconds: 140));
     await HapticFeedback.heavyImpact();
   }
+
   static Future<void> sendConfirmed() async {
     await HapticFeedback.mediumImpact();
     await Future<void>.delayed(const Duration(milliseconds: 90));

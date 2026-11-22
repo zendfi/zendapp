@@ -205,7 +205,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.55,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -310,7 +311,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     'Security',
                     style: TextStyle(
                       fontFamily: 'Geist',
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.96,
                       fontSize: 24,
                       color: zt.textPrimary,
                     ),
@@ -586,10 +588,7 @@ class _BiometricStep extends StatelessWidget {
           width: 26,
           height: 26,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: zt.onAccent,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: zt.onAccent, shape: BoxShape.circle),
           child: Text(
             '$number',
             style: ZendTextStyles.tabularNumeric.copyWith(

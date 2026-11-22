@@ -152,9 +152,8 @@ class _AskPaySheetState extends State<_AskPaySheet> {
   double get _zendAmountUsd =>
       _fixed ? (_v['amount_usd'] as num).toDouble() : _entry.usd(_amount.text);
 
-  String get _zendAmountLabel => _fixed
-      ? zlinkAmountLabel(_v)
-      : _entry.format(_entry.usd(_amount.text));
+  String get _zendAmountLabel =>
+      _fixed ? zlinkAmountLabel(_v) : _entry.format(_entry.usd(_amount.text));
 
   Future<void> _pay() async {
     final amount = _zendAmountUsd;
@@ -251,10 +250,9 @@ class _AskPaySheetState extends State<_AskPaySheet> {
     final back = _stage;
     _goTo(_AskStage.preparing);
     try {
-      final d = await zlinkServiceOf(context).askBankPrepare(
-        widget.id,
-        amountNgn: ngn,
-      );
+      final d = await zlinkServiceOf(
+        context,
+      ).askBankPrepare(widget.id, amountNgn: ngn);
       if (!mounted) return;
       _bank = d;
       _goTo(_AskStage.bankDetails);
@@ -816,7 +814,10 @@ class _AskPaySheetState extends State<_AskPaySheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              _AskDetailRow(label: 'Bank', value: d['bank_name'] as String? ?? ''),
+              _AskDetailRow(
+                label: 'Bank',
+                value: d['bank_name'] as String? ?? '',
+              ),
               Divider(color: zt.border, height: 1),
               _AskDetailRow(
                 label: 'Account number',
@@ -1148,7 +1149,7 @@ class _AskCenteredState extends State<_AskCentered>
   );
   late final Animation<double> _scale = CurvedAnimation(
     parent: _ctrl,
-    curve: Curves.elasticOut,
+    curve: ZendMotion.bounce,
   );
 
   @override

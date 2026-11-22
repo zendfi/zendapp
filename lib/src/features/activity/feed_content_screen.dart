@@ -29,6 +29,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../core/zend_format.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_gif.dart';
+import '../../design/zend_drawn.dart';
 
 /// Formats a balance for the restrained header gateway — plain dollars,
 /// 2dp only when needed.
@@ -537,9 +538,18 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                                   i == 0 ||
                                   formatDayGroup(items[i - 1].at) != day;
                               final edge = item.edge;
+                              // Activity rows sit on the page separated by
+                              // hairlines; ZApp cards keep their card and gap.
+                              final prevIsRow =
+                                  i > 0 && items[i - 1].edge != null;
                               final Widget card = Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: ZendSpacing.betweenCards,
+                                padding: EdgeInsets.only(
+                                  top: edge != null || !prevIsRow
+                                      ? 0
+                                      : ZendSpacing.betweenCards,
+                                  bottom: edge != null
+                                      ? 0
+                                      : ZendSpacing.betweenCards,
                                 ),
                                 // Each card owns an async reaction fetch
                                 // that repaints it independently of its
@@ -556,6 +566,7 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
                                           selfInitial: _selfInitial,
                                           selfAvatarUrl: _selfAvatarUrl,
                                           onTap: () => _openActivity(edge),
+                                          divider: !showDay && prevIsRow,
                                         )
                                       : ZAppFeedCard(
                                           key: ValueKey(item.card!['id']),
@@ -606,6 +617,8 @@ class _FeedContentScreenState extends State<FeedContentScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const ZendMoon(size: 96),
+            const SizedBox(height: 16),
             Text(
               'Nothing here yet.',
               textAlign: TextAlign.center,
@@ -854,19 +867,9 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
     return Padding(
-      padding: EdgeInsets.only(top: first ? 8 : 16, bottom: 8, left: 4),
-      child: Semantics(
-        header: true,
-        child: Text(
-          label,
-          style: ZendTextStyles.caption.copyWith(
-            fontWeight: FontWeight.w600,
-            color: zt.textSecondary,
-          ),
-        ),
-      ),
+      padding: EdgeInsets.only(top: first ? 8 : 20, bottom: 4, left: 4),
+      child: ZendKicker(label, padding: EdgeInsets.zero),
     );
   }
 }
@@ -893,9 +896,15 @@ class _FeedActivityCard extends StatefulWidget {
     required this.selfInitial,
     required this.selfAvatarUrl,
     required this.onTap,
+    this.divider = false,
   });
 
   final ActivityEdge edge;
+
+  /// Draws a hairline above the row: rows are separated by a line, not boxed
+  /// (zend-site's `.feed-item + .feed-item`). Off for the first row under a
+  /// day header.
+  final bool divider;
 
   /// The viewer's own initial and avatar, for the outgoing case where the
   /// card shows *them* rather than the counterparty.
@@ -971,21 +980,18 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
     // People carry their own colour (see ZendTint): names in the person's
     // tint, notes in a bubble of it. The card itself stays neutral.
     TextStyle nameStyle(String? seed) => TextStyle(
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w600,
       color: seed == null || seed.isEmpty
           ? null
           : ZendTint.of(seed, isDark: zt.isDark).name,
     );
-    final noteSeed = isDirect
-        ? (isOutgoing ? null : edge.counterparty.id)
-        : edge.senderZendtag;
-    final noteTint = noteSeed == null || noteSeed.isEmpty
-        ? null
-        : ZendTint.of(noteSeed, isDark: zt.isDark);
-
     late final String avatarInitial;
     late final String? avatarUrl;
     late final Widget headline;
+    // The second, smaller face: whoever the money went to.
+    String? toInitial;
+    String? toAvatarUrl;
+    String? toSeed;
 
     if (isDirect) {
       final counterparty = edge.counterparty;
@@ -993,6 +999,15 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
           ? widget.selfInitial
           : counterparty.initialLetter;
       avatarUrl = isOutgoing ? widget.selfAvatarUrl : counterparty.avatarUrl;
+      if (counterparty.kind == 'user') {
+        toInitial = isOutgoing
+            ? counterparty.initialLetter
+            : widget.selfInitial;
+        toAvatarUrl = isOutgoing
+            ? counterparty.avatarUrl
+            : widget.selfAvatarUrl;
+        toSeed = isOutgoing ? counterparty.id : null;
+      }
 
       final verb = feedVerbFor(edge);
       final subject = counterparty.displayLabel;
@@ -1003,7 +1018,8 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
         text: TextSpan(
           style: TextStyle(
             fontFamily: 'Geist',
-            fontSize: 14.5,
+            fontSize: 15.5,
+            height: 1.35,
             color: zt.textPrimary,
           ),
           children: isVibe
@@ -1011,30 +1027,21 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                   TextSpan(
                     text: isOutgoing ? 'You sent a Vibe ✨ to ' : '✨ Vibe from ',
                   ),
-                  TextSpan(
-                    text: subject,
-                    style: themStyle,
-                  ),
+                  TextSpan(text: subject, style: themStyle),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
                 ]
               : isPoolContrib
               ? [
                   TextSpan(text: isOutgoing ? 'You contributed to ' : ''),
-                  TextSpan(
-                    text: subject,
-                    style: themStyle,
-                  ),
+                  TextSpan(text: subject, style: themStyle),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
                   TextSpan(text: isOutgoing ? '' : ' contributed to a pool'),
                 ]
               : [
                   TextSpan(text: isOutgoing ? 'You $verb ' : ''),
-                  TextSpan(
-                    text: subject,
-                    style: themStyle,
-                  ),
+                  TextSpan(text: subject, style: themStyle),
                   if (edge.counterpartyHumanVerified && !isPoolContrib)
                     verifiedBadgeSpan(),
                   TextSpan(text: isOutgoing ? '' : ' $verb'),
@@ -1056,6 +1063,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
           ? senderTag![0].toUpperCase()
           : '?';
       avatarUrl = edge.senderAvatarUrl;
+      if (!isPoolContrib) {
+        toInitial = recipientTag?.isNotEmpty == true
+            ? recipientTag![0].toUpperCase()
+            : '?';
+        toAvatarUrl = edge.recipientAvatarUrl;
+        toSeed = recipientTag;
+      }
       final verb = feedVerbFor(edge);
       headline = RichText(
         maxLines: 1,
@@ -1063,15 +1077,13 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
         text: TextSpan(
           style: TextStyle(
             fontFamily: 'Geist',
-            fontSize: 14.5,
+            fontSize: 15.5,
+            height: 1.35,
             color: zt.textPrimary,
           ),
           children: isVibe
               ? [
-                  TextSpan(
-                    text: senderLabel,
-                    style: nameStyle(senderTag),
-                  ),
+                  TextSpan(text: senderLabel, style: nameStyle(senderTag)),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' sent a Vibe ✨ to '),
                   TextSpan(
@@ -1082,18 +1094,12 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
                 ]
               : isPoolContrib
               ? [
-                  TextSpan(
-                    text: senderLabel,
-                    style: nameStyle(senderTag),
-                  ),
+                  TextSpan(text: senderLabel, style: nameStyle(senderTag)),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   const TextSpan(text: ' contributed to a pool'),
                 ]
               : [
-                  TextSpan(
-                    text: senderLabel,
-                    style: nameStyle(senderTag),
-                  ),
+                  TextSpan(text: senderLabel, style: nameStyle(senderTag)),
                   if (edge.senderHumanVerified) verifiedBadgeSpan(),
                   TextSpan(text: ' $verb '),
                   TextSpan(
@@ -1106,180 +1112,178 @@ class _FeedActivityCardState extends State<_FeedActivityCard> {
       );
     }
 
+    final fromSeed = isDirect
+        ? (isOutgoing ? null : edge.counterparty.id)
+        : edge.senderZendtag;
+
     return ZendPressScale(
-      child: Material(
-        color: zt.bgCard,
+      child: InkWell(
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(ZendRadii.card),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(ZendRadii.card),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  // Centred, not top-aligned: at radius 26 the avatar is taller
-                  // than the headline + timestamp beside it, so start-alignment
-                  // would pin the text to the avatar's top edge and leave a gap
-                  // under it. Matches the chat tile.
+        child: Container(
+          decoration: widget.divider
+              ? BoxDecoration(
+                  border: Border(top: BorderSide(color: zt.border)),
+                )
+              : null,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Two faces, from and to: the sender's, with the recipient's
+              // tucked under its corner in a page-coloured ring.
+              SizedBox(
+                width: 54,
+                height: 52,
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     ZendAvatar(
-                      radius: 24,
+                      radius: 22,
                       photoUrl: avatarUrl,
                       initials: avatarInitial,
                       // Each person keeps one colour across the feed.
-                      seed: isDirect
-                          ? (isOutgoing ? null : edge.counterparty.id)
-                          : edge.senderZendtag,
+                      seed: fromSeed,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          headline,
-                          const SizedBox(height: 2),
-                          Text(
-                            _relativeTime(edge.createdAt),
-                            style: ZendTextStyles.caption.copyWith(
-                              color: zt.textSecondary,
-                            ),
+                    if (toInitial != null)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            shape: BoxShape.circle,
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (gifIdFromNote(edge.note) != null && !isVibe) ...[
-                  const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 62),
-                    child: ZendGifTile(gifIdFromNote(edge.note)!),
-                  ),
-                ] else if (emojiNote != null && !isVibe) ...[
-                  const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 62),
-                    child: ZendEmojiTile(
-                      emojiNote,
-                      burst:
-                          !isOutgoing &&
-                          DateTime.now().difference(edge.createdAt).inMinutes <
-                              5,
-                    ),
-                  ),
-                ] else if (edge.note?.isNotEmpty == true &&
-                    !isVibe &&
-                    !isMediaNote(edge.note)) ...[
-                  const SizedBox(height: 10),
-                  // The note as a speech bubble in its author's colour.
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: noteTint?.noteFill ?? zt.bgSecondary,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(4),
-                        topRight: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
-                        bottomRight: Radius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      edge.note!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 14,
-                        height: 1.3,
-                        color: zt.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    // One reaction system: the same emoji set as the Activity
-                    // sheet, shown as counts. Tapping opens the sheet to react.
-                    if (totalReactions == 0)
-                      Icon(
-                        PhosphorIconsRegular.smileyWink,
-                        size: 16,
-                        color: zt.textSecondary,
-                        semanticLabel: 'No reactions yet',
-                      )
-                    else
-                      for (final r in _reactions.take(3))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: r.reactedByMe
-                                  ? zt.accent
-                                  : (zt.isDark ? zt.bgElevated : zt.bgSecondary),
-                              borderRadius: BorderRadius.circular(
-                                ZendRadii.chip,
-                              ),
-                            ),
-                            child: Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: r.emoji,
-                                    style: ZendTextStyles.emoji.copyWith(
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  TextSpan(text: ' ${r.count}'),
-                                ],
-                              ),
-                              style: ZendTextStyles.micro.copyWith(
-                                color: r.reactedByMe
-                                    ? zt.onAccent
-                                    : zt.textPrimary,
-                              ),
-                            ),
+                          child: ZendAvatar(
+                            radius: 12,
+                            photoUrl: toAvatarUrl,
+                            initials: toInitial,
+                            seed: toSeed,
                           ),
                         ),
-                    // Comment indicator, mirroring the reaction one: filled with
-                    // the accent when there is something to read, outlined and
-                    // muted when there is not. Shown even at zero so the row
-                    // advertises that commenting is possible — the same reason
-                    // the heart is always present.
-                    const SizedBox(width: 14),
-                    Icon(
-                      edge.commentCount > 0
-                          ? PhosphorIconsFill.chatCircle
-                          : PhosphorIconsRegular.chatCircle,
-                      size: 15,
-                      color: edge.commentCount > 0
-                          ? zt.accent
-                          : zt.textSecondary,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    headline,
+                    const SizedBox(height: 1),
+                    Text(
+                      _relativeTime(edge.createdAt),
+                      style: ZendTextStyles.caption.copyWith(color: zt.faint),
                     ),
-                    if (edge.commentCount > 0) ...[
-                      const SizedBox(width: 4),
+                    if (gifIdFromNote(edge.note) != null && !isVibe) ...[
+                      const SizedBox(height: 10),
+                      ZendGifTile(gifIdFromNote(edge.note)!),
+                    ] else if (emojiNote != null && !isVibe) ...[
+                      const SizedBox(height: 10),
+                      ZendEmojiTile(
+                        emojiNote,
+                        burst:
+                            !isOutgoing &&
+                            DateTime.now()
+                                    .difference(edge.createdAt)
+                                    .inMinutes <
+                                5,
+                      ),
+                    ] else if (edge.note?.isNotEmpty == true &&
+                        !isVibe &&
+                        !isMediaNote(edge.note)) ...[
+                      const SizedBox(height: 6),
+                      // The note is what the moment was: set as text, not
+                      // boxed (zend-site's `.feed-note`).
                       Text(
-                        '${edge.commentCount}',
-                        style: ZendTextStyles.tabularNumeric.copyWith(
-                          fontSize: 12,
-                          color: zt.textSecondary,
-                          fontWeight: FontWeight.w600,
+                        edge.note!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 17,
+                          height: 1.35,
+                          letterSpacing: -0.17,
+                          color: zt.textPrimary,
                         ),
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // One reaction system: the same emoji set as the Activity
+                        // sheet, shown as counts. Tapping opens the sheet to react.
+                        if (totalReactions == 0)
+                          Icon(
+                            PhosphorIconsRegular.smileyWink,
+                            size: 16,
+                            color: zt.textSecondary,
+                            semanticLabel: 'No reactions yet',
+                          )
+                        else
+                          for (final r in _reactions.take(3))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              // Emoji set as text with its count, no chip
+                              // (zend-site's `.feed-reactions`). Yours reads in
+                              // ink, everyone else's in the faint grey.
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: r.emoji,
+                                      style: ZendTextStyles.emoji.copyWith(
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    TextSpan(text: ' ${r.count}'),
+                                  ],
+                                ),
+                                style: ZendTextStyles.tabularNumeric.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: r.reactedByMe
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: r.reactedByMe
+                                      ? zt.textPrimary
+                                      : zt.faint,
+                                ),
+                              ),
+                            ),
+                        // Comment indicator, mirroring the reaction one: filled with
+                        // the accent when there is something to read, outlined and
+                        // muted when there is not. Shown even at zero so the row
+                        // advertises that commenting is possible — the same reason
+                        // the heart is always present.
+                        const SizedBox(width: 14),
+                        Icon(
+                          edge.commentCount > 0
+                              ? PhosphorIconsFill.chatCircle
+                              : PhosphorIconsRegular.chatCircle,
+                          size: 15,
+                          color: edge.commentCount > 0
+                              ? zt.accent
+                              : zt.textSecondary,
+                        ),
+                        if (edge.commentCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '${edge.commentCount}',
+                            style: ZendTextStyles.tabularNumeric.copyWith(
+                              fontSize: 12,
+                              color: zt.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

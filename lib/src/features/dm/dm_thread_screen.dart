@@ -13,6 +13,7 @@ import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_tint.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/dm_message.dart';
@@ -3277,7 +3278,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1100),
     )..repeat();
   }
 
@@ -3287,9 +3288,18 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     super.dispose();
   }
 
+  /// zend-site's `hop`: across the first 60% of its cycle a dot rises 5px
+  /// and brightens, then rests.
+  static double _hop(double t) {
+    if (t >= 0.6) return 0;
+    final x = t / 0.6;
+    return x < 0.5 ? x * 2 : (1 - x) * 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final reduced = ZendMotion.reduced(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -3310,14 +3320,14 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
             decoration: BoxDecoration(
-              color: zt.bgSecondary,
+              color: zt.bubbleReceived,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(18),
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(18),
+                topLeft: Radius.circular(22),
+                topRight: Radius.circular(22),
+                bottomLeft: Radius.circular(6),
+                bottomRight: Radius.circular(22),
               ),
             ),
             child: AnimatedBuilder(
@@ -3326,19 +3336,20 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
-                    final offset = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
-                    final scale =
-                        0.6 +
-                        0.4 * (offset < 0.5 ? offset * 2 : (1 - offset) * 2);
+                    // Dots start 0.15s apart on the 1.1s cycle.
+                    final t = (_ctrl.value - i * 0.15 / 1.1) % 1.0;
+                    final h = reduced
+                        ? 0.0
+                        : Curves.easeInOut.transform(_hop(t));
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Transform.scale(
-                        scale: scale,
+                      padding: EdgeInsets.only(left: i == 0 ? 0 : 5),
+                      child: Transform.translate(
+                        offset: Offset(0, -5 * h),
                         child: Container(
-                          width: 7,
-                          height: 7,
+                          width: 8,
+                          height: 8,
                           decoration: BoxDecoration(
-                            color: zt.textSecondary,
+                            color: zt.faint.withValues(alpha: 0.45 + 0.55 * h),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -3551,7 +3562,7 @@ class _GroupSenderLabel extends StatelessWidget {
               fontFamily: 'Geist',
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: ZendAvatar.colorFor(colorSeed),
+              color: ZendTint.ofContext(context, colorSeed).name,
             ),
           ),
         ),

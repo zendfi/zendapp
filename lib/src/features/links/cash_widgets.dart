@@ -42,7 +42,11 @@ class CashTerms {
 
 /// Shown where the visibility pill sits while confirming a send.
 class CashTermsPill extends StatelessWidget {
-  const CashTermsPill({super.key, required this.value, required this.onChanged});
+  const CashTermsPill({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
 
   final CashTerms value;
   final ValueChanged<CashTerms> onChanged;
@@ -69,7 +73,11 @@ class CashTermsPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(PhosphorIconsRegular.usersThree, size: 16, color: zt.textPrimary),
+              Icon(
+                PhosphorIconsRegular.usersThree,
+                size: 16,
+                color: zt.textPrimary,
+              ),
               const SizedBox(width: 8),
               Text(
                 value.label,
@@ -81,7 +89,11 @@ class CashTermsPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(PhosphorIconsRegular.caretUpDown, size: 14, color: zt.textSecondary),
+              Icon(
+                PhosphorIconsRegular.caretUpDown,
+                size: 14,
+                color: zt.textSecondary,
+              ),
             ],
           ),
         ),
@@ -126,7 +138,11 @@ Future<CashTerms?> _showCashTermsSheet(BuildContext context, CashTerms start) {
               const SizedBox(height: 4),
               Text(
                 'Each person collects once. Whatever is left comes back to you.',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13,
+                  color: zt.textSecondary,
+                ),
               ),
               const SizedBox(height: 18),
               Text('People', style: label()),
@@ -152,7 +168,9 @@ Future<CashTerms?> _showCashTermsSheet(BuildContext context, CashTerms start) {
                   _RoundButton(
                     icon: PhosphorIconsRegular.plus,
                     semantics: 'More people',
-                    onTap: uses < CashTerms.maxUses ? () => setSheet(() => uses++) : null,
+                    onTap: uses < CashTerms.maxUses
+                        ? () => setSheet(() => uses++)
+                        : null,
                   ),
                 ],
               ),
@@ -169,14 +187,17 @@ Future<CashTerms?> _showCashTermsSheet(BuildContext context, CashTerms start) {
                         onTap: () => setSheet(() => days = d),
                       ),
                     ),
-                    if (d != CashTerms.dayChoices.last) const SizedBox(width: 8),
+                    if (d != CashTerms.dayChoices.last)
+                      const SizedBox(width: 8),
                   ],
                 ],
               ),
               const SizedBox(height: 22),
               PrimaryButton(
                 label: 'Done',
-                onPressed: () => Navigator.of(sheetContext).pop(CashTerms(uses: uses, days: days)),
+                onPressed: () => Navigator.of(
+                  sheetContext,
+                ).pop(CashTerms(uses: uses, days: days)),
               ),
             ],
           ),
@@ -205,7 +226,10 @@ class _RoundButton extends StatelessWidget {
           child: Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(color: zt.bgSecondary, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: zt.bgSecondary,
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, size: 18, color: zt.textPrimary),
           ),
         ),
@@ -215,7 +239,11 @@ class _RoundButton extends StatelessWidget {
 }
 
 class _Choice extends StatelessWidget {
-  const _Choice({required this.label, required this.selected, required this.onTap});
+  const _Choice({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -248,7 +276,20 @@ class _Choice extends StatelessWidget {
 
 // ── The card ────────────────────────────────────────────────────────────────
 
-const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 String _shortDate(DateTime d) {
   final l = d.toLocal();
@@ -300,7 +341,8 @@ class _CashCardViewState extends State<CashCardView> {
 
   Future<Uint8List> _capture() async {
     await Future<void>.delayed(Duration.zero);
-    final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final boundary =
+        _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) throw StateError('card not on screen');
     final image = await boundary.toImage(pixelRatio: 3);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -313,10 +355,9 @@ class _CashCardViewState extends State<CashCardView> {
     setState(() => _sharing = true);
     try {
       final bytes = await _capture();
-      await Share.shareXFiles(
-        [XFile.fromData(bytes, mimeType: 'image/png', name: 'zend_cash.png')],
-        text: _shareText,
-      );
+      await Share.shareXFiles([
+        XFile.fromData(bytes, mimeType: 'image/png', name: 'zend_cash.png'),
+      ], text: _shareText);
     } catch (_) {
       // No image sharing here (some browsers): the link and code still go.
       await Share.share(_shareText, subject: 'Zend cash for you');
@@ -328,9 +369,9 @@ class _CashCardViewState extends State<CashCardView> {
   Future<void> _copyCode() async {
     await Clipboard.setData(ClipboardData(text: widget.code.display));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Code copied')));
   }
 
   @override
@@ -355,7 +396,8 @@ class _CashCardViewState extends State<CashCardView> {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.5,
                   color: zt.textPrimary,
                 ),
               ),
@@ -367,7 +409,11 @@ class _CashCardViewState extends State<CashCardView> {
                 ? '${formatMoney(widget.amountUsd * widget.uses)} left your balance. Share it below.'
                 : '${formatMoney(widget.amountUsd)} left your balance. Share it below.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textSecondary,
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -398,7 +444,11 @@ class _CashCardViewState extends State<CashCardView> {
         Text(
           "Anyone with this code can collect it. Share it only with who it's for.",
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: zt.textSecondary),
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 13,
+            color: zt.textSecondary,
+          ),
         ),
         const SizedBox(height: 16),
         PrimaryButton(
@@ -413,7 +463,11 @@ class _CashCardViewState extends State<CashCardView> {
             onPressed: widget.onDone,
             child: Text(
               'Done',
-              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: zt.textPrimary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontWeight: FontWeight.w600,
+                color: zt.textPrimary,
+              ),
             ),
           ),
         ],
@@ -440,7 +494,9 @@ class _CashCardFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    final note = (memo == null || gifIdFromNote(memo) != null) ? null : memo!.trim();
+    final note = (memo == null || gifIdFromNote(memo) != null)
+        ? null
+        : memo!.trim();
     return Material(
       color: zt.bgCard,
       shape: ZendTicketBorder(side: BorderSide(color: zt.border, width: 1.5)),
@@ -454,7 +510,11 @@ class _CashCardFace extends StatelessWidget {
               children: [
                 ColorFiltered(
                   colorFilter: ColorFilter.mode(zt.accent, BlendMode.srcIn),
-                  child: Image.asset('assets/icons/zend-icon-navbar.png', width: 18, height: 18),
+                  child: Image.asset(
+                    'assets/icons/zend-icon-navbar.png',
+                    width: 18,
+                    height: 18,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -481,7 +541,11 @@ class _CashCardFace extends StatelessWidget {
             if (uses > 1)
               Text(
                 'each, for $uses people',
-                style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textSecondary,
+                ),
               ),
             if (note != null && note.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -503,7 +567,10 @@ class _CashCardFace extends StatelessWidget {
               size: 176,
               backgroundColor: zt.bgCard,
               errorCorrectionLevel: QrErrorCorrectLevel.M,
-              eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: zt.textPrimary),
+              eyeStyle: QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: zt.textPrimary,
+              ),
               dataModuleStyle: QrDataModuleStyle(
                 dataModuleShape: QrDataModuleShape.square,
                 color: zt.textPrimary,
@@ -523,7 +590,11 @@ class _CashCardFace extends StatelessWidget {
             Text(
               'Collect at app.usezend.app/cash · good until ${_shortDate(expiresAt)}',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: zt.textSecondary),
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 12,
+                color: zt.textSecondary,
+              ),
             ),
           ],
         ),
@@ -577,7 +648,10 @@ Future<void> showCashCardSheet(
 /// Upper-cases, maps look-alikes and groups as the person types.
 class _CashCodeFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     // A pasted link: the code is what's after '#'.
     var raw = newValue.text;
     final hash = raw.lastIndexOf('#');
@@ -684,11 +758,15 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
     final code = CashCode.tryParse(_controller.text);
     final problem = _problem;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: zt.bgPrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(ZendRadii.xxl)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(ZendRadii.xxl),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -706,7 +784,8 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
                     color: zt.textPrimary,
                   ),
                 ),
@@ -714,7 +793,11 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                 Text(
                   'Type it the way it was shared with you.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textSecondary),
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 14,
+                    color: zt.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Container(
@@ -753,7 +836,10 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       filled: false,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -765,14 +851,18 @@ class _CashCodeEntryState extends State<_CashCodeEntry> {
                         ? Text(
                             'Opening your cash. This takes a few seconds.',
                             textAlign: TextAlign.center,
-                            style: ZendTextStyles.caption.copyWith(color: zt.textSecondary),
+                            style: ZendTextStyles.caption.copyWith(
+                              color: zt.textSecondary,
+                            ),
                           )
                         : problem == null
                         ? null
                         : Text(
                             problem,
                             textAlign: TextAlign.center,
-                            style: ZendTextStyles.caption.copyWith(color: zt.destructive),
+                            style: ZendTextStyles.caption.copyWith(
+                              color: zt.destructive,
+                            ),
                           ),
                   ),
                 ),

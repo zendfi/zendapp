@@ -268,7 +268,8 @@ class _LockScreenState extends State<_LockScreen>
                   'App locked',
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -1.12,
                     fontSize: 28,
                     color: ZendColors.textOnDeep,
                   ),

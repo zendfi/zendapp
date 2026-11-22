@@ -8,6 +8,7 @@ import 'zend_entry_sheet.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import '../activity/activity_grouping.dart';
@@ -15,6 +16,7 @@ import '../profile/user_profile_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_verified_badge.dart';
+import '../../design/zend_drawn.dart';
 
 /// People — the identity/relationship gateway tab (ZEND BETA spec §17).
 ///
@@ -158,7 +160,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 26,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -1.04,
                   color: zt.textPrimary,
                 ),
               ),
@@ -293,14 +296,21 @@ class _PeopleScreenState extends State<PeopleScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            'Nothing here yet. Zend someone to get things started.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 14,
-              color: zt.textSecondary,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ZendMoon(size: 96),
+              const SizedBox(height: 16),
+              Text(
+                'Nothing here yet. Zend someone to get things started.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  color: zt.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -340,14 +350,9 @@ class _PeopleScreenState extends State<PeopleScreen> {
         if (i == 0) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8, top: 4),
-            child: Text(
+            child: ZendKicker(
               hasFavorites ? 'Favorites and recent' : 'Recent',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: zt.textSecondary,
-              ),
+              padding: EdgeInsets.zero,
             ),
           );
         }
@@ -379,14 +384,9 @@ class _PeopleScreenState extends State<PeopleScreen> {
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
+              child: ZendKicker(
                 'People you might know',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: zt.textSecondary,
-                ),
+                padding: EdgeInsets.zero,
               ),
             ),
             SizedBox(

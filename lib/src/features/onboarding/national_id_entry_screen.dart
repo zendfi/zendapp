@@ -150,7 +150,8 @@ class _NationalIdEntryScreenState extends State<NationalIdEntryScreen> {
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.96,
                   color: zt.textPrimary,
                 ),
               ),

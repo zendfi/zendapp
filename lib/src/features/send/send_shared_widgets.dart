@@ -311,7 +311,7 @@ class _SendSuccessStageState extends State<SendSuccessStage>
     );
     _checkScale = CurvedAnimation(
       parent: _checkController,
-      curve: Curves.elasticOut,
+      curve: ZendMotion.bounce,
     );
     _checkController.forward();
   }
@@ -355,7 +355,8 @@ class _SendSuccessStageState extends State<SendSuccessStage>
               'Sent',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.44,
                 fontSize: 32,
                 color: zt.textPrimary,
               ),
@@ -446,7 +447,8 @@ class SendErrorStage extends StatelessWidget {
               "Couldn't complete that",
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.12,
                 fontSize: 28,
                 color: zt.textPrimary,
               ),
@@ -507,7 +509,8 @@ class SendUncertainStage extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.55,
                 fontSize: 22,
                 color: zt.textPrimary,
               ),

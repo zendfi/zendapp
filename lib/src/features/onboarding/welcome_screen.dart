@@ -9,7 +9,9 @@ import '../links/zlink_sheets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
+import '../../design/zend_drawn.dart';
 import '../../design/zend_mark.dart';
+import '../../design/zend_motion_widgets.dart' show ZendRise;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -297,6 +299,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
+    final title = TextStyle(
+      fontFamily: 'Geist',
+      fontSize: 44,
+      height: 1.0,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -44 * 0.055,
+      color: zt.textPrimary,
+    );
     return Scaffold(
       backgroundColor: zt.bgPrimary,
       body: SafeArea(
@@ -319,26 +329,37 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Brand moment: the Z mark, slowly sweeping.
-                      const ZendMark(size: 88, animate: true),
+                      const ZendRise(child: ZendMark(size: 88, animate: true)),
                       const SizedBox(height: 28),
-                      Text(
-                        'Welcome to Zend',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 44,
-                          height: 1.1,
-                          fontWeight: FontWeight.w700,
-                          color: zt.textPrimary,
+                      // zend-site's hero: a firm line, then a light one with
+                      // the signal underline drawn under it.
+                      ZendRise(
+                        delay: const Duration(milliseconds: 80),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text('Cash that works', style: title),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        "The internet's social money network.",
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 17,
-                          color: zt.textSecondary,
-                          height: 1.35,
+                      ZendRise(
+                        delay: const Duration(milliseconds: 200),
+                        child: ZendSwooshText(
+                          'anywhere.',
+                          style: title.copyWith(fontWeight: FontWeight.w300),
+                          delay: const Duration(milliseconds: 900),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      ZendRise(
+                        delay: const Duration(milliseconds: 320),
+                        child: Text(
+                          'Social, borderless and as easy as a text.',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 18,
+                            color: zt.textSecondary,
+                            height: 1.5,
+                          ),
                         ),
                       ),
                     ],

@@ -299,7 +299,8 @@ class _SheetFrame extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 22,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.55,
                 color: zt.textPrimary,
               ),
             ),
@@ -331,7 +332,10 @@ void _explain(NavigatorState navigator, String title, String body) {
       icon: PhosphorIconsRegular.info,
       title: title,
       body: body,
-      action: PrimaryButton(label: 'OK', onPressed: () => Navigator.of(c).pop()),
+      action: PrimaryButton(
+        label: 'OK',
+        onPressed: () => Navigator.of(c).pop(),
+      ),
     ),
   );
 }
@@ -361,7 +365,11 @@ Future<void> _receiveQuietly(
   try {
     preview = await service.previewGive(id);
   } catch (_) {
-    _explain(navigator, "We couldn't open this link", 'Open it again in a moment.');
+    _explain(
+      navigator,
+      "We couldn't open this link",
+      'Open it again in a moment.',
+    );
     return;
   }
   if (!context.mounted) return;
@@ -399,7 +407,9 @@ Future<void> _receiveCash(BuildContext context, String fragment) async {
 
   final code = fragment.isEmpty ? null : cashCodeFromFragment(fragment);
   if (code == null) {
-    await typeIt(initial: fragment.isEmpty ? null : Uri.decodeComponent(fragment));
+    await typeIt(
+      initial: fragment.isEmpty ? null : Uri.decodeComponent(fragment),
+    );
     return;
   }
 
@@ -603,4 +613,3 @@ String _closedBody(Map<String, dynamic> preview) {
     _ => 'Links last a few days. The money went back to $name.',
   };
 }
-

@@ -44,7 +44,8 @@ Future<void> showZendErrorModal(
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.5,
                   fontSize: 20,
                   color: zt.textPrimary,
                 ),

@@ -278,7 +278,8 @@ class _ScreenHeader extends StatelessWidget {
               title,
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.96,
                 fontSize: 24,
                 color: zt.textPrimary,
               ),

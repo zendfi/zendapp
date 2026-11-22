@@ -522,7 +522,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
     } catch (e) {
       if (!mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text("Couldn't make that cash. ${friendlyError(e)}")),
+          SnackBar(
+            content: Text("Couldn't make that cash. ${friendlyError(e)}"),
+          ),
         );
         return;
       }
@@ -887,7 +889,8 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.45,
                     fontSize: 18,
                     color: zt.textPrimary,
                   ),
@@ -1541,34 +1544,34 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
       children: [
         // Cash has no one to request from.
         if (!_cash) ...[
-        Expanded(
-          child: Opacity(
-            opacity: canAct ? 1 : 0.4,
-            child: SizedBox(
-              height: 52,
-              child: OutlinedButton(
-                // One tap, no confirmation — a request is reversible.
-                onPressed: canAct ? _commitRequest : null,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: zt.textPrimary,
-                  side: BorderSide(color: zt.border),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ZendRadii.pill),
+          Expanded(
+            child: Opacity(
+              opacity: canAct ? 1 : 0.4,
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  // One tap, no confirmation — a request is reversible.
+                  onPressed: canAct ? _commitRequest : null,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: zt.textPrimary,
+                    side: BorderSide(color: zt.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(ZendRadii.pill),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Request',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  child: const Text(
+                    'Request',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
+          const SizedBox(width: 10),
         ],
         Expanded(
           child: SizedBox(

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_primitives.dart';
+import '../../design/zend_drawn.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_money.dart';
 import 'package:share_plus/share_plus.dart';
@@ -282,28 +283,21 @@ class _ReceiptSheetState extends State<_ReceiptSheet> {
                         ),
                       ),
                       if (_showDetails)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: zt.bgSecondary,
-                            borderRadius: BorderRadius.circular(ZendRadii.card),
-                          ),
+                        ZendReceiptPaper(
                           child: Column(
                             children: [
                               _DetailRow(
                                 label: 'From',
                                 value: isSent ? me : them,
                               ),
-                              Divider(color: zt.border, height: 1),
                               _DetailRow(
                                 label: 'To',
                                 value: isSent ? them : me,
                               ),
-                              Divider(color: zt.border, height: 1),
                               _DetailRow(
                                 label: 'When',
                                 value: formatDateTime(entry.createdAt),
                               ),
-                              Divider(color: zt.border, height: 1),
                               _DetailRow(
                                 label: 'Status',
                                 value: isDone
@@ -312,7 +306,6 @@ class _ReceiptSheetState extends State<_ReceiptSheet> {
                                     ? 'On its way'
                                     : "Didn't go through",
                               ),
-                              Divider(color: zt.border, height: 1),
                               _DetailRow(
                                 label: 'Reference',
                                 value: entry.id.length > 8
@@ -491,43 +484,17 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 14,
-              color: zt.textSecondary,
-            ),
+    // A line on the receipt slip: label, leader dots, value.
+    return ZendLeaderRow(
+      label: label,
+      value: value,
+      valueStyle: (mono ? ZendTextStyles.tabularNumeric : const TextStyle())
+          .copyWith(
+            fontFamily: 'Geist',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: valueColor ?? zt.textPrimary,
           ),
-          const SizedBox(width: 16),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: mono
-                  ? ZendTextStyles.tabularNumeric.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: valueColor ?? zt.textPrimary,
-                    )
-                  : TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: valueColor ?? zt.textPrimary,
-                    ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -732,23 +699,17 @@ class _BankSendReceiptSheetState extends State<_BankSendReceiptSheet> {
                       const SizedBox(height: 28),
 
                       // ── Details card ──
-                      Container(
-                        decoration: BoxDecoration(
-                          color: zt.bgSecondary,
-                          borderRadius: BorderRadius.circular(ZendRadii.xxl),
-                        ),
+                      ZendReceiptPaper(
                         child: Column(
                           children: [
                             // Account holder
                             if (accountName != null &&
                                 accountName.isNotEmpty) ...[
                               _DetailRow(label: 'To', value: accountName),
-                              Divider(color: zt.border, height: 1),
                             ],
                             // Bank
                             if (bankName.isNotEmpty) ...[
                               _DetailRow(label: 'Bank', value: bankName),
-                              Divider(color: zt.border, height: 1),
                             ],
                             // Account number
                             if (accountMasked != null &&
@@ -758,25 +719,21 @@ class _BankSendReceiptSheetState extends State<_BankSendReceiptSheet> {
                                 value: accountMasked,
                                 mono: true,
                               ),
-                              Divider(color: zt.border, height: 1),
                             ],
                             // Rail
                             _DetailRow(label: 'Rail', value: railLabel),
-                            Divider(color: zt.border, height: 1),
                             // Currency
                             if (fiatCurrency.isNotEmpty) ...[
                               _DetailRow(
                                 label: 'Currency',
                                 value: fiatCurrency,
                               ),
-                              Divider(color: zt.border, height: 1),
                             ],
                             // Date
                             _DetailRow(
                               label: 'Date',
                               value: _formatDate(createdAt),
                             ),
-                            Divider(color: zt.border, height: 1),
                             // Status
                             _DetailRow(
                               label: 'Status',

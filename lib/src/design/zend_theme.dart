@@ -10,10 +10,10 @@ ThemeData buildZendTheme() {
         displayColor: ZendColors.textPrimary,
       )
       .copyWith(
-        // Geist renders slightly looser than DM Sans/Instrument Serif at
-        // the same sizes — a small negative letterSpacing tightens tracking
-        // without looking cramped, at DISPLAY/HEADLINE/TITLE sizes (18px+)
-        // only. bodyLarge/bodyMedium/labelLarge below deliberately stay at
+        // Headings are w600 with the site's em-based tracking (see
+        // ZendTextStyles.trackingFor): −0.045em at 32+, −0.04em at 24-28
+        // and −0.025em at 18. w700 is kept for amounts.
+        // bodyLarge/bodyMedium/labelLarge below deliberately stay at
         // neutral (0) tracking: most small Text widgets across the app
         // (badges, timestamps, captions — many well under 12px) never set
         // their own letterSpacing, so they inherit whatever these three
@@ -25,39 +25,39 @@ ThemeData buildZendTheme() {
           fontFamily: 'Geist',
           fontSize: 56,
           height: 1.04,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -2.52,
           color: ZendColors.textPrimary,
         ),
         displayMedium: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 32,
           height: 1.08,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1.44,
           color: ZendColors.textPrimary,
         ),
         headlineMedium: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 28,
           height: 1.08,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1.12,
           color: ZendColors.textPrimary,
         ),
         headlineSmall: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 24,
           height: 1.1,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.96,
           color: ZendColors.textPrimary,
         ),
         titleLarge: const TextStyle(
           fontSize: 18,
           height: 1.2,
           fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
+          letterSpacing: -0.45,
           color: ZendColors.textPrimary,
         ),
         titleMedium: const TextStyle(
@@ -176,39 +176,39 @@ ThemeData buildZendDarkTheme() {
           fontFamily: 'Geist',
           fontSize: 56,
           height: 1.04,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -2.52,
           color: darkTextPrimary,
         ),
         displayMedium: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 32,
           height: 1.08,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1.44,
           color: darkTextPrimary,
         ),
         headlineMedium: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 28,
           height: 1.08,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1.12,
           color: darkTextPrimary,
         ),
         headlineSmall: const TextStyle(
           fontFamily: 'Geist',
           fontSize: 24,
           height: 1.1,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.96,
           color: darkTextPrimary,
         ),
         titleLarge: const TextStyle(
           fontSize: 18,
           height: 1.2,
           fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
+          letterSpacing: -0.45,
           color: darkTextPrimary,
         ),
         titleMedium: const TextStyle(

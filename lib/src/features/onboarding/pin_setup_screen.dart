@@ -202,7 +202,8 @@ class _PinSetupScreenState extends State<PinSetupScreen>
                       'Set your transfer PIN',
                       style: const TextStyle(
                         fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.12,
                         fontSize: 28,
                         color: ZendColors.textOnDeep,
                       ),

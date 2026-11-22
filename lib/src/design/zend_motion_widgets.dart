@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import '../core/zend_format.dart';
-import 'zend_link_card.dart' show ZendTicketBorder;
-import 'zend_mark.dart';
+import 'zend_drawn.dart';
 import 'zend_money.dart';
 import 'zend_tokens.dart';
 
@@ -143,10 +144,18 @@ class _SendCelebrationState extends State<_SendCelebration>
                         ),
                       ),
                     ),
+                    // A paper plane takes it away along a dashed trail
+                    // (zend-site's final section).
                     if (!reduced && markT > 0 && markT < 1)
-                      Transform.translate(
-                        offset: Offset((markT - 0.5) * 320, 0),
-                        child: const ZendMark(size: 64),
+                      IgnorePointer(
+                        child: CustomPaint(
+                          size: const Size(360, 260),
+                          painter: _PlaneFlightPainter(
+                            progress: ZendMotion.ease.transform(markT),
+                            plane: zt.textPrimary,
+                            trail: zt.faint,
+                          ),
+                        ),
                       ),
                     if (checkT > 0)
                       Transform.scale(
@@ -253,8 +262,8 @@ class _ZendPressScaleState extends State<ZendPressScale> {
       onPointerCancel: (_) => _set(false),
       child: AnimatedScale(
         scale: _down ? 0.97 : 1,
-        duration: ZendMotion.quick,
-        curve: ZendMotion.springSnappy,
+        duration: _down ? const Duration(milliseconds: 120) : ZendMotion.quick,
+        curve: _down ? ZendMotion.ease : ZendMotion.bounce,
         child: widget.child,
       ),
     );
@@ -367,8 +376,9 @@ class _ReceiveMomentState extends State<_ReceiveMoment>
     final reduced = ZendMotion.reduced(context);
     final note = widget.note?.trim();
     final emoji = note != null && isEmojiNote(note) ? note : null;
-    final textNote =
-        note != null && note.isNotEmpty && !isMediaNote(note) ? note : null;
+    final textNote = note != null && note.isNotEmpty && !isMediaNote(note)
+        ? note
+        : null;
     final label = '${widget.from} sent you ${formatMoney(widget.amount)}';
 
     return Semantics(
@@ -386,45 +396,47 @@ class _ReceiveMomentState extends State<_ReceiveMoment>
                 : t > 0.85
                 ? (1 - t) / 0.15
                 : 1.0;
-            final pop = reduced
-                ? 1.0
-                : 0.6 + 0.4 * ZendMotion.springSoft.transform(_seg(t, 0, 0.3));
             final counted = reduced
                 ? widget.amount
                 : widget.amount *
                       Curves.easeOutCubic.transform(_seg(t, 0.06, 0.42));
             final noteIn = reduced ? 1.0 : _seg(t, 0.3, 0.45);
-
-            Widget amount = FittedBox(
-              fit: BoxFit.scaleDown,
-              child: ZendLoudAmountText(
-                formatMoney(counted),
-                semanticsLabel: '',
-                style: ZendTextStyles.displayXl.copyWith(
-                  color: zt.textPrimary,
+            // The money arrives as a Zend note (zend-site's hero), landing
+            // with one soft overshoot and settling at its resting tilt.
+            final landT = reduced
+                ? 1.0
+                : ZendMotion.bounce.transform(_seg(t, 0, 0.32));
+            final noteWidth = math.min(
+              MediaQuery.sizeOf(context).width - 88,
+              340.0,
+            );
+            final amount = Transform.translate(
+              offset: Offset(0, (1 - landT) * 40),
+              child: Transform.rotate(
+                angle: (1 - landT) * 6 * math.pi / 180,
+                child: Transform.scale(
+                  scale: 0.5 + 0.5 * landT,
+                  child: ZendBanknote(
+                    width: noteWidth,
+                    legal: widget.viaLink ? 'MONEY LINK' : 'WORKS ANYWHERE',
+                    line: textNote == null ? null : '“$textNote”',
+                    amount: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: ZendLoudAmountText(
+                        formatMoney(counted),
+                        semanticsLabel: '',
+                        style: ZendTextStyles.displayXl.copyWith(
+                          fontSize: 60,
+                          letterSpacing: -60 * 0.055,
+                          color: ZendBanknote.ink,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             );
-            if (widget.viaLink) {
-              amount = DecoratedBox(
-                decoration: ShapeDecoration(
-                  shape: ZendTicketBorder(
-                    side: BorderSide(color: zt.textPrimary, width: 1.5),
-                    radius: 24,
-                    notchRadius: 12,
-                    cut: 26,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 24,
-                  ),
-                  child: amount,
-                ),
-              );
-            }
-
             return Opacity(
               opacity: opacity.clamp(0.0, 1.0),
               child: Material(
@@ -452,31 +464,20 @@ class _ReceiveMomentState extends State<_ReceiveMoment>
                               color: zt.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Transform.scale(scale: pop, child: amount),
-                          if (emoji != null || textNote != null)
+                          const SizedBox(height: 20),
+                          amount,
+                          if (emoji != null)
                             Opacity(
                               opacity: noteIn,
                               child: Transform.translate(
                                 offset: Offset(0, (1 - noteIn) * 12),
                                 child: Padding(
                                   padding: const EdgeInsets.only(top: 20),
-                                  child: emoji != null
-                                      ? ZendEmojiTile(
-                                          emoji,
-                                          size: 64,
-                                          burst: !reduced,
-                                        )
-                                      : Text(
-                                          '“$textNote”',
-                                          textAlign: TextAlign.center,
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: ZendTextStyles.body.copyWith(
-                                            fontSize: 18,
-                                            color: zt.textPrimary,
-                                          ),
-                                        ),
+                                  child: ZendEmojiTile(
+                                    emoji,
+                                    size: 64,
+                                    burst: !reduced,
+                                  ),
                                 ),
                               ),
                             ),
@@ -520,4 +521,183 @@ class _Ripple extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Fades [child] in while it rises 24px into place, once, after [delay]
+/// (zend-site's `rise`, 1s on the house curve). Stagger a column by giving
+/// each piece a later delay: 0, 120, 240, 340ms reads as one gesture. Shows
+/// at rest straight away under Reduce Motion.
+class ZendRise extends StatefulWidget {
+  const ZendRise({
+    super.key,
+    required this.child,
+    this.delay = Duration.zero,
+    this.duration = const Duration(milliseconds: 1000),
+    this.distance = 24,
+  });
+
+  final Widget child;
+  final Duration delay;
+  final Duration duration;
+  final double distance;
+
+  @override
+  State<ZendRise> createState() => _ZendRiseState();
+}
+
+class _ZendRiseState extends State<ZendRise>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.delay + widget.duration,
+  );
+  late final Animation<double> _t = CurvedAnimation(
+    parent: _c,
+    curve: Interval(
+      widget.delay.inMicroseconds / _c.duration!.inMicroseconds,
+      1,
+      curve: ZendMotion.ease,
+    ),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (ZendMotion.reduced(context)) {
+      _c.value = 1;
+    } else if (!_c.isAnimating && _c.value == 0) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _t,
+      builder: (context, child) => Opacity(
+        opacity: _t.value,
+        child: Transform.translate(
+          offset: Offset(0, widget.distance * (1 - _t.value)),
+          child: child,
+        ),
+      ),
+      child: widget.child,
+    );
+  }
+}
+
+/// Swaps its text with zend-site's `swap`: the new value comes up 0.18em
+/// out of a 6px blur as it fades in. Use it where an amount or label
+/// changes in place (a balance after a currency switch). Plain under
+/// Reduce Motion.
+class ZendBlurSwap extends StatelessWidget {
+  const ZendBlurSwap({super.key, required this.child, required this.swapKey});
+
+  final Widget child;
+
+  /// Changes whenever the shown value changes (the formatted string).
+  final Object swapKey;
+
+  @override
+  Widget build(BuildContext context) {
+    if (ZendMotion.reduced(context)) return child;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 600),
+      switchInCurve: ZendMotion.ease,
+      switchOutCurve: const Threshold(0),
+      layoutBuilder: (current, previous) =>
+          Stack(alignment: Alignment.center, children: [?current]),
+      transitionBuilder: (child, anim) => AnimatedBuilder(
+        animation: anim,
+        builder: (context, c) {
+          final t = anim.value;
+          return Opacity(
+            opacity: t.clamp(0.0, 1.0),
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(
+                sigmaX: 3 * (1 - t),
+                sigmaY: 3 * (1 - t),
+              ),
+              child: FractionalTranslation(
+                translation: Offset(0, 0.18 * (1 - t)),
+                child: c,
+              ),
+            ),
+          );
+        },
+        child: child,
+      ),
+      child: KeyedSubtree(key: ValueKey(swapKey), child: child),
+    );
+  }
+}
+
+/// The send celebration's paper plane: flies a curve up and off to the top
+/// right, drawing a dashed trail behind it that fades as it goes.
+class _PlaneFlightPainter extends CustomPainter {
+  _PlaneFlightPainter({
+    required this.progress,
+    required this.plane,
+    required this.trail,
+  });
+
+  final double progress;
+  final Color plane, trail;
+
+  // A cubic from below left of centre, looping up past the amount.
+  static const _p0 = Offset(-0.45, 0.35);
+  static const _p1 = Offset(-0.1, 0.55);
+  static const _p2 = Offset(0.05, -0.45);
+  static const _p3 = Offset(0.6, -0.4);
+
+  static Offset _at(double t) {
+    final u = 1 - t;
+    return _p0 * (u * u * u) +
+        _p1 * (3 * u * u * t) +
+        _p2 * (3 * u * t * t) +
+        _p3 * (t * t * t);
+  }
+
+  static Offset _tangent(double t) {
+    final u = 1 - t;
+    return (_p1 - _p0) * (3 * u * u) +
+        (_p2 - _p1) * (6 * u * t) +
+        (_p3 - _p2) * (3 * t * t);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Offset px(Offset o) => Offset(
+      size.width / 2 + o.dx * size.width,
+      size.height / 2 + o.dy * size.height,
+    );
+    final fade = progress > 0.8 ? (1 - progress) / 0.2 : 1.0;
+    final dash = Paint()
+      ..color = trail.withValues(alpha: 0.8 * fade)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2;
+    // Dashes every few percent of the way, up to the plane.
+    for (var t = 0.0; t < progress - 0.03; t += 0.035) {
+      final a = px(_at(t)), b = px(_at(math.min(t + 0.012, progress)));
+      canvas.drawLine(a, b, dash);
+    }
+    final d = _tangent(progress);
+    paintZendPaperPlane(
+      canvas,
+      at: px(_at(progress)),
+      angle: math.atan2(d.dy * size.height, d.dx * size.width),
+      color: plane.withValues(alpha: fade),
+      scale: 1.8,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PlaneFlightPainter old) =>
+      old.progress != progress || old.plane != plane || old.trail != trail;
 }

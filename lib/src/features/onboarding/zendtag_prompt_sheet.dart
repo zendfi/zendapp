@@ -8,6 +8,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../design/zend_modal.dart';
+import '../../design/zend_drawn.dart';
 
 /// Offers a zendtag to a user whose handle is still their email address.
 ///
@@ -199,13 +200,19 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              // The tag being written on a name sticker as it's typed.
+              Center(
+                child: ZendNameSticker(handle: '@${tag.isEmpty ? 'you' : tag}'),
+              ),
+              const SizedBox(height: 24),
               Text(
                 widget.change ? 'Change your Zend tag' : 'Want a zendtag?',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.96,
                   color: zt.textPrimary,
                 ),
               ),
@@ -297,10 +304,7 @@ class _ZendtagPromptSheetState extends State<_ZendtagPromptSheet> {
                   onPressed: _busy ? null : _neverAskAgain,
                   child: Text(
                     "Don't ask again — use my email",
-                    style: TextStyle(
-                      color: zt.textSecondary,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: zt.textSecondary, fontSize: 13),
                   ),
                 ),
             ],

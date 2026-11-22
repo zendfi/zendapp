@@ -398,7 +398,8 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.55,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -541,9 +542,7 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                       ZendRadii.pill,
                                     ),
                                     border: r.reactedByMe
-                                        ? Border.all(
-                                            color: zt.accent,
-                                          )
+                                        ? Border.all(color: zt.accent)
                                         : null,
                                   ),
                                   child: Row(
@@ -559,7 +558,9 @@ class _ActivityCommentSheetState extends State<_ActivityCommentSheet> {
                                         style: ZendTextStyles.tabularNumeric
                                             .copyWith(
                                               fontSize: 11,
-                                              color: r.reactedByMe ? zt.onAccent : zt.textSecondary,
+                                              color: r.reactedByMe
+                                                  ? zt.onAccent
+                                                  : zt.textSecondary,
                                             ),
                                       ),
                                     ],
@@ -1012,15 +1013,10 @@ class _CommentSheetReactionChipState extends State<CommentSheetReactionChip> {
           height: 52,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: widget.selected
-                ? zt.bgSecondary
-                : zt.bgSecondary,
+            color: widget.selected ? zt.bgSecondary : zt.bgSecondary,
             borderRadius: BorderRadius.circular(ZendRadii.lg),
             border: widget.selected
-                ? Border.all(
-                    color: zt.accent,
-                    width: 1.5,
-                  )
+                ? Border.all(color: zt.accent, width: 1.5)
                 : null,
           ),
           child: Text(widget.emoji, style: const TextStyle(fontSize: 26)),

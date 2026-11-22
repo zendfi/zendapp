@@ -217,7 +217,8 @@ class _DeviceUnlockScreenState extends State<DeviceUnlockScreen>
                 'Unlock Zend',
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -1.12,
                   fontSize: 28,
                   color: ZendColors.textOnDeep,
                 ),

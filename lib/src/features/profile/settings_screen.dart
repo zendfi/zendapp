@@ -63,7 +63,8 @@ class SettingsScreen extends StatelessWidget {
                       'Settings',
                       style: TextStyle(
                         fontFamily: 'Geist',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.96,
                         fontSize: 24,
                         color: zt.textPrimary,
                       ),
@@ -413,19 +414,9 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zt = ZendTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'Geist',
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: zt.textSecondary,
-        ),
-      ),
-    );
+    // Same type as the kicker, without the dot: Settings has a run of
+    // these and the orange stays scarce.
+    return ZendKicker(label, dot: false);
   }
 }
 

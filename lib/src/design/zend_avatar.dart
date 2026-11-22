@@ -34,7 +34,9 @@ class ZendAvatar extends StatelessWidget {
   /// [initials] when omitted.
   final String? seed;
 
-  /// Generated-avatar colour for [seed]; stable per person. See [ZendTint].
+  /// The person's strong hue for [seed], for a fill with white text on it
+  /// (the shared receipt card). Their avatar disc uses the softer
+  /// [ZendTint.pastel]; their name on a card uses [ZendTint.name].
   static Color colorFor(String seed) => ZendTint.of(seed).solid;
 
   final double radius;
@@ -168,25 +170,22 @@ class _FallbackCircle extends StatelessWidget {
     final tint = backgroundColor == null && hasInitials
         ? ZendTint.of(seed ?? initials!, isDark: zt.isDark)
         : null;
-    final bgColor = backgroundColor ?? tint?.solid ?? zt.bgSecondary;
+    final bgColor = backgroundColor ?? tint?.pastel ?? zt.bgSecondary;
 
+    // Flat pastel disc with an ink initial, as on zend-site.
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-        gradient: tint?.gradient,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: hasInitials
           ? Text(
               initials![0].toUpperCase(),
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontSize: radius * 0.72,
+                fontSize: radius * 0.84,
                 fontWeight: FontWeight.w600,
-                color: tint?.onSolid ?? _contrastColor(bgColor),
+                color: tint?.onPastel ?? _contrastColor(bgColor),
                 height: 1.0,
               ),
             )

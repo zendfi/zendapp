@@ -128,7 +128,8 @@ class _RecoveryPhraseScreenState extends State<RecoveryPhraseScreen> {
           'Recovery phrase',
           style: TextStyle(
             fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
             fontSize: 20,
             color: zt.textPrimary,
           ),
@@ -185,7 +186,8 @@ class _PinStage extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Geist',
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -1.04,
               fontSize: 26,
               color: zt.textPrimary,
             ),
@@ -280,7 +282,8 @@ class _ConfirmStage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.55,
                     fontSize: 22,
                     color: zt.textPrimary,
                   ),

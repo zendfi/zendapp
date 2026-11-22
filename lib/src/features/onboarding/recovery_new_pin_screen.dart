@@ -186,7 +186,8 @@ class _RecoveryNewPinScreenState extends State<RecoveryNewPinScreen>
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -1.04,
                   fontSize: 26,
                   color: ZendColors.textOnDeep,
                 ),

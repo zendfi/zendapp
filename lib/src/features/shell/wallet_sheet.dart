@@ -18,6 +18,7 @@ import '../send/withdraw_sheet.dart';
 import 'zend_entry_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../design/zend_modal.dart';
+import '../../design/zend_motion_widgets.dart' show ZendBlurSwap;
 import '../../core/zend_format.dart';
 
 /// Wallet — ZEND BETA spec §7-9: reached only by tapping the balance on
@@ -150,21 +151,35 @@ class _WalletSheetState extends State<WalletSheet> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: model.toggleBalanceHidden,
-                            child: Text(
-                              model.balanceHidden
+                          Builder(
+                            builder: (context) {
+                              final shown = model.balanceHidden
                                   ? '••••••'
                                   : model.balanceKnown
                                   ? formatBalance(model.displayBalance)
-                                  : '—',
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 40,
-                                fontWeight: FontWeight.w700,
-                                color: zt.textPrimary,
-                              ),
-                            ),
+                                  : '—';
+                              // Hiding, revealing or a new figure comes up
+                              // out of a blur (zend-site's amount swap).
+                              return GestureDetector(
+                                onTap: model.toggleBalanceHidden,
+                                child: ZendBlurSwap(
+                                  swapKey: shown,
+                                  child: Text(
+                                    shown,
+                                    style: TextStyle(
+                                      fontFamily: 'Geist',
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -40 * 0.05,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                      color: zt.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -333,7 +348,8 @@ class _WalletSheetState extends State<WalletSheet> {
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.45,
                 color: zt.textPrimary,
               ),
             ),

@@ -182,7 +182,8 @@ class _RequestView extends StatelessWidget {
           'Forgot your PIN?',
           style: TextStyle(
             fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -1.12,
             fontSize: 28,
             color: ZendColors.textOnDeep,
           ),
@@ -272,7 +273,8 @@ class _OtpView extends StatelessWidget {
           'Check your inbox',
           style: TextStyle(
             fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -1.12,
             fontSize: 28,
             color: ZendColors.textOnDeep,
           ),

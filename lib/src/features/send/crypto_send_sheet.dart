@@ -78,16 +78,13 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
-        );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.linear));
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadChains());
   }
@@ -516,7 +513,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 28,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.12,
                 color: zt.textPrimary,
               ),
             ),
@@ -594,9 +592,7 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(ZendRadii.md),
                             border: isSelected
-                                ? Border.all(
-                                    color: zt.accent,
-                                  )
+                                ? Border.all(color: zt.accent)
                                 : null,
                           ),
                           child: Row(
@@ -734,7 +730,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 22,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.55,
                 color: zt.textPrimary,
               ),
             ),
@@ -922,7 +919,8 @@ class _CryptoSendSheetState extends State<CryptoSendSheet>
                 'Oops',
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -1.44,
                   fontSize: 32,
                   color: zt.textPrimary,
                 ),
@@ -999,7 +997,7 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
     );
     _checkScale = CurvedAnimation(
       parent: _checkController,
-      curve: Curves.elasticOut,
+      curve: ZendMotion.bounce,
     );
     _checkController.forward();
   }
@@ -1040,7 +1038,8 @@ class _CryptoSuccessStageState extends State<_CryptoSuccessStage>
               'Sent!',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.8,
                 fontSize: 40,
                 color: zt.textPrimary,
               ),

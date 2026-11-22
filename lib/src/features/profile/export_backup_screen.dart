@@ -112,7 +112,8 @@ class _ExportBackupScreenState extends State<ExportBackupScreen> {
           'Export backup',
           style: TextStyle(
             fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
             fontSize: 20,
             color: zt.textPrimary,
           ),
@@ -170,7 +171,8 @@ class _PinStage extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Geist',
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -1.04,
               fontSize: 26,
               color: zt.textPrimary,
             ),
@@ -257,7 +259,8 @@ class _WarningStage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.55,
                     fontSize: 22,
                     color: zt.textPrimary,
                   ),
@@ -342,7 +345,8 @@ class _DoneStage extends StatelessWidget {
             'Backup exported',
             style: TextStyle(
               fontFamily: 'Geist',
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -1.12,
               fontSize: 28,
               color: zt.textPrimary,
             ),

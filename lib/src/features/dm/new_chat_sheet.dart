@@ -196,7 +196,8 @@ class _NewChatSheetState extends State<NewChatSheet> {
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
                     color: zt.textPrimary,
                   ),
                 ),

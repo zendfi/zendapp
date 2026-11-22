@@ -136,7 +136,8 @@ class _DmMessageInfoSheetState extends State<_DmMessageInfoSheet> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.45,
                       color: zt.textPrimary,
                     ),
                   ),

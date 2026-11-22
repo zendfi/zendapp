@@ -552,8 +552,8 @@ class _Wordmark extends StatelessWidget {
         style: TextStyle(
           fontFamily: 'Geist',
           fontSize: 26,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -1.04,
           color: zt.textPrimary,
         ),
       ),

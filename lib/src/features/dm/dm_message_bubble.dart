@@ -25,10 +25,10 @@ import '../../design/zend_note.dart';
 // against, neither has a beak anymore.
 
 /// Outer (far) corner — large, fully rounded.
-const double _kOuter = 18.0;
+const double _kOuter = 22.0;
 
 /// Inner (joining) corner — tight, visually fuses grouped bubbles together.
-const double _kInner = 5.0;
+const double _kInner = 6.0;
 
 /// Returns the per-corner [BorderRadius] for a bubble at a given position in
 /// its sender group.
@@ -74,10 +74,15 @@ class _BubbleShape extends StatelessWidget {
     required this.color,
     this.borderColor,
     this.borderWidth = 0,
+    this.shadow = const [],
   });
 
   final bool isMe, isFirst, isLast;
   final Widget child;
+
+  /// Money bubbles lift off the canvas ([ZendShadows.lift]); text bubbles
+  /// stay flat.
+  final List<BoxShadow> shadow;
 
   /// Flat fill. There is deliberately no gradient option — bubbles are a
   /// single solid colour.
@@ -99,6 +104,7 @@ class _BubbleShape extends StatelessWidget {
         border: borderColor != null && borderWidth > 0
             ? Border.all(color: borderColor!, width: borderWidth)
             : null,
+        boxShadow: shadow,
       ),
       child: child,
     );
@@ -267,11 +273,11 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
   }
 
   void _onTapUp(TapUpDetails _) {
-    // Spring back with elastic overshoot on release
+    // Spring back with one soft overshoot on release
     _pressCtrl.animateTo(
       0,
       duration: const Duration(milliseconds: 380),
-      curve: Curves.elasticOut,
+      curve: ZendMotion.bounce,
     );
     // Manual double-tap detection — replaces onDoubleTap to avoid
     // gesture arena delay that made swipe-to-reply feel stuck.
@@ -290,7 +296,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     _pressCtrl.animateTo(
       0,
       duration: const Duration(milliseconds: 300),
-      curve: Curves.elasticOut,
+      curve: ZendMotion.bounce,
     );
   }
 
@@ -501,10 +507,12 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
         children: [
           child,
           Positioned(
-            bottom: -10,
+            // The disc is 6px taller than the old chip (its 3px canvas ring),
+            // so it hangs 2px further to show the same amount below the bubble.
+            bottom: -12,
             // Anchor to the bubble's near corner: left for received, right for sent.
-            left: widget.isMe ? null : 4,
-            right: widget.isMe ? 4 : null,
+            left: widget.isMe ? null : 8,
+            right: widget.isMe ? 8 : null,
             child: _ReactionRow(
               reactions: widget.message.reactions,
               onTap: (emoji) =>
@@ -739,7 +747,9 @@ class _TextBubble extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: 'Geist',
                                   fontSize: 15.5,
-                                  color: isMe ? zt.onBubbleSent : zt.textPrimary,
+                                  color: isMe
+                                      ? zt.onBubbleSent
+                                      : zt.textPrimary,
                                   height: 1.35,
                                   // Message content is arbitrary user text and
                                   // can be pure emoji (e.g. "🔥🔥🔥") — without
@@ -1009,8 +1019,9 @@ class DmPaymentBubble extends StatelessWidget {
     final amountStr = pd?.amountUsdc ?? '0.00';
     final note = pd?.note;
 
-    // Money bubbles are cards on the chat canvas: yours carry a solid ink
-    // outline, theirs sit plain, so it's clear at a glance who paid.
+    // Money bubbles are paper cards lifted off the chat canvas (zend-site's
+    // `.bubble-pay`): yours carry a solid ink outline, theirs sit plain, so
+    // it's clear at a glance who paid.
     final bg = zt.bubbleReceived;
     final sentBorder = isMe ? Border.all(color: zt.accent, width: 1.5) : null;
     final labelColor = zt.textSecondary;
@@ -1026,8 +1037,8 @@ class DmPaymentBubble extends StatelessWidget {
         Flexible(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minWidth: 110,
-              maxWidth: MediaQuery.of(context).size.width * 0.62,
+              minWidth: 150,
+              maxWidth: MediaQuery.of(context).size.width * 0.68,
             ),
             child: _BubbleShape(
               isMe: isMe,
@@ -1036,8 +1047,9 @@ class DmPaymentBubble extends StatelessWidget {
               color: bg,
               borderColor: sentBorder != null ? zt.accent : null,
               borderWidth: sentBorder != null ? 1.5 : 0,
+              shadow: ZendShadows.lift(zt),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(13, 10, 13, 9),
+                padding: const EdgeInsets.fromLTRB(18, 13, 18, 11),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -1047,18 +1059,20 @@ class DmPaymentBubble extends StatelessWidget {
                       children: [
                         Icon(
                           isMe
-                              ? PhosphorIconsRegular.arrowSquareUp
-                              : PhosphorIconsRegular.arrowSquareDown,
+                              ? PhosphorIconsBold.arrowUp
+                              : PhosphorIconsBold.arrowDown,
                           size: 11,
                           color: iconColor,
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 4),
                         Text(
                           isMe ? 'sent' : 'received',
-                          style: ZendTextStyles.tabularNumeric.copyWith(
-                            fontSize: 10,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                             color: labelColor,
-                            letterSpacing: 0.4,
+                            letterSpacing: 0.55,
                           ),
                         ),
                       ],
@@ -1072,10 +1086,14 @@ class DmPaymentBubble extends StatelessWidget {
                       ZendEmojiTile(note!.trim(), size: 44, burst: !isMe),
                       const SizedBox(height: 8),
                     ] else
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                     ZendAmount(
                       double.tryParse(amountStr) ?? 0,
-                      style: ZendTextStyles.amountM.copyWith(fontSize: 28),
+                      style: ZendTextStyles.amountM.copyWith(
+                        fontSize: 36,
+                        height: 1.0,
+                        letterSpacing: -36 * 0.055,
+                      ),
                       direction: isMe
                           ? MoneyDirection.outgoing
                           : MoneyDirection.incoming,
@@ -1084,12 +1102,13 @@ class DmPaymentBubble extends StatelessWidget {
                         note.isNotEmpty &&
                         note != 'vibe' &&
                         !isMediaNote(note)) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 8),
                       Text(
                         note,
                         style: TextStyle(
                           fontFamily: 'Geist',
-                          fontSize: 12,
+                          fontSize: 15,
+                          height: 1.3,
                           color: noteColor,
                           decoration: TextDecoration.none,
                           decorationColor: Colors.transparent,
@@ -1098,15 +1117,12 @@ class DmPaymentBubble extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        _formatTime(message.createdAt),
-                        style: ZendTextStyles.tabularNumeric.copyWith(
-                          fontSize: 10,
-                          color: labelColor,
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 12,
+                        color: zt.faint,
                       ),
                     ),
                   ],
@@ -1380,38 +1396,52 @@ class _ReactionRow extends StatelessWidget {
       onTap(emoji);
     }
 
+    // zend-site's `.bubble-reaction`: a paper disc punched out of the
+    // canvas by a 3px ring in the canvas colour, with a small soft shadow.
+    // A shared reaction stretches into a pill to fit its count; yours gets a
+    // thin ink outline.
     return Wrap(
-      spacing: 3,
-      runSpacing: 3,
+      spacing: 2,
+      runSpacing: 2,
       children: reactions.map((r) {
         final decoration = BoxDecoration(
-          color: r.reactedByMe
-              ? zt.accent.withValues(alpha: zt.isDark ? 0.28 : 0.16)
-              : zt.chatBg,
+          color: zt.bubbleReceived,
           borderRadius: BorderRadius.circular(ZendRadii.pill),
-          border: Border.all(
-            color: r.reactedByMe
-                ? zt.accent.withValues(alpha: 0.6)
-                : zt.border.withValues(alpha: 0.5),
-            width: r.reactedByMe ? 1.2 : 1.0,
-          ),
-          // No drop shadow — the border alone separates the chip from the
-          // bubble it sits against.
+          border: Border.all(color: zt.chatBg, width: 3),
+          boxShadow: zt.isDark
+              ? const []
+              : const [
+                  BoxShadow(
+                    color: Color(0x590F0F0E),
+                    offset: Offset(0, 6),
+                    blurRadius: 12,
+                    spreadRadius: -6,
+                  ),
+                ],
         );
+        final mine = r.reactedByMe
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(ZendRadii.pill),
+                border: Border.all(color: zt.accent, width: 1.2),
+              )
+            : null;
 
         return GestureDetector(
           onTap: () => handleTap(r.emoji),
           child: Container(
-            height: 24,
-            padding: EdgeInsets.symmetric(horizontal: r.count > 1 ? 7 : 6),
+            height: 30,
+            constraints: const BoxConstraints(minWidth: 30),
+            padding: EdgeInsets.symmetric(horizontal: r.count > 1 ? 8 : 0),
+            alignment: Alignment.center,
             decoration: decoration,
+            foregroundDecoration: mine,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   r.emoji,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     decoration: TextDecoration.none,
                     decorationColor: Colors.transparent,
                   ),
@@ -1466,7 +1496,7 @@ class _HeartPopupState extends State<_HeartPopup>
         tween: Tween(
           begin: 0.0,
           end: 1.3,
-        ).chain(CurveTween(curve: Curves.elasticOut)),
+        ).chain(CurveTween(curve: ZendMotion.ease)),
         weight: 50,
       ),
       TweenSequenceItem(

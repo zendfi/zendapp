@@ -101,16 +101,13 @@ class _DevPaymentModalSheetState extends State<DevPaymentModalSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
-        );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.linear));
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
@@ -629,7 +626,8 @@ class _DevConfirmStage extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Geist',
               fontSize: 22,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.55,
               color: zt.textPrimary,
             ),
           ),
@@ -711,7 +709,8 @@ class _DevTerminalStage extends StatelessWidget {
               title,
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.12,
                 fontSize: 28,
                 color: zt.textPrimary,
               ),

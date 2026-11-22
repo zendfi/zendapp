@@ -286,7 +286,8 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.55,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -406,9 +407,7 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                                       ZendRadii.pill,
                                     ),
                                     border: r.reactedByMe
-                                        ? Border.all(
-                                            color: zt.accent,
-                                          )
+                                        ? Border.all(color: zt.accent)
                                         : null,
                                   ),
                                   child: Row(
@@ -424,7 +423,9 @@ class _AppCardSheetState extends State<_AppCardSheet> {
                                         style: ZendTextStyles.tabularNumeric
                                             .copyWith(
                                               fontSize: 11,
-                                              color: r.reactedByMe ? zt.onAccent : zt.textSecondary,
+                                              color: r.reactedByMe
+                                                  ? zt.onAccent
+                                                  : zt.textSecondary,
                                             ),
                                       ),
                                     ],

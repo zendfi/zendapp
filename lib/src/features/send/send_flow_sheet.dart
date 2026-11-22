@@ -143,16 +143,13 @@ class _SendFlowSheetState extends State<SendFlowSheet>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _shakeAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
-        );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: -12), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12, end: 12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12, end: -8), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8, end: 6), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.linear));
 
     final email = widget.prefilledEmail;
     if (email != null) {
@@ -1143,7 +1140,8 @@ class _RecipientStageState extends State<_RecipientStage> {
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 28,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -1.12,
                       color: zt.textPrimary,
                     ),
                   ),
@@ -1673,7 +1671,7 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
     );
     _checkScale = CurvedAnimation(
       parent: _checkController,
-      curve: Curves.elasticOut,
+      curve: ZendMotion.bounce,
     );
     _checkController.forward();
   }
@@ -1734,7 +1732,8 @@ class _EmailIntentSuccessStageState extends State<_EmailIntentSuccessStage>
               'Sent!',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.62,
                 fontSize: 36,
                 color: zt.textPrimary,
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/zend_state.dart';
+import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import 'zapp_sheet.dart';
 
@@ -196,15 +197,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontFamily: 'Geist',
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: zt.textSecondary,
-      ),
-    ),
+    child: ZendKicker(text, padding: EdgeInsets.zero),
   );
 }
 

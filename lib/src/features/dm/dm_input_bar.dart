@@ -443,7 +443,7 @@ class _DmInputBarState extends State<DmInputBar>
                             scale: Tween<double>(begin: 0.7, end: 1.0).animate(
                               CurvedAnimation(
                                 parent: anim,
-                                curve: Curves.elasticOut,
+                                curve: ZendMotion.bounce,
                               ),
                             ),
                             child: FadeTransition(opacity: anim, child: child),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'zend_tint.dart';
 import 'zend_tokens.dart';
+import 'zend_drawn.dart';
 
 /// The Link silhouette: a rounded ticket with a half-round notch in each
 /// side and the top-right corner cut on the same diagonal as the Zend mark.
@@ -49,14 +50,22 @@ class ZendTicketBorder extends OutlinedBorder {
       ..lineTo(r, t + c)
       ..lineTo(r, ny - n)
       // Right notch, curving inward.
-      ..arcToPoint(Offset(r, ny + n), radius: Radius.circular(n), clockwise: false)
+      ..arcToPoint(
+        Offset(r, ny + n),
+        radius: Radius.circular(n),
+        clockwise: false,
+      )
       ..lineTo(r, b - rad)
       ..arcToPoint(Offset(r - rad, b), radius: Radius.circular(rad))
       ..lineTo(l + rad, b)
       ..arcToPoint(Offset(l, b - rad), radius: Radius.circular(rad))
       ..lineTo(l, ny + n)
       // Left notch.
-      ..arcToPoint(Offset(l, ny - n), radius: Radius.circular(n), clockwise: false)
+      ..arcToPoint(
+        Offset(l, ny - n),
+        radius: Radius.circular(n),
+        clockwise: false,
+      )
       ..lineTo(l, t + rad)
       ..arcToPoint(Offset(l + rad, t), radius: Radius.circular(rad))
       ..close();
@@ -153,14 +162,7 @@ class ZendLinkCard extends StatelessWidget {
           right: 4,
           child: Semantics(
             label: 'Not collected yet',
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: zt.signal,
-                shape: BoxShape.circle,
-              ),
-            ),
+            child: const ZendPingDot(),
           ),
         ),
       ],

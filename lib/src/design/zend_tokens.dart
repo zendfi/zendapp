@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 ///
 /// Identity: warm neutrals, ink as the action colour, and colour that comes
 /// from people (see `zend_tint.dart`), not from the brand. The one brand hue
-/// left is [signal], kept to dots and badges.
+/// left is [signal], kept to dots, badges and thin drawn lines (a stamp, an
+/// underline), never fills or body text. Shared with zend-site's globals.css.
 class ZendColors {
   /// Barely-warm off-white page, never pure #FFF.
   static const bgPrimary = Color(0xFFF2F1ED);
@@ -38,12 +39,16 @@ class ZendColors {
   static const negative = Color(0xFF0F0F0E);
   static const destructive = Color(0xFFD92D20);
 
-  /// The single small signal: unread badges, notification dots, and Links
-  /// nobody has collected yet. Dots and badges only, never fills or text.
+  /// The single small signal: unread badges, notification dots, Links
+  /// nobody has collected yet, and thin drawn lines (stamps, underlines).
+  /// Never fills or body text.
   static const signal = Color(0xFFFF4D1A);
   static const onSignal = Color(0xFF0F0F0E);
 
   static const border = Color(0xFFE2E0DA);
+
+  /// Third text level: timestamps, footnotes, meta. The site's `--faint`.
+  static const faint = Color(0xFFA19F99);
 
   /// Permanently dark surfaces (PIN setup, QR, onboarding success).
   static const bgDeep = Color(0xFF111111);
@@ -61,6 +66,7 @@ class ZendTheme {
     required this.bubbleReceived,
     required this.textPrimary,
     required this.textSecondary,
+    required this.faint,
     required this.border,
     required this.accent,
     required this.onAccent,
@@ -88,6 +94,10 @@ class ZendTheme {
 
   final Color textPrimary;
   final Color textSecondary;
+
+  /// Third text level for timestamps, footnotes and meta lines. Use it
+  /// instead of [textSecondary] at reduced opacity.
+  final Color faint;
   final Color border;
 
   /// Ink: the primary action fill, active states, selected chips. Soft black
@@ -110,8 +120,8 @@ class ZendTheme {
   final Color destructive;
 
   /// The one small brand signal: unread badges, notification dots, Links
-  /// nobody has collected yet. Keep it to dots and badges (well under 1% of
-  /// the screen) so it stays a signal.
+  /// nobody has collected yet, and thin drawn lines (a stamp ring, an
+  /// underline). Never fills or body text, so it stays a signal.
   final Color signal;
 
   /// Text on a [signal] badge.
@@ -133,6 +143,7 @@ class ZendTheme {
     // Soft black (17:1 on the page) and a near-neutral grey (6:1).
     textPrimary: Color(0xFF0F0F0E),
     textSecondary: Color(0xFF5C5B57),
+    faint: Color(0xFFA19F99),
     border: Color(0xFFE2E0DA),
     accent: Color(0xFF0F0F0E),
     onAccent: Color(0xFFFFFEFC),
@@ -158,6 +169,7 @@ class ZendTheme {
     // Off-white (19:1 on black) and a neutral grey (8.3:1).
     textPrimary: Color(0xFFF7F6F3),
     textSecondary: Color(0xFFA3A3A0),
+    faint: Color(0xFF6E6E6A),
     border: Color(0xFF2A2A28),
     accent: Color(0xFFF7F6F3),
     onAccent: Color(0xFF0A0A0A),
@@ -223,9 +235,20 @@ class ZendSpacing {
 }
 
 class ZendMotion {
-  // Named presets — reuse these, don't tune curves per screen.
-  static const Curve springSoft = Curves.easeOutBack;
-  static const Curve springSnappy = Curves.easeOutCubic;
+  // Named presets — reuse these, don't tune curves per screen. Shared with
+  // zend-site (globals.css `--ease` and `--bounce`).
+
+  /// The house curve: fast out of the gate, long soft landing. Use for
+  /// nearly everything that moves.
+  static const Curve ease = Cubic(0.22, 1, 0.36, 1);
+
+  /// One gentle overshoot, then settled. For things that pop into place: a
+  /// check mark, a reaction, a bubble arriving, a button released. Never
+  /// for layout or page movement.
+  static const Curve bounce = Cubic(0.34, 1.56, 0.64, 1);
+
+  static const Curve springSoft = bounce;
+  static const Curve springSnappy = ease;
   static const Duration quick = Duration(milliseconds: 180);
   static const Duration standard = Duration(milliseconds: 280);
   static const Duration celebrate = Duration(milliseconds: 700);
@@ -244,6 +267,55 @@ class ZendMotion {
   static const Duration stageIn = Duration(milliseconds: 160);
   static const Duration stageOut = Duration(milliseconds: 90);
   static const Duration splash = Duration(milliseconds: 1400);
+}
+
+/// Long, soft shadows with a negative spread, so things read as paper lifted
+/// off the page rather than floating boxes. Shared with zend-site. Light mode
+/// only: on true black a shadow can't be seen, so dark mode gets none and
+/// surfaces separate by fill instead.
+class ZendShadows {
+  /// The ink button (site `.pill-ink`).
+  static List<BoxShadow> pill(ZendTheme zt) => zt.isDark
+      ? const []
+      : const [
+          BoxShadow(
+            color: Color(0x800F0F0E),
+            offset: Offset(0, 10),
+            blurRadius: 30,
+            spreadRadius: -12,
+          ),
+        ];
+
+  /// A card resting on the page: a payment bubble, a chip, a ticket.
+  static List<BoxShadow> lift(ZendTheme zt) => zt.isDark
+      ? const []
+      : const [
+          BoxShadow(
+            color: Color(0x660F0F0E),
+            offset: Offset(0, 14),
+            blurRadius: 28,
+            spreadRadius: -16,
+          ),
+        ];
+
+  /// A drawn object held up off the page: the Zend note, the stamp, the
+  /// receipt.
+  static List<BoxShadow> float(ZendTheme zt) => zt.isDark
+      ? const []
+      : const [
+          BoxShadow(
+            color: Color(0x730F0F0E),
+            offset: Offset(0, 34),
+            blurRadius: 60,
+            spreadRadius: -30,
+          ),
+          BoxShadow(
+            color: Color(0x330F0F0E),
+            offset: Offset(0, 12),
+            blurRadius: 24,
+            spreadRadius: -14,
+          ),
+        ];
 }
 
 class ZendTextStyles {
@@ -272,7 +344,7 @@ class ZendTextStyles {
     fontSize: 72,
     height: 1.0,
     fontWeight: FontWeight.w700,
-    letterSpacing: -3.2,
+    letterSpacing: -3.6,
     fontFeatures: _tabular,
   );
 
@@ -285,7 +357,7 @@ class ZendTextStyles {
         : n <= 8
         ? 60.0
         : 48.0;
-    return displayXl.copyWith(fontSize: size, letterSpacing: -size * 0.044);
+    return displayXl.copyWith(fontSize: size, letterSpacing: -size * 0.05);
   }
 
   /// 52/56 bold: receipt and send amount.
@@ -294,7 +366,7 @@ class ZendTextStyles {
     fontSize: 52,
     height: 56 / 52,
     fontWeight: FontWeight.w700,
-    letterSpacing: -2.2,
+    letterSpacing: -2.6,
     fontFeatures: _tabular,
   );
 
@@ -304,7 +376,7 @@ class ZendTextStyles {
     fontSize: 24,
     height: 28 / 24,
     fontWeight: FontWeight.w700,
-    letterSpacing: -0.8,
+    letterSpacing: -0.84,
     fontFeatures: _tabular,
   );
 
@@ -313,6 +385,48 @@ class ZendTextStyles {
     fontSize: 20,
     height: 26 / 20,
     fontWeight: FontWeight.w600,
+    letterSpacing: -0.5,
+  );
+
+  /// Screen and sheet headlines: 600 with tight tracking (−0.04em), the
+  /// site's `.section-title`. Headings are never 700; that weight is for
+  /// amounts.
+  static const headline = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 28,
+    height: 1.08,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -1.12,
+  );
+
+  /// The light second line of a two-weight headline ("Cash that works /
+  /// anywhere."). Pair with [headline] or a large w600 line at the same
+  /// size.
+  static const headlineSoft = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 28,
+    height: 1.08,
+    fontWeight: FontWeight.w300,
+    letterSpacing: -1.12,
+  );
+
+  /// Letter-spacing for a heading at [fontSize], in the site's em-based
+  /// scale: −0.045em at 32 and up, −0.04em from 24, −0.025em from 18, and
+  /// none below (tight tracking turns jagged at small sizes).
+  static double trackingFor(double fontSize) {
+    if (fontSize >= 32) return -0.045 * fontSize;
+    if (fontSize >= 24) return -0.04 * fontSize;
+    if (fontSize >= 18) return -0.025 * fontSize;
+    return 0;
+  }
+
+  /// Kicker label above a section: 14 w500, muted. Draw it with
+  /// `ZendKicker`, which adds the signal dot.
+  static const kicker = TextStyle(
+    fontFamily: 'Geist',
+    fontSize: 14,
+    height: 18 / 14,
+    fontWeight: FontWeight.w500,
   );
   static const body = TextStyle(
     fontFamily: 'Geist',

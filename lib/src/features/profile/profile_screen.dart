@@ -96,7 +96,8 @@ class ProfileScreen extends StatelessWidget {
                             zendtag.isNotEmpty ? zendtag : displayName,
                             style: TextStyle(
                               fontFamily: 'Geist',
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.45,
                               fontSize: 18,
                               color: zt.textPrimary,
                             ),
@@ -295,7 +296,8 @@ class _AvatarUploadButtonState extends State<_AvatarUploadButton> {
                 'Profile photo',
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.45,
                   fontSize: 18,
                   color: zt.textPrimary,
                 ),
@@ -515,7 +517,8 @@ Future<void> _confirmLogout(BuildContext context) async {
               'Log out?',
               style: TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.55,
                 fontSize: 22,
                 color: zt.textPrimary,
               ),

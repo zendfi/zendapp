@@ -23,6 +23,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
 import '../../core/zend_format.dart';
 import '../../design/zend_verified_badge.dart';
+import '../../design/zend_drawn.dart';
 
 class DmListScreen extends StatefulWidget {
   const DmListScreen({super.key});
@@ -379,7 +380,8 @@ class _DmListScreenState extends State<DmListScreen> {
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 26,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.04,
                         color: zt.textPrimary,
                       ),
                     ),
@@ -857,12 +859,8 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            PhosphorIconsRegular.chatCircleText,
-            size: 48,
-            color: zt.textSecondary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 12),
+          const ZendMoon(size: 96),
+          const SizedBox(height: 16),
           Text(
             'No chats yet',
             style: TextStyle(

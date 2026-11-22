@@ -10,6 +10,7 @@ import '../../design/zend_link_card.dart';
 import '../../design/zend_note.dart' show noteText;
 import '../../design/zend_tint.dart';
 import '../../design/zend_tokens.dart';
+import '../../design/zend_drawn.dart';
 import '../../services/zlink_service.dart';
 import 'cash_widgets.dart' show showCashCardSheet;
 
@@ -210,7 +211,8 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 26,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -1.04,
                         color: zt.textPrimary,
                       ),
                     ),
@@ -276,13 +278,20 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32),
-                        child: Text(
-                          'No links yet. Send money to anyone, even if they\'re not on Zend, and it shows up here.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            color: zt.textSecondary,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const ZendMoon(),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No links yet. Send money to anyone, even if they\'re not on Zend, and it shows up here.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                color: zt.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     )
@@ -336,6 +345,25 @@ class _LinkTile extends StatelessWidget {
     return usd == null ? 'Any amount' : formatMoney(usd.toDouble());
   }
 
+  /// What a finished link is stamped with; null while it's still open.
+  String? _stampWord() {
+    final status = link['status'] as String;
+    if (link['kind'] == 'give') {
+      return switch (status) {
+        'claimed' => 'Collected',
+        'returned' => 'Taken back',
+        'expired' => 'Returned',
+        _ => null,
+      };
+    }
+    return switch (status) {
+      'completed' => 'Done',
+      'cancelled' => 'Closed',
+      'expired' => 'Expired',
+      _ => null,
+    };
+  }
+
   String _subtitle() {
     final isGive = link['kind'] == 'give';
     final status = link['status'] as String;
@@ -381,7 +409,9 @@ class _LinkTile extends StatelessWidget {
     final tint = ZendTint.of(seed, isDark: zt.isDark);
     // A give Link nobody has opened yet carries the one signal dot.
     final waiting =
-        isGive && active && (link['uses_left'] ?? 1) == (link['uses_total'] ?? 1);
+        isGive &&
+        active &&
+        (link['uses_left'] ?? 1) == (link['uses_total'] ?? 1);
     return ZendLinkCard(
       seed: seed,
       waiting: waiting,
@@ -390,14 +420,14 @@ class _LinkTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: active ? tint.solid : zt.bgSecondary,
+            backgroundColor: active ? tint.pastel : zt.bgSecondary,
             child: Icon(
               cash
                   ? PhosphorIconsRegular.money
                   : isGive
                   ? PhosphorIconsRegular.gift
                   : PhosphorIconsRegular.handCoins,
-              color: active ? tint.onSolid : zt.textSecondary,
+              color: active ? tint.onPastel : zt.textSecondary,
               size: 20,
             ),
           ),
@@ -433,6 +463,18 @@ class _LinkTile extends StatelessWidget {
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else if (!active && _stampWord() != null)
+            // A finished link gets stamped with how it ended. Still in a
+            // list, so it doesn't replay the landing as rows scroll by.
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: ZendStamp(
+                label: _stampWord()!,
+                size: 58,
+                ring: 'ZEND • MONEY LINK • ZEND • MONEY LINK • ',
+                animate: false,
+              ),
             )
           else if (active) ...[
             if (onCopy != null)

@@ -252,7 +252,8 @@ class _CardFace extends StatelessWidget {
               handleLabel(username),
               style: const TextStyle(
                 fontFamily: 'Geist',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1.04,
                 fontSize: 26,
                 color: _textOnDeep,
                 height: 1.1,
