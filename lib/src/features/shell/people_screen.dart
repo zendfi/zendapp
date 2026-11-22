@@ -299,7 +299,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ZendMoon(size: 96),
+              // A blank name sticker, waiting for someone's name.
+              const ZendNameSticker(width: 150),
               const SizedBox(height: 16),
               Text(
                 'Nothing here yet. Zend someone to get things started.',

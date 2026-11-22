@@ -7,6 +7,7 @@ import '../../core/zend_state.dart';
 import '../../design/zend_avatar.dart';
 import '../../design/zend_error_modal.dart';
 import '../../design/zend_primitives.dart';
+import '../../design/zend_motion_widgets.dart' show showEnvelopeSealed;
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart'
     show ApiException, PinDecryptionException, RequestTimeoutException;
@@ -599,6 +600,8 @@ class _SendFlowSheetState extends State<SendFlowSheet>
           ),
         ),
       );
+      // The letter goes into its envelope and the seal presses shut.
+      unawaited(showEnvelopeSealed(context));
       _dismiss();
     } catch (e) {
       final message = e is ZlinkException

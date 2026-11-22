@@ -8,6 +8,7 @@ import 'src/services/web_idle_guard.dart';
 import 'src/design/zend_web_frame.dart';
 import 'src/core/zend_features.dart';
 import 'src/core/zend_state.dart';
+import 'src/design/zend_drawn.dart' show ZendZDrawOn;
 import 'src/design/zend_theme.dart';
 import 'src/design/zend_tokens.dart';
 
@@ -714,9 +715,19 @@ class _SplashWithSessionRestore extends StatefulWidget {
 }
 
 class _SplashWithSessionRestoreState extends State<_SplashWithSessionRestore> {
+  /// Done once the Z has drawn itself on; navigation waits for it so the
+  /// first screen never cuts it off halfway.
+  final _drawn = Completer<void>();
+
   @override
   void initState() {
     super.initState();
+    // Swap the still native splash for the Z drawing itself on, as soon as
+    // Flutter can paint. Session restore runs underneath, so this costs no
+    // time unless restoring is quicker than the drawing (under a second).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!kIsWeb) FlutterNativeSplash.remove();
+    });
     _restoreSession();
   }
 
@@ -850,25 +861,37 @@ class _SplashWithSessionRestoreState extends State<_SplashWithSessionRestore> {
     }
   }
 
-  /// Removes the native splash screen (held on-screen since main() via
-  /// FlutterNativeSplash.preserve()) and navigates to [page] in the same
-  /// beat — so the native splash is the only splash the user ever sees;
-  /// there's no separate Dart SplashScreen widget to hand off to first.
-  void _finishSplashAndNavigate(Widget page) {
-    // No native splash on web (pubspec: flutter_native_splash web: false);
-    // remove() throws there because removeSplashFromWeb() was never generated.
-    if (!kIsWeb) FlutterNativeSplash.remove();
+  /// Navigates to [page] once the Z has finished drawing on (capped, so a
+  /// slow frame never holds the app). The native splash was removed on the
+  /// first frame; this screen's build is the drawn hand-off.
+  Future<void> _finishSplashAndNavigate(Widget page) async {
+    // The native splash is already gone (removed on the first frame, see
+    // initState). Wait for the Z to finish, but never long.
+    await _drawn.future.timeout(
+      const Duration(milliseconds: 1200),
+      onTimeout: () {},
+    );
+    if (!mounted) return;
     pushReplacementZendSlide(context, page);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Rendered only for the brief window between the native splash being
-    // removed (see _finishSplashAndNavigate) and the replacement route's
-    // push animation completing — kept as a plain themed surface (no logo,
-    // no text) since the native splash is what the user actually perceives
-    // as "the splash screen" for the whole session-restore duration.
+    // Shown from the first Flutter frame (when the native splash goes, see
+    // initState) while the session restores: the Z drawing itself on, then
+    // the underline, on the page colour the native splash also uses.
     final zt = ZendTheme.of(context);
-    return Scaffold(backgroundColor: zt.bgPrimary);
+    return Scaffold(
+      backgroundColor: zt.bgPrimary,
+      body: Center(
+        child: ZendZDrawOn(
+          size: 88,
+          duration: const Duration(milliseconds: 800),
+          onDone: () {
+            if (!_drawn.isCompleted) _drawn.complete();
+          },
+        ),
+      ),
+    );
   }
 }

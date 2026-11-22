@@ -859,7 +859,8 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ZendMoon(size: 96),
+          // A paper plane, ready to go: no chats yet.
+          const ZendPlaneTrail(width: 140),
           const SizedBox(height: 16),
           Text(
             'No chats yet',

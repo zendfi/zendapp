@@ -104,11 +104,14 @@ class _SendCelebrationState extends State<_SendCelebration>
               : t > 0.85
               ? (1 - t) / 0.15
               : 1.0;
-          final lift = reduced
+          // The amount holds for a beat, then folds down into a paper
+          // plane at its own centre, and the plane takes it away: one
+          // gesture rather than an amount leaving and a plane arriving.
+          final fold = reduced
               ? 0.0
-              : Curves.easeInCubic.transform((t / 0.5).clamp(0, 1)) * -120;
-          final amountOpacity = reduced ? 1.0 : (1 - (t / 0.5)).clamp(0.0, 1.0);
-          final markT = ((t - 0.25) / 0.35).clamp(0.0, 1.0);
+              : Curves.easeInCubic.transform(((t - 0.16) / 0.2).clamp(0, 1));
+          final amountOpacity = reduced ? 1.0 : (1 - fold).clamp(0.0, 1.0);
+          final markT = ((t - 0.3) / 0.32).clamp(0.0, 1.0);
           final checkT = ZendMotion.springSoft.transform(
             ((t - 0.5) / 0.3).clamp(0.0, 1.0),
           );
@@ -120,27 +123,30 @@ class _SendCelebrationState extends State<_SendCelebration>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Transform.translate(
-                      offset: Offset(0, lift),
-                      child: Opacity(
-                        opacity: amountOpacity,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.emoji != null)
-                              Text(
-                                widget.emoji!,
-                                style: ZendTextStyles.emoji.copyWith(
-                                  fontSize: 48,
+                    Transform.rotate(
+                      angle: fold * 0.35,
+                      child: Transform.scale(
+                        scale: 1 - 0.9 * fold,
+                        child: Opacity(
+                          opacity: amountOpacity,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.emoji != null)
+                                Text(
+                                  widget.emoji!,
+                                  style: ZendTextStyles.emoji.copyWith(
+                                    fontSize: 48,
+                                  ),
+                                ),
+                              ZendLoudAmountText(
+                                formatMoney(widget.amount),
+                                style: ZendTextStyles.displayL.copyWith(
+                                  color: zt.textPrimary,
                                 ),
                               ),
-                            ZendLoudAmountText(
-                              formatMoney(widget.amount),
-                              style: ZendTextStyles.displayL.copyWith(
-                                color: zt.textPrimary,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -651,10 +657,12 @@ class _PlaneFlightPainter extends CustomPainter {
   final Color plane, trail;
 
   // A cubic from below left of centre, looping up past the amount.
-  static const _p0 = Offset(-0.45, 0.35);
-  static const _p1 = Offset(-0.1, 0.55);
-  static const _p2 = Offset(0.05, -0.45);
-  static const _p3 = Offset(0.6, -0.4);
+  // Starts where the amount folded, at the centre, and climbs off to the
+  // top right.
+  static const _p0 = Offset(0, 0);
+  static const _p1 = Offset(0.25, 0.22);
+  static const _p2 = Offset(0.3, -0.35);
+  static const _p3 = Offset(0.65, -0.45);
 
   static Offset _at(double t) {
     final u = 1 - t;
@@ -693,11 +701,117 @@ class _PlaneFlightPainter extends CustomPainter {
       at: px(_at(progress)),
       angle: math.atan2(d.dy * size.height, d.dx * size.width),
       color: plane.withValues(alpha: fade),
-      scale: 1.8,
+      // Unfolds out of the amount: small at first, full size a quarter of
+      // the way along.
+      scale: 1.8 * (0.35 + 0.65 * (progress / 0.25).clamp(0.0, 1.0)),
     );
   }
 
   @override
   bool shouldRepaint(_PlaneFlightPainter old) =>
       old.progress != progress || old.plane != plane || old.trail != trail;
+}
+
+/// A money link going out: the letter slides into an envelope, the flap
+/// folds down, and the Z seal presses it shut, with a thump as it lands.
+/// A brief overlay that removes itself; tap to skip. Under Reduce Motion
+/// it's the sealed envelope, fading in and out.
+Future<void> showEnvelopeSealed(BuildContext context) async {
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) return;
+  final done = Completer<void>();
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _EnvelopeSealed(
+      onDone: () {
+        entry.remove();
+        if (!done.isCompleted) done.complete();
+      },
+    ),
+  );
+  overlay.insert(entry);
+  return done.future;
+}
+
+class _EnvelopeSealed extends StatefulWidget {
+  const _EnvelopeSealed({required this.onDone});
+  final VoidCallback onDone;
+
+  @override
+  State<_EnvelopeSealed> createState() => _EnvelopeSealedState();
+}
+
+class _EnvelopeSealedState extends State<_EnvelopeSealed>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  );
+  bool _thumped = false;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c.addListener(() {
+      // The seal lands about 70% of the way through the sealing.
+      if (!_thumped && _c.value > 0.55) {
+        _thumped = true;
+        unawaited(ZendFeel.sendConfirmed());
+      }
+    });
+    _c.forward().whenComplete(_finish);
+  }
+
+  void _finish() {
+    if (_closing) return;
+    _closing = true;
+    widget.onDone();
+  }
+
+  void _skip() {
+    if (_c.value < 0.85) _c.animateTo(1, duration: ZendMotion.quick);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final reduced = ZendMotion.reduced(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _skip,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+          final opacity = t < 0.1
+              ? t / 0.1
+              : t > 0.85
+              ? (1 - t) / 0.15
+              : 1.0;
+          // Sealing runs over the first three quarters, then it rests.
+          final seal = reduced ? 1.0 : (t / 0.78).clamp(0.0, 1.0);
+          return Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: ColoredBox(
+              color: zt.bgPrimary.withValues(alpha: 0.92),
+              child: Center(
+                child: Semantics(
+                  liveRegion: true,
+                  label: 'Your money link is on its way',
+                  child: ZendEnvelope(width: 200, progress: seal),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

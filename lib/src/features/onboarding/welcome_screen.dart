@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 // kIsWeb and debugPrint live in foundation.dart; material.dart does not
 // re-export them.
@@ -11,7 +12,9 @@ import 'package:flutter/material.dart';
 import '../../core/zend_state.dart';
 import '../../design/zend_drawn.dart';
 import '../../design/zend_mark.dart';
-import '../../design/zend_motion_widgets.dart' show ZendRise;
+import '../../design/zend_avatar.dart';
+import '../../core/zend_format.dart';
+import '../../design/zend_motion_widgets.dart' show ZendBlurSwap, ZendRise;
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
@@ -329,7 +332,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Brand moment: the Z mark, slowly sweeping.
-                      const ZendRise(child: ZendMark(size: 88, animate: true)),
+                      // zend-site's hero: a Zend note that lands somewhere new
+                      // every few seconds, in that person's money. Falls back
+                      // to the Z mark where the screen is too short for it.
+                      const ZendRise(child: _LandingNote()),
                       const SizedBox(height: 28),
                       // zend-site's hero: a firm line, then a light one with
                       // the signal underline drawn under it.
@@ -422,6 +428,150 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The site's hero note on the welcome screen: the same \$25 from Amara,
+/// landing with someone new every 2.6s, shown in their own money. Example
+/// rates, like the site; the app uses the day's once you're in. Still under
+/// Reduce Motion, and it stops while the screen isn't showing.
+class _LandingNote extends StatefulWidget {
+  const _LandingNote();
+
+  @override
+  State<_LandingNote> createState() => _LandingNoteState();
+}
+
+class _LandingNoteState extends State<_LandingNote> {
+  // zend-site lib/people.ts and lib/money.ts: who, where, their money, and
+  // an example rate per dollar.
+  static const _stops = <(String, String, String, double)>[
+    ('Léa', 'Lisbon', 'EUR', 0.87),
+    ('Kenji', 'Tokyo', 'JPY', 150),
+    ('Mum', 'Mumbai', 'INR', 85),
+    ('Rafa', 'São Paulo', 'BRL', 5.5),
+    ('Kemi', 'Lagos', 'NGN', 1500),
+    ('Minji', 'Seoul', 'KRW', 1400),
+    ('Wanjiru', 'Nairobi', 'KES', 129),
+    ('Yuri', 'the Moon', 'USD', 1),
+  ];
+  static const _usd = 25.0;
+
+  int _i = 0;
+  Timer? _timer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _timer?.cancel();
+    _timer = null;
+    if (ZendMotion.reduced(context)) return;
+    _timer = Timer.periodic(const Duration(milliseconds: 2600), (_) {
+      if (!mounted) return;
+      final showing =
+          (ModalRoute.of(context)?.isCurrent ?? true) &&
+          TickerMode.valuesOf(context).enabled &&
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused;
+      if (showing) setState(() => _i = (_i + 1) % _stops.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  static String _money(double usd, String code, double perUsd) =>
+      '${CurrencyStyle.prefixOf(code)}${groupThousands((usd * perUsd).round().toString())}';
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    // Room left once the title, the lede and the buttons have theirs.
+    final byHeight = (screen.height - 500 - 76) * 1.72;
+    final width = [340.0, screen.width - 48 - 28, byHeight].reduce(math.min);
+    if (width < 200) return const ZendMark(size: 88, animate: true);
+
+    final (name, place, code, rate) = _stops[_i];
+    final amount = _money(_usd, code, rate);
+    final where = place == 'the Moon' ? 'on the Moon' : 'in $place';
+    return ExcludeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ZendBanknote(
+            width: width,
+            line: 'From Amara · “first round’s on me 🍻”',
+            amount: ZendBlurSwap(
+              swapKey: amount,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  amount,
+                  style: ZendTextStyles.displayXl.copyWith(
+                    fontSize: width * 0.17,
+                    letterSpacing: -width * 0.17 * 0.055,
+                    color: ZendBanknote.ink,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          ZendBlurSwap(
+            swapKey: name,
+            child: _LandedPill(name: name, where: where),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Landed with Léa in Lisbon", with her face (zend-site's `.note-landed`).
+class _LandedPill extends StatelessWidget {
+  const _LandedPill({required this.name, required this.where});
+
+  final String name;
+  final String where;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(6, 6, 16, 6),
+      decoration: BoxDecoration(
+        color: zt.bgCard,
+        borderRadius: BorderRadius.circular(ZendRadii.pill),
+        boxShadow: ZendShadows.lift(zt),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ZendAvatar(radius: 14, initials: name, seed: name),
+          const SizedBox(width: 10),
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: 'Landed with '),
+                TextSpan(
+                  text: name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(text: ' $where'),
+              ],
+            ),
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 14,
+              color: zt.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

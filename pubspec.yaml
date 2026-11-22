@@ -238,6 +238,9 @@ flutter:
     # Pay-to-read decryption bundle for the hidden webview (built by seal/).
     # Web loads web/zend_seal.js instead, so this is mobile weight only.
     - assets/seal/
+    # Tiled paper grain for the drawn objects (the note, the receipt, the
+    # sticker), never for screens. See ZendGrain in design/zend_drawn.dart.
+    - assets/textures/grain.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -318,13 +321,13 @@ flutter_launcher_icons:
 # logo in the Dart SplashScreen widget, avoiding a visible size jump
 # between the native splash and the Dart splash that follows it.
 flutter_native_splash:
-  color: "#FAFAF7"
-  color_dark: "#0D0D0D"
+  color: "#F2F1ED"
+  color_dark: "#000000"
   image: assets/logo/Zend-splash.png
   image_dark: assets/logo/Zend-splash.png
   android_12:
-    color: "#FAFAF7"
-    color_dark: "#0D0D0D"
+    color: "#F2F1ED"
+    color_dark: "#000000"
     image: assets/logo/Zend-splash.png
     image_dark: assets/logo/Zend-splash.png
   android: true

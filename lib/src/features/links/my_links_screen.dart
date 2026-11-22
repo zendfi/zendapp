@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/zend_format.dart';
@@ -7,10 +9,12 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/zend_state.dart';
 import '../../design/zend_link_card.dart';
+import '../../design/zend_money.dart' show ZendFeel;
 import '../../design/zend_note.dart' show noteText;
 import '../../design/zend_tint.dart';
 import '../../design/zend_tokens.dart';
 import '../../design/zend_drawn.dart';
+import '../../services/link_events.dart';
 import '../../services/zlink_service.dart';
 import 'cash_widgets.dart' show showCashCardSheet;
 
@@ -38,12 +42,27 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
   String _filter = 'all';
   final Set<String> _busy = {};
 
+  /// Links that finished since the last load: their stamp lands once.
+  final Set<String> _justStamped = {};
+  StreamSubscription<String>? _linkEvents;
+
   static const _filters = ['all', 'sent', 'collecting', 'closed'];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    // Someone collects or pays one of these while you're looking: refresh,
+    // and the row gets stamped as it happens.
+    _linkEvents = LinkEvents.changed.listen((_) {
+      if (mounted && !_loading) _load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkEvents?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -54,10 +73,30 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
     try {
       final links = await zlinkServiceOf(context).myLinks();
       if (!mounted) return;
+      // Open before, finished now: stamp it. Not on the first load, where
+      // everything finished long ago.
+      final wasOpen = {
+        for (final l in _links)
+          if (l['status'] == 'active') l['id'],
+      };
+      final finished = [
+        for (final l in links)
+          if (l['status'] != 'active' && wasOpen.contains(l['id']))
+            l['id'] as String,
+      ];
       setState(() {
         _links = links;
         _loading = false;
+        _justStamped.addAll(finished);
       });
+      if (finished.isNotEmpty) {
+        unawaited(ZendFeel.received());
+        // Long enough for the stamp to land; after that a row scrolled
+        // back into view shows it at rest.
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) setState(() => _justStamped.removeAll(finished));
+        });
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -281,7 +320,12 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const ZendMoon(),
+                            // An empty envelope: nothing sent out yet.
+                            const ZendEnvelope(
+                              width: 132,
+                              progress: 0,
+                              letter: false,
+                            ),
                             const SizedBox(height: 20),
                             Text(
                               'No links yet. Send money to anyone, even if they\'re not on Zend, and it shows up here.',
@@ -304,6 +348,7 @@ class _MyLinksScreenState extends State<MyLinksScreen> {
                         itemBuilder: (context, i) => _LinkTile(
                           link: visible[i],
                           busy: _busy.contains(visible[i]['id']),
+                          stampNow: _justStamped.contains(visible[i]['id']),
                           onShare: () => _share(visible[i]),
                           onCopy: visible[i]['kind'] == 'ask'
                               ? () => _copy(visible[i]['url'] as String)
@@ -327,10 +372,15 @@ class _LinkTile extends StatelessWidget {
     required this.onShare,
     required this.onClose,
     this.onCopy,
+    this.stampNow = false,
   });
 
   final Map<String, dynamic> link;
   final bool busy;
+
+  /// Finished while the screen was open: the stamp lands instead of
+  /// appearing at rest.
+  final bool stampNow;
   final VoidCallback onShare;
   final VoidCallback onClose;
   final VoidCallback? onCopy;
@@ -473,7 +523,7 @@ class _LinkTile extends StatelessWidget {
                 label: _stampWord()!,
                 size: 58,
                 ring: 'ZEND • MONEY LINK • ZEND • MONEY LINK • ',
-                animate: false,
+                animate: stampNow,
               ),
             )
           else if (active) ...[

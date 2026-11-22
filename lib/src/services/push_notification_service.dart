@@ -14,6 +14,7 @@ import '../models/notification_category.dart';
 import '../models/notification_destination.dart';
 import '../models/payment_request_notification.dart';
 import 'api_client.dart';
+import 'link_events.dart';
 import 'pending_notification_service.dart';
 
 class PushNotificationService {
@@ -253,6 +254,8 @@ class PushNotificationService {
       RemoteMessage message,
     ) {
       _showLocalNotificationForMessage(_localNotifications, message.data);
+      // A link was collected or paid while the app is open: My Links stamps it.
+      LinkEvents.fromPush(message.data);
 
       final type = message.data['type'] as String? ?? '';
       // Pool message badge — mark pool as having new messages. Previously

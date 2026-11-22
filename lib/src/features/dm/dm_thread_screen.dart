@@ -13,6 +13,7 @@ import '../../core/zend_features.dart';
 import '../../core/zend_state.dart';
 import '../../design/skeleton_loader.dart';
 import '../../design/zend_avatar.dart';
+import '../../design/zend_drawn.dart';
 import '../../design/zend_tint.dart';
 import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
@@ -642,6 +643,43 @@ class _DmThreadScreenState extends State<DmThreadScreen>
       // fetched until the next full app resume or thread reopen.
       if (wasReconnect) _loadMessages();
     }
+  }
+
+  /// The first payment between the two of you, for the "First Zend"
+  /// postmark. Only once the whole history is loaded (no older page, nothing
+  /// cleared), so it never marks a payment that only looks like the first.
+  /// Direct chats only.
+  String? _firstZendId(ZendAppModel model) {
+    if (_isGroup || _nextCursor != null || _loading) return null;
+    if (model.dmService.getClearedBefore(widget.roomId) != null) return null;
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final m = _messages[i];
+      if (m.type == DmMessageType.payment &&
+          m.localStatus != DmLocalStatus.failed) {
+        return m.id;
+      }
+    }
+    return null;
+  }
+
+  static const _months = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
+
+  static String _postmarkDate(DateTime d) {
+    final l = d.toLocal();
+    return '${_months[l.month - 1]} ${l.year}';
   }
 
   Future<void> _loadMessages({bool more = false}) async {
@@ -2606,6 +2644,7 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                       typingOffset +
                                       moreOffset;
                                   _lastBuiltItemCount = totalCount;
+                                  final firstZendId = _firstZendId(model);
 
                                   return ScrollablePositionedList.builder(
                                     itemScrollController: _itemScrollController,
@@ -2822,6 +2861,39 @@ class _DmThreadScreenState extends State<DmThreadScreen>
                                                 ),
                                               ),
                                             ),
+                                          ],
+                                        );
+                                      }
+                                      if (msg.id == firstZendId) {
+                                        bubbleRow = Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 14,
+                                                  ),
+                                              child: Center(
+                                                child: ZendPostmark(
+                                                  when: _postmarkDate(
+                                                    msg.createdAt,
+                                                  ),
+                                                  // Lands only when it's just
+                                                  // happened, never on a
+                                                  // reopened chat.
+                                                  animate:
+                                                      DateTime.now()
+                                                          .difference(
+                                                            msg.createdAt,
+                                                          )
+                                                          .inSeconds <
+                                                      10,
+                                                ),
+                                              ),
+                                            ),
+                                            bubbleRow,
                                           ],
                                         );
                                       }

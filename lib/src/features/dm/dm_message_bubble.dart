@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/zend_format.dart';
 import '../../design/zend_money.dart';
@@ -165,6 +166,14 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     with TickerProviderStateMixin {
   late final AnimationController _arrivalCtrl;
   late final Animation<double> _scaleAnim;
+
+  bool get _isMoney => widget.message.type == DmMessageType.payment;
+
+  /// Reactions already on the message when this bubble was built. Only
+  /// ones added after that pop in, including the first.
+  late final Set<String> _reactionsAtMount = {
+    for (final r in widget.message.reactions) r.emoji,
+  };
   late final AnimationController _pressCtrl;
   late final Animation<double> _pressAnim;
   double _swipeDx = 0.0;
@@ -209,7 +218,12 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
     // the fact that they were already in the cache when the screen opened).
     _arrivalCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      // Money comes in from lower down with a tilt and takes longer to
+      // settle than a text bubble, so a payment reads as a different thing
+      // arriving (zend-site's `pay-in`).
+      duration: _isMoney
+          ? const Duration(milliseconds: 850)
+          : const Duration(milliseconds: 380),
     );
 
     // Spring pop: fast scale-up with overshoot, then settle.
@@ -514,6 +528,7 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
             left: widget.isMe ? null : 8,
             right: widget.isMe ? 8 : null,
             child: _ReactionRow(
+              known: _reactionsAtMount,
               reactions: widget.message.reactions,
               onTap: (emoji) =>
                   widget.onReactionTap?.call(widget.message, emoji),
@@ -576,14 +591,40 @@ class _DmMessageBubbleState extends State<DmMessageBubble>
       );
     }
 
-    // Arrival bounce
+    // Arrival: text pops, money lands. Nothing moves under Reduce Motion.
+    final reduced = ZendMotion.reduced(context);
+    final corner = widget.isMe ? Alignment.bottomRight : Alignment.bottomLeft;
     child = AnimatedBuilder(
-      animation: _scaleAnim,
-      builder: (ctx, c) => Transform.scale(
-        scale: _scaleAnim.value,
-        alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: c,
-      ),
+      animation: _arrivalCtrl,
+      builder: (ctx, c) {
+        if (reduced || _arrivalCtrl.value >= 1) return c!;
+        if (!_isMoney) {
+          return Transform.scale(
+            scale: _scaleAnim.value,
+            alignment: widget.isMe
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            child: c,
+          );
+        }
+        final t = _arrivalCtrl.value;
+        final b = ZendMotion.bounce.transform(t);
+        return Opacity(
+          opacity: (t / 0.6).clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 40 * (1 - b)),
+            child: Transform.rotate(
+              angle: (widget.isMe ? 6 : -6) * (1 - b) * math.pi / 180,
+              alignment: corner,
+              child: Transform.scale(
+                scale: 0.4 + 0.6 * b,
+                alignment: corner,
+                child: c,
+              ),
+            ),
+          ),
+        );
+      },
       child: child,
     );
 
@@ -1380,16 +1421,40 @@ String _weekday(int w) {
 /// accent-colored fill; everyone else's get a neutral fill. Multiple
 /// distinct emojis lay out as a horizontal row of chips (wrapping if the
 /// bubble is narrow), all still anchored to the bubble's bottom corner.
-class _ReactionRow extends StatelessWidget {
-  const _ReactionRow({required this.reactions, required this.onTap});
+class _ReactionRow extends StatefulWidget {
+  const _ReactionRow({
+    required this.reactions,
+    required this.onTap,
+    this.known = const {},
+  });
 
   final List<DmReaction> reactions;
+
+  /// Emoji that were there before this bubble came on screen.
+  final Set<String> known;
   final void Function(String emoji) onTap;
 
   @override
+  State<_ReactionRow> createState() => _ReactionRowState();
+}
+
+/// Pops only reactions that arrive while you're looking. Scrolling a message
+/// back into view rebuilds its bubble with everything in [known], so nothing
+/// replays.
+class _ReactionRowState extends State<_ReactionRow> {
+  late final Set<String> _seen = {...widget.known};
+
+  @override
   Widget build(BuildContext context) {
+    final reactions = widget.reactions;
+    final onTap = widget.onTap;
     if (reactions.isEmpty) return const SizedBox.shrink();
     final zt = ZendTheme.of(context);
+    final fresh = {
+      for (final r in reactions)
+        if (!_seen.contains(r.emoji)) r.emoji,
+    };
+    _seen.addAll(fresh);
 
     void handleTap(String emoji) {
       HapticFeedback.selectionClick();
@@ -1426,38 +1491,42 @@ class _ReactionRow extends StatelessWidget {
               )
             : null;
 
-        return GestureDetector(
-          onTap: () => handleTap(r.emoji),
-          child: Container(
-            height: 30,
-            constraints: const BoxConstraints(minWidth: 30),
-            padding: EdgeInsets.symmetric(horizontal: r.count > 1 ? 8 : 0),
-            alignment: Alignment.center,
-            decoration: decoration,
-            foregroundDecoration: mine,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  r.emoji,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    decoration: TextDecoration.none,
-                    decorationColor: Colors.transparent,
-                  ),
-                ),
-                if (r.count > 1) ...[
-                  const SizedBox(width: 3),
+        return _ReactionPop(
+          key: ValueKey(r.emoji),
+          play: fresh.contains(r.emoji),
+          child: GestureDetector(
+            onTap: () => handleTap(r.emoji),
+            child: Container(
+              height: 30,
+              constraints: const BoxConstraints(minWidth: 30),
+              padding: EdgeInsets.symmetric(horizontal: r.count > 1 ? 8 : 0),
+              alignment: Alignment.center,
+              decoration: decoration,
+              foregroundDecoration: mine,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    '${r.count}',
-                    style: ZendTextStyles.tabularNumeric.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: r.reactedByMe ? zt.accent : zt.textSecondary,
+                    r.emoji,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                      decorationColor: Colors.transparent,
                     ),
                   ),
+                  if (r.count > 1) ...[
+                    const SizedBox(width: 3),
+                    Text(
+                      '${r.count}',
+                      style: ZendTextStyles.tabularNumeric.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: r.reactedByMe ? zt.accent : zt.textSecondary,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -1609,4 +1678,55 @@ class _MediaMessage extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A reaction disc spinning in from −30° and nothing (zend-site's `react`),
+/// once, when [play] is set. At rest otherwise and under Reduce Motion.
+class _ReactionPop extends StatefulWidget {
+  const _ReactionPop({super.key, required this.play, required this.child});
+
+  final bool play;
+  final Widget child;
+
+  @override
+  State<_ReactionPop> createState() => _ReactionPopState();
+}
+
+class _ReactionPopState extends State<_ReactionPop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 550),
+    value: widget.play ? 0 : 1,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (ZendMotion.reduced(context)) {
+      _c.value = 1;
+    } else if (_c.value == 0 && !_c.isAnimating) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _c,
+    builder: (context, child) {
+      if (_c.value >= 1) return child!;
+      final t = ZendMotion.bounce.transform(_c.value);
+      return Transform.rotate(
+        angle: -30 * (1 - t) * math.pi / 180,
+        child: Transform.scale(scale: t.clamp(0.0, 2.0), child: child),
+      );
+    },
+    child: widget.child,
+  );
 }

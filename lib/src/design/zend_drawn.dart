@@ -454,12 +454,13 @@ class _StampPainter extends CustomPainter {
 // ── Name sticker ─────────────────────────────────────────────────────────────
 
 /// A "HELLO / my name is" sticker with [handle] written on it by hand
-/// (zend-site's `NameSticker`). For the @tag sheet.
+/// (zend-site's `NameSticker`). For the @tag sheet, and blank (no [handle])
+/// for an empty People list.
 class ZendNameSticker extends StatelessWidget {
-  const ZendNameSticker({super.key, required this.handle, this.width = 184});
+  const ZendNameSticker({super.key, this.handle, this.width = 184});
 
-  /// Shown as written, e.g. "@tolu".
-  final String handle;
+  /// Shown as written, e.g. "@tolu". Null leaves a dashed line to write on.
+  final String? handle;
   final double width;
 
   static const _paper = Color(0xFFFFFEFC);
@@ -470,8 +471,10 @@ class ZendNameSticker extends StatelessWidget {
   Widget build(BuildContext context) {
     final zt = ZendTheme.of(context);
     final h = width * 80 / 122;
+    final writing = handle;
     return Semantics(
-      label: 'Name sticker: $handle',
+      label: writing == null ? null : 'Name sticker: $writing',
+      excludeSemantics: writing == null,
       child: Transform.rotate(
         angle: -5 * math.pi / 180,
         child: Container(
@@ -482,6 +485,9 @@ class ZendNameSticker extends StatelessWidget {
             borderRadius: BorderRadius.circular(width * 0.08),
             border: zt.isDark ? null : Border.all(color: zt.border),
             boxShadow: ZendShadows.lift(zt),
+          ),
+          foregroundDecoration: ZendGrain.decoration(
+            BorderRadius.circular(width * 0.08),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -522,21 +528,26 @@ class ZendNameSticker extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: width * 0.08),
                   child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        handle,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: width * 0.17,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -width * 0.004,
-                          color: _ink,
-                        ),
-                      ),
-                    ),
+                    child: writing == null
+                        ? CustomPaint(
+                            size: Size(width * 0.6, 2),
+                            painter: _DashPainter(const Color(0x590F0F0E)),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              writing,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: width * 0.17,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -width * 0.004,
+                                color: _ink,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -748,6 +759,7 @@ class ZendBanknote extends StatelessWidget {
         ),
         boxShadow: ZendShadows.float(zt),
       ),
+      foregroundDecoration: ZendGrain.decoration(r),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
@@ -926,6 +938,7 @@ class ZendReceiptPaper extends StatelessWidget {
         color: zt.isDark ? zt.bgElevated : const Color(0xFFFBFAF6),
         shape: const ZendTornEdgeBorder(),
         shadows: ZendShadows.lift(zt),
+        image: zt.isDark ? null : ZendGrain.image,
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
@@ -1068,4 +1081,573 @@ class _DotsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotsPainter old) => old.color != color;
+}
+
+// ── Paper grain ──────────────────────────────────────────────────────────────
+
+/// Fine paper grain (zend-site's page texture), tiled. Only for drawn
+/// objects that are paper (the note, the receipt, the sticker), never for
+/// screens: on a screen it would read as dirt, and it costs a layer.
+abstract final class ZendGrain {
+  static const image = DecorationImage(
+    image: AssetImage('assets/textures/grain.png'),
+    repeat: ImageRepeat.repeat,
+    opacity: 0.22,
+    scale: 2,
+  );
+
+  /// A foreground decoration that lays the grain over a rounded object.
+  static BoxDecoration decoration(BorderRadius radius) =>
+      BoxDecoration(borderRadius: radius, image: image);
+}
+
+class _DashPainter extends CustomPainter {
+  _DashPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    for (var x = 0.0; x < size.width; x += 8) {
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset(math.min(x + 4, size.width), size.height / 2),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashPainter old) => old.color != color;
+}
+
+// ── Envelope ─────────────────────────────────────────────────────────────────
+
+/// A paper envelope closed with a Z wax seal (zend-site's `SealedEnvelope`),
+/// drawn in ink. [progress] runs the sealing: 0 is open with the letter
+/// above it, 1 is closed and sealed. A static [ZendEnvelope] with
+/// `progress: 0` and no letter is the empty envelope.
+class ZendEnvelope extends StatelessWidget {
+  const ZendEnvelope({
+    super.key,
+    this.width = 150,
+    this.progress = 1,
+    this.letter = true,
+  });
+
+  final double width;
+  final double progress;
+
+  /// Draws the letter going in. Off for an empty envelope.
+  final bool letter;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return ExcludeSemantics(
+      child: CustomPaint(
+        size: Size(width, width * 0.86),
+        painter: _EnvelopePainter(
+          progress: progress,
+          letter: letter,
+          shadow: !zt.isDark,
+        ),
+      ),
+    );
+  }
+}
+
+class _EnvelopePainter extends CustomPainter {
+  _EnvelopePainter({
+    required this.progress,
+    required this.letter,
+    required this.shadow,
+  });
+
+  final double progress;
+  final bool letter, shadow;
+
+  static double _seg(double t, double a, double b) =>
+      ((t - a) / (b - a)).clamp(0.0, 1.0);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 150-wide box, the envelope body 114×70 at the bottom.
+    final u = size.width / 150;
+    final body = Rect.fromLTWH(18 * u, size.height - 76 * u, 114 * u, 70 * u);
+    final r = Radius.circular(6 * u);
+    final t = progress;
+
+    // Phases: letter slides in, flap folds down, seal presses on.
+    final slide = ZendMotion.ease.transform(_seg(t, 0, 0.45));
+    final fold = ZendMotion.ease.transform(_seg(t, 0.4, 0.7));
+    final press = ZendMotion.bounce.transform(_seg(t, 0.68, 1));
+
+    if (shadow) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(body.shift(Offset(0, 10 * u)), r),
+        Paint()
+          ..color = const Color(0x260F0F0E)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 * u),
+      );
+    }
+    // Back of the envelope.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(body, r),
+      Paint()..color = const Color(0xFFE6DECB),
+    );
+
+    // The letter, sliding down into the pocket.
+    if (letter && slide < 1) {
+      final lw = 96 * u, lh = 64 * u;
+      final top = body.top - lh * 0.9 + (lh * 0.9 + 6 * u) * slide;
+      final paper = Rect.fromLTWH(body.center.dx - lw / 2, top, lw, lh);
+      canvas
+        ..save()
+        ..clipRect(Rect.fromLTRB(0, 0, size.width, body.top + 30 * u));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(paper, Radius.circular(3 * u)),
+        Paint()..color = const Color(0xFFFFFEFC),
+      );
+      final line = Paint()
+        ..color = const Color(0x260F0F0E)
+        ..strokeWidth = 2 * u
+        ..strokeCap = StrokeCap.round;
+      for (var i = 0; i < 3; i++) {
+        final y = paper.top + (16 + i * 11) * u;
+        canvas.drawLine(
+          Offset(paper.left + 14 * u, y),
+          Offset(paper.right - (i == 2 ? 40 : 14) * u, y),
+          line,
+        );
+      }
+      canvas.restore();
+    }
+
+    // Front pocket: the two lower flaps.
+    final front = Path()
+      ..moveTo(body.left, body.top + 6 * u)
+      ..lineTo(body.center.dx, body.top + 40 * u)
+      ..lineTo(body.right, body.top + 6 * u)
+      ..lineTo(body.right, body.bottom - 6 * u)
+      ..arcToPoint(Offset(body.right - 6 * u, body.bottom), radius: r)
+      ..lineTo(body.left + 6 * u, body.bottom)
+      ..arcToPoint(Offset(body.left, body.bottom - 6 * u), radius: r)
+      ..close();
+    canvas.drawPath(front, Paint()..color = const Color(0xFFEFE8D6));
+    canvas.drawPath(
+      front,
+      Paint()
+        ..color = const Color(0xFFDDD4BF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1 * u,
+    );
+
+    // Top flap: points up while open, folds down over the pocket.
+    final tipY = body.top - 38 * u + (38 * u + 40 * u) * fold;
+    final flap = Path()
+      ..moveTo(body.left, body.top + 6 * u)
+      ..lineTo(body.center.dx, tipY)
+      ..lineTo(body.right, body.top + 6 * u)
+      ..close();
+    canvas.drawPath(
+      flap,
+      Paint()
+        ..color = Color.lerp(
+          const Color(0xFFE6DECB),
+          const Color(0xFFEAE2CF),
+          fold,
+        )!,
+    );
+    canvas.drawPath(
+      flap,
+      Paint()
+        ..color = const Color(0xFFDDD4BF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1 * u,
+    );
+
+    // Wax seal with the Z, pressed onto the flap's tip.
+    if (press > 0) {
+      final c = Offset(body.center.dx, body.top + 38 * u);
+      final sr = 16 * u * (0.4 + 0.6 * press);
+      canvas
+        ..save()
+        ..translate(c.dx, c.dy)
+        ..scale(1.6 - 0.6 * press)
+        ..translate(-c.dx, -c.dy);
+      canvas.drawCircle(c, sr, Paint()..color = const Color(0xFF0F0F0E));
+      canvas.drawCircle(
+        c,
+        sr * 0.72,
+        Paint()
+          ..color = const Color(0x59F7F6F3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1 * u,
+      );
+      final g = sr * 1.05;
+      canvas
+        ..translate(c.dx - g / 2, c.dy - g / 2)
+        ..drawPath(zendZGlyphPath(g), Paint()..color = const Color(0xFFF7F6F3))
+        ..restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EnvelopePainter old) =>
+      old.progress != progress || old.letter != letter || old.shadow != shadow;
+}
+
+// ── Plane trail ──────────────────────────────────────────────────────────────
+
+/// A paper plane at the end of a dashed loop (zend-site's final section),
+/// at rest. For an empty Chats list: nothing sent yet.
+class ZendPlaneTrail extends StatelessWidget {
+  const ZendPlaneTrail({super.key, this.width = 150});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return ExcludeSemantics(
+      child: CustomPaint(
+        size: Size(width, width * 0.66),
+        painter: _PlaneTrailPainter(plane: zt.textPrimary, trail: zt.faint),
+      ),
+    );
+  }
+}
+
+class _PlaneTrailPainter extends CustomPainter {
+  _PlaneTrailPainter({required this.plane, required this.trail});
+  final Color plane, trail;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 150;
+    final path = Path()
+      ..moveTo(6 * u, 84 * u)
+      ..cubicTo(40 * u, 92 * u, 58 * u, 60 * u, 44 * u, 46 * u)
+      ..cubicTo(30 * u, 32 * u, 14 * u, 52 * u, 34 * u, 62 * u)
+      ..cubicTo(60 * u, 74 * u, 96 * u, 30 * u, 128 * u, 18 * u);
+    final dash = Paint()
+      ..color = trail
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2 * u;
+    for (final m in path.computeMetrics()) {
+      for (var d = 0.0; d < m.length - 12 * u; d += 11 * u) {
+        canvas.drawPath(m.extractPath(d, d + 4 * u), dash);
+      }
+      final end = m.getTangentForOffset(m.length)!;
+      paintZendPaperPlane(
+        canvas,
+        at: end.position,
+        angle: -end.angle,
+        color: plane,
+        scale: 1.1 * u,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PlaneTrailPainter old) =>
+      old.plane != plane || old.trail != trail;
+}
+
+// ── Postmark ─────────────────────────────────────────────────────────────────
+
+/// A round postmark with wavy cancellation lines beside it: "FIRST ZEND"
+/// over [when]. Marks the first time money moved between two people. Lands
+/// like a rubber stamp when [animate] is on; at rest otherwise.
+class ZendPostmark extends StatefulWidget {
+  const ZendPostmark({super.key, required this.when, this.animate = false});
+
+  /// Short date, e.g. "NOV 2026".
+  final String when;
+  final bool animate;
+
+  @override
+  State<ZendPostmark> createState() => _ZendPostmarkState();
+}
+
+class _ZendPostmarkState extends State<ZendPostmark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 550),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!widget.animate || ZendMotion.reduced(context)) {
+      _c.value = 1;
+    } else if (!_c.isAnimating && _c.value == 0) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final ink = zt.textSecondary;
+    const d = 64.0;
+    final mark = SizedBox(
+      width: d + 64,
+      height: d,
+      child: Stack(
+        children: [
+          Positioned(
+            left: d - 6,
+            top: 0,
+            bottom: 0,
+            right: 0,
+            child: CustomPaint(
+              painter: _WavesPainter(ink.withValues(alpha: 0.6)),
+            ),
+          ),
+          Container(
+            width: d,
+            height: d,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: zt.chatBg,
+              border: Border.all(color: ink, width: 1.6),
+            ),
+            alignment: Alignment.center,
+            child: Container(
+              width: d - 10,
+              height: d - 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ink.withValues(alpha: 0.6),
+                  width: 0.8,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'FIRST',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 8,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: ink,
+                    ),
+                  ),
+                  Text(
+                    'ZEND',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      height: 1.05,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.4,
+                      color: ink,
+                    ),
+                  ),
+                  Text(
+                    widget.when,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 7.5,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      color: ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    return Semantics(
+      label: 'First Zend, ${widget.when.toLowerCase()}',
+      excludeSemantics: true,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          final t = ZendMotion.bounce.transform(_c.value);
+          return Opacity(
+            opacity: _c.value.clamp(0.0, 1.0),
+            child: Transform.rotate(
+              angle: (-8 + 2 * (1 - t)) * math.pi / 180,
+              child: Transform.scale(scale: 1.5 - 0.5 * t, child: child),
+            ),
+          );
+        },
+        child: mark,
+      ),
+    );
+  }
+}
+
+class _WavesPainter extends CustomPainter {
+  _WavesPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 4; i++) {
+      final y = size.height * (0.2 + i * 0.2);
+      final path = Path()..moveTo(0, y);
+      for (var x = 0.0; x <= size.width; x += 2) {
+        path.lineTo(x, y + math.sin(x / 6) * 2.4);
+      }
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WavesPainter old) => old.color != color;
+}
+
+// ── The Z drawing itself on ──────────────────────────────────────────────────
+
+/// The Z glyph tracing its outline, filling in, then the signal underline
+/// drawing under it, over [duration]. For the first frame of the app. At
+/// rest straight away under Reduce Motion. Calls [onDone] when finished.
+class ZendZDrawOn extends StatefulWidget {
+  const ZendZDrawOn({
+    super.key,
+    this.size = 96,
+    this.duration = const Duration(milliseconds: 900),
+    this.onDone,
+  });
+
+  final double size;
+  final Duration duration;
+  final VoidCallback? onDone;
+
+  @override
+  State<ZendZDrawOn> createState() => _ZendZDrawOnState();
+}
+
+class _ZendZDrawOnState extends State<ZendZDrawOn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_c.value > 0 || _c.isAnimating) return;
+    if (ZendMotion.reduced(context)) {
+      _c.value = 1;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onDone?.call(),
+      );
+    } else {
+      _c.forward().whenComplete(() => widget.onDone?.call());
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    return ExcludeSemantics(
+      child: CustomPaint(
+        size: Size(widget.size, widget.size * 1.2),
+        painter: _ZDrawPainter(
+          progress: _c,
+          ink: zt.textPrimary,
+          signal: zt.signal,
+        ),
+      ),
+    );
+  }
+}
+
+class _ZDrawPainter extends CustomPainter {
+  _ZDrawPainter({
+    required this.progress,
+    required this.ink,
+    required this.signal,
+  }) : super(repaint: progress);
+
+  final Animation<double> progress;
+  final Color ink, signal;
+
+  static double _seg(double t, double a, double b) =>
+      ((t - a) / (b - a)).clamp(0.0, 1.0);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = progress.value;
+    final s = size.width;
+    final glyph = zendZGlyphPath(s);
+    final trace = ZendMotion.ease.transform(_seg(t, 0, 0.55));
+    final fill = _seg(t, 0.35, 0.65);
+    final under = ZendMotion.ease.transform(_seg(t, 0.55, 1));
+
+    if (fill > 0) {
+      canvas.drawPath(glyph, Paint()..color = ink.withValues(alpha: fill));
+    }
+    canvas.drawPath(
+      _partial(glyph, trace),
+      Paint()
+        ..color = ink
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = s * 0.04,
+    );
+    if (under > 0) {
+      final sx = s * 0.8 / 300, y0 = s * 1.04;
+      final swoosh = Path()
+        ..moveTo(s * 0.1 + 4 * sx, y0 + 12 * sx)
+        ..cubicTo(
+          s * 0.1 + 70 * sx,
+          y0 + 4 * sx,
+          s * 0.1 + 190 * sx,
+          y0,
+          s * 0.1 + 296 * sx,
+          y0 + 8 * sx,
+        );
+      canvas.drawPath(
+        _partial(swoosh, under),
+        Paint()
+          ..color = signal
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = s * 0.05,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ZDrawPainter old) =>
+      old.ink != ink || old.signal != signal || old.progress != progress;
 }

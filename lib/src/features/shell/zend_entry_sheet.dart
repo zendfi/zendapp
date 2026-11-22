@@ -817,6 +817,9 @@ class _ZendEntrySheetState extends State<ZendEntrySheet> {
         await links.emailAskLink(url, email);
         emailed = true;
       } catch (_) {}
+      // The request goes into its envelope and the seal presses shut, over
+      // the sheet as it closes.
+      if (mounted) unawaited(showEnvelopeSealed(context));
       navigator.pop();
       if (!emailed) {
         final forWhat = note == null ? '' : ' for $note';
