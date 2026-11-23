@@ -430,6 +430,15 @@ class _ZAppScreenState extends State<_ZAppScreen> {
             textAlign: TextAlign.center,
             style: s(14, c: zt.textSecondary),
           ),
+          if (app.botHandle != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '@${app.botHandle}, its automated account, can message you about '
+              'what you do in ${app.name}.',
+              textAlign: TextAlign.center,
+              style: s(14, c: zt.textSecondary),
+            ),
+          ],
           const SizedBox(height: 12),
           for (final e in _optional.entries)
             SwitchListTile(

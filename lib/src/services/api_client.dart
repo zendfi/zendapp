@@ -2770,6 +2770,33 @@ class ApiClient {
     }
   }
 
+  /// A settings change for one of your bots, asked for from the command line
+  /// (`zdfi.me/bot-settings/{code}`): the bot and the changes in plain words.
+  Future<Map<String, dynamic>> getBotSettingsRequestByCode(String code) async {
+    try {
+      final r = await _dio.get('/api/zend/bots/settings-requests/by-code/$code');
+      return Map<String, dynamic>.from(r.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> approveBotSettingsRequest(String requestId) async {
+    try {
+      await _dio.post('/api/zend/bots/settings-requests/$requestId/approve');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> denyBotSettingsRequest(String requestId) async {
+    try {
+      await _dio.post('/api/zend/bots/settings-requests/$requestId/deny');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   // ── Email intents ────────────────────────────────────────────────────────────
 
   /// Creates a new email intent (pending USDC send to an email address).

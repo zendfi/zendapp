@@ -10,7 +10,10 @@ import '../../models/dm_message.dart';
 import '../vibes/vibe_message_bubble.dart';
 import '../../models/handle_label.dart';
 import '../../design/zend_gif.dart';
+import 'package:flutter/gestures.dart';
 import '../zapps/zapp_card.dart';
+import '../zapps/zapp_links.dart';
+import '../zapps/zapp_sheet.dart' show openZAppLink;
 import '../../core/zend_features.dart';
 import '../../design/zend_note.dart';
 
@@ -780,39 +783,33 @@ class _TextBubble extends StatelessWidget {
                         // genuinely compact one-line bubble; the meta only
                         // drops to its own line when the text doesn't leave
                         // room on the last line.
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: message.displayContent!,
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 15.5,
-                                  color: isMe
-                                      ? zt.onBubbleSent
-                                      : zt.textPrimary,
-                                  height: 1.35,
-                                  // Message content is arbitrary user text and
-                                  // can be pure emoji (e.g. "🔥🔥🔥") — without
-                                  // an explicit decoration/decorationColor,
-                                  // some platforms render a stray underline
-                                  // under emoji glyphs.
-                                  decoration: TextDecoration.none,
-                                  decorationColor: Colors.transparent,
-                                ),
-                              ),
-                              const WidgetSpan(child: SizedBox(width: 8)),
-                              WidgetSpan(
-                                alignment: PlaceholderAlignment.middle,
-                                child: _MessageMeta(
-                                  message: message,
-                                  isMe: isMe,
-                                  showNotEncrypted: _showNotEncryptedBadge,
-                                  onRetry: onRetry,
-                                ),
-                              ),
-                            ],
+                        _MessageText(
+                          text: message.displayContent!,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 15.5,
+                            color: isMe ? zt.onBubbleSent : zt.textPrimary,
+                            height: 1.35,
+                            // Message content is arbitrary user text and
+                            // can be pure emoji (e.g. "🔥🔥🔥") — without
+                            // an explicit decoration/decorationColor,
+                            // some platforms render a stray underline
+                            // under emoji glyphs.
+                            decoration: TextDecoration.none,
+                            decorationColor: Colors.transparent,
                           ),
+                          trailing: [
+                            const WidgetSpan(child: SizedBox(width: 8)),
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: _MessageMeta(
+                                message: message,
+                                isMe: isMe,
+                                showNotEncrypted: _showNotEncryptedBadge,
+                                onRetry: onRetry,
+                              ),
+                            ),
+                          ],
                         )
                       else
                         // No text content (edge case) — meta still needs
@@ -833,6 +830,79 @@ class _TextBubble extends StatelessWidget {
         if (isMe) const SizedBox(width: 4),
       ],
     );
+  }
+}
+
+/// Message text, with links to ZApps (`app.usezend.app/apps/<slug>…`) made
+/// tappable: they open the app inside Zend, as its card would. Other links stay
+/// plain text, so a chat can't be used to send people to arbitrary sites.
+/// Stateful only to own (and dispose) the tap recognizers.
+class _MessageText extends StatefulWidget {
+  const _MessageText({
+    required this.text,
+    required this.style,
+    required this.trailing,
+  });
+
+  final String text;
+  final TextStyle style;
+  final List<InlineSpan> trailing;
+
+  @override
+  State<_MessageText> createState() => _MessageTextState();
+}
+
+class _MessageTextState extends State<_MessageText> {
+  final _recognizers = <TapGestureRecognizer>[];
+
+  void _clear() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  @override
+  void dispose() {
+    _clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _clear();
+    final pieces = splitZAppLinks(widget.text);
+    final linkStyle = widget.style.copyWith(
+      decoration: TextDecoration.underline,
+      decorationColor: widget.style.color,
+      fontWeight: FontWeight.w500,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          for (final p in pieces)
+            if (p.link == null)
+              TextSpan(text: p.text, style: widget.style)
+            else
+              TextSpan(
+                text: p.text,
+                style: linkStyle,
+                recognizer: _tap(p),
+              ),
+          ...widget.trailing,
+        ],
+      ),
+    );
+  }
+
+  TapGestureRecognizer _tap(MessagePiece p) {
+    final r = TapGestureRecognizer()
+      ..onTap = () {
+        HapticFeedback.selectionClick();
+        openZAppLink(context, p.link!);
+      };
+    _recognizers.add(r);
+    return r;
   }
 }
 

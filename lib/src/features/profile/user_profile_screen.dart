@@ -19,6 +19,8 @@ import '../shell/zend_entry_sheet.dart';
 import 'account_information_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/handle_label.dart';
+import '../../models/bot_app.dart';
+import '../zapps/zapp_sheet.dart' show openZApp;
 import '../../design/zend_note.dart';
 import '../../design/zend_verified_badge.dart';
 
@@ -59,6 +61,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _humanVerified = false;
   bool _automated = false;
   bool _idVerified = false;
+  BotApp? _botApp;
   bool _loadingIdentity = true;
   String? _identityError;
 
@@ -115,6 +118,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _humanVerified = profile.humanVerified;
           _automated = profile.automated;
           _idVerified = profile.idVerified;
+          _botApp = profile.automatedApp;
           _loadingIdentity = false;
         });
         _loadEdges();
@@ -360,6 +364,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               color: zt.textPrimary,
                             ),
                           ),
+                          if (_automated) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: _botApp == null
+                                  ? null
+                                  : () => openZApp(context, _botApp!.slug),
+                              child: Text(
+                                automatedLabel(_botApp),
+                                style: TextStyle(
+                                  fontFamily: 'Geist',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: zt.textSecondary,
+                                  decoration: _botApp == null
+                                      ? null
+                                      : TextDecoration.underline,
+                                  decorationColor: zt.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                           if (_idVerified) ...[
                             const SizedBox(height: 4),
                             Text(

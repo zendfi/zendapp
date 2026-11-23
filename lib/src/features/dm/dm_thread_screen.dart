@@ -42,6 +42,8 @@ import '../../design/zend_modal.dart';
 import '../../design/zend_gif.dart';
 import '../../design/zend_money.dart';
 import '../zapps/zapp_tray.dart';
+import '../zapps/zapp_sheet.dart' show openZApp;
+import '../../models/bot_app.dart';
 import '../shell/zend_entry_sheet.dart';
 import '../../design/zend_verified_badge.dart';
 
@@ -1047,6 +1049,21 @@ class _DmThreadScreenState extends State<DmThreadScreen>
     }
     if (_theyAreTyping) {
       return _PresenceLabel(text: 'typing…', color: zt.accent, dot: true);
+    }
+    // A bot has no presence. Say what it is, and which app it's from.
+    if (cp.automated) {
+      final label = _PresenceLabel(
+        text: automatedLabel(cp.automatedApp),
+        color: zt.textSecondary,
+        dot: false,
+      );
+      final app = cp.automatedApp;
+      if (app == null) return label;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => openZApp(context, app.slug),
+        child: label,
+      );
     }
     if (_counterpartyOnline == true) {
       return _PresenceLabel(

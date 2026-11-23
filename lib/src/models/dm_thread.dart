@@ -1,3 +1,4 @@
+import 'bot_app.dart';
 import 'dm_message.dart';
 import '../services/e2ee_service.dart' show kE2eePrefix;
 
@@ -9,7 +10,11 @@ class DmCounterparty {
     this.avatarUrl,
     this.humanVerified = false,
     this.automated = false,
+    this.automatedApp,
   });
+
+  /// For a bot linked to a ZApp: the app, shown as "from {name}".
+  final BotApp? automatedApp;
 
   final String userId;
   final String zendtag;
@@ -33,6 +38,7 @@ class DmCounterparty {
       avatarUrl: json['avatar_url'] as String?,
       humanVerified: json['human_verified'] as bool? ?? false,
       automated: json['automated'] as bool? ?? false,
+      automatedApp: BotApp.fromJson(json['automated_app']),
     );
   }
 }

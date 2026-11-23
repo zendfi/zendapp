@@ -1,3 +1,5 @@
+import 'bot_app.dart';
+
 class OtpResponse {
   final String sessionId;
   final DateTime expiresAt;
@@ -710,7 +712,11 @@ class PublicUserProfile {
     this.humanVerified = false,
     this.idVerified = false,
     this.automated = false,
+    this.automatedApp,
   });
+
+  /// For a bot linked to a ZApp: the app, shown as "from {name}".
+  final BotApp? automatedApp;
 
   final String userId;
   final String zendtag;
@@ -745,6 +751,7 @@ class PublicUserProfile {
       humanVerified: json['human_verified'] as bool? ?? false,
       idVerified: json['id_verified'] as bool? ?? false,
       automated: json['automated'] as bool? ?? false,
+      automatedApp: BotApp.fromJson(json['automated_app']),
     );
   }
 }

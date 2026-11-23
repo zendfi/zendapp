@@ -25,6 +25,8 @@ class ZAppDescriptor {
     'app' => 'Results decided by $name',
     _ => null,
   };
+  /// @handle of the app's own bot, which may message people who connect the app.
+  String? get botHandle => (raw['bot'] as Map?)?['handle'] as String?;
   String get custody => raw['custody'] as String? ?? 'contract';
   List<String> get origins => (raw['origins'] as List? ?? []).cast<String>();
   List<String> get permissions =>

@@ -14,6 +14,7 @@ import '../../design/zend_tokens.dart';
 import '../../models/qr_payment_intent.dart';
 import '../../services/qr_scanner_state.dart';
 import '../pairing/bot_approval_sheet.dart';
+import '../pairing/bot_settings_sheet.dart';
 import '../pairing/pairing_approval_sheet.dart';
 import 'qr_payment_sheet.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -142,6 +143,19 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (!mounted) return;
       Navigator.of(context).pop();
       showBotApprovalSheet(context, pairingCode: uri.pathSegments[1]);
+      return;
+    }
+    // https://zdfi.me/bot-settings/{code}: approve a bot settings change from the CLI.
+    if (uri.host.toLowerCase() == 'zdfi.me' &&
+        uri.pathSegments.length == 2 &&
+        uri.pathSegments[0] == 'bot-settings' &&
+        uri.pathSegments[1].isNotEmpty) {
+      _hasScanned = true;
+      HapticFeedback.mediumImpact();
+      unawaited(_controller.stop());
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      showBotSettingsSheet(context, code: uri.pathSegments[1]);
       return;
     }
 
