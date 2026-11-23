@@ -5,7 +5,10 @@
       "namespace": "android_app",
       "package_name": "com.zendfi.zendapp",
       "sha256_cert_fingerprints": [
-        "8D:A1:78:3C:4D:30:0F:61:64:1F:91:7D:58:F9:01:2E:E8:BA:5A:6F:36:BC:9B:4D:58:F4:FB:63:41:B8:5C:18"
+        "8D:A1:78:3C:4D:30:0F:61:64:1F:91:7D:58:F9:01:2E:E8:BA:5A:6F:36:BC:9B:4D:58:F4:FB:63:41:B8:5C:18",
+        "45:13:E6:6E:CE:80:5F:12:98:C0:89:84:E3:84:2F:E6:DE:CE:6D:28:24:91:44:B8:C7:8F:37:05:A9:18:56:AD",
+        "5B:11:6E:82:B8:8A:11:0B:8B:1C:96:C9:EA:8F:8D:72:36:80:FA:FF:AA:FF:9C:BF:18:A8:F1:94:C0:91:95:67",
+        "CC:45:CB:84:D9:74:AB:88:C7:7F:A1:FE:53:BC:EB:8D:F8:16:AB:BF:D6:99:D2:D1:40:61:F2:0F:19:CD:83:D9"
       ]
     }
   }
