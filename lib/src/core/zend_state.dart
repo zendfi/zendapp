@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,7 @@ import '../models/api_models.dart';
 import '../models/email_intent.dart';
 import '../models/recent_contact.dart';
 import '../models/activity_edge.dart';
+import '../models/app_notification.dart';
 import '../models/add_cash_models.dart';
 import '../services/activity_data_service.dart';
 import '../services/app_lock_service.dart';
@@ -548,6 +550,7 @@ class ZendAppModel extends ChangeNotifier {
     // its first event within the polling interval, confirming SSE is working.
     _startFallbackPolling();
     _startReconcileTimer();
+    _startNotificationsRefresh();
   }
 
   void _onSseEvent(SseEvent event) {
@@ -731,6 +734,8 @@ class ZendAppModel extends ChangeNotifier {
             unawaited(fetchHistory());
           }
         });
+      case SseEventType.notificationCreated:
+        _onNotificationCreated(event.data);
       default:
         _handleDmSseEvent(event);
         break;
@@ -862,6 +867,8 @@ class ZendAppModel extends ChangeNotifier {
     _sseSubscription = null;
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    _notificationsTimer?.cancel();
+    _notificationsTimer = null;
     _reconcileTimer?.cancel();
     _reconcileTimer = null;
     _sseConnected = false;
@@ -1068,6 +1075,112 @@ class ZendAppModel extends ChangeNotifier {
   // ── Unread/badge counts ────────────────────────────────────────────────────
   // Lightweight counters for UI badges — not persisted, reset when the user
   // navigates to the relevant screen.
+
+  // ── Notifications inbox ──
+  //
+  // Server-side list of everything Zend notified the user about. The web bell
+  // shows [notificationsUnread]; `notification_created` SSE events keep it live,
+  // and web also re-reads the count every minute in case the stream drops.
+
+  int notificationsUnread = 0;
+  final List<AppNotification> notifications = [];
+  bool notificationsLoading = false;
+  bool notificationsLoaded = false;
+  String? _notificationsNextBefore;
+  bool get notificationsHasMore => _notificationsNextBefore != null;
+  Timer? _notificationsTimer;
+
+  /// Loads the first page, or the next one when [more] is true.
+  Future<void> fetchNotifications({bool more = false}) async {
+    if (notificationsLoading) return;
+    if (more && _notificationsNextBefore == null) return;
+    notificationsLoading = true;
+    notifyListeners();
+    try {
+      final res = await walletService.apiClient.getNotifications(
+        before: more ? _notificationsNextBefore : null,
+      );
+      final items = (res['notifications'] as List? ?? const [])
+          .whereType<Map>()
+          .map((m) => AppNotification.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+      if (!more) notifications.clear();
+      notifications.addAll(items);
+      _notificationsNextBefore = res['next_before'] as String?;
+      notificationsUnread = (res['unread_count'] as num?)?.toInt() ?? 0;
+      notificationsLoaded = true;
+    } catch (_) {
+      // Keep what's shown; the screen offers a retry.
+    } finally {
+      notificationsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Re-reads only the unread count (one tiny request).
+  Future<void> refreshNotificationsUnread() async {
+    if (!isAuthenticated) return;
+    try {
+      final res = await walletService.apiClient.getNotifications(limit: 1);
+      final unread = (res['unread_count'] as num?)?.toInt() ?? 0;
+      if (unread != notificationsUnread) {
+        notificationsUnread = unread;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    final i = notifications.indexWhere((n) => n.id == id);
+    if (i >= 0 && !notifications[i].read) {
+      notifications[i] = notifications[i].markedRead();
+      if (notificationsUnread > 0) notificationsUnread--;
+      notifyListeners();
+    }
+    try {
+      notificationsUnread = await walletService.apiClient
+          .markNotificationsRead(ids: [id]);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    for (var i = 0; i < notifications.length; i++) {
+      if (!notifications[i].read) {
+        notifications[i] = notifications[i].markedRead();
+      }
+    }
+    notificationsUnread = 0;
+    notifyListeners();
+    try {
+      notificationsUnread = await walletService.apiClient
+          .markNotificationsRead(all: true);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void _onNotificationCreated(Map<String, dynamic> data) {
+    final raw = data['notification'];
+    if (raw is Map) {
+      final n = AppNotification.fromJson(Map<String, dynamic>.from(raw));
+      // A chat item is bumped in place rather than added again.
+      notifications.removeWhere((e) => e.id == n.id);
+      notifications.insert(0, n);
+    }
+    final unread = data['unread_count'];
+    if (unread is num) notificationsUnread = unread.toInt();
+    notifyListeners();
+  }
+
+  void _startNotificationsRefresh() {
+    unawaited(refreshNotificationsUnread());
+    if (!kIsWeb) return;
+    _notificationsTimer?.cancel();
+    _notificationsTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => unawaited(refreshNotificationsUnread()),
+    );
+  }
 
   /// Number of new activity events (transfers, reactions, comments) since the
   /// user last viewed the Activity tab. Incremented by SSE events, cleared
@@ -2165,6 +2278,10 @@ class ZendAppModel extends ChangeNotifier {
     holdPromptsForLink = false;
     _pushPromptHeld = false;
     fxService.forgetCurrency();
+    notifications.clear();
+    notificationsUnread = 0;
+    notificationsLoaded = false;
+    _notificationsNextBefore = null;
     isZkLoginAccount = false;
     username = 'blessed';
     balanceHidden = false;

@@ -86,6 +86,8 @@
                 <data android:scheme="https" android:host="app.usezend.app" android:path="/cash" />
                 <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/apps/" />
                 <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/i/" />
+                <!-- Notification emails: "Open" goes to /n/{id} -->
+                <data android:scheme="https" android:host="app.usezend.app" android:pathPrefix="/n/" />
             </intent-filter>
 
             <!-- Android App Links: zdfi.me/@{tag} payment QR links -->

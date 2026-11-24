@@ -13,7 +13,8 @@ Future<SseConnection> openSseConnection(
 ) async {
   final abort = web.AbortController();
   final requestHeaders = web.Headers();
-  headers.forEach(requestHeaders.append);
+  // JS interop members can't be torn off, so wrap them in closures.
+  headers.forEach((k, v) => requestHeaders.append(k, v));
 
   final response = await web.window
       .fetch(
@@ -39,7 +40,7 @@ Future<SseConnection> openSseConnection(
     return SseConnection(
       statusCode: response.status,
       bytes: const Stream<List<int>>.empty(),
-      close: abort.abort,
+      close: () => abort.abort(),
     );
   }
 

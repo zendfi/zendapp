@@ -6,7 +6,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/zend_state.dart';
+import '../features/notifications/notifications_screen.dart';
 import '../features/shell/zend_entry_sheet.dart';
+import '../navigation/zend_routes.dart';
 import '../navigation/zend_shell_controller.dart';
 import 'zend_tokens.dart';
 
@@ -239,6 +241,13 @@ class _Sidebar extends StatelessWidget {
     ZendShellController.instance?.switchToTab(index);
   }
 
+  void _openNotifications() {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.popUntil((route) => route.isFirst);
+    navigator.push(zendRoute<void>(page: const NotificationsScreen()));
+  }
+
   static void openZend(GlobalKey<NavigatorState> navigatorKey) {
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
@@ -315,6 +324,16 @@ class _Sidebar extends StatelessWidget {
               label: 'Discover',
               active: currentTab == 3,
               onTap: () => _goToTab(3),
+            ),
+            // Web has no push, so this is where people catch up.
+            _NavItem(
+              collapsed: collapsed,
+              icon: PhosphorIconsRegular.bellSimple,
+              activeIcon: PhosphorIconsFill.bellSimple,
+              label: 'Notifications',
+              active: false,
+              badge: model.notificationsUnread,
+              onTap: _openNotifications,
             ),
             const SizedBox(height: 20),
             Semantics(

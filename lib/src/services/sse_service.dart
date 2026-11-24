@@ -40,6 +40,8 @@ enum SseEventType {
   // ── Streaks ──
   streakMilestone,
   streakBreak,
+  // ── Notifications inbox ──
+  notificationCreated,
   unknown,
 }
 
@@ -71,6 +73,7 @@ class SseEvent {
       'dm_read' => SseEventType.dmRead,
       'streak_milestone' => SseEventType.streakMilestone,
       'streak_break' => SseEventType.streakBreak,
+      'notification_created' => SseEventType.notificationCreated,
       _ => SseEventType.unknown,
     };
 

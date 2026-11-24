@@ -1175,6 +1175,64 @@ class ApiClient {
     }
   }
 
+  /// The muted categories as the server has them.
+  Future<List<String>> getNotificationPreferences() async {
+    try {
+      final response = await _dio.get('/api/zend/notifications/preferences');
+      final data = response.data as Map<String, dynamic>;
+      return (data['muted_categories'] as List? ?? const [])
+          .whereType<String>()
+          .toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// One page of the notifications inbox, newest first. Pass the previous
+  /// page's `next_before` as [before] for the next page.
+  Future<Map<String, dynamic>> getNotifications({
+    String? before,
+    int limit = 30,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/zend/notifications',
+        queryParameters: {'limit': limit, 'before': ?before},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// One of the user's own notifications, for `app.usezend.app/n/{id}` links.
+  Future<Map<String, dynamic>> getNotification(String id) async {
+    try {
+      final response = await _dio.get('/api/zend/notifications/$id');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Marks [ids] read, or everything when [all] is true. Returns the new
+  /// unread count.
+  Future<int> markNotificationsRead({
+    List<String> ids = const [],
+    bool all = false,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/notifications/read',
+        data: {'ids': ids, 'all': all},
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['unread_count'] as num?)?.toInt() ?? 0;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   Future<Map<String, dynamic>> createPaymentRequest({
     double? amountUsdc,
     String? description,

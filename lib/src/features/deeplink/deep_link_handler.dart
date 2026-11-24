@@ -87,6 +87,10 @@ class DeepLinkHandler {
     }
   }
 
+  static final _uuid = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   static DeepLinkPayload? _parse(String url) {
     try {
       final uri = Uri.parse(url);
@@ -125,6 +129,10 @@ class DeepLinkHandler {
         }
         if (uri.pathSegments[0] == 'i' && id.startsWith('int_')) {
           return DeepLinkPayload(zendtag: '', interactionId: id);
+        }
+        // app.usezend.app/n/{uuid} — "Open" in a notification email.
+        if (uri.pathSegments[0] == 'n' && _uuid.hasMatch(id)) {
+          return DeepLinkPayload(zendtag: '', notificationId: id);
         }
       }
 
@@ -253,6 +261,9 @@ class DeepLinkPayload {
   /// filtered by [zappLinkParams].
   final Map<String, String>? zappQuery;
 
+  /// Inbox item id from an `app.usezend.app/n/{id}` link (notification email).
+  final String? notificationId;
+
   const DeepLinkPayload({
     required this.zendtag,
     this.requestId,
@@ -269,7 +280,10 @@ class DeepLinkPayload {
     this.zappSlug,
     this.interactionId,
     this.zappQuery,
+    this.notificationId,
   });
+
+  bool get isInboxLink => notificationId != null;
 
   bool get isZApp => zappSlug != null || interactionId != null;
 

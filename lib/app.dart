@@ -13,6 +13,7 @@ import 'src/design/zend_theme.dart';
 import 'src/design/zend_tokens.dart';
 
 import 'src/features/deeplink/deep_link_handler.dart';
+import 'src/features/notifications/notification_opener.dart';
 import 'src/features/links/zlink_sheets.dart';
 import 'src/features/zapps/zapp_sheet.dart';
 import 'src/features/drop/drop_receiver_sheet.dart';
@@ -90,6 +91,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     // Register authentication hook to dispatch pending notification destinations
     // that were parked before auth completed (covers device OS-lock path).
     widget.model.onAuthenticated = () {
+      _openPendingInboxLink(delay: const Duration(milliseconds: 600));
       final pendingZlink = PendingZlink.consume();
       if (pendingZlink != null) {
         Future<void>.delayed(const Duration(milliseconds: 500), () {
@@ -298,9 +300,29 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   /// Fires whenever the app-lock state changes (locked ↔ unlocked).
   /// Consumes any pending deep link or notification destination the moment
   /// the app is unlocked.
+  /// Opens a parked `/n/{id}` link once the app is usable.
+  void _openPendingInboxLink({Duration delay = const Duration(milliseconds: 450)}) {
+    final id = PendingInboxLink.consume();
+    if (id == null) return;
+    Future<void>.delayed(delay, () {
+      if (!mounted) return;
+      final ctx = _navigatorKey.currentContext;
+      if (ctx == null ||
+          !ctx.mounted ||
+          !widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
+        PendingInboxLink.store(id);
+        return;
+      }
+      // ignore: use_build_context_synchronously
+      unawaited(openInboxLink(ctx, widget.model, id));
+    });
+  }
+
   void _onLockStateChanged() {
     if (widget.model.appLockService.isLocked) return;
     if (!widget.model.isAuthenticated) return;
+    _openPendingInboxLink();
 
     // Deep-link intent (payment request URL)
     final pendingIntent = PendingDeepLinkService.consume();
@@ -373,6 +395,20 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
   }
 
   void _handleDeepLink(DeepLinkPayload payload) {
+    // app.usezend.app/n/{id} — "Open" in a notification email. Parked until
+    // signed in and unlocked (onAuthenticated / _onLockStateChanged).
+    if (payload.isInboxLink) {
+      final context = _navigatorKey.currentContext;
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked ||
+          context == null) {
+        PendingInboxLink.store(payload.notificationId!);
+        return;
+      }
+      unawaited(openInboxLink(context, widget.model, payload.notificationId!));
+      return;
+    }
+
     // Zlinks — app.usezend.app/z/{id}#{key} (claim) and /a/{id} (pay).
     // Signed out: the welcome screen shows "X sent you ₦…" and the link opens
     // right after Continue with Google (see onAuthenticated).
