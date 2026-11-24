@@ -20,7 +20,22 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- "default" lets iOS tint the bar to match the page; "black" forced a black bar. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Status bar colour while Flutter loads, matching the page in each mode.
+       Once Flutter draws, it writes its own theme-color (MaterialApp.color in
+       app.dart, which follows the in-app theme toggle) and these are removed
+       so they can't win over it. -->
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F2F1ED" media="(prefers-color-scheme: light)" data-boot-theme>
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" data-boot-theme>
+  <style>
+    html, body { background: #F2F1ED; }
+    @media (prefers-color-scheme: dark) { html, body { background: #000000; } }
+  </style>
+  <!-- A file, not inline: the CSP in vercel.json only allows same-origin scripts. -->
+  <script src="zend_boot_theme.js"></script>
   <meta name="apple-mobile-web-app-title" content="Zend">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 

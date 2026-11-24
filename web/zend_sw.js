@@ -27,6 +27,7 @@ const SHELL = [
   'favicon.png',
   'zxing-0.21.3.min.js',
   'zend_sw_register.js',
+  'zend_boot_theme.js',
 ];
 // OAuth callbacks must always be fresh and never come from a cache.
 const NEVER = ['/auth.html', '/auth.js', '/zend_sw.js'];

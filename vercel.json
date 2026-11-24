@@ -61,7 +61,7 @@
       ]
     },
     {
-      "source": "/(flutter_bootstrap\\.js|flutter\\.js|flutter_service_worker\\.js|zend_sw\\.js|zend_sw_register\\.js|main\\.dart\\.js|version\\.json|manifest\\.json)",
+      "source": "/(flutter_bootstrap\\.js|flutter\\.js|flutter_service_worker\\.js|zend_sw\\.js|zend_sw_register\\.js|zend_boot_theme\\.js|main\\.dart\\.js|version\\.json|manifest\\.json)",
       "headers": [
         {
           "key": "Cache-Control",

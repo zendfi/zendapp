@@ -519,6 +519,25 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     }
   }
 
+  /// Page colour for the mode actually on screen (see `color:` on MaterialApp).
+  Color get _systemBarColor {
+    final dark = switch (_themeMode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system =>
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark,
+    };
+    // Same values as ZendTheme's light/dark bgPrimary.
+    return dark ? const Color(0xFF000000) : ZendColors.bgPrimary;
+  }
+
+  // Following the system theme: repaint the bar colour when the phone flips.
+  @override
+  void didChangePlatformBrightness() {
+    if (_themeMode == ThemeMode.system) setState(() {});
+  }
+
   void _onModelChanged() {
     final newMode = widget.model.hasExplicitTheme
         ? (widget.model.isDarkMode ? ThemeMode.dark : ThemeMode.light)
@@ -658,6 +677,11 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Zend! App',
+        // On web Flutter writes this into <meta name="theme-color">, which the
+        // phone paints behind the status bar. Left unset it falls back to the
+        // light theme's primary (ink #0F0F0E), so a light page sat under a
+        // black bar. Use the page colour so bar and app read as one surface.
+        color: _systemBarColor,
         navigatorKey: _navigatorKey,
         theme: buildZendTheme(),
         darkTheme: buildZendDarkTheme(),

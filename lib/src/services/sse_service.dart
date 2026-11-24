@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'sse_transport.dart';
 
 /// SSE event types matching the backend's SseEvent enum.
 enum SseEventType {
@@ -101,8 +102,9 @@ class SseService {
   static const _initialReconnectDelay = Duration(seconds: 1);
 
   StreamController<SseEvent>? _controller;
-  CancelToken? _cancelToken;
+  SseConnection? _connection;
   bool _active = false;
+  int _generation = 0;
   Duration _reconnectDelay = _initialReconnectDelay;
   Timer? _reconnectTimer;
   final _random = Random();
@@ -132,10 +134,11 @@ class SseService {
   /// Stop the SSE connection. Call this on logout or when the app backgrounds.
   void stop() {
     _active = false;
+    _generation++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    _cancelToken?.cancel('SSE stopped');
-    _cancelToken = null;
+    _connection?.close();
+    _connection = null;
   }
 
   /// Dispose the service entirely (call on app shutdown).
@@ -147,6 +150,10 @@ class SseService {
 
   Future<void> _connect() async {
     if (!_active) return;
+    // stop() bumps this, so a connection from before a stop()/start() pair
+    // can't schedule a reconnect and leave two connections running.
+    final generation = _generation;
+    bool current() => _active && generation == _generation;
 
     final token = await _secureStorage.read(key: _tokenKey);
     if (token == null || token.isEmpty) {
@@ -155,28 +162,34 @@ class SseService {
       return;
     }
 
-    _cancelToken = CancelToken();
-
-    final dio = Dio(
-      BaseOptions(
-        baseUrl: _baseUrl,
-        headers: {
+    try {
+      // Dio on mobile, fetch on web: see sse_transport.dart for why.
+      final connection = await openSseConnection(
+        Uri.parse('$_baseUrl/api/zend/events'),
+        {
           'Authorization': 'Bearer $token',
           'Accept': 'text/event-stream',
           'Cache-Control': 'no-cache',
         },
-        responseType: ResponseType.stream,
-        // No timeout — SSE is a long-lived connection
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: null,
-      ),
-    );
-
-    try {
-      final response = await dio.get<ResponseBody>(
-        '/api/zend/events',
-        cancelToken: _cancelToken,
       );
+      if (!current()) {
+        // stop() ran while the request was in flight.
+        connection.close();
+        return;
+      }
+      _connection = connection;
+
+      if (connection.statusCode == 401) {
+        // Session expired — stop SSE, let the auth interceptor handle it
+        connection.close();
+        _active = false;
+        return;
+      }
+      if (connection.statusCode < 200 || connection.statusCode >= 300) {
+        connection.close();
+        _scheduleReconnect();
+        return;
+      }
 
       // The connection succeeded and we're about to start receiving events —
       // reset the backoff now, not just in start(). Previously the delay only
@@ -188,7 +201,7 @@ class SseService {
       // real-time updates instead of the 1s a healthy reconnect deserves.
       _reconnectDelay = _initialReconnectDelay;
 
-      final stream = response.data!.stream.cast<List<int>>();
+      final stream = connection.bytes;
 
       // Reassembles the raw byte stream into lines, correctly handling a
       // multi-byte UTF-8 character split across two separate chunk
@@ -208,7 +221,7 @@ class SseService {
           .transform(const LineSplitter());
 
       await for (final line in lines) {
-        if (!_active) break;
+        if (!current()) break;
 
         if (line.startsWith('event:')) {
           currentEventType = line.substring(6).trim();
@@ -225,23 +238,11 @@ class SseService {
         // Ignore 'id:' and 'retry:' lines for now
       }
 
-      // Stream ended cleanly — reconnect
-      _scheduleReconnect();
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.cancel) {
-        // Intentional cancellation — don't reconnect
-        return;
-      }
-
-      if (e.response?.statusCode == 401) {
-        // Session expired — stop SSE, let the auth interceptor handle it
-        _active = false;
-        return;
-      }
-
-      _scheduleReconnect();
+      // Stream ended cleanly — reconnect.
+      if (current()) _scheduleReconnect();
     } catch (e) {
-      _scheduleReconnect();
+      // Includes the cancellation from stop(), which must not reconnect.
+      if (current()) _scheduleReconnect();
     }
   }
 
