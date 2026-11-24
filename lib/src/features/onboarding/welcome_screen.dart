@@ -19,6 +19,7 @@ import '../../design/zend_primitives.dart';
 import '../../design/zend_tokens.dart';
 import '../../models/api_exceptions.dart';
 import '../../navigation/zend_routes.dart';
+import '../../services/oauth_redirect_store.dart';
 import '../../services/sui_oauth_provider.dart';
 import '../../services/sui_zklogin_models.dart';
 import '../../services/sui_zklogin_service.dart';
@@ -90,7 +91,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.initState();
     // ZendScope.read rather than .of: .of throws from initState, which
     // zend_scope_read_test.dart pins down explicitly.
-    if (kIsWeb) unawaited(_prepareSession());
+    if (!kIsWeb) return;
+    // Back from Google in the installed app (see oauth_redirect_store.dart):
+    // finish that sign-in instead of starting a new one. take() deletes the
+    // parked key whether or not it is usable.
+    final returned = OAuthRedirectStore.take();
+    if (returned != null) {
+      _busy = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final model = ZendScope.read(context);
+        unawaited(
+          _signIn(
+            () => model.authService.completeGoogleRedirect(
+              model.zkLoginService,
+              returned,
+            ),
+          ),
+        );
+      });
+      return;
+    }
+    unawaited(_prepareSession());
   }
 
   @override
@@ -131,7 +153,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     });
 
     final model = ZendScope.of(context);
-    final navigator = Navigator.of(context);
 
     // Consumed here: completePublicSignIn takes ownership on success and
     // disposes on failure, so the field must not keep pointing at it.
@@ -139,6 +160,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     _prepared = null;
     final usable = prepared != null && prepared.isUsable;
     if (prepared != null && !usable) prepared.dispose();
+
+    // Installed on the home screen: no popup. On iPhone a popup from a
+    // home-screen app opens in a separate Safari sheet that cannot hand the
+    // token back, so the app waited five minutes and the person landed on
+    // this screen again. Go to Google in this window instead; the app
+    // reloads on return and initState above finishes the sign-in. A
+    // same-window navigation needs no user activation, so a stale session
+    // can simply be minted here.
+    if (kIsWeb && OAuthRedirectStore.isInstalledWebApp) {
+      try {
+        final session = usable
+            ? prepared
+            : await model.zkLoginService.preparePublicSignIn();
+        await model.zkLoginService.redirectPublicSignIn(session);
+        // The page is unloading. Leave the button busy until it does.
+      } catch (error) {
+        debugPrint('Google sign-in redirect failed to start: $error');
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _error = "Couldn't sign you in. Please try again.";
+        });
+      }
+      return;
+    }
 
     // On web, refuse to continue without a session already in hand. Falling
     // back to minting one here is what hung Safari: the round-trip spends the
@@ -157,11 +203,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       return;
     }
 
-    try {
-      final result = await model.authService.signInWithGoogle(
+    await _signIn(
+      () => model.authService.signInWithGoogle(
         model.zkLoginService,
         prepared: usable ? prepared : null,
-      );
+      ),
+    );
+  }
+
+  /// Runs one sign-in [attempt] and handles its outcome: into the app on
+  /// success, a message on this screen on failure. Shared by the popup path
+  /// and the return from a full-page redirect.
+  Future<void> _signIn(
+    Future<SuiZkLoginPublicSignIn> Function() attempt,
+  ) async {
+    final model = ZendScope.of(context);
+    final navigator = Navigator.of(context);
+    if (mounted && !_busy) setState(() => _busy = true);
+    try {
+      final result = await attempt();
       if (!mounted) return;
 
       // Prefer the Google profile name. Falling back to the handle would show a

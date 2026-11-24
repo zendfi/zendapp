@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 import '../models/api_models.dart';
 import '../models/api_exceptions.dart';
+import 'oauth_redirect_store.dart' show OAuthRedirectReturn;
 import 'sui_zklogin_models.dart';
 import 'sui_zklogin_service.dart';
 import 'wallet_service.dart';
@@ -115,6 +116,22 @@ class AuthService {
     final result = prepared != null
         ? await zkLoginService.completePublicSignIn(prepared)
         : await zkLoginService.signInPublic();
+    await _persistZkLoginSignIn(result);
+    return result;
+  }
+
+  /// Finishes a Google sign-in that went to Google by full-page redirect
+  /// (installed web app), and stores the session like [signInWithGoogle].
+  Future<SuiZkLoginPublicSignIn> completeGoogleRedirect(
+    SuiZkLoginService zkLoginService,
+    OAuthRedirectReturn returned,
+  ) async {
+    final result = await zkLoginService.resumeRedirectedPublicSignIn(returned);
+    await _persistZkLoginSignIn(result);
+    return result;
+  }
+
+  Future<void> _persistZkLoginSignIn(SuiZkLoginPublicSignIn result) async {
     await _secureStorage.write(key: _tokenKey, value: result.sessionToken);
     await _secureStorage.write(key: _userIdKey, value: result.userId);
     await _secureStorage.write(key: _zendtagKey, value: result.zendtag);
@@ -126,7 +143,6 @@ class AuthService {
     // _walletAddressKey here. Callers must treat a null wallet address as normal
     // rather than as a broken account.
     _verificationToken = null;
-    return result;
   }
 
   /// True when this device's account signs in with Google via zkLogin.

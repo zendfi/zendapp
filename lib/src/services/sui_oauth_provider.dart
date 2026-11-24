@@ -6,7 +6,8 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 import 'package:pointycastle/digests/sha256.dart';
 
-import 'sui_zklogin_service.dart' show SuiOAuthProvider, SuiOAuthTokens;
+import 'sui_zklogin_service.dart'
+    show SuiOAuthProvider, SuiOAuthRedirectProvider, SuiOAuthTokens;
 
 /// Which OAuth response type to use.
 ///
@@ -81,7 +82,8 @@ enum SuiOAuthPrompt {
 /// two different client ids therefore controls two different Sui addresses, and
 /// funds in one are not visible from the other. Every platform that must share
 /// an address has to send the same [clientId].
-class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
+class GoogleZkLoginOAuthProvider
+    implements SuiOAuthProvider, SuiOAuthRedirectProvider {
   GoogleZkLoginOAuthProvider({
     required this.clientId,
     required this.redirectUri,
@@ -189,30 +191,12 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
         ? _randomUrlSafe(48)
         : null;
 
-    final parameters = <String, String>{
-      'client_id': clientId,
-      'redirect_uri': redirectUri,
-      // Identity scopes only by default. Drive is requested separately by
-      // [authorizeDriveAppdata] so that a Drive-side problem cannot take down
-      // authentication. See [requestDriveScope].
-      'scope': _scope,
-      'nonce': nonce,
-      'state': state,
-      ...prompt.parameters,
-      if (flow == SuiOAuthFlow.implicitIdToken) ...{
-        'response_type': _effectiveImplicitResponseType,
-        'response_mode': 'fragment',
-      },
-      if (flow == SuiOAuthFlow.authorizationCodePkce) ...{
-        'response_type': 'code',
-        'code_challenge': _s256Challenge(verifier!),
-        'code_challenge_method': 'S256',
-      },
-    };
-
-    final authorizationUrl = Uri.parse(
-      _authorizationEndpoint,
-    ).replace(queryParameters: parameters).toString();
+    final authorizationUrl = _signInUrl(
+      nonce: nonce,
+      state: state,
+      prompt: prompt,
+      verifier: verifier,
+    );
 
     final callback = await FlutterWebAuth2.authenticate(
       url: authorizationUrl,
@@ -227,16 +211,7 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
       ),
     );
 
-    final returned = _parseCallback(callback);
-    final error = returned['error'];
-    if (error != null) {
-      throw SuiOAuthException('Google rejected the sign-in request: $error');
-    }
-    if (returned['state'] != state) {
-      throw const SuiOAuthException(
-        'OAuth state did not match the request. Sign-in was aborted.',
-      );
-    }
+    final returned = _checkedCallback(callback, state);
 
     final SuiOAuthTokens tokens = switch (flow) {
       // Implicit returns both tokens directly in the fragment.
@@ -435,6 +410,94 @@ class GoogleZkLoginOAuthProvider implements SuiOAuthProvider {
       idToken: decoded['id_token'] as String? ?? '',
       accessToken: decoded['access_token'] as String?,
     );
+  }
+
+  // ── Full-page redirect (installed web app) ──────────────────────────────
+  //
+  // Same request and the same checks as [signInForIdToken], split in two
+  // because the page unloads in between: the caller parks `state` with the
+  // session and hands both back with the callback.
+
+  @override
+  ({String url, String state}) redirectSignInRequest({required String nonce}) {
+    // A PKCE verifier would also have to survive the trip, and the code
+    // exchange needs a client secret anyway (see [SuiOAuthFlow]).
+    if (flow != SuiOAuthFlow.implicitIdToken) {
+      throw StateError('Redirect sign-in supports the implicit flow only');
+    }
+    final state = _randomUrlSafe(24);
+    return (
+      url: _signInUrl(
+        nonce: nonce,
+        state: state,
+        prompt: SuiOAuthPrompt.selectAccount,
+      ),
+      state: state,
+    );
+  }
+
+  @override
+  SuiOAuthTokens tokensFromRedirect({
+    required String callback,
+    required String state,
+    required String nonce,
+  }) {
+    final returned = _checkedCallback(callback, state);
+    final tokens = SuiOAuthTokens(
+      idToken: returned['id_token'] ?? '',
+      accessToken: returned['access_token'],
+    );
+    if (tokens.idToken.isEmpty) {
+      throw const SuiOAuthException('Google returned no ID token');
+    }
+    _assertNonceMatches(idToken: tokens.idToken, expected: nonce);
+    return tokens;
+  }
+
+  String _signInUrl({
+    required String nonce,
+    required String state,
+    required SuiOAuthPrompt prompt,
+    String? verifier,
+  }) {
+    final parameters = <String, String>{
+      'client_id': clientId,
+      'redirect_uri': redirectUri,
+      // Identity scopes only by default. Drive is requested separately by
+      // [authorizeDriveAppdata] so that a Drive-side problem cannot take down
+      // authentication. See [requestDriveScope].
+      'scope': _scope,
+      'nonce': nonce,
+      'state': state,
+      ...prompt.parameters,
+      if (flow == SuiOAuthFlow.implicitIdToken) ...{
+        'response_type': _effectiveImplicitResponseType,
+        'response_mode': 'fragment',
+      },
+      if (flow == SuiOAuthFlow.authorizationCodePkce) ...{
+        'response_type': 'code',
+        'code_challenge': _s256Challenge(verifier!),
+        'code_challenge_method': 'S256',
+      },
+    };
+    return Uri.parse(
+      _authorizationEndpoint,
+    ).replace(queryParameters: parameters).toString();
+  }
+
+  /// Parses [callback], failing on a Google error or a state mismatch.
+  Map<String, String?> _checkedCallback(String callback, String state) {
+    final returned = _parseCallback(callback);
+    final error = returned['error'];
+    if (error != null) {
+      throw SuiOAuthException('Google rejected the sign-in request: $error');
+    }
+    if (returned['state'] != state) {
+      throw const SuiOAuthException(
+        'OAuth state did not match the request. Sign-in was aborted.',
+      );
+    }
+    return returned;
   }
 
   /// Reads parameters from either the query string or the fragment.

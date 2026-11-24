@@ -1172,8 +1172,25 @@ class ZendAppModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _utcOffsetSent = false;
+
+  /// Tells the server this device's UTC offset once per session, so the daily
+  /// summary email arrives in the evening where the person is.
+  Future<void> _sendUtcOffset() async {
+    if (_utcOffsetSent) return;
+    _utcOffsetSent = true;
+    try {
+      await walletService.apiClient.updateEmailSettings(
+        utcOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
+      );
+    } catch (_) {
+      _utcOffsetSent = false;
+    }
+  }
+
   void _startNotificationsRefresh() {
     unawaited(refreshNotificationsUnread());
+    unawaited(_sendUtcOffset());
     if (!kIsWeb) return;
     _notificationsTimer?.cancel();
     _notificationsTimer = Timer.periodic(
@@ -2282,6 +2299,7 @@ class ZendAppModel extends ChangeNotifier {
     notificationsUnread = 0;
     notificationsLoaded = false;
     _notificationsNextBefore = null;
+    _utcOffsetSent = false;
     isZkLoginAccount = false;
     username = 'blessed';
     balanceHidden = false;

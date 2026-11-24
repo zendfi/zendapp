@@ -43,6 +43,21 @@ class NotificationPreferencesService {
         .map(_categoryFromStorageKey)
         .whereType<NotificationCategoryKind>()
         .toSet();
+    // The server's set wins, so a mute made on another device (or on web)
+    // shows here too. Falls back to the local copy when offline.
+    try {
+      final server = await _apiClient.getNotificationPreferences().timeout(
+        const Duration(seconds: 3),
+      );
+      _muted = server
+          .map(_categoryFromStorageKey)
+          .whereType<NotificationCategoryKind>()
+          .toSet();
+      await prefs.setStringList(
+        _prefsKey,
+        _muted.map((c) => c.storageKey).toList(),
+      );
+    } catch (_) {}
     _loaded = true;
   }
 

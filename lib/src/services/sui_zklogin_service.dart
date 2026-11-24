@@ -6,11 +6,12 @@ import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
 import 'payment_rail_models.dart' show PaymentNetwork, PaymentRail;
-import 'sui_oauth_provider.dart' show SuiOAuthPrompt;
+import 'sui_oauth_provider.dart' show SuiOAuthException, SuiOAuthPrompt;
 import 'sui_salt_custody_service.dart';
 import 'sui_salt_shares.dart';
 import 'sui_signing_service.dart';
 import 'unlock_service.dart' show UnlockService;
+import 'oauth_redirect_store.dart';
 import 'sui_zklogin_models.dart';
 
 /// Obtains a nonce-bearing OpenID Connect ID token.
@@ -46,6 +47,23 @@ abstract interface class SuiOAuthProvider {
   /// unrecoverably later.
   Future<SuiOAuthTokens?> authorizeDriveAppdata({
     required String currentIdToken,
+  });
+}
+
+/// A provider that can also run sign-in as a full-page redirect.
+///
+/// Used by the installed web app, where a popup cannot hand the token back
+/// (see `oauth_redirect_store.dart`). The page unloads between the two calls,
+/// so the caller keeps `state` and the nonce and passes them back.
+abstract interface class SuiOAuthRedirectProvider {
+  /// The Google URL to send the window to, and the CSRF state it carries.
+  ({String url, String state}) redirectSignInRequest({required String nonce});
+
+  /// Checks [callback] against [state] and [nonce] and returns its tokens.
+  SuiOAuthTokens tokensFromRedirect({
+    required String callback,
+    required String state,
+    required String nonce,
   });
 }
 
@@ -307,35 +325,132 @@ class SuiZkLoginService {
   Future<SuiZkLoginPublicSignIn> completePublicSignIn(
     PreparedZkLoginSignIn prepared,
   ) async {
-    final init = prepared.init;
     try {
-      final tokens = await _oauth.signInForIdToken(nonce: init.nonce);
-
-      final result = await _api.publicSuiZkLoginSignIn(
-        sessionId: init.sessionId,
-        idToken: tokens.idToken,
-      );
-
-      // Retain the signing session so the first transfer after sign-in does not
-      // need another OAuth round-trip. Ownership of the key pair transfers here,
-      // which is why it is not zeroized on the success path.
-      _replaceSession(
-        _ActiveSession(
-          sessionId: init.sessionId,
-          keyPair: prepared.keyPair,
-          jwtRandomness: prepared.randomness,
-          idToken: tokens.idToken,
-          accessToken: tokens.accessToken,
-          maxEpoch: init.maxEpoch,
-          expiresAt: init.expiresAt,
-          saltSharesProvisioned: result.identity.saltSharesProvisioned,
-        ),
-      );
-      return result;
+      final tokens = await _oauth.signInForIdToken(nonce: prepared.init.nonce);
+      return await _finishPublicSignIn(prepared, tokens);
     } catch (error) {
       prepared.dispose();
       rethrow;
     }
+  }
+
+  // ── Full-page redirect (installed web app) ───────────────────────────────
+
+  /// The provider's redirect half. Only the Google provider has one.
+  SuiOAuthRedirectProvider get _redirectOAuth {
+    final oauth = _oauth;
+    if (oauth is SuiOAuthRedirectProvider) {
+      return oauth as SuiOAuthRedirectProvider;
+    }
+    throw StateError('This sign-in provider cannot redirect');
+  }
+
+  /// Parks [prepared] and sends the window to Google. Web, installed app only.
+  ///
+  /// Takes ownership of [prepared]: its in-memory key is zeroed here, and the
+  /// parked copy is what [resumeRedirectedPublicSignIn] reads back. The page
+  /// starts unloading when this returns, so callers should show progress and
+  /// do nothing else.
+  Future<void> redirectPublicSignIn(PreparedZkLoginSignIn prepared) async {
+    try {
+      final oauth = _redirectOAuth;
+      final init = prepared.init;
+      final request = oauth.redirectSignInRequest(nonce: init.nonce);
+      OAuthRedirectStore.park(
+        jsonEncode({
+          'v': 1,
+          'seed': base64.encode(prepared.keyPair.seed),
+          'public_key': base64.encode(prepared.keyPair.publicKey),
+          'randomness': prepared.randomness,
+          'state': request.state,
+          'session_id': init.sessionId,
+          'network': init.network,
+          'nonce': init.nonce,
+          'max_epoch': init.maxEpoch,
+          'expires_at': init.expiresAt.toUtc().toIso8601String(),
+        }),
+      );
+      OAuthRedirectStore.navigate(request.url);
+    } finally {
+      // base64.encode copied the seed, so the live bytes can go now.
+      prepared.dispose();
+    }
+  }
+
+  /// Finishes a sign-in that went to Google by full-page redirect.
+  ///
+  /// [returned] comes from `OAuthRedirectStore.take`, which has already
+  /// deleted it from storage. Runs the same checks as the popup path: state,
+  /// nonce, and the session's expiry.
+  Future<SuiZkLoginPublicSignIn> resumeRedirectedPublicSignIn(
+    OAuthRedirectReturn returned,
+  ) async {
+    final oauth = _redirectOAuth;
+    final Map<String, dynamic> parked;
+    try {
+      parked = jsonDecode(returned.pending) as Map<String, dynamic>;
+      if (parked['v'] != 1) throw const FormatException('version');
+    } on Object {
+      throw const SuiOAuthException('Sign-in could not be resumed. Try again.');
+    }
+    final prepared = PreparedZkLoginSignIn._(
+      keyPair: SuiEphemeralKeyPair(
+        seed: base64.decode(parked['seed'] as String),
+        publicKey: base64.decode(parked['public_key'] as String),
+      ),
+      randomness: parked['randomness'] as String,
+      init: SuiZkLoginSessionInit(
+        sessionId: parked['session_id'] as String,
+        network: parked['network'] as String,
+        nonce: parked['nonce'] as String,
+        maxEpoch: (parked['max_epoch'] as num).toInt(),
+        expiresAt: DateTime.parse(parked['expires_at'] as String),
+      ),
+    );
+    try {
+      if (!DateTime.now().toUtc().isBefore(prepared.init.expiresAt.toUtc())) {
+        throw const SuiOAuthException('Sign-in took too long. Try again.');
+      }
+      final tokens = oauth.tokensFromRedirect(
+        callback: returned.callback,
+        state: parked['state'] as String,
+        nonce: prepared.init.nonce,
+      );
+      return await _finishPublicSignIn(prepared, tokens);
+    } catch (error) {
+      prepared.dispose();
+      rethrow;
+    }
+  }
+
+  /// Redeems [tokens] for a Zend session and keeps [prepared] as the signing
+  /// session. Ownership of the key pair transfers on success.
+  Future<SuiZkLoginPublicSignIn> _finishPublicSignIn(
+    PreparedZkLoginSignIn prepared,
+    SuiOAuthTokens tokens,
+  ) async {
+    final init = prepared.init;
+    final result = await _api.publicSuiZkLoginSignIn(
+      sessionId: init.sessionId,
+      idToken: tokens.idToken,
+    );
+
+    // Retain the signing session so the first transfer after sign-in does not
+    // need another OAuth round-trip. Ownership of the key pair transfers here,
+    // which is why it is not zeroized on the success path.
+    _replaceSession(
+      _ActiveSession(
+        sessionId: init.sessionId,
+        keyPair: prepared.keyPair,
+        jwtRandomness: prepared.randomness,
+        idToken: tokens.idToken,
+        accessToken: tokens.accessToken,
+        maxEpoch: init.maxEpoch,
+        expiresAt: init.expiresAt,
+        saltSharesProvisioned: result.identity.saltSharesProvisioned,
+      ),
+    );
+    return result;
   }
 
   /// The session's zero-knowledge proof, fetched once and reused.

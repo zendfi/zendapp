@@ -1175,6 +1175,68 @@ class ApiClient {
     }
   }
 
+  /// Notification email settings: masked address and the three switches.
+  Future<Map<String, dynamic>> getEmailSettings() async {
+    try {
+      final response = await _dio.get('/api/zend/notifications/email-settings');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Partial update; only the given fields change. Returns the new settings.
+  Future<Map<String, dynamic>> updateEmailSettings({
+    bool? instant,
+    bool? summary,
+    bool? backup,
+    bool? resubscribe,
+    int? utcOffsetMinutes,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/zend/notifications/email-settings',
+        data: {
+          'instant': ?instant,
+          'summary': ?summary,
+          'backup': ?backup,
+          'resubscribe': ?resubscribe,
+          'utc_offset_minutes': ?utcOffsetMinutes,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Emails a 6-digit code to [email]; the address is saved once it's confirmed.
+  Future<void> requestNotificationEmailChange(String email) async {
+    try {
+      await _dio.post(
+        '/api/zend/notifications/email/change',
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Confirms the code from [requestNotificationEmailChange]. Returns the new settings.
+  Future<Map<String, dynamic>> confirmNotificationEmailChange(
+    String code,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/api/zend/notifications/email/confirm',
+        data: {'code': code},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// The muted categories as the server has them.
   Future<List<String>> getNotificationPreferences() async {
     try {

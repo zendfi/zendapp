@@ -43,6 +43,12 @@ class ApiException extends ZendException {
     'RATE_LIMITED',
     // "This isn't available right now. Try again later."
     'SPONSOR_PAUSED',
+    // Notification email address change (notification_settings.rs).
+    'INVALID_EMAIL',
+    'INVALID_CODE',
+    'CODE_EXPIRED',
+    'TOO_MANY_CODES',
+    'EMAIL_FAILED',
   };
 
   @override

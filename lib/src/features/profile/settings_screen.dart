@@ -17,6 +17,7 @@ import 'currency_picker_sheet.dart';
 import '../../core/zend_format.dart' show DisplayCurrency;
 import 'connected_banks_screen.dart';
 import 'delete_account_screen.dart';
+import 'email_change_sheet.dart';
 import 'security_settings_screen.dart';
 import '../links/my_links_screen.dart';
 import '../send/offline_pay_screen.dart';
@@ -154,6 +155,11 @@ class SettingsScreen extends StatelessWidget {
                     const _PresencePrivacyTile(),
 
                     const SizedBox(height: 24),
+                    _SectionLabel('Email'),
+                    const SizedBox(height: 8),
+                    const _EmailSettingsSection(),
+
+                    const SizedBox(height: 24),
                     _SectionLabel('Appearance'),
                     const SizedBox(height: 8),
                     _TileGroup(
@@ -263,6 +269,174 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Email updates ────────────────────────────────────────────────────────────
+
+/// Where Zend emails updates, and which ones. Web has no push, so for many
+/// people this is how they hear that money arrived.
+class _EmailSettingsSection extends StatefulWidget {
+  const _EmailSettingsSection();
+
+  @override
+  State<_EmailSettingsSection> createState() => _EmailSettingsSectionState();
+}
+
+class _EmailSettingsSectionState extends State<_EmailSettingsSection> {
+  Map<String, dynamic>? _s;
+  bool _failed = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final s = await ZendScope.of(context).walletService.apiClient.getEmailSettings();
+      if (mounted) setState(() => _s = s);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  Future<void> _update({bool? instant, bool? summary, bool? backup, bool? resubscribe}) async {
+    if (_saving) return;
+    final before = _s;
+    setState(() {
+      _saving = true;
+      _s = {
+        ...?_s,
+        'instant': ?instant,
+        'summary': ?summary,
+        'backup': ?backup,
+        if (resubscribe == true) 'unsubscribed': false,
+      };
+    });
+    try {
+      final s = await ZendScope.of(context).walletService.apiClient.updateEmailSettings(
+        instant: instant,
+        summary: summary,
+        backup: backup,
+        resubscribe: resubscribe,
+      );
+      if (mounted) setState(() => _s = s);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _s = before);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("That didn't save. Try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _changeEmail() async {
+    final s = await showEmailChangeSheet(context);
+    if (s != null && mounted) {
+      setState(() => _s = s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved. Updates will go to your new email.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zt = ZendTheme.of(context);
+    final s = _s;
+    if (s == null) {
+      return _TileGroup(
+        tiles: [
+          _Tile(
+            icon: PhosphorIconsRegular.envelopeSimple,
+            label: 'Email updates',
+            subtitle: _failed ? "Couldn't load. Tap to try again." : 'Loading…',
+            onTap: () {
+              setState(() => _failed = false);
+              _load();
+            },
+          ),
+        ],
+      );
+    }
+
+    final hasEmail = s['has_email'] == true;
+    final unsubscribed = s['unsubscribed'] == true;
+    final undeliverable = s['undeliverable'] == true;
+    final on = hasEmail && !unsubscribed && !undeliverable;
+    String addressLine() {
+      if (!hasEmail) return 'Add an email to get updates';
+      if (undeliverable) return "Emails to ${s['email_masked']} didn't arrive. Use a different one.";
+      return s['email_masked'] as String? ?? '';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (unsubscribed && hasEmail) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: zt.bgCard,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'You turned off Zend emails',
+                    style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: zt.textPrimary),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _saving ? null : () => _update(resubscribe: true),
+                  child: const Text('Turn back on'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        _TileGroup(
+          tiles: [
+            _Tile(
+              icon: PhosphorIconsRegular.envelopeSimple,
+              label: hasEmail ? 'Email' : 'Add email',
+              subtitle: addressLine(),
+              onTap: _changeEmail,
+            ),
+            _ToggleTile(
+              icon: PhosphorIconsRegular.arrowDownLeft,
+              label: 'Money updates',
+              subtitle: "When money arrives, a link is collected or someone asks you to pay",
+              value: on && s['instant'] != false,
+              onChanged: on && !_saving ? (v) => _update(instant: v) : null,
+            ),
+            _ToggleTile(
+              icon: PhosphorIconsRegular.listBullets,
+              label: 'Daily summary',
+              subtitle: "Messages and reactions you haven't seen, once a day",
+              value: on && s['summary'] != false,
+              onChanged: on && !_saving ? (v) => _update(summary: v) : null,
+            ),
+            if (s['has_push'] == true)
+              _ToggleTile(
+                icon: PhosphorIconsRegular.bellSimple,
+                label: 'Email me even when I have the app',
+                subtitle: "Only if you haven't opened Zend after a notification",
+                value: on && s['backup'] != false,
+                onChanged: on && !_saving ? (v) => _update(backup: v) : null,
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -519,12 +693,16 @@ class _ToggleTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
+  final String? subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+
+  /// Null shows the switch disabled.
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -536,14 +714,31 @@ class _ToggleTile extends StatelessWidget {
           Icon(icon, size: 20, color: zt.textSecondary),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: zt.textPrimary,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: zt.textPrimary,
+                  ),
+                ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 13,
+                        color: zt.textSecondary,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           Switch.adaptive(
