@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'src/services/web_idle_guard.dart';
@@ -568,6 +569,21 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
     return dark ? const Color(0xFF000000) : ZendColors.bgPrimary;
   }
 
+  /// Web only. MaterialApp calls setSystemUIOverlayStyle(SystemUiOverlayStyle
+  /// .dark/.light) on every build, and those carry no statusBarColor. Flutter
+  /// web reads "no colour" as "delete <meta name=theme-color>", so the colour
+  /// from `color:` above was wiped right after it was written, and the phone
+  /// drew its default bar over the page. SystemChrome applies only the last
+  /// style asked for in a frame, and this runs after MaterialApp's call (it is
+  /// inside MaterialApp's builder), so the page colour wins.
+  void _paintWebStatusBar(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+          .copyWith(statusBarColor: ZendTheme.of(context).bgPrimary),
+    );
+  }
+
   // Following the system theme: repaint the bar colour when the phone flips.
   @override
   void didChangePlatformBrightness() {
@@ -737,6 +753,7 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
           navigatorKey: _navigatorKey,
           child: Builder(
             builder: (context) {
+              if (kIsWeb) _paintWebStatusBar(context);
               // Width-relative text scaling: derive a text scale factor from the
               // device's screen width relative to a 375dp reference (iPhone SE /
               // standard design frame). This replaces the old OS text-scale clamp

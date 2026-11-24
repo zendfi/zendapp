@@ -301,7 +301,9 @@ class _ZAppScreenState extends State<_ZAppScreen> {
     final dark = bg.computeLuminance() < 0.45;
     final overlay =
         (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-            .copyWith(statusBarColor: Colors.transparent);
+            // Web paints the bar from this colour and ignores transparent, so
+            // give it the sheet's own background there.
+            .copyWith(statusBarColor: kIsWeb ? bg : Colors.transparent);
 
     Widget body;
     if (_error != null) {
