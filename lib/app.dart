@@ -30,6 +30,7 @@ import 'src/features/lock/biometric_lock_screen.dart';
 import 'src/features/pools/pool_detail_screen.dart';
 import 'src/features/shell/zend_shell.dart';
 import 'src/services/biometric_service.dart';
+import 'src/services/oauth_redirect_store.dart';
 import 'src/features/profile/user_profile_screen.dart';
 import 'src/models/qr_payment_intent.dart';
 import 'src/navigation/notification_navigator.dart';
@@ -842,6 +843,19 @@ class _SplashWithSessionRestoreState extends State<_SplashWithSessionRestore> {
     // of before it.
     final hasStoredSession = await widget.model.authService.isAuthenticated();
     if (!mounted) return;
+
+    // Installed web app coming back from Google (see oauth_redirect_store.dart).
+    // WelcomeScreen finishes that sign-in. Every other launch clears whatever
+    // an abandoned trip left parked, so the ephemeral key never lingers.
+    final returningFromGoogle =
+        kIsWeb && !hasStoredSession && OAuthRedirectStore.hasReturn;
+    if (kIsWeb && !returningFromGoogle) OAuthRedirectStore.discard();
+    if (returningFromGoogle) {
+      await LanguageIntroScreen.markSeen();
+      if (!mounted) return;
+      _finishSplashAndNavigate(const WelcomeScreen());
+      return;
+    }
 
     if (!hasStoredSession) {
       // The language intro is a first-install moment, not a "logged out"

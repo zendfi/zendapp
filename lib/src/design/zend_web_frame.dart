@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -10,6 +12,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/shell/zend_entry_sheet.dart';
 import '../navigation/zend_routes.dart';
 import '../navigation/zend_shell_controller.dart';
+import 'web_safe_area.dart';
 import 'zend_tokens.dart';
 
 /// Which web layout the app is rendered in.
@@ -65,13 +68,43 @@ class ZendWebFrame extends StatelessWidget {
   /// Remembered for the session; toggled from the sidebar.
   static final ValueNotifier<bool> sidebarCollapsed = ValueNotifier(false);
 
+  /// Phone-width web: give the app the device's real safe area (home
+  /// indicator, notch), which Flutter web leaves at zero. Without it the tab
+  /// bar in the home-screen app sat right on top of the home indicator.
+  /// Re-read whenever the window size changes (rotation), as build depends on
+  /// MediaQuery size.
+  static Widget _withDeviceSafeArea(BuildContext context, Widget child) {
+    final device = webSafeAreaInsets();
+    if (device == EdgeInsets.zero) return child;
+    final media = MediaQuery.of(context);
+    EdgeInsets atLeast(EdgeInsets a) => EdgeInsets.fromLTRB(
+      math.max(a.left, device.left),
+      math.max(a.top, device.top),
+      math.max(a.right, device.right),
+      math.max(a.bottom, device.bottom),
+    );
+    final viewPadding = atLeast(media.viewPadding);
+    // Same rule as the engine: the keyboard covers the bottom inset.
+    final padding = atLeast(media.padding).copyWith(
+      bottom: math.max(0.0, viewPadding.bottom - media.viewInsets.bottom),
+    );
+    return MediaQuery(
+      data: media.copyWith(padding: padding, viewPadding: viewPadding),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb) return child;
 
     final size = MediaQuery.sizeOf(context);
     if (size.width < desktopBreakpoint) {
-      return ZendWebLayout(desktop: false, wide: false, child: child);
+      return ZendWebLayout(
+        desktop: false,
+        wide: false,
+        child: _withDeviceSafeArea(context, child),
+      );
     }
 
     final zt = ZendTheme.of(context);
