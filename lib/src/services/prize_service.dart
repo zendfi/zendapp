@@ -7,6 +7,10 @@ import 'zlink_service.dart' show verifyZlinkTransaction;
 /// Optional pin for the published `zend::prize` package.
 const String kPrizePackageId = String.fromEnvironment('PRIZE_PACKAGE_ID');
 
+/// The upgraded package (shorter waits after a result). Zend sends `create` there only for waits
+/// under 10 minutes; every other call stays on [kPrizePackageId].
+const String kPrizePackageV2Id = String.fromEnvironment('PRIZE_PACKAGE_V2_ID');
+
 /// Host-funded prizes (`zend::prize`). Hosts create and may cancel during the
 /// dispute window; players join. Every prepared transaction is decoded and
 /// checked before the user approves it.
@@ -27,12 +31,13 @@ class PrizeService {
     required String sender,
     required String function,
     BigInt? withdraw,
+    String packageId = kPrizePackageId,
   }) => verifyZlinkTransaction(
     txB64,
     sender: sender,
     function: function,
     withdrawBaseUnits: withdraw,
-    packageId: kPrizePackageId,
+    packageId: packageId,
     module: 'prize',
   );
 
@@ -60,6 +65,7 @@ class PrizeService {
     int? disputeSecs,
     String? reference,
     String? interactionId,
+    String kind = 'prize',
   }) async {
     final me = await _me();
     final prepared = await withSuiDepositRetry(
@@ -74,15 +80,18 @@ class PrizeService {
         'dispute_secs': ?disputeSecs,
         'reference': ?reference,
         'interaction_id': ?interactionId,
+        'kind': kind,
       }),
     );
     final tx = _tx(prepared);
-    _verify(
-      tx,
-      sender: me,
-      function: 'create',
-      withdraw: BigInt.from((amountUsd * 1000000).round()),
-    );
+    final withdraw = BigInt.from((amountUsd * 1000000).round());
+    try {
+      _verify(tx, sender: me, function: 'create', withdraw: withdraw);
+    } catch (_) {
+      // Only a short wait goes through the upgraded package; refuse it otherwise.
+      if (kPrizePackageV2Id.isEmpty || (disputeSecs ?? 600) >= 600) rethrow;
+      _verify(tx, sender: me, function: 'create', withdraw: withdraw, packageId: kPrizePackageV2Id);
+    }
     return _signSubmit('/apps/prizes/submit', tx);
   }
 

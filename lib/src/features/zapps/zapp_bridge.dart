@@ -98,19 +98,31 @@ class ZAppBridge {
     final joinIn = (p['joinInSecs'] as num?)?.toInt() ?? 0;
     final resolveIn = (p['resolveInSecs'] as num?)?.toInt() ?? 0;
     final maxPlayers = (p['maxPlayers'] as num?)?.toInt() ?? 0;
+    final kind = (p['kind'] as String?) ?? 'prize';
+    if (kind != 'prize' && kind != 'hold') {
+      throw const ZBridgeError('INVALID_PARAMS', 'kind must be "prize" or "hold"');
+    }
+    final hold = kind == 'hold';
+    // What Zend will actually apply: never under a minute; it may raise a short wait to 10 minutes.
+    final asked = (p['disputeSecs'] as num?)?.toInt() ?? 3600;
+    // Shown before Zend applies its limits, which can raise a short wait back to 10 minutes.
+    final waitLabel = asked < 600 ? 'within 10 minutes' : _duration(asked);
     if (!context.mounted) throw const ZBridgeError('CANCELLED', 'Closed');
     final ok = await confirmZAppMoney(
       context,
       app: app,
-      title: 'Put up a prize of',
+      title: hold ? 'Hold' : 'Put up a prize of',
       amountLabel: priced.ngn != null
           ? formatNaira(priced.ngn!)
           : _money2(amount),
-      note:
-          'Up to $maxPlayers people can join for ${_duration(joinIn)}. '
-          '${app.name} decides the winners. If there is no result in ${_duration(resolveIn)}, '
-          'or you cancel during the short wait after results, it all comes back to you. '
-          'Held safely until the rules say who gets it.',
+      note: hold
+          ? 'Held safely until the rules say who gets it. ${app.name} decides who gets paid. '
+                'The money moves $waitLabel after that, and you can stop it until then. '
+                'If there is no decision in ${_duration(resolveIn)}, it all comes back to you.'
+          : 'Up to $maxPlayers people can join for ${_duration(joinIn)}. '
+                '${app.name} decides the winners. Winners are paid $waitLabel after the result, '
+                'and you can cancel until then. If there is no result in ${_duration(resolveIn)}, '
+                'it all comes back to you. Held safely until the rules say who gets it.',
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
     final r = await _prizes.create(
@@ -123,6 +135,7 @@ class ZAppBridge {
       disputeSecs: (p['disputeSecs'] as num?)?.toInt(),
       reference: p['reference'] as String?,
       interactionId: p['interactionId'] as String?,
+      kind: kind,
     );
     _model.fetchBalance();
     return r;
@@ -135,9 +148,11 @@ class ZAppBridge {
     final ok = await confirmZAppMoney(
       context,
       app: app,
-      title: 'Join for a chance to win',
+      title: prize['kind'] == 'hold' ? 'Join to get paid from' : 'Join for a chance to win',
       amountLabel: _potLabel(prize),
-      note: "It's free to join. ${app.name} decides the winners.",
+      note: prize['kind'] == 'hold'
+          ? "It's free to join. ${app.name} decides who gets paid. Held safely until then."
+          : "It's free to join. ${app.name} decides the winners.",
     );
     if (!ok) throw const ZBridgeError('USER_CANCELLED', 'The user cancelled');
     return _prizes.join(id);
@@ -153,7 +168,7 @@ class ZAppBridge {
     final ok = await confirmZAppMoney(
       context,
       app: app,
-      title: 'Cancel the prize and take back',
+      title: prize['kind'] == 'hold' ? 'Stop the payout and take back' : 'Cancel the prize and take back',
       amountLabel: _potLabel(prize),
       note: 'Nobody gets paid. All of it comes back to you.',
     );
