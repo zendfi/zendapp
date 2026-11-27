@@ -503,13 +503,34 @@ class ZlinkService {
     );
     final tx = _txOf(prepared);
     try {
-      verifyGaslessUsdcTransfer(
-        transactionDataBcsBase64: tx,
-        expectation: SuiTransferExpectation(
-          amountBaseUnits: usdcBaseUnits(amountUsd),
+      final parts = prepared['parts'] as List?;
+      if (parts != null) {
+        // A device link that shares each payment: one split that must add up to exactly what
+        // the payer agreed to, and nothing else.
+        final split = parts
+            .map((p) => SuiSplitPart(
+                  address: (p as Map)['address'] as String,
+                  amountBaseUnits: BigInt.parse(p['amount_base'].toString()),
+                ))
+            .toList();
+        final total = split.fold<BigInt>(BigInt.zero, (a, p) => a + p.amountBaseUnits);
+        if (total != usdcBaseUnits(amountUsd)) {
+          throw const ZlinkException(_kSafetyStop);
+        }
+        verifyGaslessUsdcSplit(
+          transactionDataBcsBase64: tx,
           senderAddress: payer,
-        ),
-      );
+          parts: split,
+        );
+      } else {
+        verifyGaslessUsdcTransfer(
+          transactionDataBcsBase64: tx,
+          expectation: SuiTransferExpectation(
+            amountBaseUnits: usdcBaseUnits(amountUsd),
+            senderAddress: payer,
+          ),
+        );
+      }
     } on SuiTransactionVerificationException {
       throw const ZlinkException(_kSafetyStop);
     } on SuiTransactionDecodeException {

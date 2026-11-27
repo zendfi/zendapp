@@ -1,0 +1,62 @@
+group = "com.zend.ziro_vision"
+version = "0.1.0"
+
+buildscript {
+    ext.kotlin_version = "2.2.20"
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.11.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+
+android {
+    namespace = "com.zend.ziro_vision"
+    compileSdk = 35
+
+    defaultConfig {
+        // MediaPipe Tasks and StrongBox attestation need API 24+.
+        minSdk = 24
+        consumerProguardFiles "proguard-rules.pro"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    // Model files are app assets (flutter_assets); keep them uncompressed for mmap.
+    aaptOptions {
+        noCompress "tflite", "task"
+    }
+}
+
+dependencies {
+    def camerax = "1.4.2"
+    implementation "androidx.camera:camera-core:$camerax"
+    implementation "androidx.camera:camera-camera2:$camerax"
+    implementation "androidx.camera:camera-lifecycle:$camerax"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.7"
+    implementation "com.google.mediapipe:tasks-vision:0.10.20"
+    implementation "com.google.ai.edge.litert:litert:1.2.0"
+    implementation "com.google.ai.edge.litert:litert-gpu:1.2.0"
+    implementation "com.google.android.play:integrity:1.4.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
+}

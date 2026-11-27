@@ -9,6 +9,7 @@ import '../features/activity/public_feed_screen.dart';
 import '../features/dm/dm_thread_screen.dart';
 import '../features/pools/pool_detail_screen.dart';
 import '../features/savings/savings_screen.dart';
+import '../features/ziro/customer/palm_pay_screen.dart';
 import '../models/activity_edge.dart';
 import '../models/dm_thread.dart';
 import '../models/notification_destination.dart';
@@ -129,6 +130,8 @@ class NotificationNavigator {
         ZendShellController.instance?.switchToTab(0);
 
       // ── Savings ──────────────────────────────────────────────────────────────
+      case NotifPalmPay():
+        pushZendSlide(context, const PalmPayScreen(), rootNavigator: true);
       case NotifSavings():
         ZendShellController.instance?.switchToTab(0);
         // Savings is gated off for launch — see [ZendFeatures.savings]. This

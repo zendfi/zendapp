@@ -40,6 +40,8 @@ import 'src/features/send/qr_payment_sheet.dart';
 import 'src/features/send/dev_payment_modal_sheet.dart';
 import 'src/features/pairing/pairing_approval_sheet.dart';
 import 'src/features/pairing/bot_approval_sheet.dart';
+import 'src/features/pairing/device_approval_sheet.dart';
+import 'src/features/pairing/device_checkin_sheet.dart';
 import 'src/features/pairing/bot_settings_sheet.dart';
 import 'src/services/qr_scanner_state.dart';
 import 'src/services/push_notification_service.dart';
@@ -449,6 +451,28 @@ class _ZendAppState extends State<ZendApp> with WidgetsBindingObserver {
       final context = _navigatorKey.currentContext;
       if (context == null) return;
       showBotApprovalSheet(context, pairingCode: payload.botPairingCode!);
+      return;
+    }
+    // Check in at a device — zdfi.me/device-checkin/{code}.
+    if (payload.isDeviceCheckin) {
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      if (context == null) return;
+      showDeviceCheckinSheet(context, code: payload.deviceCheckinCode!);
+      return;
+    }
+    // Add a device — zdfi.me/device-auth/{code}.
+    if (payload.isDevicePairing) {
+      if (!widget.model.isAuthenticated ||
+          widget.model.appLockService.isLocked) {
+        return;
+      }
+      final context = _navigatorKey.currentContext;
+      if (context == null) return;
+      showDeviceApprovalSheet(context, code: payload.devicePairingCode!);
       return;
     }
     // Approve a bot settings change asked for from the CLI — zdfi.me/bot-settings/{code}.

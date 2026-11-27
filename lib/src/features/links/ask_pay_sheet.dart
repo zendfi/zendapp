@@ -528,6 +528,16 @@ class _AskPaySheetState extends State<_AskPaySheet> {
             ),
           ),
         ],
+        // A shared device link: say who else gets part of it before the person confirms.
+        if ((_v['shares'] as List? ?? const []).isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Part of this goes to ${(_v['shares'] as List).map((s) => '${(s as Map)['name']} (${s['percent']}%)').join(', ')}. '
+            'Pay it from your Zend.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Geist', fontSize: 13, height: 1.4, color: zt.textSecondary),
+          ),
+        ],
       ],
     );
   }

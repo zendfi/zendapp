@@ -155,3 +155,9 @@ final class NotifDmThread extends NotificationDestination {
   const NotifDmThread({required this.roomId});
   final String roomId;
 }
+
+/// Open Settings → Palm pay, where the payment and "Wasn't me" are listed.
+final class NotifPalmPay extends NotificationDestination {
+  const NotifPalmPay({this.paymentId});
+  final String? paymentId;
+}

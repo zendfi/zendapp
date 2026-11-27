@@ -158,6 +158,24 @@ class DeepLinkHandler {
           return DeepLinkPayload(zendtag: '', botPairingCode: code);
         }
       }
+      // https://zdfi.me/device-checkin/{code} — check in at a device (gym door, event gate).
+      if (uri.host == 'zdfi.me' &&
+          uri.pathSegments.length == 2 &&
+          uri.pathSegments[0] == 'device-checkin') {
+        final code = uri.pathSegments[1];
+        if (code.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', deviceCheckinCode: code);
+        }
+      }
+      // https://zdfi.me/device-auth/{code} — add an ESP32 / Arduino / Raspberry Pi device.
+      if (uri.host == 'zdfi.me' &&
+          uri.pathSegments.length == 2 &&
+          uri.pathSegments[0] == 'device-auth') {
+        final code = uri.pathSegments[1];
+        if (code.isNotEmpty) {
+          return DeepLinkPayload(zendtag: '', devicePairingCode: code);
+        }
+      }
       // https://zdfi.me/bot-settings/{code} — approve a bot settings change from the CLI.
       if (uri.host == 'zdfi.me' &&
           uri.pathSegments.length == 2 &&
@@ -237,6 +255,10 @@ class DeepLinkPayload {
 
   /// Non-null only for `zdfi.me/bot-settings/{code}` links (approve a bot settings change).
   final String? botSettingsCode;
+  /// Non-null only for `zdfi.me/device-auth/{code}` links (add a device).
+  final String? devicePairingCode;
+  /// Non-null only for `zdfi.me/device-checkin/{code}` links (check in at a device).
+  final String? deviceCheckinCode;
 
   /// Non-null only for `zdfi.me/pool/{code}` links — pool discovery deep link.
   final String? poolShortCode;
@@ -272,6 +294,8 @@ class DeepLinkPayload {
     this.cliPairingCode,
     this.botPairingCode,
     this.botSettingsCode,
+    this.devicePairingCode,
+    this.deviceCheckinCode,
     this.poolShortCode,
     this.zlinkGiveId,
     this.zlinkKey,
@@ -295,6 +319,8 @@ class DeepLinkPayload {
   bool get isCliPairing => cliPairingCode != null;
   bool get isBotPairing => botPairingCode != null;
   bool get isBotSettings => botSettingsCode != null;
+  bool get isDevicePairing => devicePairingCode != null;
+  bool get isDeviceCheckin => deviceCheckinCode != null;
   bool get isPoolLink => poolShortCode != null;
 
   @override

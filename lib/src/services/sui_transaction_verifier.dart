@@ -548,3 +548,421 @@ void verifyGaslessUsdcSplit({
     no('Expiration is not a bounded epoch window');
   }
 }
+
+// ── Ziro palm pay (contracts.md §1.4) ───────────────────────────────────────
+//
+// Customer transactions core builds and sponsors for palm pay. Each verifier
+// accepts exactly one shape and the values this phone chose (limits, the
+// commitment it computed itself, the pause flag), against the package,
+// Registry, relayer and coin type it trusts. Anything else throws
+// [SuiTransactionVerificationException] and nothing is signed.
+
+const _kStdPackage =
+    '0x0000000000000000000000000000000000000000000000000000000000000001';
+const _kFrameworkPackage = _kBalancePackage;
+
+/// Name the allowance carries; shown to the customer by the framework.
+const kZiroAllowanceName = 'Ziro palm pay';
+const _kZiroRatePeriodMs = 86400000;
+
+/// What the phone trusts for every Ziro transaction.
+class ZiroTxExpectation {
+  ZiroTxExpectation({
+    required String sender,
+    required String packageId,
+    required String registryId,
+    required String relayer,
+    required this.coinType,
+  }) : sender = normaliseSuiAddress(sender),
+       packageId = normaliseSuiAddress(packageId),
+       registryId = normaliseSuiAddress(registryId),
+       relayer = normaliseSuiAddress(relayer);
+
+  /// The customer, who signs.
+  final String sender;
+  final String packageId;
+  final String registryId;
+  final String relayer;
+
+  /// Canonical coin type (full 64-hex addresses), e.g. `0x…::usdc::USDC`.
+  final String coinType;
+
+  String get balanceType => '$_kFrameworkPackage::balance::Balance<$coinType>';
+  String get ziroAppType => '$packageId::ziro::ZIRO';
+}
+
+/// Objects a verified Ziro transaction touches, for the caller's own checks.
+class ZiroVerifiedTx {
+  const ZiroVerifiedTx({this.accountId, this.allowanceId, this.capId});
+  final String? accountId;
+  final String? allowanceId;
+  final String? capId;
+}
+
+Never _zno(String why) => throw SuiTransactionVerificationException(why);
+
+SuiDecodedTransaction _ziroDecode(String b64, ZiroTxExpectation e) {
+  final Uint8List bytes;
+  try {
+    bytes = base64.decode(b64.trim());
+  } on FormatException catch (error) {
+    throw SuiTransactionDecodeException(
+      'Transaction payload is not valid base64: ${error.message}',
+    );
+  }
+  final tx = decodeSuiTransaction(bytes);
+  if (normaliseSuiAddress(tx.sender) != e.sender) _zno('sender');
+  // Sponsored: the gas is someone else's, never the customer's coins.
+  if (normaliseSuiAddress(tx.gasPayment.owner) == e.sender) {
+    _zno('gas is paid by the customer');
+  }
+  if (tx.commands.any((c) => c is! SuiMoveCallCommand)) _zno('non-call step');
+  if (tx.inputs.any((i) => i is SuiFundsWithdrawalInput)) {
+    _zno('takes money from a balance');
+  }
+  // Every input must be used, and nothing may touch the gas coin.
+  final used = <int>{};
+  for (final c in tx.commands.cast<SuiMoveCallCommand>()) {
+    for (final a in c.arguments) {
+      if (a.kind == SuiArgumentKind.gas) _zno('uses the gas coin');
+      if (a.kind == SuiArgumentKind.nestedResult) _zno('nested result');
+      if (a.kind == SuiArgumentKind.input) used.add(a.index!);
+    }
+  }
+  if (used.length != tx.inputs.length) _zno('unused or missing inputs');
+  return tx;
+}
+
+SuiInput _zin(SuiDecodedTransaction tx, SuiArgument a) {
+  if (a.kind != SuiArgumentKind.input ||
+      a.index == null ||
+      a.index! >= tx.inputs.length) {
+    _zno('argument is not an input');
+  }
+  return tx.inputs[a.index!];
+}
+
+Uint8List _zpure(SuiDecodedTransaction tx, SuiArgument a) {
+  final i = _zin(tx, a);
+  if (i is! SuiPureInput) _zno('argument is not a plain value');
+  return i.bytes;
+}
+
+BigInt _zuint(Uint8List b, int width) {
+  if (b.length != width) _zno('number has ${b.length} bytes, expected $width');
+  var v = BigInt.zero;
+  for (var i = width - 1; i >= 0; i--) {
+    v = (v << 8) | BigInt.from(b[i]);
+  }
+  return v;
+}
+
+BigInt _zu64(SuiDecodedTransaction tx, SuiArgument a) => _zuint(_zpure(tx, a), 8);
+BigInt _zu256(SuiDecodedTransaction tx, SuiArgument a) =>
+    _zuint(_zpure(tx, a), 32);
+
+bool _zbool(SuiDecodedTransaction tx, SuiArgument a) {
+  final b = _zpure(tx, a);
+  if (b.length != 1 || b[0] > 1) _zno('not a yes/no value');
+  return b[0] == 1;
+}
+
+String _zaddr(SuiDecodedTransaction tx, SuiArgument a) {
+  final i = _zin(tx, a);
+  final addr = i is SuiPureInput ? i.asAddress : null;
+  if (addr == null) _zno('not an address');
+  return normaliseSuiAddress(addr);
+}
+
+/// A BCS `vector<u8>` (or `String`): ULEB length, then exactly that many bytes.
+Uint8List _zvec(SuiDecodedTransaction tx, SuiArgument a) {
+  final r = SuiBcsReader(_zpure(tx, a));
+  final v = r.readByteVector();
+  r.expectEnd();
+  return v;
+}
+
+bool _zsame(List<int> a, List<int> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+SuiSharedInput _zshared(
+  SuiDecodedTransaction tx,
+  SuiArgument a, {
+  String? id,
+  bool? mutable,
+}) {
+  final i = _zin(tx, a);
+  if (i is! SuiSharedInput) _zno('not a shared object');
+  if (id != null && normaliseSuiAddress(i.objectId) != id) _zno('wrong object');
+  if (mutable != null && i.mutable != mutable) _zno('wrong object access');
+  return i;
+}
+
+/// Owned or shared object input; returns its ID.
+String _zobject(SuiDecodedTransaction tx, SuiArgument a) {
+  final i = _zin(tx, a);
+  if (i is SuiSharedInput) return normaliseSuiAddress(i.objectId);
+  if (i is SuiObjectInput && i.kind == SuiObjectInputKind.immutableOrOwned) {
+    return normaliseSuiAddress(i.reference.objectId);
+  }
+  _zno('not an object');
+}
+
+void _zresult(SuiArgument a, int command) {
+  if (a.kind != SuiArgumentKind.result || a.index != command) {
+    _zno('expected the result of step $command');
+  }
+}
+
+SuiMoveCallCommand _zcall(
+  SuiDecodedTransaction tx,
+  int index,
+  String package,
+  String module,
+  String function, {
+  List<String> typeArgs = const [],
+  required int argc,
+}) {
+  final c = tx.commands[index] as SuiMoveCallCommand;
+  if (normaliseSuiAddress(c.package) != normaliseSuiAddress(package) ||
+      c.module != module ||
+      c.function != function) {
+    _zno('step $index is ${c.target}, expected $module::$function');
+  }
+  if (c.typeArguments.length != typeArgs.length) _zno('step $index types');
+  for (var i = 0; i < typeArgs.length; i++) {
+    if (c.typeArguments[i].canonical != typeArgs[i]) {
+      _zno('step $index type ${c.typeArguments[i].canonical}');
+    }
+  }
+  if (c.arguments.length != argc) _zno('step $index takes ${c.arguments.length}');
+  return c;
+}
+
+/// Steps 1–3 of contracts §1.4 enroll, starting at command [k]: the daily
+/// rate limit, `option::some`, and `propose_for_app` naming the relayer as
+/// spender with an expiry about a year out.
+void _zproposal(
+  SuiDecodedTransaction tx,
+  int k,
+  ZiroTxExpectation e, {
+  required BigInt dailyMax,
+  required DateTime now,
+}) {
+  final rate = _zcall(
+    tx,
+    k,
+    _kFrameworkPackage,
+    'allowance',
+    'periodic_rate_limit',
+    argc: 2,
+  );
+  if (_zu64(tx, rate.arguments[0]) != BigInt.from(_kZiroRatePeriodMs)) {
+    _zno('rate period');
+  }
+  if (_zu256(tx, rate.arguments[1]) != dailyMax) _zno('daily maximum');
+
+  final some = _zcall(
+    tx,
+    k + 1,
+    _kStdPackage,
+    'option',
+    'some',
+    typeArgs: ['$_kFrameworkPackage::allowance::RateLimit'],
+    argc: 1,
+  );
+  _zresult(some.arguments[0], k);
+
+  final p = _zcall(
+    tx,
+    k + 2,
+    _kFrameworkPackage,
+    'allowance',
+    'propose_for_app',
+    typeArgs: [e.balanceType, e.ziroAppType],
+    argc: 6,
+  );
+  if (!_zsame(_zvec(tx, p.arguments[0]), utf8.encode(kZiroAllowanceName))) {
+    _zno('allowance name');
+  }
+  if (_zaddr(tx, p.arguments[1]) != e.relayer) _zno('spender is not Ziro');
+  // none<u256>: no total cap. none<u64>: no start time.
+  if (!_zsame(_zpure(tx, p.arguments[2]), const [0])) _zno('total cap');
+  if (!_zsame(_zpure(tx, p.arguments[3]), const [0])) _zno('start time');
+  final exp = _zpure(tx, p.arguments[4]);
+  if (exp.length != 9 || exp[0] != 1) _zno('expiry');
+  final expiryMs = _zuint(Uint8List.sublistView(exp, 1), 8);
+  final nowMs = BigInt.from(now.millisecondsSinceEpoch);
+  const day = 86400000;
+  if (expiryMs < nowMs + BigInt.from(364 * day) ||
+      expiryMs > nowMs + BigInt.from(366 * day)) {
+    _zno('expiry is not about a year out');
+  }
+  _zresult(p.arguments[5], k + 1);
+}
+
+void _zlimits(BigInt per, BigInt noPin) {
+  if (noPin > per) _zno('no-PIN amount is above the per-payment maximum');
+}
+
+/// Enroll: rate limit, `some`, `propose_for_app`, then
+/// `ziro::open_account<USDC>(proposal, Registry, commitment, per, no_pin)`.
+ZiroVerifiedTx verifyZiroEnroll(
+  String txB64, {
+  required ZiroTxExpectation expectation,
+  required BigInt perPaymentMax,
+  required BigInt noPinMax,
+  required BigInt dailyMax,
+  required List<int> commitment,
+  DateTime? now,
+}) {
+  final e = expectation;
+  final tx = _ziroDecode(txB64, e);
+  if (tx.commands.length != 4) _zno('expected 4 steps');
+  _zlimits(perPaymentMax, noPinMax);
+  _zproposal(tx, 0, e, dailyMax: dailyMax, now: now ?? DateTime.now());
+  final open = _zcall(
+    tx,
+    3,
+    e.packageId,
+    'ziro',
+    'open_account',
+    typeArgs: [e.coinType],
+    argc: 5,
+  );
+  _zresult(open.arguments[0], 2);
+  _zshared(tx, open.arguments[1], id: e.registryId);
+  if (commitment.length != 32 || !_zsame(_zvec(tx, open.arguments[2]), commitment)) {
+    _zno('commitment');
+  }
+  if (_zu64(tx, open.arguments[3]) != perPaymentMax) _zno('per-payment maximum');
+  if (_zu64(tx, open.arguments[4]) != noPinMax) _zno('no-PIN amount');
+  return const ZiroVerifiedTx();
+}
+
+/// Limits: `ziro::set_limits(acct, per, no_pin)` when the daily maximum is
+/// unchanged; otherwise `allowance::revoke` + steps 1–3 +
+/// `ziro::reissue_allowance<USDC>(acct, proposal, Registry, per, no_pin)`.
+ZiroVerifiedTx verifyZiroLimits(
+  String txB64, {
+  required ZiroTxExpectation expectation,
+  required BigInt perPaymentMax,
+  required BigInt noPinMax,
+  required BigInt dailyMax,
+  required BigInt currentDailyMax,
+  DateTime? now,
+}) {
+  final e = expectation;
+  final tx = _ziroDecode(txB64, e);
+  _zlimits(perPaymentMax, noPinMax);
+  if (tx.commands.length == 1) {
+    if (dailyMax != currentDailyMax) _zno('daily maximum not changed');
+    final c = _zcall(tx, 0, e.packageId, 'ziro', 'set_limits', argc: 3);
+    final acct = _zshared(tx, c.arguments[0], mutable: true);
+    if (_zu64(tx, c.arguments[1]) != perPaymentMax) _zno('per-payment maximum');
+    if (_zu64(tx, c.arguments[2]) != noPinMax) _zno('no-PIN amount');
+    return ZiroVerifiedTx(accountId: normaliseSuiAddress(acct.objectId));
+  }
+  if (tx.commands.length != 5) _zno('expected 1 or 5 steps');
+  final revoke = _zcall(
+    tx,
+    0,
+    _kFrameworkPackage,
+    'allowance',
+    'revoke',
+    typeArgs: [e.balanceType],
+    argc: 2,
+  );
+  final cap = _zobject(tx, revoke.arguments[0]);
+  final old = _zobject(tx, revoke.arguments[1]);
+  _zproposal(tx, 1, e, dailyMax: dailyMax, now: now ?? DateTime.now());
+  final re = _zcall(
+    tx,
+    4,
+    e.packageId,
+    'ziro',
+    'reissue_allowance',
+    typeArgs: [e.coinType],
+    argc: 5,
+  );
+  final acct = _zshared(tx, re.arguments[0], mutable: true);
+  _zresult(re.arguments[1], 3);
+  _zshared(tx, re.arguments[2], id: e.registryId);
+  if (_zu64(tx, re.arguments[3]) != perPaymentMax) _zno('per-payment maximum');
+  if (_zu64(tx, re.arguments[4]) != noPinMax) _zno('no-PIN amount');
+  return ZiroVerifiedTx(
+    accountId: normaliseSuiAddress(acct.objectId),
+    allowanceId: old,
+    capId: cap,
+  );
+}
+
+/// PIN change and re-enrollment: `ziro::set_commitment(acct, commitment)`.
+ZiroVerifiedTx verifyZiroCommitment(
+  String txB64, {
+  required ZiroTxExpectation expectation,
+  required List<int> commitment,
+}) {
+  final e = expectation;
+  final tx = _ziroDecode(txB64, e);
+  if (tx.commands.length != 1) _zno('expected 1 step');
+  final c = _zcall(tx, 0, e.packageId, 'ziro', 'set_commitment', argc: 2);
+  final acct = _zshared(tx, c.arguments[0], mutable: true);
+  if (commitment.length != 32 || !_zsame(_zvec(tx, c.arguments[1]), commitment)) {
+    _zno('commitment');
+  }
+  return ZiroVerifiedTx(accountId: normaliseSuiAddress(acct.objectId));
+}
+
+/// Pause, resume and "Wasn't me": `ziro::set_account_paused(acct, paused)`.
+ZiroVerifiedTx verifyZiroPause(
+  String txB64, {
+  required ZiroTxExpectation expectation,
+  required bool paused,
+}) {
+  final e = expectation;
+  final tx = _ziroDecode(txB64, e);
+  if (tx.commands.length != 1) _zno('expected 1 step');
+  final c = _zcall(tx, 0, e.packageId, 'ziro', 'set_account_paused', argc: 2);
+  final acct = _zshared(tx, c.arguments[0], mutable: true);
+  if (_zbool(tx, c.arguments[1]) != paused) _zno('pause flag');
+  return ZiroVerifiedTx(accountId: normaliseSuiAddress(acct.objectId));
+}
+
+/// Delete: `allowance::revoke<Balance<USDC>>(cap, allowance)` then
+/// `ziro::close_account(acct)`.
+ZiroVerifiedTx verifyZiroDelete(
+  String txB64, {
+  required ZiroTxExpectation expectation,
+}) {
+  final e = expectation;
+  final tx = _ziroDecode(txB64, e);
+  if (tx.commands.length != 2) _zno('expected 2 steps');
+  final revoke = _zcall(
+    tx,
+    0,
+    _kFrameworkPackage,
+    'allowance',
+    'revoke',
+    typeArgs: [e.balanceType],
+    argc: 2,
+  );
+  final cap = _zobject(tx, revoke.arguments[0]);
+  final allowance = _zobject(tx, revoke.arguments[1]);
+  final close = _zcall(tx, 1, e.packageId, 'ziro', 'close_account', argc: 1);
+  final acct = _zshared(tx, close.arguments[0], mutable: true);
+  if (normaliseSuiAddress(acct.objectId) == allowance ||
+      normaliseSuiAddress(acct.objectId) == cap) {
+    _zno('same object twice');
+  }
+  return ZiroVerifiedTx(
+    accountId: normaliseSuiAddress(acct.objectId),
+    allowanceId: allowance,
+    capId: cap,
+  );
+}

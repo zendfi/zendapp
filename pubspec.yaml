@@ -183,6 +183,12 @@ dependencies:
   scrollable_positioned_list: ^0.3.8
   webview_flutter: ^4.14.1
   webview_flutter_android: ^4.0.0
+  # Ziro (palm pay at the till): keeps the merchant's screen on while the
+  # customer view is up and during the colour flash. HPKE, HKDF, AES-GCM and
+  # the enclave's signatures use `cryptography` above.
+  wakelock_plus: ^1.2.8
+  ziro_vision:
+    path: packages/ziro_vision
 
 dev_dependencies:
   flutter_test:

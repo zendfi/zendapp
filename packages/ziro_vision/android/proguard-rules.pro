@@ -1,0 +1,3 @@
+-keep class com.google.mediapipe.** { *; }
+-keep class org.tensorflow.lite.** { *; }
+-dontwarn com.google.mediapipe.proto.**

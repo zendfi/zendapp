@@ -11,8 +11,10 @@ import '../../design/zend_tokens.dart';
 import '../../navigation/zend_routes.dart';
 import 'bridge_kyc_screen.dart';
 import 'human_verification_screen.dart';
+import '../ziro/customer/palm_pay_screen.dart';
 import 'change_pin_screen.dart';
 import 'connected_apps_screen.dart';
+import 'devices_screen.dart';
 import 'currency_picker_sheet.dart';
 import '../../core/zend_format.dart' show DisplayCurrency;
 import 'connected_banks_screen.dart';
@@ -106,6 +108,15 @@ class SettingsScreen extends StatelessWidget {
                           onTap: () => pushZendSlide(
                             context,
                             const ConnectedAppsScreen(),
+                          ),
+                        ),
+                        _Tile(
+                          icon: PhosphorIconsRegular.cpu,
+                          label: 'Devices',
+                          subtitle: 'Boards that take payments for you',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const DevicesScreen(),
                           ),
                         ),
                         if (developerToolsAvailable(context))
@@ -220,6 +231,15 @@ class SettingsScreen extends StatelessWidget {
                             onTap: () =>
                                 pushZendSlide(context, const ChangePinScreen()),
                           ),
+                        _Tile(
+                          icon: PhosphorIconsRegular.handPalm,
+                          label: 'Palm pay',
+                          subtitle: 'Pay at shops with your palm',
+                          onTap: () => pushZendSlide(
+                            context,
+                            const PalmPayScreen(),
+                          ),
+                        ),
                         if (ZendFeatures.humanBadge)
                           _Tile(
                             icon: PhosphorIconsRegular.sealCheck,

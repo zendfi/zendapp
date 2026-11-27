@@ -1,0 +1,13 @@
+.DS_Store
+.dart_tool/
+.flutter-plugins-dependencies
+/build/
+/pubspec.lock
+*.iml
+.idea/
+android/.gradle/
+android/local.properties
+android/build/
+# Model binaries are fetched separately (README "Model assets").
+assets/models/*.task
+assets/models/*.tflite

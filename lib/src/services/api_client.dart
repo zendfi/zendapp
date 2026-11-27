@@ -2890,6 +2890,139 @@ class ApiClient {
     }
   }
 
+  // ── Devices (ESP32, Arduino, Raspberry Pi boards that take payments for you) ──
+
+  /// A device waiting to be added, by the code in its QR or the 6 characters on its screen.
+  Future<Map<String, dynamic>> getDeviceSessionByCode(String code) async {
+    try {
+      final r = await _dio.get('/api/zend/devices/sessions/by-code/${Uri.encodeComponent(code)}');
+      return Map<String, dynamic>.from(r.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> approveDeviceSession(String sessionId, {String? name}) async {
+    try {
+      await _dio.post('/api/zend/devices/sessions/$sessionId/approve', data: {'name': ?name});
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> denyDeviceSession(String sessionId) async {
+    try {
+      await _dio.post('/api/zend/devices/sessions/$sessionId/deny');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// `{devices: [...], groups: [...]}`: your devices and groups, and groups you're staff in.
+  Future<Map<String, dynamic>> getMyDevices() async {
+    try {
+      final r = await _dio.get('/api/zend/devices');
+      return Map<String, dynamic>.from(r.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> updateDevice(
+    String id, {
+    String? name,
+    bool? paused,
+    double? maxRequestNgn,
+    int? offlineAlertMins,
+    String? groupId,
+    bool ungroup = false,
+  }) async {
+    try {
+      await _dio.patch('/api/zend/devices/$id', data: {
+        'name': ?name,
+        'paused': ?paused,
+        'max_request_ngn': ?maxRequestNgn,
+        'offline_alert_mins': ?offlineAlertMins,
+        'group_id': ?groupId,
+        if (ungroup) 'ungroup': true,
+      });
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> _devicePost(String path, Object? data, {String method = 'POST'}) async {
+    try {
+      await _dio.request(path, data: data, options: Options(method: method));
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// Replaces a device's own settings (prices, times). The device hears `config.updated`.
+  Future<void> setDeviceConfig(String id, Map<String, dynamic> config) =>
+      _devicePost('/api/zend/devices/$id/config', {'config': config}, method: 'PUT');
+
+  Future<void> sendDeviceCommand(String id, String name, {Map<String, dynamic>? args}) =>
+      _devicePost('/api/zend/devices/$id/commands', {'name': name, 'args': ?args});
+
+  Future<List<Map<String, dynamic>>> getDeviceCommands(String id) async {
+    try {
+      final r = await _dio.get('/api/zend/devices/$id/commands');
+      return ((r.data as Map)['commands'] as List).map((c) => Map<String, dynamic>.from(c as Map)).toList();
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  /// [shares]: up to 3 of `{handle, percent}`; empty to stop sharing.
+  Future<void> setDeviceShares(String id, List<Map<String, dynamic>> shares) =>
+      _devicePost('/api/zend/devices/$id/shares', {'shares': shares}, method: 'PUT');
+
+  Future<void> setDeviceGroupShares(String groupId, List<Map<String, dynamic>> shares) =>
+      _devicePost('/api/zend/devices/groups/$groupId/shares', {'shares': shares}, method: 'PUT');
+
+  Future<String> createDeviceGroup(String name) async {
+    try {
+      final r = await _dio.post('/api/zend/devices/groups', data: {'name': name});
+      return (r.data as Map)['id'] as String;
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> updateDeviceGroup(String id, {String? name, Map<String, dynamic>? config}) =>
+      _devicePost('/api/zend/devices/groups/$id', {'name': ?name, 'config': ?config}, method: 'PATCH');
+
+  Future<void> removeDeviceGroup(String id) => _devicePost('/api/zend/devices/groups/$id/remove', null);
+
+  Future<void> addDeviceGroupStaff(String id, String handle) =>
+      _devicePost('/api/zend/devices/groups/$id/staff', {'handle': handle});
+
+  Future<void> removeDeviceGroupStaff(String id, String handle) =>
+      _devicePost('/api/zend/devices/groups/$id/staff/remove', {'handle': handle});
+
+  /// What a device's check-in code is for (`zdfi.me/device-checkin/{code}`).
+  Future<Map<String, dynamic>> getDeviceCheckin(String code) async {
+    try {
+      final r = await _dio.get('/api/zend/devices/checkins/${Uri.encodeComponent(code)}');
+      return Map<String, dynamic>.from(r.data as Map);
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
+  Future<void> confirmDeviceCheckin(String code, {required bool shareName}) =>
+      _devicePost('/api/zend/devices/checkins/${Uri.encodeComponent(code)}/confirm', {'share_name': shareName});
+
+  Future<void> removeDevice(String id) async {
+    try {
+      await _dio.post('/api/zend/devices/$id/remove');
+    } on DioException catch (e) {
+      throw e.error ?? e;
+    }
+  }
+
   /// A settings change for one of your bots, asked for from the command line
   /// (`zdfi.me/bot-settings/{code}`): the bot and the changes in plain words.
   Future<Map<String, dynamic>> getBotSettingsRequestByCode(String code) async {

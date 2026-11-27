@@ -207,7 +207,11 @@ class _ZlinkWelcomeLineState extends State<ZlinkWelcomeLine> {
         _sub = active ? "It'll be in your balance as soon as you're in." : null;
       } else {
         final v = await service.previewAsk(p.zlinkAskId!);
-        _text = '${v['payee_name']} is asking for ${zlinkAmountLabel(v)}';
+        final shares = (v['shares'] as List? ?? const [])
+            .map((s) => '${(s as Map)['name']} (${s['percent']}%)')
+            .join(', ');
+        _text = '${v['payee_name']} is asking for ${zlinkAmountLabel(v)}'
+            '${shares.isEmpty ? '' : '. Part of it goes to $shares'}';
       }
       if (mounted) setState(() {});
     } on ApiException catch (e) {

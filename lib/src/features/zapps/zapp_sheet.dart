@@ -20,6 +20,10 @@ import 'zapp_host_mobile.dart'
     if (dart.library.js_interop) 'zapp_host_web.dart';
 import 'zapp_web_url_stub.dart'
     if (dart.library.js_interop) 'zapp_web_url_web.dart';
+import '../ziro/merchant/ziro_home.dart';
+
+/// Slug of the built-in Ziro ZApp.
+const kZiroSlug = 'ziro';
 
 /// Plain-language description of each optional scope for the consent screen.
 const _scopeCopy = {
@@ -62,6 +66,12 @@ Future<Object?> openZApp(
   String? path,
   Map<String, String>? query,
 }) {
+  // Built-in ZApps ship inside Zend and open a native screen; they are never
+  // loaded from a web origin (ziro-palm-pay design §13).
+  if (slug == kZiroSlug) {
+    return Navigator.of(context, rootNavigator: true)
+        .push<Object?>(MaterialPageRoute(builder: (_) => const ZiroHome()));
+  }
   return Navigator.of(context, rootNavigator: true).push<Object?>(
     PageRouteBuilder<Object?>(
       opaque: true,
